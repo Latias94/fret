@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{
@@ -23,7 +24,7 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, ui,
+    Space, UiChildIntoElement, UiHostBoundIntoElement, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -146,14 +147,89 @@ pub struct DialogTrigger {
     child: AnyElement,
 }
 
+pub struct DialogTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl DialogTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> DialogTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        DialogTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTrigger::new(
+            self.child
+                .expect("expected dialog trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait DialogCompositionTriggerArg<H: UiHost> {
+    fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger;
+}
+
+impl<H: UiHost> DialogCompositionTriggerArg<H> for DialogTrigger {
+    fn into_dialog_trigger(self, _cx: &mut ElementContext<'_, H>) -> DialogTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> DialogCompositionTriggerArg<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger {
+        DialogTrigger::new(
+            self.child
+                .expect("expected dialog trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -679,15 +755,15 @@ impl Dialog {
 ///
 /// This builder stores already-authored Fret elements/parts and lowers them into the existing
 /// closure-based `into_element_parts(...)` entry point at the end.
-pub struct DialogComposition {
+pub struct DialogComposition<TTrigger = DialogTrigger> {
     dialog: Dialog,
-    trigger: Option<DialogTrigger>,
+    trigger: Option<TTrigger>,
     portal: DialogPortal,
     overlay: DialogOverlay,
     content: Option<AnyElement>,
 }
 
-impl std::fmt::Debug for DialogComposition {
+impl<TTrigger> std::fmt::Debug for DialogComposition<TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DialogComposition")
             .field("dialog", &self.dialog)
@@ -709,10 +785,17 @@ impl DialogComposition {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: DialogTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<TTrigger> DialogComposition<TTrigger> {
+    pub fn trigger<TNextTrigger>(self, trigger: TNextTrigger) -> DialogComposition<TNextTrigger> {
+        DialogComposition {
+            dialog: self.dialog,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: DialogPortal) -> Self {
@@ -731,10 +814,14 @@ impl DialogComposition {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: DialogCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("Dialog::compose().trigger(...) must be provided before into_element()");
+            .expect("Dialog::compose().trigger(...) must be provided before into_element()")
+            .into_dialog_trigger(cx);
         let content = self
             .content
             .expect("Dialog::compose().content(...) must be provided before into_element()");
@@ -1243,6 +1330,26 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn dialog_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, DialogTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
 
     #[test]
     fn dialog_new_controllable_uses_controlled_model_when_provided() {
@@ -1715,6 +1822,82 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
+    #[test]
+    fn dialog_composition_trigger_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-dialog-composition-trigger-accepts-late-child",
+            |cx| {
+                vec![
+                    Dialog::new(open.clone())
+                        .compose()
+                        .trigger(DialogTrigger::build(
+                            crate::Button::new("Open").test_id("dialog-compose-trigger-late-child"),
+                        ))
+                        .portal(DialogPortal::new())
+                        .overlay(DialogOverlay::new())
+                        .content(DialogContent::new([cx.text("Content")]).into_element(cx))
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
     #[test]
     #[should_panic(
         expected = "DialogClose::from_scope() must be used while rendering Dialog content"

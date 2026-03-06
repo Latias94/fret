@@ -2,6 +2,7 @@
 //!
 //! Fret currently models drawers as a `Sheet` that defaults to the `Bottom` side.
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
@@ -17,21 +18,24 @@ use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_headless::snap_points as headless_snap_points;
 
+use crate::Sheet;
 use crate::layout as shadcn_layout;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
-use crate::Sheet;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::{
     shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
 };
 use fret_ui_kit::declarative::motion_value::{
-    drive_motion_value_f32, MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32,
+    MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::{ui, ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, ui,
+};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -324,11 +328,13 @@ impl DrawerContent {
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default().w_full(),
         };
         let content = cx.container(props, move |cx| {
-            vec![ui::v_stack(move |_cx| rows)
-                .gap(Space::N0)
-                .layout(stack_layout)
-                .items_stretch()
-                .into_element(cx)]
+            vec![
+                ui::v_stack(move |_cx| rows)
+                    .gap(Space::N0)
+                    .layout(stack_layout)
+                    .items_stretch()
+                    .into_element(cx),
+            ]
         });
 
         content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
@@ -1069,14 +1075,65 @@ pub struct DrawerTrigger {
     child: AnyElement,
 }
 
+pub struct DrawerTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl DrawerTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> DrawerTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        DrawerTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTrigger::new(
+            self.child
+                .expect("expected drawer trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTriggerBuild::into_element(self, cx)
     }
 }
 
@@ -1144,9 +1201,9 @@ mod tests {
 
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
@@ -1154,14 +1211,33 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
     use fret_ui::elements::{
-        current_bounds_for_element, visual_bounds_for_element, GlobalElementId,
+        GlobalElementId, current_bounds_for_element, visual_bounds_for_element,
     };
-    use fret_ui::UiTree;
-    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
     use fret_ui_kit::OverlayController;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn drawer_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, DrawerTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(
+                out[0].kind,
+                fret_ui::element::ElementKind::Container(_)
+            ));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1454,7 +1530,7 @@ mod tests {
                     |_cx| trigger,
                     move |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new())
+                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
                         ])
                         .into_element(cx)
                     },
@@ -1895,7 +1971,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             let content = DrawerContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new())
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
                             ])
                             .into_element(cx);
                             drawer_content_id.set(Some(content.id));
@@ -2020,7 +2096,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             let content = DrawerContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new())
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
                             ])
                             .into_element(cx);
                             drawer_content_id.set(Some(content.id));

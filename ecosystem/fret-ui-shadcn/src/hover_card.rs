@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,6 +26,7 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
+    UiChildIntoElement, UiHostBoundIntoElement,
 };
 
 use crate::layout as shadcn_layout;
@@ -311,6 +313,27 @@ impl HoverCard {
         }
     }
 
+    /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
+    pub fn build<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl Into<HoverCardContentArg>,
+    ) -> Self {
+        Self::new(trigger.into_child_element(cx), content)
+    }
+
+    /// Host-bound builder-first constructor for the controlled/uncontrolled root variant.
+    pub fn build_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl Into<HoverCardContentArg>,
+    ) -> Self {
+        let trigger = trigger.into_child_element(cx);
+        Self::new_controllable(cx, open, default_open, trigger, content)
+    }
+
     /// Creates a hover card with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
     ///
     /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
@@ -320,7 +343,7 @@ impl HoverCard {
         open: Option<Model<bool>>,
         default_open: bool,
         trigger: AnyElement,
-        content: AnyElement,
+        content: impl Into<HoverCardContentArg>,
     ) -> Self {
         let open = radix_hover_card::HoverCardRoot::new()
             .open(open)
@@ -1093,14 +1116,69 @@ pub struct HoverCardTrigger {
     child: AnyElement,
 }
 
+pub struct HoverCardTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl HoverCardTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> HoverCardTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        HoverCardTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> HoverCardTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> HoverCardTrigger {
+        HoverCardTrigger::new(
+            self.child
+                .expect("expected hover card trigger child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_trigger(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        HoverCardTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        HoverCardTriggerBuild::into_element(self, cx)
     }
 }
 
@@ -1112,9 +1190,28 @@ pub struct HoverCardAnchor {
     child: AnyElement,
 }
 
+pub struct HoverCardAnchorBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl HoverCardAnchor {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    /// Builder-first variant that late-lands the anchor child at `into_element(cx)` time.
+    ///
+    /// If you need the anchor ID before final landing, call [`HoverCardAnchorBuild::into_anchor`] or
+    /// keep using [`HoverCardAnchor::new`] with an already-landed child.
+    pub fn build<H: UiHost, T>(child: T) -> HoverCardAnchorBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        HoverCardAnchorBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
     }
 
     pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
@@ -1124,6 +1221,45 @@ impl HoverCardAnchor {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> HoverCardAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> HoverCardAnchor {
+        HoverCardAnchor::new(
+            self.child
+                .expect("expected hover card anchor child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_anchor(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for HoverCardAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        HoverCardAnchorBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for HoverCardAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        HoverCardAnchorBuild::into_element(self, cx)
     }
 }
 
@@ -1237,13 +1373,101 @@ mod tests {
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
-        ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PositionStyle,
-        PressableProps, SemanticsProps,
+        ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+        PositionStyle, PressableProps, SemanticsProps,
     };
     use fret_ui::overlay_placement;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::prelude::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
     use fret_ui_kit::{OverlayController, ui};
+
+    #[test]
+    fn hover_card_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(
+                cx,
+                HoverCardTrigger::build(crate::Card::build(|_cx, _out| {})),
+            );
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn hover_card_anchor_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(
+                cx,
+                HoverCardAnchor::build(crate::Card::build(|_cx, _out| {})),
+            );
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn hover_card_build_into_element_accepts_late_landed_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = HoverCardContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let root =
+                HoverCard::build(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+
+            assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
+        });
+    }
+
+    #[test]
+    fn hover_card_build_controllable_into_element_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = HoverCardContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let root = HoverCard::build_controllable(
+                cx,
+                Some(open.clone()),
+                false,
+                crate::Card::build(|_cx, _out| {}),
+                content,
+            )
+            .into_element(cx);
+
+            assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
+        });
+    }
 
     #[test]
     fn hover_card_open_change_events_emit_change_and_complete_after_settle() {

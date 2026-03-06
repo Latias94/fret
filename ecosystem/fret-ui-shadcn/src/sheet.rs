@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
@@ -17,7 +18,8 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -91,14 +93,89 @@ pub struct SheetTrigger {
     child: AnyElement,
 }
 
+pub struct SheetTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl SheetTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> SheetTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        SheetTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTrigger::new(
+            self.child
+                .expect("expected sheet trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait SheetCompositionTriggerArg<H: UiHost> {
+    fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger;
+}
+
+impl<H: UiHost> SheetCompositionTriggerArg<H> for SheetTrigger {
+    fn into_sheet_trigger(self, _cx: &mut ElementContext<'_, H>) -> SheetTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> SheetCompositionTriggerArg<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger {
+        SheetTrigger::new(
+            self.child
+                .expect("expected sheet trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -853,15 +930,15 @@ impl Sheet {
 }
 
 /// Recipe-level builder for composing a sheet from shadcn-style parts.
-pub struct SheetComposition {
+pub struct SheetComposition<TTrigger = SheetTrigger> {
     sheet: Sheet,
-    trigger: Option<SheetTrigger>,
+    trigger: Option<TTrigger>,
     portal: SheetPortal,
     overlay: SheetOverlay,
     content: Option<AnyElement>,
 }
 
-impl std::fmt::Debug for SheetComposition {
+impl<TTrigger> std::fmt::Debug for SheetComposition<TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SheetComposition")
             .field("sheet", &self.sheet)
@@ -883,10 +960,17 @@ impl SheetComposition {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: SheetTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<TTrigger> SheetComposition<TTrigger> {
+    pub fn trigger<TNextTrigger>(self, trigger: TNextTrigger) -> SheetComposition<TNextTrigger> {
+        SheetComposition {
+            sheet: self.sheet,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: SheetPortal) -> Self {
@@ -905,10 +989,14 @@ impl SheetComposition {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: SheetCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("Sheet::compose().trigger(...) must be provided before into_element()");
+            .expect("Sheet::compose().trigger(...) must be provided before into_element()")
+            .into_sheet_trigger(cx);
         let content = self
             .content
             .expect("Sheet::compose().content(...) must be provided before into_element()");
@@ -1279,6 +1367,26 @@ mod tests {
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn sheet_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, SheetTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
 
     #[test]
     fn sheet_new_controllable_uses_controlled_model_when_provided() {
@@ -1553,6 +1661,86 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
+    #[test]
+    fn sheet_composition_trigger_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sheet-composition-trigger-accepts-late-child",
+            |cx| {
+                vec![
+                    Sheet::new(open.clone())
+                        .compose()
+                        .trigger(SheetTrigger::build(
+                            crate::Button::new("Open").test_id("sheet-compose-trigger-late-child"),
+                        ))
+                        .portal(SheetPortal::new())
+                        .overlay(SheetOverlay::new())
+                        .content(
+                            SheetContent::new([cx.text("Content")])
+                                .show_close_button(false)
+                                .into_element(cx),
+                        )
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
     #[test]
     fn sheet_bottom_auto_max_height_fraction_clamps_tall_content_with_edge_gap() {
         let window = AppWindowId::default();

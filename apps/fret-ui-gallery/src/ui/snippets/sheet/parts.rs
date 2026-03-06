@@ -19,11 +19,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let trigger = shadcn::SheetTrigger::new(
+    let trigger = shadcn::SheetTrigger::build(
         shadcn::Button::new("Open (Parts)")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-sheet-parts-trigger")
-            .into_element(cx),
+            .test_id("ui-gallery-sheet-parts-trigger"),
     );
 
     let content = shadcn::SheetContent::new([

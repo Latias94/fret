@@ -45,16 +45,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+    shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
         cx,
-        |cx| {
-            shadcn::DropdownMenuTrigger::new(
-                shadcn::Button::new("Open")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dropdown-menu-checkboxes-trigger")
-                    .into_element(cx),
-            )
-        },
+        shadcn::DropdownMenuTrigger::build(
+            shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dropdown-menu-checkboxes-trigger"),
+        ),
         shadcn::DropdownMenuContent::new()
             .align(shadcn::DropdownMenuAlign::Start)
             .side_offset(Px(4.0))
