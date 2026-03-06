@@ -663,8 +663,9 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
-    use super::{App as FretApp, IconRegistry, KernelApp, ViewElements};
+    use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp, ViewElements};
     use crate::view::{View, ViewCx};
+    use crate::{Defaults, prelude::FretApp as PreludeFretApp};
     use fret_app::CreateWindowRequest;
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
@@ -793,7 +794,11 @@ mod builder_surface_tests {
                     .dock_op(dock_op)
             })
             .expect("ui_with_hooks should build")
-            .configure(|_config| {})
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder UI Smoke");
+                assert_eq!(config.main_window_size.width, 640.0);
+                assert_eq!(config.main_window_size.height, 480.0);
+            })
             .init_app(|_app| {})
             .install_custom_effects(install_custom_effects)
             .on_gpu_ready(|_app, _context, _renderer| {});
@@ -813,7 +818,40 @@ mod builder_surface_tests {
                     .dock_op(dock_op)
             })
             .expect("view_with_hooks should build")
-            .configure(|_config| {});
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder View Smoke");
+                assert_eq!(config.main_window_size.width, 640.0);
+                assert_eq!(config.main_window_size.height, 480.0);
+            });
+    }
+
+    #[test]
+    fn app_builder_ui_smoke() {
+        let _builder = AppBuilder::new("builder-ui-basic")
+            .defaults(Defaults::desktop_app())
+            .window("Builder UI Basic", (800.0, 600.0))
+            .ui(init_window, view)
+            .expect("ui should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder UI Basic");
+                assert_eq!(config.main_window_size.width, 800.0);
+                assert_eq!(config.main_window_size.height, 600.0);
+            })
+            .init_app(|_app| {})
+            .on_gpu_ready(|_app, _context, _renderer| {});
+    }
+
+    #[test]
+    fn app_builder_view_smoke_uses_default_main_window() {
+        let _builder = PreludeFretApp::new("builder-view-default-main-window")
+            .minimal_defaults()
+            .view::<SmokeView>()
+            .expect("view should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "builder-view-default-main-window");
+                assert_eq!(config.main_window_size.width, 960.0);
+                assert_eq!(config.main_window_size.height, 720.0);
+            });
     }
 }
 

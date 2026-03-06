@@ -37,8 +37,8 @@
 ## Remaining work
 
 - [ ] Sweep remaining historical docs that still teach removed helper paths or older MVU-era entry snippets.
-- [x] Add a compile-oriented regression gate that covers `ui_with_hooks(...)` and
-      `view_with_hooks(...)` directly.
+- [x] Add compile-oriented regression coverage for the four recommended builder entry paths
+      (`ui`, `ui_with_hooks`, `view`, `view_with_hooks`) and the default main-window fallback.
 - [x] Add a focused surface gate that keeps `fret` crate root builder-only and keeps README
       onboarding text aligned with the builder story.
 - [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder
@@ -53,5 +53,6 @@
 - [x] `cargo check -p fret --all-targets`
 - [x] `cargo check -p fret --no-default-features --features desktop`
 - [x] `cargo check -p fret-examples --all-targets`
+- [x] `cargo nextest run -p fret builder_surface_tests`
 - [x] `python tools/check_layering.py`
 - [x] `python tools/gate_fret_builder_only_surface.py`

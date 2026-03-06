@@ -70,6 +70,8 @@
 - Advanced users can keep using `UiAppBuilder` and `UiAppDriver` seams without dropping down early.
 - A focused guardrail now keeps the crate-root story builder-only and locks README onboarding to the
   same entry model.
+- Targeted smoke tests now cover all four recommended builder entry paths and the default
+  main-window fallback behavior.
 
 **What remains**
 
@@ -80,6 +82,7 @@
 **Evidence**
 
 - `ecosystem/fret/src/app_entry.rs`
+- `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/README.md`
 - `tools/gate_fret_builder_only_surface.py`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
