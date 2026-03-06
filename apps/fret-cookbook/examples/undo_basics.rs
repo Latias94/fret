@@ -411,6 +411,8 @@ impl View for UndoBasicsView {
             }
         });
 
+        // `Undo`/`Redo` intentionally stay on the advanced helper because history traversal
+        // is coupled to an explicit RAF effect for immediate visual refresh.
         cx.on_action_notify::<act::Undo>({
             let value = self.value.clone();
             let history = self.history.clone();

@@ -22,6 +22,8 @@ impl View for ToastBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        // This is an intentional advanced case: toast APIs still need the action host/window.
+        // Keep the default onboarding focused on `on_action_notify_models` / transient helpers.
         // `Sonner::global` needs `UiHost`, which we have during render (but not inside handlers).
         // Capture a clone into action handlers.
         let sonner = shadcn::Sonner::global(cx.app);

@@ -118,6 +118,8 @@ impl View for RouterBasicsView {
         let intents_weak = intents_model.downgrade();
         let intents_weak_for_clear = intents_weak.clone();
 
+        // Back/forward stay on the advanced host-aware helper because navigation also updates
+        // command availability snapshots on the router host path.
         let navigate_history_action = {
             let intents_weak = intents_weak.clone();
             let router_model = router_model.clone();

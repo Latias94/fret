@@ -325,6 +325,8 @@ impl View for AsyncInboxBasicsView {
             }
         });
 
+        // `Start` intentionally stays on the advanced helper because it spawns dispatcher/inbox
+        // work and keeps the host-facing scheduling logic in one place.
         cx.on_action_notify::<act::Start>({
             let dispatcher = self.st.dispatcher.clone();
             let current_job = self.st.current_job.clone();

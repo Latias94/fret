@@ -208,6 +208,8 @@ Choosing the helper:
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
 - Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
   custom effects) where the built-in shorthands do not fit.
+  - In-tree examples that intentionally stay here today: `toast_basics`, `router_basics` back/forward,
+    `async_inbox_basics::Start`, and `undo_basics::Undo` / `Redo`.
 - Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
   replacement for typed action handlers.
 
