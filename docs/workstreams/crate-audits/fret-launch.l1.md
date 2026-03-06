@@ -189,13 +189,21 @@ Evidence anchors:
   the platform/runner layer behind app/platform injection, while Fret chooses to keep launch as an
   explicit crate. That is acceptable because Fret wants runner ownership, hotpatch-friendly
   function-pointer seams, and specialized interop/media escape hatches to remain first-class.
-- The main unresolved problem is therefore not “can it extend enough?” but “can we keep the naming
-  and default story tight enough that advanced escape hatches do not become the accidental default?”
+- The main unresolved problem is therefore not "can it extend enough?" but "can we keep the naming
+  and default story tight enough that advanced escape hatches do not become the accidental default?"
+- After migrating `custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`,
+  and `custom_effect_v3_web_demo` to explicit `build_fn_driver()` helpers, the remaining
+  example-local `impl WinitAppDriver` bodies are better understood as internal migration debt
+  or complex harness glue (multi-window, hot reload, accessibility, engine-frame hooks), not
+  as evidence that `FnDriver` lacks extension headroom.
 
 Evidence anchors:
 
 - `crates/fret-launch/src/runner/common/fn_driver.rs`
 - `crates/fret-launch/src/runner/common/winit_app_driver.rs`
+- `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
+- `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
+- `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)

@@ -59,6 +59,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
 - Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls.
+- Recent web custom-effect helpers (`custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`, `custom_effect_v3_web_demo`) now also expose explicit `build_fn_driver()` entrypoints.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`

@@ -232,7 +232,20 @@ Additional evidence:
 - `apps/fret-examples/src/chart_multi_axis_demo.rs`
 - `apps/fret-examples/src/components_gallery.rs`
 - `apps/fret-examples/src/gizmo3d_demo.rs`
+- `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
+- `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
+- `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
+- `apps/fret-demo-web/src/wasm.rs`
 - `tools/gate_winit_driver_example_hook_coverage.py`
+
+Interpretation update:
+
+- the latest remaining web custom-effect helpers now teach `FnDriver` directly, so the
+  advanced helper posture is tighter than the raw `impl WinitAppDriver` inventory alone
+  suggests.
+- remaining in-file direct trait impls cluster around multi-window/hot-reload/accessibility
+  or engine-frame customization examples; that is migration debt and review surface, not a
+  demonstrated `FnDriver` capability gap.
 
 ### H3) Specialized launch modules still need classification discipline
 
