@@ -1,0 +1,142 @@
+pub const SOURCE: &str = include_str!("attachments_list.rs");
+
+// region: example
+use crate::ui::snippets::aspect_ratio::landscape_image_id;
+use fret_core::Px;
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
+
+#[derive(Default)]
+struct DemoModels {
+    removed_ids: Option<Model<Vec<Arc<str>>>>,
+}
+
+fn demo_items<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> Vec<ui_ai::AttachmentData> {
+    let mut image = ui_ai::AttachmentFileData::new("att-image")
+        .filename("mountain-landscape.jpg")
+        .media_type("image/jpeg");
+    if let Some(preview) = landscape_image_id(cx) {
+        image = image.preview_image(preview);
+    }
+
+    let pdf = ui_ai::AttachmentFileData::new("att-pdf")
+        .filename("quarterly-report-2024.pdf")
+        .media_type("application/pdf");
+    let video = ui_ai::AttachmentFileData::new("att-video")
+        .filename("product-demo.mp4")
+        .media_type("video/mp4");
+    let source = ui_ai::AttachmentSourceDocumentData::new("att-source")
+        .title("API Documentation")
+        .filename("api-reference")
+        .url("https://docs.example.com/api");
+    let audio = ui_ai::AttachmentFileData::new("att-audio")
+        .filename("meeting-recording.mp3")
+        .media_type("audio/mpeg");
+
+    vec![
+        ui_ai::AttachmentData::File(image),
+        ui_ai::AttachmentData::File(pdf),
+        ui_ai::AttachmentData::File(video),
+        ui_ai::AttachmentData::SourceDocument(source),
+        ui_ai::AttachmentData::File(audio),
+    ]
+}
+
+fn render_list_attachment<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    data: ui_ai::AttachmentData,
+    on_remove: ui_ai::OnAttachmentRemove,
+    test_id: Option<&'static str>,
+) -> AnyElement {
+    let mut attachment = ui_ai::Attachment::new(data)
+        .variant(ui_ai::AttachmentVariant::List)
+        .show_media_type(true)
+        .on_remove(on_remove);
+    if let Some(test_id) = test_id {
+        attachment = attachment.test_id(test_id);
+    }
+
+    attachment.into_element_with_children(cx, move |cx, _parts| {
+        let preview = ui_ai::AttachmentPreview::from_context().into_element(cx);
+        let info = ui_ai::AttachmentInfo::from_context()
+            .show_media_type(true)
+            .into_element(cx);
+        let remove = ui_ai::AttachmentRemove::from_context().into_element(cx);
+
+        let row = ui::h_row(move |_cx| vec![preview, info, remove])
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_center()
+            .into_element(cx);
+        vec![row]
+    })
+}
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let removed_ids = cx.with_state(DemoModels::default, |st| st.removed_ids.clone());
+    let removed_ids = match removed_ids {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Vec::<Arc<str>>::new());
+            cx.with_state(DemoModels::default, |st| {
+                st.removed_ids = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let hidden = cx
+        .get_model_cloned(&removed_ids, Invalidation::Layout)
+        .unwrap_or_default();
+
+    let on_remove: ui_ai::OnAttachmentRemove = Arc::new({
+        let removed_ids = removed_ids.clone();
+        move |host, _action_cx, id| {
+            let _ = host.models_mut().update(&removed_ids, |v| {
+                if !v.iter().any(|existing| existing.as_ref() == id.as_ref()) {
+                    v.push(id.clone());
+                }
+            });
+        }
+    });
+
+    let children = demo_items(cx)
+        .into_iter()
+        .filter(|item| !hidden.iter().any(|id| id.as_ref() == item.id().as_ref()))
+        .map(|item| {
+            let item_id = item.id().clone();
+            let on_remove = on_remove.clone();
+            let key = Arc::<str>::from(format!("attachments-list-{}", item_id.as_ref()));
+            cx.keyed(key, move |cx| {
+                render_list_attachment(
+                    cx,
+                    item.clone(),
+                    on_remove.clone(),
+                    (item_id.as_ref() == "att-image").then_some("ui-ai-attachment-list-att-image"),
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+
+    ui::h_flex(move |cx| {
+        vec![
+            ui_ai::Attachments::new(children)
+                .variant(ui_ai::AttachmentVariant::List)
+                .test_id("ui-ai-attachments-list-root")
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .max_w(MetricRef::Px(Px(440.0))),
+                )
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .justify_center()
+    .into_element(cx)
+}
+// endregion: example
