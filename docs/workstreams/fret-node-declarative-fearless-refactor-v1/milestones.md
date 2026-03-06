@@ -211,6 +211,9 @@ points rather than direct graph mutation.
     flags.
   - Declarative escape cancel now also clears pending-selection-only sessions, while helper-backed
     gates cover selection-only release and pointer-cancel transient cleanup.
+  - Declarative left-button pointer release now routes through a dedicated helper that arbitrates
+    node-drag vs pending-selection vs marquee completion, with focused tests covering pending-only,
+    inactive-toggle-marquee, and no-state releases.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -256,6 +259,7 @@ points rather than direct graph mutation.
   `paint_only.rs`)
 - cancel/release gates for selection-only release, escape cancel, and pointer-cancel transient
   cleanup in the declarative path
+- left-release arbitration gates for pending-only, inactive-toggle-marquee, and no-state releases
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors

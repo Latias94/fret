@@ -151,6 +151,8 @@ First landing in this worktree:
 - hit-node click selection and empty-space clear now also stay local until pointer-up (or node-drag
   activation), instead of writing store selection on pointer-down,
 - pointer-up commits the previewed selection through the same controller/store-backed selection seam,
+- left-button pointer release now routes through a dedicated helper that arbitrates node-drag vs
+  pending-selection vs marquee completion before the shared pointer-session cleanup,
 - node-drag threshold crossing commits any pending hit selection before the drag transaction path
   takes over,
 - node drag local state now uses explicit `Armed` / `Active` / `Canceled` phases so threshold

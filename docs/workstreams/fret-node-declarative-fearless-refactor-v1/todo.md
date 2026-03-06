@@ -241,6 +241,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed cancel/release follow-up: selection-only node-drag release now has a dedicated gate, and
     escape / pointer-cancel now have focused helper-backed tests (including the pending-selection-only
     escape case).
+  - Landed left-release reducer follow-up: pointer-up arbitration between node-drag / pending
+    selection / marquee now goes through a dedicated helper with focused tests for the pending-only,
+    inactive-toggle-marquee, and no-state branches.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.
