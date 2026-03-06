@@ -8,6 +8,7 @@ pub mod groups;
 pub mod groups_with_separator;
 pub mod input_group;
 pub mod invalid;
+pub mod label;
 pub mod long_list;
 pub mod multiple_selection;
 pub mod rtl;

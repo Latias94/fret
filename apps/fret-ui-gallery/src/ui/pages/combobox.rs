@@ -12,6 +12,7 @@ pub(super) fn preview_combobox(
     let conformance_demo =
         snippets::conformance_demo::render(cx, value.clone(), open.clone(), query.clone());
     let basic = snippets::basic::render(cx);
+    let label = snippets::label::render(cx);
     let auto_highlight = snippets::auto_highlight::render(cx);
     let clear = snippets::clear_button::render(cx);
     let groups = snippets::groups::render(cx);
@@ -50,6 +51,10 @@ pub(super) fn preview_combobox(
             DocSection::new("Basic", basic)
                 .description("Upstream shadcn demo: basic framework combobox with search.")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control`, `Combobox::control_id`, and `Combobox::test_id_prefix` so label clicks focus the trigger and keep derived automation anchors stable.")
+                .test_id_prefix("ui-gallery-combobox-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Auto Highlight", auto_highlight)
                 .description(
                     "Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).",
