@@ -107,14 +107,16 @@ impl FretDevtoolsMcp {
         }
     }
 
-    async fn resolve_regression_dir(
+    async fn resolve_regression_context(
         &self,
         repo_root: &Path,
         session_id: Option<String>,
         dir: Option<String>,
-    ) -> Result<(PathBuf, String), String> {
-        let dir_abs = if let Some(dir) = dir.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-            resolve_repo_path(repo_root, dir)
+    ) -> Result<(PathBuf, String, Option<String>), String> {
+        let (dir_abs, resolved_session_id) = if let Some(dir) =
+            dir.as_deref().map(str::trim).filter(|s| !s.is_empty())
+        {
+            (resolve_repo_path(repo_root, dir), None)
         } else {
             let session_id = self.resolve_session_id(session_id).await?;
             let dumped_payload = {
@@ -131,9 +133,11 @@ impl FretDevtoolsMcp {
             .ok_or_else(|| {
                 "missing dir and no bundle.dumped available for the selected session".to_string()
             })?;
-            artifacts_root_from_bundle_dumped_payload(repo_root, &dumped_payload).ok_or_else(
-                || "bundle.dumped missing out_dir/dir for artifacts root resolution".to_string(),
-            )?
+            let dir_abs = artifacts_root_from_bundle_dumped_payload(repo_root, &dumped_payload)
+                .ok_or_else(|| {
+                    "bundle.dumped missing out_dir/dir for artifacts root resolution".to_string()
+                })?;
+            (dir_abs, Some(session_id))
         };
 
         let dir_arg = dir_abs
@@ -142,7 +146,40 @@ impl FretDevtoolsMcp {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| dir_abs.to_string_lossy().to_string());
 
-        Ok((dir_abs, dir_arg))
+        Ok((dir_abs, dir_arg, resolved_session_id))
+    }
+
+    async fn notify_resource_updates(
+        &self,
+        notify_resources_list_changed: bool,
+        resource_updated_uris: Vec<String>,
+    ) {
+        if !notify_resources_list_changed && resource_updated_uris.is_empty() {
+            return;
+        }
+        let peer = self.peer.lock().await.clone();
+        let subscribed = self.subscribed_resources.lock().await.clone();
+        if let Some(peer) = peer {
+            if notify_resources_list_changed {
+                let n = ResourceListChangedNotification {
+                    method: Default::default(),
+                    extensions: Extensions::default(),
+                };
+                let _ = peer
+                    .send_notification(ServerNotification::ResourceListChangedNotification(n))
+                    .await;
+            }
+
+            for uri in resource_updated_uris {
+                if !subscribed.contains(&uri) {
+                    continue;
+                }
+                let n = ResourceUpdatedNotification::new(ResourceUpdatedNotificationParam { uri });
+                let _ = peer
+                    .send_notification(ServerNotification::ResourceUpdatedNotification(n))
+                    .await;
+            }
+        }
     }
 
     #[tool(
@@ -406,8 +443,8 @@ impl FretDevtoolsMcp {
             .or_else(|| std::env::current_dir().ok())
             .ok_or_else(|| "failed to resolve repo root".to_string())?;
 
-        let (dir_abs, dir_arg) = self
-            .resolve_regression_dir(
+        let (dir_abs, dir_arg, resolved_session_id) = self
+            .resolve_regression_context(
                 &repo_root,
                 params.0.session_id.clone(),
                 params.0.dir.clone(),
@@ -431,6 +468,19 @@ impl FretDevtoolsMcp {
         let summary_path = dir_abs.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
         let index_path = dir_abs.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
         let include_json = params.0.include_json.unwrap_or(false);
+
+        if let Some(session_id) = resolved_session_id.as_deref() {
+            let selected_session_id = self.selected_session_id.lock().await.clone();
+            let uris = session_resource_uris(
+                session_id,
+                selected_session_id.as_deref(),
+                &[
+                    RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                    RESOURCE_KIND_REGRESSION_INDEX_JSON,
+                ],
+            );
+            self.notify_resource_updates(true, uris).await;
+        }
 
         Ok(Json(RegressionSummarizeResultV1 {
             schema_version: 1,
@@ -461,8 +511,8 @@ impl FretDevtoolsMcp {
             .or_else(|| std::env::current_dir().ok())
             .ok_or_else(|| "failed to resolve repo root".to_string())?;
 
-        let (dir_abs, dir_arg) = self
-            .resolve_regression_dir(
+        let (dir_abs, dir_arg, _resolved_session_id) = self
+            .resolve_regression_context(
                 &repo_root,
                 params.0.session_id.clone(),
                 params.0.dir.clone(),
@@ -1870,32 +1920,18 @@ async fn run_client_task(
                 "bundle.dumped" => {
                     notify_resources_list_changed = true;
                     if let Some(sid) = msg.session_id.as_deref() {
-                        let base = format!("{RESOURCE_SCHEME}sessions/{sid}/");
-                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_JSON}"));
-                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_ZIP}"));
-                        resource_updated_uris
-                            .push(format!("{base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
-                        resource_updated_uris
-                            .push(format!("{base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"));
-                        resource_updated_uris
-                            .push(format!("{base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"));
-
                         let selected = selected_session_id.lock().await.clone();
-                        if selected.as_deref() == Some(sid) {
-                            let selected_base = format!("{RESOURCE_SCHEME}selected/");
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_JSON}"));
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_ZIP}"));
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
-                            resource_updated_uris.push(format!(
-                                "{selected_base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"
-                            ));
-                            resource_updated_uris.push(format!(
-                                "{selected_base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"
-                            ));
-                        }
+                        resource_updated_uris.extend(session_resource_uris(
+                            sid,
+                            selected.as_deref(),
+                            &[
+                                RESOURCE_KIND_BUNDLE_JSON,
+                                RESOURCE_KIND_BUNDLE_ZIP,
+                                RESOURCE_KIND_REPRO_SUMMARY_JSON,
+                                RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                                RESOURCE_KIND_REGRESSION_INDEX_JSON,
+                            ],
+                        ));
                     }
                 }
                 _ => {}
@@ -2009,6 +2045,25 @@ fn connect_client(ws_defaults: &WsState, cfg: ConnectConfig) -> Result<ToolingDi
 
 fn env_u16(key: &str) -> Option<u16> {
     std::env::var(key).ok().and_then(|v| v.parse().ok())
+}
+
+fn session_resource_uris(
+    session_id: &str,
+    selected_session_id: Option<&str>,
+    resource_kinds: &[&str],
+) -> Vec<String> {
+    let mut uris = Vec::with_capacity(resource_kinds.len() * 2);
+    let base = format!("{RESOURCE_SCHEME}sessions/{session_id}/");
+    for kind in resource_kinds {
+        uris.push(format!("{base}{kind}"));
+    }
+    if selected_session_id == Some(session_id) {
+        let selected_base = format!("{RESOURCE_SCHEME}selected/");
+        for kind in resource_kinds {
+            uris.push(format!("{selected_base}{kind}"));
+        }
+    }
+    uris
 }
 
 fn build_regression_dashboard_result(
@@ -2704,5 +2759,24 @@ mod tests {
         assert_eq!(result.failing_summaries.len(), 1);
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
+    }
+
+    #[test]
+    fn session_resource_uris_includes_selected_alias_when_session_matches() {
+        let uris = session_resource_uris(
+            "session-a",
+            Some("session-a"),
+            &[
+                RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                RESOURCE_KIND_REGRESSION_INDEX_JSON,
+            ],
+        );
+
+        assert!(
+            uris.contains(&"fret-diag://sessions/session-a/regression.summary.json".to_string())
+        );
+        assert!(uris.contains(&"fret-diag://sessions/session-a/regression.index.json".to_string()));
+        assert!(uris.contains(&"fret-diag://selected/regression.summary.json".to_string()));
+        assert!(uris.contains(&"fret-diag://selected/regression.index.json".to_string()));
     }
 }

@@ -69,7 +69,9 @@ Batch run:
   - when `dir` is omitted, it reuses the current session artifacts root from the latest
     `bundle.dumped` event,
   - when `include_json` is `true`, it also returns the generated `regression.summary.json` and
-    `regression.index.json` payloads inline.
+    `regression.index.json` payloads inline,
+  - when the directory is session-derived, it also emits MCP resource update notifications for the
+    regression summary/index resources.
 
 - tool: `fret_diag_regression_dashboard`
   - reads `regression.index.json` from the same shared artifacts root,
