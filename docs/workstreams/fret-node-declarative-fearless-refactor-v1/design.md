@@ -155,6 +155,7 @@ First landing in this worktree:
   takes over,
 - node drag local state now uses explicit `Armed` / `Active` / `Canceled` phases so threshold
   activation, selection-only release, and cancel-drop semantics stay reviewable,
+- escape now also clears pending-selection-only sessions (not just marquee / node-drag sessions),
 - escape/pointer-cancel now drop transient marquee/click-selection state instead of issuing
   selection restore writes.
 

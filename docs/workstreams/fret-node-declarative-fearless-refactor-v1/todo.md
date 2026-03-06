@@ -238,7 +238,12 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed node-drag phase follow-up: local drag state now uses explicit `Armed` / `Active` /
     `Canceled` phases, threshold crossing commits pending selection exactly once, and pointer-up only
     emits a drag transaction for active non-zero delta drags.
-- [ ] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
+  - Landed cancel/release follow-up: selection-only node-drag release now has a dedicated gate, and
+    escape / pointer-cancel now have focused helper-backed tests (including the pending-selection-only
+    escape case).
+- [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
+  - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
+    cleanup in `paint_only.rs`.
 - [ ] Decide which interaction pieces remain local surface state vs store-backed editor state.
 - [ ] Ensure new declarative interaction work does not regress cache discipline.
 - [ ] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only

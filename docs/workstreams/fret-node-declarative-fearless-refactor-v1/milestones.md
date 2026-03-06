@@ -209,6 +209,8 @@ points rather than direct graph mutation.
   - Declarative node drag now uses explicit `Armed` / `Active` / `Canceled` phases, so threshold
     activation, selection-only release, and cancel-drop behavior no longer depend on paired boolean
     flags.
+  - Declarative escape cancel now also clears pending-selection-only sessions, while helper-backed
+    gates cover selection-only release and pointer-cancel transient cleanup.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -252,6 +254,8 @@ points rather than direct graph mutation.
 - at least one declarative drag or marquee gate that proves commit goes through the transaction-safe
   path (landed for controller-backed declarative node drag plus selection/marquee callback paths in
   `paint_only.rs`)
+- cancel/release gates for selection-only release, escape cancel, and pointer-cancel transient
+  cleanup in the declarative path
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors
