@@ -104,6 +104,7 @@ Mapping (rough):
 - `fret::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
 - `fret::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
+- `fret::run_native_demo_fn(...)` → `fret_bootstrap::BootstrapBuilder::new_fn(...)`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

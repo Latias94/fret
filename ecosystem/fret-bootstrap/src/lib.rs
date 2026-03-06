@@ -9,13 +9,11 @@
 //! ```no_run
 //! use fret_app::App;
 //! use fret_bootstrap::BootstrapBuilder;
-//! use fret_launch::FnDriver;
 //!
 //! # fn event(_d: &mut (), _cx: fret_launch::WinitEventContext<'_, ()>, _e: &fret_core::Event) {}
 //! # fn render(_d: &mut (), _cx: fret_launch::WinitRenderContext<'_, ()>) {}
 //! #
-//! let driver = FnDriver::new((), |_d, _app, _w| (), event, render);
-//! let builder = BootstrapBuilder::new(App::new(), driver)
+//! let builder = BootstrapBuilder::new_fn(App::new(), (), |_d, _app, _w| (), event, render)
 //!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
@@ -638,6 +636,31 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         });
 
         inner
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
+    /// Create a bootstrap builder directly from `FnDriver` pieces.
+    ///
+    /// This is the recommended advanced escape hatch when the app wants the `fret-bootstrap`
+    /// defaults and builder ergonomics, but does not want to manually construct
+    /// `fret_launch::FnDriver` first.
+    pub fn new_fn(
+        app: App,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    ) -> Self {
+        Self::new(
+            app,
+            fret_launch::FnDriver::new(driver_state, create_window_state, handle_event, render),
+        )
     }
 }
 

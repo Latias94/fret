@@ -612,6 +612,40 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     Ok(())
 }
 
+/// Run a native desktop demo using the `fret-bootstrap` advanced `FnDriver` escape hatch.
+///
+/// Prefer this over manually constructing `fret_launch::FnDriver` when the app still wants the
+/// higher-level bootstrap/defaults story from `fret`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_demo_fn<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(
+        &'d mut D,
+        fret_launch::WinitEventContext<'cx, S>,
+        &'e fret_core::Event,
+    ),
+    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new_fn(
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .configure(move |c| {
+        *c = config;
+    });
+
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
+
+    builder.run().map_err(RunnerError::from)?;
+    Ok(())
+}
+
 /// Create a desktop-first UI app builder with conservative defaults applied.
 ///
 /// Defaults (when the corresponding features are enabled):
