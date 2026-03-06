@@ -1,6 +1,10 @@
 pub mod agent_demo;
 pub mod artifact_demo;
-pub mod attachments_demo;
+pub mod attachments_empty;
+pub mod attachments_grid;
+pub mod attachments_inline;
+pub mod attachments_list;
+pub mod attachments_usage;
 pub mod audio_player_demo;
 pub mod canvas_world_layer_spike;
 pub mod chain_of_thought_demo;
