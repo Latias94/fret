@@ -97,7 +97,13 @@ impl View for QueryAsyncTokioDemoView {
             });
         }
 
-        cx.on_action_notify_toggle_bool::<act::ToggleFailMode>(self.st.fail_mode.clone());
+        cx.on_action_notify_models::<act::ToggleFailMode>({
+            let fail_mode = self.st.fail_mode.clone();
+            move |models| {
+                let _ = models.update(&fail_mode, |value| *value = !*value);
+                true
+            }
+        });
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
