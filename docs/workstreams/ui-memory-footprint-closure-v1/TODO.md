@@ -14,7 +14,8 @@
 
 ## Diagnostics (app-side)
 
-- [ ] Add heap byte estimates for text caches (blob cache, shape cache, measure caches).
+- [x] Add heap byte estimates for render_text caches (shape cache + blob payload slices).
+- [ ] Extend heap byte estimates for text caches further (measure caches, line layout internals beyond best-effort).
 - [ ] Add cache byte estimates for images/assets where feasible (distinguish CPU decoded bytes vs GPU textures).
 - [ ] Keep all new fields behind a “diagnostics” surface (non-contract; best-effort).
 
@@ -51,6 +52,10 @@
   - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
   - Goal: separate baseline intercept (swapchain/driver/allocator) from per-image growth.
 - [x] Captured initial sweep (local 2026-03-05; N=3 each) and observed ~1:1 scaling with a ~100 MiB Metal baseline and ~217 MiB footprint baseline.
+- [ ] Attribution: sweep `FRET_IMAGE_HEAVY_DEMO_SIZE_PX` (count=24; size=512/1024/2048) and validate whether:
+  - the ~1:1 bytes/byte slope still holds (or if there is a material tiling/alignment multiplier),
+  - the intercept remains stable (baseline driver/swapchain).
+- [x] Captured initial size sweep (local 2026-03-05; N=3 each) and observed ~1:1 bytes/byte scaling with stable intercepts.
 
 ### Evidence (captured)
 
@@ -86,4 +91,7 @@
 - [x] Add a wgpu hub counts gate (`check.wgpu_hub_counts.json`; requires `--env FRET_DIAG_WGPU_REPORT=1`).
 - [x] Add a text-atlas-focused gate (`--max-render-text-atlas-bytes-live-estimate-total`) for more stable attribution vs total Metal bytes.
 - [x] Calibrate a post-drop release gate for `image-heavy-memory-steady-after-drop` (avoid peak-based gates; prefer `owned_unmapped_memory` and `wgpu_metal_current_allocated_size_bytes` thresholds).
+- [x] Add linear-vs-image-pressure gates for the headline buckets:
+  - `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images`
+  - `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images`
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).

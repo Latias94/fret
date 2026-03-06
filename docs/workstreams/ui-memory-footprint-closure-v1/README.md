@@ -20,10 +20,16 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - Summarize multiple `--session-auto` samples under a base dir:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
+    - Linear fit helper (least squares; outputs intercept + slope + suggested `slope_ppm`):
+      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear macos_owned_unmapped_memory_dirty_bytes:renderer_gpu_images_bytes_estimate`
+      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear wgpu_metal_current_allocated_size_bytes_max:renderer_gpu_images_bytes_estimate`
     - Renderer-side attribution fields (from `bundle_last_frame_stats`) are also surfaced, so you can sort/compare by:
       - `--sort-key renderer_gpu_images_bytes_estimate`
       - `--sort-key renderer_gpu_render_targets_bytes_estimate`
       - `--sort-key renderer_intermediate_peak_in_use_bytes`
+      - `--sort-key render_text_shape_cache_bytes_estimate_total`
+      - `--sort-key render_text_blob_paint_palette_bytes_estimate_total`
+      - `--sort-key render_text_blob_decorations_bytes_estimate_total`
   - Optional macOS-only hint for the largest `vmmap` buckets:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
   - Aggregate macOS `vmmap -sortBySize` top-dirty regions across samples (helps attribute `owned unmapped memory`):
@@ -160,6 +166,8 @@ Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts +
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 359,976,141 .. 366,162,739 (~343.3 .. 349.3 MiB)
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,384,538 (~237.5 .. 242.6 MiB)
   - `render_text_atlas_bytes_live_estimate_total`: ~20 MiB (after lazy mask atlas page allocation)
+- Text cache byte estimates (`resource_caches.render_text`, last snapshot; local 2026-03-05):
+  - `shape_cache_bytes_estimate_total`: ~0.26 MiB (best-effort; excludes allocator overhead)
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
 - `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
@@ -188,6 +196,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Me
 
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 
+- Note: this page is behind `fret-ui-gallery`'s `gallery-dev` feature; launch with that enabled (or `gallery-full`) or the nav item will not exist.
 - Repeat sample (N=5; captured via `fretboard diag repro --launch`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 387,343,974 .. 390,804,275 (~369.4 .. 372.7 MiB)
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
@@ -210,6 +219,8 @@ Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memor
 - Text system attribution (`resource_caches.render_text`, last snapshot; single run):
   - `registered_font_blobs_total_bytes`: 0 (no injected memory-backed fonts observed)
   - `baseline_metrics_cache_entries`: 5
+  - `shape_cache_bytes_estimate_total`: ~6.3 MiB (best-effort; excludes allocator overhead)
+  - `blob_paint_palette_bytes_estimate_total`: ~0.06 MiB (best-effort)
 
 Interpretation:
 
@@ -217,6 +228,7 @@ Interpretation:
   the measured code editor paint caches (tens of KiB). The dominant CPU-side contributors remain:
   - `owned unmapped memory` dirty (allocator retention / sticky reservations), and
   - `MALLOC_SMALL` dirty (heap allocations + fragmentation).
+- The new best-effort text cache byte estimates (shape cache + blob payload slices) are **single-digit MiB** even in the editor torture scenario, which further weakens the hypothesis that “font/text caches explain the high footprint”.
 - Allocator A/B spot-check (single-run, `apps/fret-demo` `ui_gallery` binary, `--release`):
   - `system`:
     - `owned unmapped memory` dirty: 236,349,030 (~225.4 MiB)
@@ -425,6 +437,7 @@ Candidate gates:
 
 - `--max-macos-physical-footprint-peak-bytes`
 - `--max-macos-owned-unmapped-memory-dirty-bytes`
+- `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images` (format: `<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]`)
 - `--max-macos-io-surface-dirty-bytes`
 - `--max-macos-io-accelerator-dirty-bytes`
 - `--max-macos-malloc-small-dirty-bytes`
@@ -432,6 +445,7 @@ Candidate gates:
 - `--max-renderer-gpu-render-targets-bytes-estimate`
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
+- `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images` (format: `<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]`)
 - `--max-wgpu-hub-buffers` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
 - `--max-wgpu-hub-textures` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
 - `--max-wgpu-hub-render-pipelines` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
@@ -441,6 +455,9 @@ Candidate gates:
 - `--max-render-text-registered-font-blobs-count` (guards memory-backed font injection churn; `resource_caches.render_text`)
 - `--max-render-text-shape-cache-entries` (guards unbounded text shaping cache growth; `resource_caches.render_text`)
 - `--max-render-text-blob-cache-entries` (guards unbounded text blob cache growth; `resource_caches.render_text`)
+- `--max-render-text-shape-cache-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
+- `--max-render-text-blob-paint-palette-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
+- `--max-render-text-blob-decorations-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
 - `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
@@ -458,6 +475,8 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-macos-physical-footprint-peak-bytes 440401920` (420 MiB)
   - `--max-macos-owned-unmapped-memory-dirty-bytes 304087040` (290 MiB)
   - `--max-render-text-atlas-bytes-live-estimate-total 50331648` (48 MiB)
+  - Optional (best-effort; monitor-only until we have a stable distribution):
+    - `--max-render-text-shape-cache-bytes-estimate-total 33554432` (32 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 167772160` (160 MiB)
 - `image-heavy-memory-steady`:
@@ -471,6 +490,9 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-renderer-intermediate-peak-in-use-bytes 67108864` (64 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
+  - Optional (when scripts vary image pressure; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images 251658240,1010000,33554432` (240 MiB + 1.01 * images + 32 MiB)
+    - `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images 117440512,1010000,33554432` (112 MiB + 1.01 * images + 32 MiB)
 - `image-heavy-memory-steady-after-drop`:
   - Note: do not set `--max-macos-physical-footprint-peak-bytes` for this scenario; the script includes a pre-drop peak by design.
   - `--max-macos-owned-unmapped-memory-dirty-bytes 293601280` (280 MiB)
@@ -483,6 +505,10 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-macos-malloc-small-dirty-bytes 104857600` (100 MiB)
   - `--max-macos-io-surface-dirty-bytes 67108864` (64 MiB)
   - `--max-macos-io-accelerator-dirty-bytes 16777216` (16 MiB)
+  - Optional (best-effort; monitor-only until we have a stable distribution):
+    - `--max-render-text-shape-cache-bytes-estimate-total 67108864` (64 MiB)
+    - `--max-render-text-blob-paint-palette-bytes-estimate-total 8388608` (8 MiB)
+    - `--max-render-text-blob-decorations-bytes-estimate-total 4194304` (4 MiB)
   - `--max-wgpu-metal-current-allocated-size-bytes 150994944` (144 MiB)
 
 Note: these numbers are intentionally conservative and should be revisited when:
@@ -507,6 +533,9 @@ Note: these numbers are intentionally conservative and should be revisited when:
   - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
   - This helps separate a “baseline intercept” (swapchain/driver/allocator) from per-image growth, and tells us where
     further instrumentation is worthwhile.
+ - **Size sweep (image-heavy):** run `tools/diag-scripts/suites/tooling-image-heavy-memory-sweep-size/suite.json` and
+  validate whether `wgpu_metal_current_allocated_size_bytes_max` and the macOS (graphics) unmapped footprint scale
+  ~1:1 with `renderer_gpu_images_bytes_estimate` across texture sizes (detect tiling/alignment multipliers).
 
 ### Count sweep (results; local 2026-03-05)
 
@@ -525,3 +554,20 @@ Interpretation:
 
 - The headline bucket is dominated by **live texture pressure + a baseline intercept**, and scales ~1:1 with the estimated image bytes.
 - This strongly suggests our “high memory” in image-heavy scenarios is not primarily font/text heap; it is expected GPU resource pressure plus a platform/driver baseline.
+
+### Size sweep (results; local 2026-03-05)
+
+Using `target/diag/mem-sweep-size-20260305/` (N=3 each; count=24; 512/1024/2048 RGBA8 images):
+
+- p50 table:
+  - size=512: images=24.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=123.0 MiB, `Owned physical footprint (unmapped) (graphics)`=241.1 MiB
+  - size=1024: images=96.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=195.4 MiB, `Owned physical footprint (unmapped) (graphics)`=313.5 MiB
+  - size=2048: images=384.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=485.7 MiB, `Owned physical footprint (unmapped) (graphics)`=605.8 MiB
+- Linear fit (least squares; y = intercept + slope * images_bytes):
+  - `Owned physical footprint (unmapped) (graphics)`: intercept ≈ 216.5 MiB, slope ≈ 1.01 bytes/byte
+  - `wgpu_metal_current_allocated_size_bytes_max`: intercept ≈ 98.8 MiB, slope ≈ 1.01 bytes/byte
+
+Interpretation:
+
+- The ~1:1 bytes/byte scaling holds across texture sizes (no large tiling/alignment multiplier visible in this sweep).
+- The intercepts closely match the count sweep, strengthening the “baseline + linear image pressure” model.
