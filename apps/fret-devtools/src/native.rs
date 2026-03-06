@@ -1089,12 +1089,6 @@ fn center_panel(
         .read(&st.script_last_reason, |v| v.clone())
         .ok()
         .flatten();
-    let script_last_bundle_dir = cx
-        .app
-        .models()
-        .read(&st.script_last_bundle_dir, |v| v.clone())
-        .ok()
-        .flatten();
     let pack_after_run = cx
         .app
         .models()
@@ -1182,26 +1176,6 @@ fn center_panel(
     let (script_summary, script_is_valid) = script_summary_line(&script_text);
     let script_steps = script_steps_len(&script_text).unwrap_or(0);
     let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
-    let status_line = {
-        let stage = script_last_stage
-            .as_ref()
-            .map(|s| format!("{s:?}"))
-            .unwrap_or_else(|| "None".to_string());
-        let step = script_last_step_index
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "-".to_string());
-        let reason = script_last_reason
-            .as_deref()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "-".to_string());
-        let bundle = script_last_bundle_dir
-            .as_deref()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "-".to_string());
-        format!(
-            "status={stage} step={step}/{script_steps} reason={reason} last_bundle_dir={bundle}"
-        )
-    };
     let pack_status_line = {
         let err = pack_last_error
             .as_deref()
@@ -1330,17 +1304,31 @@ fn center_panel(
         .items_center()
         .into_element(cx);
 
-    let loaded_line = match (loaded_origin, loaded_path.as_deref()) {
-        (Some(origin), Some(path)) => format!("Loaded: [{}] {path}", origin.label()),
-        _ => "Loaded: <none>".to_string(),
-    };
     let out_dir_line = match target_out_dir.as_deref() {
         Some(dir) => format!("Target diag out_dir: {dir}"),
         None => "Target diag out_dir: <unknown>".to_string(),
     };
-    let pack_line = match last_pack_path.as_deref() {
-        Some(p) => format!("Last pack: {p}"),
-        None => "Last pack: <none>".to_string(),
+    let loaded_summary_line = match (loaded_origin, loaded_path.as_deref()) {
+        (Some(origin), Some(path)) => format!("Loaded [{}] {}", origin.label(), path),
+        _ => "Loaded <none>".to_string(),
+    };
+    let run_summary_line = {
+        let stage = script_last_stage
+            .as_ref()
+            .map(|s| format!("{s:?}"))
+            .unwrap_or_else(|| "None".to_string());
+        let step = script_last_step_index
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!("Run status: {stage} • step {step}/{script_steps}")
+    };
+    let reason_summary_line = script_last_reason
+        .as_deref()
+        .map(|s| format!("Reason: {s}"))
+        .unwrap_or_else(|| "Reason: -".to_string());
+    let pack_summary_line = match last_pack_path.as_deref() {
+        Some(path) => format!("Pack output: {path}"),
+        None => format!("Pack output: <none> • {pack_status_line}"),
     };
     let script_status_badges = ui::h_row(|cx| {
             [
@@ -1829,6 +1817,39 @@ fn center_panel(
         ])
         .into_element(cx);
 
+    let scripts_sidebar = ui::v_stack(|cx| {
+        [
+            cx.text("Script Library"),
+            cx.text(format!("Workspace + local scripts: {}", scripts.len())),
+            scripts_list,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    let editor_workspace = ui::v_stack(|cx| {
+        [
+            cx.text("Script Editor"),
+            cx.text(format!("Script text bytes={}", script_text.len())),
+            textarea,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+    .into_element(cx);
+
+    let helper_workspace = ui::v_stack(|cx| {
+        [
+            cx.text("Helpers"),
+            cx.text("Insert steps, patch selectors, and build predicates."),
+            helpers_tabs,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+
     let split = ui::h_row(|cx| {
         [
             cx.container(
@@ -1839,7 +1860,7 @@ fn center_panel(
                         .w_px(Px(240.0))
                         .h_full(),
                 ),
-                |_cx| [scripts_list],
+                |_cx| [scripts_sidebar],
             ),
             cx.container(
                 fret_ui_kit::declarative::style::container_props(
@@ -1847,7 +1868,7 @@ fn center_panel(
                     fret_ui_kit::ChromeRefinement::default(),
                     fret_ui_kit::LayoutRefinement::default().flex_1().min_w_0().h_full(),
                 ),
-                |_cx| [textarea],
+                |_cx| [editor_workspace],
             ),
             cx.container(
                 fret_ui_kit::declarative::style::container_props(
@@ -1857,7 +1878,7 @@ fn center_panel(
                         .w_px(Px(320.0))
                         .h_full(),
                 ),
-                |_cx| [helpers_tabs],
+                |_cx| [helper_workspace],
             ),
         ]
     })
@@ -1877,17 +1898,16 @@ fn center_panel(
             primary_actions,
             library_actions,
             script_status_badges,
-            cx.text(format!("validate: {script_summary}")),
-            cx.text(status_line),
-            cx.text(pack_status_line),
+            cx.text(format!("Validate: {script_summary}")),
+            cx.text(run_summary_line),
+            cx.text(reason_summary_line),
             apply_row,
             pack_row,
             viewer_row,
-            cx.text(loaded_line),
+            cx.text(loaded_summary_line),
             cx.text(out_dir_line),
-            cx.text(pack_line),
+            cx.text(pack_summary_line),
             split,
-            cx.text(format!("Script text bytes={}", script_text.len())),
         ])
         .into_element(cx),
     ])
