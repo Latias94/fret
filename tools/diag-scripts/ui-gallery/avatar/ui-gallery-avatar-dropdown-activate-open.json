@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-avatar-docs-screenshots",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "shadcn", "avatar", "badge", "dropdown", "screenshots"]
+    "name": "ui-gallery-avatar-dropdown-activate-open",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "avatar", "dropdown", "activate"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -35,30 +35,16 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 20 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-avatar-badge-icon" },
-      "delta_y": -520.0,
-      "padding_px": 16.0,
-      "timeout_frames": 1800
-    },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "ui-gallery-avatar-badge-icon" },
-    { "type": "capture_screenshot", "label": "ui-gallery-avatar-badge-icon" },
-
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger-avatar" },
-      "delta_y": -360.0,
+      "delta_y": -520.0,
       "padding_px": 16.0,
       "timeout_frames": 1800
     },
-    { "type": "wait_frames", "n": 10 },
     {
-      "type": "click_stable",
+      "type": "activate",
       "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger-avatar" }
     },
     {
@@ -72,8 +58,6 @@
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "ui-gallery-avatar-dropdown-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-avatar-dropdown-open" }
+    { "type": "capture_bundle", "label": "ui-gallery-avatar-dropdown-activate-open" }
   ]
 }

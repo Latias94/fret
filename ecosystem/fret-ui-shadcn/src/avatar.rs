@@ -124,6 +124,11 @@ impl Avatar {
         }
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
     pub fn size(mut self, size: AvatarSize) -> Self {
         self.size = size;
         self
