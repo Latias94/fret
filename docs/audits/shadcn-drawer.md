@@ -57,6 +57,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
 - Pass: `DrawerClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
+- Pass: `Drawer::compose()` provides a recipe-level builder for part assembly without pushing
+  shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog
   substrate building blocks (`Title`/`Description`).
 
@@ -79,6 +81,16 @@ Upstream exports a thin wrapper around `vaul`:
   `Drawer::on_dismiss_request(...)` (delegates to `Sheet`).
 - Pass: Open lifecycle callbacks are available via `Drawer::on_open_change(...)` and
   `Drawer::on_open_change_complete(...)` (delegates to `Sheet`).
+
+## Authoring note: `compose()`
+
+`Drawer::compose()` is a recipe-layer bridge for authors who want a more composable part-based
+style than the raw closure root.
+
+- Scope: ergonomics only; it lowers into `Drawer::into_element_parts(...)`.
+- Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
+- Limitation: this is still not a full React-style nested children API; Fret stores already-built
+  elements and assembles them at the final call site.
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from a small handle affordance region.
 
 ### Focus behavior
