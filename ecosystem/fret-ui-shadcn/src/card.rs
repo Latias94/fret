@@ -449,12 +449,12 @@ impl CardHeader {
                 vec![left_col, action],
             )
         } else {
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
                     .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full()),
+                    .items_start(),
                 left,
             )
         };
@@ -765,7 +765,7 @@ mod tests {
                 .first()
                 .unwrap_or_else(|| panic!("expected CardContent to have a single vstack child"));
 
-            let ElementKind::Column(ColumnProps { align, .. }) = &child.kind else {
+            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
                 panic!("expected CardContent child to be a column element");
             };
 
@@ -773,6 +773,62 @@ mod tests {
                 *align,
                 CrossAlign::Start,
                 "expected CardContent to avoid cross-axis stretch so inline-sized children (e.g. buttons) do not fill the card width"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardContent inner flow root to request fill width so wrapped text resolves against the card's inner width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardContent inner flow root to opt into min-w-0 so nested flex/text content can shrink and wrap"
+            );
+        });
+    }
+
+    #[test]
+    fn card_header_without_action_uses_fill_width_flow_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardHeader::new([
+                CardTitle::new("Overview").into_element(cx),
+                CardDescription::new(
+                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let child = el
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected CardHeader to have a single inner flow child"));
+
+            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
+                panic!("expected CardHeader child to be a column element");
+            };
+
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected CardHeader without an action slot to avoid cross-axis stretch on the inner flow root"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardHeader inner flow root to request fill width so wrapped title/description text resolves against the card width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardHeader inner flow root to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
             );
         });
     }
@@ -1441,15 +1497,17 @@ impl CardContent {
         };
         let children = self.children;
         with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 // Upstream shadcn/ui `CardContent` is a plain `div` (`px-6`) rather than a flex
                 // container, so avoid the default `items: stretch` behavior that would expand
-                // inline-sized children (e.g. buttons) to fill the card width.
+                // inline-sized children (e.g. buttons) to fill the card width. Still request a
+                // fill-width flow root so wrapped text resolves against the section's inner width
+                // instead of shrink-wrapping to an intrinsic/min-content width.
                 shadcn_layout::VStackProps::default()
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
+                    .layout(LayoutRefinement::default()),
                 children,
             )
         })
