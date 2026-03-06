@@ -48,6 +48,14 @@ pub(crate) struct CampaignRegistry {
     campaigns: Vec<CampaignDefinition>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct CampaignFilterOptions {
+    pub lane: Option<RegressionLaneV1>,
+    pub tier: Option<String>,
+    pub tags: Vec<String>,
+    pub platforms: Vec<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct CampaignManifestV1 {
     schema_version: u64,
@@ -170,6 +178,51 @@ impl CampaignDefinition {
             .filter(|item| item.kind == CampaignItemKind::Script)
             .count()
     }
+
+    pub(crate) fn matches_filter(&self, filter: &CampaignFilterOptions) -> bool {
+        if let Some(lane) = filter.lane
+            && self.lane != lane
+        {
+            return false;
+        }
+        if let Some(tier) = filter.tier.as_deref()
+            && !self
+                .tier
+                .as_deref()
+                .is_some_and(|value| value.eq_ignore_ascii_case(tier))
+        {
+            return false;
+        }
+        if !filter.tags.is_empty() {
+            let tags = self
+                .tags
+                .iter()
+                .map(|tag| tag.to_ascii_lowercase())
+                .collect::<Vec<_>>();
+            if !filter
+                .tags
+                .iter()
+                .all(|tag| tags.iter().any(|value| value == &tag.to_ascii_lowercase()))
+            {
+                return false;
+            }
+        }
+        if !filter.platforms.is_empty() {
+            let platforms = self
+                .platforms
+                .iter()
+                .map(|platform| platform.to_ascii_lowercase())
+                .collect::<Vec<_>>();
+            if !filter.platforms.iter().all(|platform| {
+                platforms
+                    .iter()
+                    .any(|value| value == &platform.to_ascii_lowercase())
+            }) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl CampaignRegistry {
@@ -199,8 +252,14 @@ impl CampaignRegistry {
         })
     }
 
-    pub(crate) fn list_campaigns(&self) -> &[CampaignDefinition] {
-        &self.campaigns
+    pub(crate) fn filtered_campaigns<'a>(
+        &'a self,
+        filter: &CampaignFilterOptions,
+    ) -> Vec<&'a CampaignDefinition> {
+        self.campaigns
+            .iter()
+            .filter(|campaign| campaign.matches_filter(filter))
+            .collect()
     }
 
     pub(crate) fn resolve(&self, campaign_id: &str) -> Result<&CampaignDefinition, String> {
@@ -516,6 +575,20 @@ mod tests {
         let error = registry.resolve("missing-campaign").unwrap_err();
         assert!(error.contains("unknown diag campaign"));
         assert!(error.contains("ui-gallery-smoke"));
+    }
+
+    #[test]
+    fn campaign_filter_matches_lane_tag_and_platform() {
+        let registry = CampaignRegistry::builtin();
+        let filter = CampaignFilterOptions {
+            lane: Some(RegressionLaneV1::Smoke),
+            tier: Some("smoke".to_string()),
+            tags: vec!["ui-gallery".to_string()],
+            platforms: vec!["native".to_string()],
+        };
+        let campaigns = registry.filtered_campaigns(&filter);
+        assert_eq!(campaigns.len(), 1);
+        assert_eq!(campaigns[0].id, "ui-gallery-smoke");
     }
 
     #[test]

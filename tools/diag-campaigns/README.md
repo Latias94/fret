@@ -16,6 +16,7 @@ Current rules:
 Example:
 
 - `cargo run -p fretboard -- diag campaign list --json`
+- `cargo run -p fretboard -- diag campaign list --lane smoke --tag ui-gallery --platform native`
 - `cargo run -p fretboard -- diag campaign show ui-gallery-smoke --json`
 - `cargo run -p fretboard -- diag campaign show ui-gallery-accordion-script-smoke --json`
 - `cargo run -p fretboard -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`

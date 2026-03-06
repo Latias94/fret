@@ -1,8 +1,8 @@
 use super::*;
 
 use crate::registry::campaigns::{
-    CampaignDefinition, CampaignItemDefinition, CampaignItemKind, CampaignRegistry,
-    campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
+    CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
+    CampaignRegistry, campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
 };
 use crate::regression_summary::RegressionLaneV1;
 
@@ -173,18 +173,15 @@ fn cmd_campaign_list(
     rest: &[String],
     json: bool,
 ) -> Result<(), String> {
-    if let Some(other) = rest.first() {
-        return Err(format!(
-            "unexpected positional for `diag campaign list`: {other}"
-        ));
-    }
+    let filter = parse_campaign_list_filters(rest)?;
+    let campaigns = registry.filtered_campaigns(&filter);
 
     if json {
         let payload = serde_json::json!({
-            "campaigns": registry
-                .list_campaigns()
+            "filters": campaign_filter_to_json(&filter),
+            "campaigns": campaigns
                 .iter()
-                .map(campaign_to_json)
+                .map(|campaign| campaign_to_json(campaign))
                 .collect::<Vec<_>>(),
         });
         println!(
@@ -194,7 +191,7 @@ fn cmd_campaign_list(
         return Ok(());
     }
 
-    for campaign in registry.list_campaigns() {
+    for campaign in campaigns {
         let mut details = vec![
             lane_to_str(campaign.lane).to_string(),
             format!("suites={}", campaign.suite_count()),
@@ -216,6 +213,56 @@ fn cmd_campaign_list(
     }
 
     Ok(())
+}
+
+fn parse_campaign_list_filters(rest: &[String]) -> Result<CampaignFilterOptions, String> {
+    let mut filter = CampaignFilterOptions::default();
+    let mut index = 0;
+    while index < rest.len() {
+        match rest[index].as_str() {
+            "--lane" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --lane".to_string())?;
+                filter.lane = Some(parse_lane(value)?);
+                index += 2;
+            }
+            "--tier" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --tier".to_string())?;
+                filter.tier = Some(value.to_string());
+                index += 2;
+            }
+            "--tag" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --tag".to_string())?;
+                filter.tags.push(value.to_string());
+                index += 2;
+            }
+            "--platform" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --platform".to_string())?;
+                filter.platforms.push(value.to_string());
+                index += 2;
+            }
+            other => {
+                return Err(format!("unknown diag campaign list flag: {other}"));
+            }
+        }
+    }
+    Ok(filter)
+}
+
+fn campaign_filter_to_json(filter: &CampaignFilterOptions) -> serde_json::Value {
+    serde_json::json!({
+        "lane": filter.lane,
+        "tier": filter.tier,
+        "tags": filter.tags,
+        "platforms": filter.platforms,
+    })
 }
 
 fn cmd_campaign_show(

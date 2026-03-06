@@ -68,10 +68,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] perf,
   - [ ] nightly/full.
 - [ ] Define suite metadata needed for scalable execution:
-  - [ ] tier,
-  - [ ] owner,
-  - [ ] platform,
-  - [ ] expected duration,
+  - [x] first-pass campaign metadata is now present (`tier`, `owner`, `platforms`, `expected_duration_ms`, `tags`),
   - [ ] flake policy,
   - [ ] capability/feature tags.
 - [x] Decide whether to introduce a first-class “campaign” orchestration layer.
@@ -157,6 +154,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] summary/index artifacts,
   - [ ] failing evidence bundles,
   - [ ] copy/share-friendly paths.
+- [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
 - [ ] Add one thin maintainer note that explains the intended automation flow:
   - [ ] author or choose script,
   - [ ] run suite/campaign,
