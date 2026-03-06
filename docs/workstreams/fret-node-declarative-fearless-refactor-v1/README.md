@@ -466,6 +466,7 @@ This workstream is complete only when it leaves behind:
 - XyFlow parity map: `docs/node-graph-xyflow-parity.md`
 - XYFlow gap analysis: `docs/workstreams/xyflow-gap-analysis.md`
 - External downstream alias audit: `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`
+- External downstream inventory: `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`
 
 ## Evidence anchors to preserve while refactoring
 

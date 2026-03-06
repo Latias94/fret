@@ -321,6 +321,8 @@ removed or permanently demoted.
 - A stable gate matrix comparing compatibility retained vs declarative behavior where it matters.
 - An external downstream audit note + inventory before root queue/helper aliases receive deprecated markers
   (`docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`).
+- A populated external downstream inventory ledger
+  (`docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`).
 
 ### Done criteria
 
@@ -334,6 +336,7 @@ removed or permanently demoted.
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`
 
 ## Suggested milestone order
 

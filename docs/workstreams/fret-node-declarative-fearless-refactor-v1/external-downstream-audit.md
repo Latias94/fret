@@ -47,7 +47,7 @@ Still intentionally open:
 
 - no deprecated markers on root aliases yet
 - no release-note migration note yet
-- no explicit external downstream inventory yet
+- no populated external downstream inventory yet (`external-downstream-inventory.md` is now the skeleton)
 
 ## Audit scope
 
@@ -151,10 +151,14 @@ The root aliases are ready for deprecated markers only if all of the following a
 
 Leave behind these artifacts when the audit is executed:
 
-- a small downstream inventory table
+- a filled downstream inventory file (`external-downstream-inventory.md`)
 - links to migration PRs / commits when applicable
 - a short exception list with owners and dates
 - the exact release note wording to use when deprecated markers are added
+
+## Execution ledger
+
+Use `external-downstream-inventory.md` as the canonical execution ledger for this audit.
 
 ## Suggested inventory table
 
@@ -184,6 +188,7 @@ Those are follow-up governance decisions.
 - `ecosystem/fret-node/src/ui/mod.rs`
 - `apps/fret-examples/src/node_graph_domain_demo.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md`
