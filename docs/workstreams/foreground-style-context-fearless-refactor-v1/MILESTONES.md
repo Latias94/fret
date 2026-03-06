@@ -53,6 +53,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/navigation_drawer` labels are now covered too: labels shrink beside optional
   badges because the left content slot and label text both explicitly fill available width and opt
   into `min-w-0`.
+- `fret-ui-material3/tabs` labels are now covered too: non-scrollable primary tabs keep stable
+  one-line clip semantics because the label text explicitly fills the equal-width tab slot and opts
+  into `min-w-0`.
 
 ---
 
