@@ -3970,6 +3970,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 #[cfg(test)]
 mod tests {
     use std::any::Any;
+    use std::cell::RefCell;
+    use std::rc::Rc;
     use std::sync::Arc;
 
     use fret_canvas::view::PanZoom2D;
@@ -3982,14 +3984,19 @@ mod tests {
         build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
         build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
         build_node_drag_transaction, commit_graph_transaction,
-        commit_marquee_selection_action_host, commit_pending_selection_action_host,
-        node_drag_commit_delta, pointer_crossed_threshold,
+        commit_marquee_selection_action_host, commit_node_drag_transaction,
+        commit_pending_selection_action_host, node_drag_commit_delta, pointer_crossed_threshold,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
     };
     use crate::io::NodeGraphViewState;
     use crate::ops::GraphOp;
+    use crate::runtime::callbacks::{
+        NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+        install_callbacks,
+    };
+    use crate::runtime::changes::NodeGraphChanges;
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphController;
     use serde_json::Value;
@@ -4263,6 +4270,77 @@ mod tests {
         assert_eq!(graph_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(store_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(synced_zoom, 1.0);
+    }
+
+    #[test]
+    fn commit_node_drag_transaction_notifies_store_callbacks_through_controller() {
+        #[derive(Clone)]
+        struct Recorder {
+            commits: Rc<RefCell<Vec<(Option<String>, usize)>>>,
+        }
+
+        impl NodeGraphCommitCallbacks for Recorder {
+            fn on_graph_commit(
+                &mut self,
+                committed: &crate::ops::GraphTransaction,
+                changes: &NodeGraphChanges,
+            ) {
+                self.commits
+                    .borrow_mut()
+                    .push((committed.label.clone(), changes.nodes.len()));
+            }
+        }
+
+        impl NodeGraphViewCallbacks for Recorder {}
+
+        impl NodeGraphGestureCallbacks for Recorder {}
+
+        let mut host = TestActionHostImpl::default();
+        let mut graph_value = Graph::new(GraphId::from_u128(6));
+        let node = NodeId::from_u128(199);
+        graph_value
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+        let commits: Rc<RefCell<Vec<(Option<String>, usize)>>> = Rc::new(RefCell::new(Vec::new()));
+        let _callbacks_token = host
+            .models
+            .update(&store, |store| {
+                install_callbacks(
+                    store,
+                    Recorder {
+                        commits: commits.clone(),
+                    },
+                )
+            })
+            .expect("install callbacks");
+
+        let tx = host
+            .models
+            .read(&graph, |graph| {
+                build_node_drag_transaction(graph, &[node], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_node_drag_transaction(
+            &mut host,
+            &graph,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+            &tx,
+        ));
+
+        let callback_commits = commits.borrow();
+        assert_eq!(callback_commits.len(), 1);
+        assert_eq!(callback_commits[0].0.as_deref(), Some("Move Node"));
+        assert_eq!(callback_commits[0].1, 1);
     }
 
     #[test]

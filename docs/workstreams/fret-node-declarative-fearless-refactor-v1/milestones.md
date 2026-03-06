@@ -250,7 +250,7 @@ points rather than direct graph mutation.
 
 - transaction/undo/redo tests for the new controller path
 - at least one declarative drag or marquee gate that proves commit goes through the transaction-safe
-  path
+  path (landed for controller-backed declarative node drag in `paint_only.rs`)
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors
