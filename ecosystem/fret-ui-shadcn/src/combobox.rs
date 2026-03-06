@@ -243,7 +243,7 @@ impl ComboboxClear {
 ///
 /// Upstream uses Base UI render props to map `items` 闂?list rows. In Fret we expose a structured
 /// adapter that maps part configuration onto the existing Popover + Command recipe so upstream
-/// 闂傚倸鍊烽懗鍫曞磻閵娾晛纾块柡灞诲劜閸庢绱掔捄铏光攬ge闂?shapes remain expressible in Rust.
+/// 闂傚倸鍊搁崐鐑芥嚄閸洖纾婚柕濞炬櫅绾惧潡鏌＄仦璇插姕闁稿孩顨堢槐鎺旀崉閾忓厜鏀琯e闂?shapes remain expressible in Rust.
 #[derive(Debug)]
 pub enum ComboboxPart {
     Trigger(ComboboxTrigger),
@@ -3140,7 +3140,6 @@ mod tests {
 
                             let combobox = Combobox::new(model, open)
                                 .test_id_prefix("cb")
-                                .trigger_test_id("cb-trigger")
                                 .into_element_parts(cx, |_cx| {
                                     vec![
                                         ComboboxPart::trigger(
@@ -3818,7 +3817,6 @@ mod tests {
                 move |cx| {
                     let el = Combobox::new(model, open)
                         .test_id_prefix("cb")
-                        .trigger_test_id("cb-trigger")
                         .items(items())
                         .into_element(cx);
 

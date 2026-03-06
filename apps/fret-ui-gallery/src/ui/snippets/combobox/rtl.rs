@@ -45,7 +45,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .a11y_label("Combobox RTL")
                 .query_model(query.clone())
                 .test_id_prefix("ui-gallery-combobox-rtl")
-                .trigger_test_id("ui-gallery-combobox-rtl-trigger")
                 .items([
                     shadcn::ComboboxItem::new("next", "Next.js"),
                     shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
@@ -57,7 +56,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
                         ),
                         shadcn::ComboboxPart::from(
-                            shadcn::ComboboxInput::new().placeholder("ابحث عن إطار عمل"),
+                            shadcn::ComboboxInput::new()
+                                .placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"),
                         ),
                     ]
                 })

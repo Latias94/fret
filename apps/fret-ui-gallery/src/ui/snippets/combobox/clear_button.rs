@@ -87,7 +87,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox clear")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-clear")
-        .trigger_test_id("ui-gallery-combobox-clear-trigger")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
             shadcn::ComboboxItem::new("svelte", "SvelteKit"),
