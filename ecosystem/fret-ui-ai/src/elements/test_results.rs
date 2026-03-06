@@ -197,13 +197,11 @@ fn status_badge<H: UiHost>(
             ink_overflow: Default::default(),
         });
 
-        vec![
-            ui::h_row(move |_cx| vec![icon, text])
-                .items(Items::Center)
-                .justify(Justify::Center)
-                .gap(Space::N1)
-                .into_element(cx),
-        ]
+        vec![ui::h_row(move |_cx| vec![icon, text])
+            .items(Items::Center)
+            .justify(Justify::Center)
+            .gap(Space::N1)
+            .into_element(cx)]
     })
 }
 
@@ -291,13 +289,11 @@ impl TestResults {
         let children = if let Some(children) = self.children {
             children
         } else if let Some(summary) = self.summary.clone() {
-            vec![
-                TestResultsHeader::new([
-                    TestResultsSummary::new(summary.clone()).into_element(cx),
-                    TestResultsDuration::new(summary).into_element(cx),
-                ])
-                .into_element(cx),
-            ]
+            vec![TestResultsHeader::new([
+                TestResultsSummary::new(summary.clone()).into_element(cx),
+                TestResultsDuration::new(summary).into_element(cx),
+            ])
+            .into_element(cx)]
         } else {
             Vec::new()
         };
@@ -610,13 +606,11 @@ impl TestResultsProgress {
                     cx.container(props, |_cx| Vec::new())
                 };
 
-                vec![
-                    ui::h_row(move |_cx| vec![passed_seg, failed_seg])
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N0)
-                        .items(Items::Stretch)
-                        .into_element(cx),
-                ]
+                vec![ui::h_row(move |_cx| vec![passed_seg, failed_seg])
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N0)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             })
         };
 
@@ -862,12 +856,20 @@ impl TestSuiteName {
         let status_icon = status_icon(cx, &theme, self.status, Px(16.0));
 
         let name_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    min_width: Some(Length::Px(Px(0.0))),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
             text: self.name.clone(),
             style: None,
             color: None,
             wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
+            overflow: TextOverflow::Ellipsis,
             align: fret_core::TextAlign::Start,
             ink_overflow: Default::default(),
         });
@@ -916,7 +918,7 @@ impl TestSuiteName {
             } else {
                 Some(
                     ui::h_row(move |_cx| parts)
-                        .layout(LayoutRefinement::default().flex_shrink_0())
+                        .layout(LayoutRefinement::default().ml_auto().flex_shrink_0())
                         .gap(Space::N2)
                         .items(Items::Center)
                         .into_element(cx),
@@ -970,6 +972,7 @@ pub struct Test {
     status: TestStatusKind,
     duration_ms: Option<u32>,
     children: Option<Vec<AnyElement>>,
+    details: Option<Vec<AnyElement>>,
     on_activate: Option<OnTestActivate>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -986,6 +989,10 @@ impl std::fmt::Debug for Test {
                 "children_len",
                 &self.children.as_ref().map(|c| c.len()).unwrap_or(0),
             )
+            .field(
+                "details_len",
+                &self.details.as_ref().map(|c| c.len()).unwrap_or(0),
+            )
             .field("has_on_activate", &self.on_activate.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
@@ -1001,6 +1008,7 @@ impl Test {
             status,
             duration_ms: None,
             children: None,
+            details: None,
             on_activate: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
@@ -1015,6 +1023,11 @@ impl Test {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = Some(children.into_iter().collect());
+        self
+    }
+
+    pub fn details(mut self, details: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.details = Some(details.into_iter().collect());
         self
     }
 
@@ -1051,59 +1064,72 @@ impl Test {
         let test_id = self.test_id;
 
         let children = self.children;
+        let details = self.details;
         let theme_for_content = theme.clone();
         let name_for_content = name.clone();
         let content_factory = move |cx: &mut ElementContext<'_, H>| {
-            if let Some(children) = children {
-                return ui::h_row(move |_cx| children)
+            let content = if let Some(children) = children {
+                ui::h_row(move |_cx| children)
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
                     .items(Items::Center)
-                    .into_element(cx);
-            }
-
-            let status_el = status_icon(cx, &theme_for_content, status, Px(16.0));
-            let name_el = cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        min_width: Some(Length::Px(Px(0.0))),
+                    .into_element(cx)
+            } else {
+                let status_el = status_icon(cx, &theme_for_content, status, Px(16.0));
+                let name_el = cx.text_props(TextProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            min_width: Some(Length::Px(Px(0.0))),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                text: name_for_content.clone(),
-                style: None,
-                color: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
-
-            let duration_el = duration.map(|ms| {
-                cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: Arc::<str>::from(format!("{ms}ms")),
+                    text: name_for_content.clone(),
                     style: None,
-                    color: Some(theme_for_content.color_token("muted-foreground")),
+                    color: None,
                     wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
+                    overflow: TextOverflow::Ellipsis,
                     align: fret_core::TextAlign::Start,
                     ink_overflow: Default::default(),
-                })
-            });
+                });
 
-            let mut children = vec![status_el, name_el];
-            if let Some(duration_el) = duration_el {
-                children.push(duration_el);
-            }
+                let duration_el = duration.map(|ms| {
+                    cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: Arc::<str>::from(format!("{ms}ms")),
+                        style: None,
+                        color: Some(theme_for_content.color_token("muted-foreground")),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
+                    })
+                });
 
-            ui::h_row(move |_cx| children)
+                let mut children = vec![status_el, name_el];
+                if let Some(duration_el) = duration_el {
+                    children.push(duration_el);
+                }
+
+                ui::h_row(move |_cx| children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2)
+                    .items(Items::Center)
+                    .into_element(cx)
+            };
+
+            let Some(details) = details else {
+                return content;
+            };
+
+            let mut stacked = vec![content];
+            stacked.extend(details);
+            ui::v_stack(move |_cx| stacked)
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N2)
-                .items(Items::Center)
+                .items(Items::Stretch)
                 .into_element(cx)
         };
 
@@ -1206,9 +1232,15 @@ impl TestError {
 
         let chrome = self.chrome.bg(ColorRef::Color(bg));
         let children = self.children;
+        let content = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Stretch)
+            .into_element(cx);
+
         cx.container(
             decl_style::container_props(&theme, chrome, self.layout),
-            move |_cx| children,
+            move |_cx| vec![content],
         )
     }
 }
@@ -1439,13 +1471,11 @@ impl TestResultsContent {
         let content = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
             move |cx| {
-                vec![
-                    ui::v_stack(move |_cx| children)
-                        .layout(layout)
-                        .gap(Space::N2)
-                        .items(Items::Stretch)
-                        .into_element(cx),
-                ]
+                vec![ui::v_stack(move |_cx| children)
+                    .layout(layout)
+                    .gap(Space::N2)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             },
         );
 
