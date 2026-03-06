@@ -264,6 +264,7 @@ Interpretation update:
 - the current single-window UI batch (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) reduces that inventory again to 13, reinforcing that the remaining blockers are composition complexity and migration effort, not launch-hook insufficiency.
 - the latest medium-complexity desktop batch (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) reduces that inventory again to 8, leaving only the heaviest docking/gallery/gizmo/node-graph examples on direct `WinitAppDriver` posture.
 - `canvas_datagrid_stress_demo` also migrates cleanly to pure free hooks, reducing that inventory again to 7 and further supporting the conclusion that `FnDriver` is not blocked on additional stress/perf hook surface.
+- `docking_demo` shows the remaining gap was not in `FnDriverHooks` at all, but in the facade posture: once `fret::run_native_with_configured_fn_driver(...)` exists for preconfigured `.with_init(...)` drivers, docking orchestration also migrates cleanly and the inventory drops again to 6.
 
 ### H3) Specialized launch modules still need classification discipline
 

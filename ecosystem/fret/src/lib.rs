@@ -8,8 +8,9 @@
 //! ## Choosing a native entry path
 //!
 //! - `fret::App::new(...).window(...).ui(...)?` is the recommended app-author path.
-//! - `fret::run_native_with_fn_driver(...)` / `fret::run_native_with_fn_driver_with_hooks(...)`
-//!   are the recommended advanced escape hatches when you need runner-level customization but
+//! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
+//!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
+//!   hatches when you need runner-level customization but
 //!   still want the `fret` defaults/bootstrap story.
 //! - `fret::run_native_with_compat_driver(...)` is a compatibility path for existing low-level
 //!   integrations that still implement `fret_launch::WinitAppDriver` directly.
@@ -662,6 +663,23 @@ pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
         configure_hooks,
     )
     .configure(move |c| {
+        *c = config;
+    });
+
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
+
+    builder.run().map_err(RunnerError::from)?;
+    Ok(())
+}
+
+/// Run a native desktop app using a preconfigured advanced `FnDriver` instance.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver: fret_launch::FnDriver<D, S>,
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
         *c = config;
     });
 

@@ -211,6 +211,10 @@ Evidence anchors:
 - `canvas_datagrid_stress_demo` reinforces the same point from the retained-canvas stress side:
   GPU prep, perf snapshot reporting, model/global propagation, and close semantics all migrate to
   the existing free-hook surface, taking the remaining direct impl inventory down to seven.
+- `docking_demo` tightens the conclusion further: the only blocker there was an app-facing helper
+  gap for preconfigured `.with_init(...)` `FnDriver` values, not a missing hook. Adding
+  `fret::run_native_with_configured_fn_driver(...)` closes that posture gap and reduces the
+  remaining direct impl inventory to six.
 
 Evidence anchors:
 
@@ -233,6 +237,8 @@ Evidence anchors:
 - `apps/fret-examples/src/virtual_list_stress_demo.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/canvas_datagrid_stress_demo.rs`
+- `apps/fret-examples/src/docking_demo.rs`
+- `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)
