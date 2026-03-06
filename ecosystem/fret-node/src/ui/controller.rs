@@ -11,6 +11,7 @@ use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
 use crate::runtime::utils::{get_connected_edges, get_incomers, get_outgoers};
 
+use super::edit_queue::NodeGraphEditQueue;
 use super::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue};
 use super::viewport_helper::pan_for_center;
 
@@ -43,6 +44,7 @@ pub struct NodeGraphNodeConnectionsQuery {
 #[derive(Debug, Clone)]
 pub struct NodeGraphController {
     store: Model<NodeGraphStore>,
+    edit_queue: Option<Model<NodeGraphEditQueue>>,
     view_queue: Option<Model<NodeGraphViewQueue>>,
 }
 
@@ -50,8 +52,14 @@ impl NodeGraphController {
     pub fn new(store: Model<NodeGraphStore>) -> Self {
         Self {
             store,
+            edit_queue: None,
             view_queue: None,
         }
+    }
+
+    pub fn with_edit_queue(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
+        self.edit_queue = Some(queue);
+        self
     }
 
     pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
@@ -61,6 +69,10 @@ impl NodeGraphController {
 
     pub fn store(&self) -> Model<NodeGraphStore> {
         self.store.clone()
+    }
+
+    pub fn edit_queue(&self) -> Option<Model<NodeGraphEditQueue>> {
+        self.edit_queue.clone()
     }
 
     pub fn view_queue(&self) -> Option<Model<NodeGraphViewQueue>> {
@@ -103,6 +115,49 @@ impl NodeGraphController {
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, NodeGraphControllerError> {
         self.dispatch_transaction_in_models(host.models_mut(), tx)
+    }
+
+    pub fn submit_transaction<H: UiHost>(
+        &self,
+        host: &mut H,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.submit_transaction_in_models(host.models_mut(), tx)
+    }
+
+    pub fn submit_transaction_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.submit_transaction_in_models(host.models_mut(), tx)
+    }
+
+    pub fn submit_transaction_and_sync_models<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.submit_transaction_in_models(host.models_mut(), tx)?;
+        if self.edit_queue.is_none() {
+            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        }
+        Ok(())
+    }
+
+    pub fn submit_transaction_and_sync_graph_model<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: &Model<Graph>,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.submit_transaction_in_models(host.models_mut(), tx)?;
+        if self.edit_queue.is_none() {
+            let _ = self.sync_graph_model_from_store_in_models(host.models_mut(), graph);
+        }
+        Ok(())
     }
 
     pub fn sync_models_from_store<H: UiHost>(
@@ -185,6 +240,22 @@ impl NodeGraphController {
         view_state: &Model<NodeGraphViewState>,
     ) -> bool {
         self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state)
+    }
+
+    pub fn sync_graph_model_from_store<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: &Model<Graph>,
+    ) -> bool {
+        self.sync_graph_model_from_store_in_models(host.models_mut(), graph)
+    }
+
+    pub fn sync_graph_model_from_store_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: &Model<Graph>,
+    ) -> bool {
+        self.sync_graph_model_from_store_in_models(host.models_mut(), graph)
     }
 
     pub fn replace_view_state_and_sync_model<H: UiHost>(
@@ -502,6 +573,21 @@ impl NodeGraphController {
             .unwrap_or_default()
     }
 
+    fn submit_transaction_in_models(
+        &self,
+        models: &mut ModelStore,
+        tx: &GraphTransaction,
+    ) -> Result<(), NodeGraphControllerError> {
+        if let Some(queue) = self.edit_queue.as_ref() {
+            return match models.update(queue, |edit_queue| edit_queue.push(tx.clone())) {
+                Ok(()) => Ok(()),
+                Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+            };
+        }
+
+        self.dispatch_transaction_in_models(models, tx).map(|_| ())
+    }
+
     fn dispatch_transaction_in_models(
         &self,
         models: &mut ModelStore,
@@ -512,6 +598,22 @@ impl NodeGraphController {
             Ok(Err(err)) => Err(NodeGraphControllerError::Dispatch(err)),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
         }
+    }
+
+    fn sync_graph_model_from_store_in_models(
+        &self,
+        models: &mut ModelStore,
+        graph: &Model<Graph>,
+    ) -> bool {
+        let Ok(next_graph) = models.read(&self.store, |store| store.graph().clone()) else {
+            return false;
+        };
+
+        models
+            .update(graph, |graph_model| {
+                *graph_model = next_graph;
+            })
+            .is_ok()
     }
 
     fn sync_models_from_store_in_models(
@@ -693,8 +795,8 @@ mod tests {
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::{
-        NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue,
-        NodeGraphViewRequest,
+        NodeGraphEditQueue, NodeGraphFitViewOptions, NodeGraphSetViewportOptions,
+        NodeGraphViewQueue, NodeGraphViewRequest,
     };
 
     #[derive(Default)]
@@ -1478,5 +1580,74 @@ mod tests {
                 )
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn controller_submit_transaction_uses_edit_queue_when_present() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, _node_b) = make_test_graph_two_nodes();
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let edits = host.models.insert(NodeGraphEditQueue::default());
+        let controller = NodeGraphController::new(store.clone()).with_edit_queue(edits.clone());
+        let tx = GraphTransaction {
+            label: Some("Move Node".to_string()),
+            ops: vec![GraphOp::SetNodePos {
+                id: node_a,
+                from: CanvasPoint { x: 0.0, y: 0.0 },
+                to: CanvasPoint { x: 42.0, y: 24.0 },
+            }],
+        };
+
+        controller.submit_transaction(&mut host, &tx).unwrap();
+
+        let queued = edits
+            .read_ref(&host, |queue| queue.pending.clone())
+            .ok()
+            .unwrap_or_default();
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].label.as_deref(), Some("Move Node"));
+
+        let store_pos = store
+            .read_ref(&host, |store| {
+                store.graph().nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("store node pos");
+        assert_eq!(store_pos, CanvasPoint { x: 0.0, y: 0.0 });
+    }
+
+    #[test]
+    fn controller_submit_transaction_and_sync_graph_model_dispatches_without_edit_queue() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, _node_b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store);
+        let tx = GraphTransaction {
+            label: Some("Move Node".to_string()),
+            ops: vec![GraphOp::SetNodePos {
+                id: node_a,
+                from: CanvasPoint { x: 0.0, y: 0.0 },
+                to: CanvasPoint { x: 84.0, y: 12.0 },
+            }],
+        };
+
+        controller
+            .submit_transaction_and_sync_graph_model(&mut host, &graph, &tx)
+            .unwrap();
+
+        let graph_pos = graph
+            .read_ref(&host, |graph| graph.nodes.get(&node_a).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("graph node pos");
+        assert_eq!(graph_pos, CanvasPoint { x: 84.0, y: 12.0 });
     }
 }

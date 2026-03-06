@@ -168,6 +168,14 @@ points rather than direct graph mutation.
     and the gallery workflow snippet controls now route viewport actions through the controller.
   - Those helpers now have a real store fallback when no `view_queue` exists, and still route
     through queued `SetViewport` requests when a queue is present.
+  - The controller now also owns an optional edit transport and queue-aware submission helpers
+    (`submit_transaction*`, `submit_transaction_and_sync_*`), so app-facing code no longer needs to
+    choose between raw queue mutation and direct store dispatch first.
+  - Retained edit glue now also converges on the controller-first path:
+    `NodeGraphCanvas::with_controller` carries optional edit/view queues,
+    `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new_with_controller` prefer
+    controller-owned transaction submission, and `compat_retained` constructs controller-first
+    canvas wiring whenever a store exists.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -180,6 +188,8 @@ points rather than direct graph mutation.
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
     surface so the recommended demo path exercises the transaction-safe commit architecture.
+  - `apps/fret-examples/src/node_graph_domain_demo.rs` now acts as the retained-backed best-practice
+    sample for controller-first canvas / overlay / portal composition.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more
   declarative commit coverage, and explicit undo/redo / controlled-mode gates.
 
@@ -215,7 +225,11 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/runtime/lookups.rs`
 - `ecosystem/fret-node/src/ui/controller.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
+- `apps/fret-examples/src/node_graph_domain_demo.rs`
 
 ## M4 - Declarative editor-grade interaction and portal closure
 
@@ -225,6 +239,13 @@ Status target: behavior convergence milestone
 
 Bring the declarative path much closer to the retained engine on the behaviors that matter most for
 real editors.
+
+### Progress note (2026-03-06)
+
+- Retained portal + rename overlay glue now has a controller-first path
+  (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new_with_controller`).
+- `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
+  app-facing examples need to teach raw `edit_queue` mutation.
 
 ### Deliverables
 
@@ -249,6 +270,8 @@ real editors.
 
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+- `apps/fret-examples/src/node_graph_domain_demo.rs`
 - `tools/diag-scripts/node-graph/`
 
 ## M5 - Compatibility retained convergence and deletion gate

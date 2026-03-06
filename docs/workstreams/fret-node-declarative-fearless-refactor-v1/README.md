@@ -228,10 +228,13 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - diagnostics-only paint-only graph hotkeys now also build/commit transactions instead of teaching
   direct `Graph` mutation,
 - it can sync external graph/view models from store after commits,
+- retained rename / portal / compatibility glue now also prefers controller-owned transaction
+  submission when a controller/store exists,
 - the default declarative demo now uses it.
 
-This is intentionally not the final shape yet. `edit_queue`, richer viewport commands, callback
-layering, and the long-term public naming/ownership story are still open.
+This is intentionally not the final shape yet. Richer viewport commands, callback layering, and the
+long-term public naming/ownership story are still open; `edit_queue` is trending toward a
+transport/compatibility seam rather than the preferred app-facing teaching surface.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
@@ -249,7 +252,8 @@ Current controller-facing XyFlow mapping (review helper, not a final contract):
   - current Fret surface: `NodeGraphController::node_connections`, `port_connections`
 - graph replacement / transaction-safe updates:
   - XyFlow mental model: imperative instance/store writes
-  - current Fret surface: `replace_graph`, `dispatch_transaction*`, `dispatch_transaction_and_sync_models*`
+  - current Fret surface: `replace_graph`, `submit_transaction*`,
+    `submit_transaction_and_sync_*`, `dispatch_transaction*`
 - still open:
   - `updateNode` / `updateEdge`-style ergonomic helpers,
   - final `Controller` vs `Instance` naming,
@@ -353,7 +357,8 @@ Concretely:
 
 - prefer declarative composition at the app boundary,
 - prefer store-driven integration,
-- prefer edit/view queue or controller-driven commands,
+- prefer controller-driven commands and treat raw edit/view queues as transport or compatibility
+  seams,
 - do not author directly against retained `NodeGraphCanvas` unless you are working inside
   `fret-node` internals, tests, or temporary compatibility harnesses.
 

@@ -108,6 +108,13 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     new app/UI glue no longer needs to teach raw queue mutation first.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
+  - Progress: retained edit glue now prefers controller-owned submission helpers when a controller is
+    available:
+    - `NodeGraphCanvas::with_controller` now carries both store + optional edit/view queues.
+    - `NodeGraphPortalHost::with_controller` submits transactions through the controller before
+      falling back to raw queue transport.
+    - `NodeGraphOverlayHost::new_with_controller` and `compat_retained` now teach controller-first
+      rename / portal composition instead of requiring raw queue mutation at the app boundary.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
@@ -167,7 +174,12 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Move from portal/bounds experimentation toward a declared editor-grade portal hosting path for
       the visible subset.
 - [ ] Clarify how node content subtrees publish measured geometry into derived stores.
-- [ ] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
+- [x] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
+  - `NodeGraphPortalHost::with_controller` now prefers
+    `NodeGraphController::submit_transaction_and_sync_models`.
+  - `NodeGraphOverlayHost::new_with_controller` now prefers
+    `NodeGraphController::submit_transaction_and_sync_graph_model`.
+  - Raw `edit_queue` remains as a compatibility transport seam for retained-only callers.
 - [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
       currently blurry.
 - [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
