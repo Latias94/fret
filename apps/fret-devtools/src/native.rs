@@ -2039,9 +2039,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             let is_selected = selected_summary_path
                 .as_deref()
                 .is_some_and(|selected| selected == resolved_summary_path_str);
-            let label = format!(
-                "{} | lane={} failures={} items={}",
-                row.path, row.lane, row.failures, row.items_total
+            let title = row.path.clone();
+            let meta = format!(
+                "lane={} • failures={} • items={}",
+                row.lane, row.failures, row.items_total
             );
             let selected_summary_path_model = st.regression_selected_summary_path.clone();
             let selected_summary_json_model = st.regression_selected_summary_json.clone();
@@ -2096,25 +2097,45 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 host.request_redraw(action_cx.window);
             });
             rows.push(
-                ui::h_row(|cx| {
-                    [
-                        shadcn::Button::new(label.clone())
-                            .variant(if is_selected {
-                                shadcn::ButtonVariant::Secondary
-                            } else {
-                                shadcn::ButtonVariant::Ghost
-                            })
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(on_select)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy path")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(on_copy)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(fret_ui_kit::Space::N2)
+                shadcn::Card::new([
+                    shadcn::CardContent::new([
+                        cx.text(title),
+                        cx.text(meta),
+                        ui::h_row(|cx| {
+                            [
+                                shadcn::Badge::new(if is_selected { "Selected" } else { "Failing" })
+                                    .variant(if is_selected {
+                                        shadcn::BadgeVariant::Secondary
+                                    } else {
+                                        shadcn::BadgeVariant::Destructive
+                                    })
+                                    .into_element(cx),
+                                shadcn::Button::new(if is_selected {
+                                    "Opened"
+                                } else {
+                                    "Open details"
+                                })
+                                .variant(if is_selected {
+                                    shadcn::ButtonVariant::Secondary
+                                } else {
+                                    shadcn::ButtonVariant::Ghost
+                                })
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(on_select)
+                                .into_element(cx),
+                                shadcn::Button::new("Copy path")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .on_activate(on_copy)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .gap(fret_ui_kit::Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
                 .into_element(cx),
             );
         }
@@ -2239,6 +2260,42 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     .gap(fret_ui_kit::Space::N2)
     .into_element(cx);
 
+    let selected_summary_badges = ui::h_row(|cx| {
+        [
+            shadcn::Badge::new(if selected_summary_path.is_some() {
+                "Summary selected"
+            } else {
+                "No selection"
+            })
+            .variant(if selected_summary_path.is_some() {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(format!("bundle dirs {selected_bundle_count}"))
+                .variant(if selected_bundle_count > 0 {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+            shadcn::Badge::new(if selected_error.is_some() {
+                "Selection error"
+            } else {
+                "Selection ok"
+            })
+            .variant(if selected_error.is_some() {
+                shadcn::BadgeVariant::Destructive
+            } else {
+                shadcn::BadgeVariant::Secondary
+            })
+            .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .into_element(cx);
+
     let status_row = ui::h_row(|cx| {
         [
             shadcn::Badge::new(if can_refresh {
@@ -2341,6 +2398,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         ])
         .into_element(cx),
         shadcn::CardContent::new([
+            selected_summary_badges,
             cx.text(selected_summary_overview),
             selected_actions,
             text_blob_sized(cx, selected_detail_content, Px(280.0)),
