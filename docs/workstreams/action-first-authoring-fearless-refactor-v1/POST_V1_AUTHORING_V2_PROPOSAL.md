@@ -91,8 +91,8 @@ Prototype status (as of 2026-03-06):
 
 - an additive `LocalState<T>` wrapper now exists in `ecosystem/fret/src/view.rs`,
 - `ViewCx::use_local*` / `watch_local(...)` are available as an experimental surface,
-- `apps/fret-examples/src/hello_counter_demo.rs` and `apps/fret-examples/src/query_demo.rs` use the prototype to remove explicit local model-handle fields from the view struct,
-- `query_demo` also validates that `use_local` can coexist with `use_query` and transient invalidation without changing the default teaching-surface action path,
+- `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/query_demo.rs`, and `apps/fret-examples/src/query_async_tokio_demo.rs` use the prototype to remove explicit local model-handle fields from the view struct,
+- the query demos validate that `use_local` can coexist with `use_query` / `use_query_async` and transient invalidation without changing the default teaching-surface action path,
 - the prototype is still model-backed and is **not yet** the final plain-Rust local-state answer.
 
 ### 4.2 Actions and event wiring

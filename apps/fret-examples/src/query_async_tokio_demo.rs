@@ -65,25 +65,16 @@ fn install_tokio_spawner(app: &mut App) {
     app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
 }
 
-struct QueryAsyncTokioDemoState {
-    fail_mode: Model<bool>,
-}
-
-struct QueryAsyncTokioDemoView {
-    st: QueryAsyncTokioDemoState,
-}
+struct QueryAsyncTokioDemoView;
 
 impl View for QueryAsyncTokioDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            st: QueryAsyncTokioDemoState {
-                fail_mode: app.models_mut().insert(false),
-            },
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
+        let fail_mode_state = cx.use_local_with(|| false);
 
         if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY) {
             let _ = with_query_client(cx.app, |client, app| {
@@ -98,19 +89,13 @@ impl View for QueryAsyncTokioDemoView {
         }
 
         cx.on_action_notify_models::<act::ToggleFailMode>({
-            let fail_mode = self.st.fail_mode.clone();
-            move |models| {
-                let _ = models.update(&fail_mode, |value| *value = !*value);
-                true
-            }
+            let fail_mode_state = fail_mode_state.clone();
+            move |models| fail_mode_state.update_in(models, |value| *value = !*value)
         });
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = cx
-            .watch_model(&self.st.fail_mode)
-            .layout()
-            .copied_or_default();
+        let fail_mode = cx.watch_local(&fail_mode_state).layout().copied_or_default();
 
         let query_handle = cx.use_query_async(
             demo_key(),

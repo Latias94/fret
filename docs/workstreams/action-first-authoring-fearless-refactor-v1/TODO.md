@@ -381,7 +381,7 @@ practical steps:
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
     or shared-model interop.
   - Evidence target: rewrite one medium demo as a comparison branch before promoting any new surface.
-  - Update (as of 2026-03-06): additive prototype landed as `LocalState<T>` + `ViewCx::use_local*` / `watch_local(...)`; `hello_counter_demo` and `query_demo` now use the prototype instead of storing explicit local model handles in the view struct, with `query_demo` also validating `use_local` alongside `use_query` + transient invalidation.
+  - Update (as of 2026-03-06): additive prototype landed as `LocalState<T>` + `ViewCx::use_local*` / `watch_local(...)`; `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the prototype instead of storing explicit local model handles in the view struct, with the query demos validating `use_local` alongside `use_query` / `use_query_async` + transient invalidation.
 - [ ] AFA-postv1-002 Investigate builder-first composition paths that reduce `ui::children!` and nested
   `into_element(cx)` in medium demos.
   - Goal: measure whether a builder-only path materially improves density without helper sprawl.
@@ -394,7 +394,7 @@ practical steps:
 - [~] AFA-postv1-004 Evaluate v2 invalidation ergonomics: keep explicit `notify()` as a low-level runtime escape hatch while making local-state writes rerender implicitly by default.
   - Goal: preserve cache/debug determinism without forcing users to call `notify()` after most tracked state writes.
   - Evidence target: prototype one medium demo and confirm diagnostics still explain rebuild reasons.
-  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo` and `query_demo`; `LocalState::update_action` / `set_action` remain available for future widget-local experiments once widget-local dispatch ergonomics are revisited.
+  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`; `LocalState::update_action` / `set_action` remain available for future widget-local experiments once widget-local dispatch ergonomics are revisited.
 - [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
   - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
   - Guardrail: no macro should hide action identity, key context, or cache-boundary semantics.
@@ -462,7 +462,7 @@ practical steps:
     - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (uses `on_activate_request_redraw`)
 - Demo authoring review snapshot (as of 2026-03-06):
   - Simple demo status: `hello_template_main_rs` is close to the intended golden path (typed actions + `ui::children!` + one model-update helper).
-  - Medium demo status: `hello_counter_demo` and `query_demo` now use the `LocalState<T>` prototype for view-local state and are substantially improved, but still expose three recurring noise classes:
+  - Medium demo status: `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the `LocalState<T>` prototype for view-local state and are substantially improved, but still expose three recurring noise classes:
     1. tracked-state read boilerplate (`watch_local(...).layout()/paint().copied_or/cloned_or_default()` and `watch_model(...).layout()/paint().copied_or/cloned_or_default()`),
     2. nested `into_element(cx)` landing inside composed card/layout sections,
     3. explicit transient scheduling for App-only effects (`take_transient_on_action_root` + `with_query_client`).
@@ -490,7 +490,7 @@ practical steps:
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
-  - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme`, `embedded_viewport_demo`, and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, while `hello_counter_demo` is the intentional `use_local` prototype but still keeps the default `on_action_notify_models` action surface.
+  - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme`, `embedded_viewport_demo`, and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, while `hello_counter_demo` plus both query demos are the intentional `use_local` prototypes and still keep the default `on_action_notify_models` action surface.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
