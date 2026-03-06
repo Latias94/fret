@@ -265,6 +265,8 @@ Recommended PR slices:
 2. [in progress] add campaign-aware run triggers in MCP or GUI,
    - `apps/fret-devtools-mcp` now provides a thin `fret_diag_regression_summarize` bridge over
      `fretboard diag summarize`,
+   - `apps/fret-devtools-mcp` now also provides `fret_diag_regression_dashboard` as a thin
+     consumer over `regression.index.json`,
 3. add summary browsing panels,
 4. add flake/evidence drill-down UX.
 

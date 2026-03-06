@@ -71,6 +71,11 @@ Batch run:
   - when `include_json` is `true`, it also returns the generated `regression.summary.json` and
     `regression.index.json` payloads inline.
 
+- tool: `fret_diag_regression_dashboard`
+  - reads `regression.index.json` from the same shared artifacts root,
+  - returns a structured first-open dashboard view plus a human-readable summary string,
+  - can optionally include the raw index JSON inline.
+
 ### Step 4: Pack the latest bundle and open the offline viewer
 
 - tool: `fret_diag_pack_last_bundle` (creates a zip on disk; returns `pack_path`)
