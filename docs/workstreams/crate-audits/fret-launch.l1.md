@@ -208,6 +208,9 @@ Evidence anchors:
   and workspace-shell command orchestration also migrate to pure free hooks, so the remaining
   direct impl inventory is down to eight and concentrated in genuinely heavier docking/gallery/
   gizmo/node-graph examples rather than a missing launch primitive.
+- `canvas_datagrid_stress_demo` reinforces the same point from the retained-canvas stress side:
+  GPU prep, perf snapshot reporting, model/global propagation, and close semantics all migrate to
+  the existing free-hook surface, taking the remaining direct impl inventory down to seven.
 
 Evidence anchors:
 
@@ -229,6 +232,7 @@ Evidence anchors:
 - `apps/fret-examples/src/table_stress_demo.rs`
 - `apps/fret-examples/src/virtual_list_stress_demo.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
+- `apps/fret-examples/src/canvas_datagrid_stress_demo.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)

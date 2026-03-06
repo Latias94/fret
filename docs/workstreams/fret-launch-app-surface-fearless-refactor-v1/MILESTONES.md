@@ -63,6 +63,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Recent low-risk demos (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) now also run through `FnDriver`-backed entrypoints.
 - Single-window UI demos (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) now also use pure `FnDriver` hooks instead of keeping local compat impls.
 - Medium-complexity desktop demos (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) now also run through pure `FnDriver` hook assembly, reducing the remaining direct `WinitAppDriver` example inventory to eight without expanding launch surface area.
+- `canvas_datagrid_stress_demo` now also uses pure free `FnDriver` hooks, reducing the remaining direct `WinitAppDriver` example inventory to seven while keeping stress/perf reporting inside the existing hook set.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`
