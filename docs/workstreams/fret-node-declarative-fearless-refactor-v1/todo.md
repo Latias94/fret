@@ -121,9 +121,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       controller-first rename / portal composition instead of requiring raw queue mutation at the
       app boundary, and `compat_retained` now takes a controller binding instead of exposing public
       `edit_queue` / `view_queue` transport props.
-    - `NodeGraphBlackboardOverlay` now also exposes `new + with_edit_queue/with_controller`, so
-      retained symbol actions can prefer controller/store commits without hiding the fallback
-      transport seam.
+    - `NodeGraphBlackboardOverlay` now supports controller-first retained symbol actions, while raw
+      queue fallback remains crate-internal for compatibility harnesses and focused retained tests.
     - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /
       overlay / blackboard / portal / minimap wiring and no longer keeps a demo-owned
       `NodeGraphEditQueue`; remaining queue ownership is limited to generic compatibility transport
@@ -139,22 +138,22 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 
 ### Retained transport seam audit (snapshot 2026-03-06)
 
-- **Keep as retained-only compatibility seams for now**
-  - `NodeGraphCanvas::with_edit_queue` / `NodeGraphCanvas::with_view_queue`
+- **Retained compatibility seams now stay crate-internal**
+  - `NodeGraphCanvas::with_view_queue`
     (`ecosystem/fret-node/src/ui/canvas/widget.rs`): still needed because the retained canvas is the
     compatibility root that drains queue transport directly, and several focused retained tests still
-    exercise that path.
+    exercise that path; the methods are now crate-private so they stop reading like public app-facing API.
   - `NodeGraphPortalHost::with_edit_queue`
     (`ecosystem/fret-node/src/ui/portal.rs`),
     `NodeGraphOverlayHost::with_edit_queue`
     (`ecosystem/fret-node/src/ui/overlays/group_rename.rs`), and
     `NodeGraphBlackboardOverlay::with_edit_queue`
-    (`ecosystem/fret-node/src/ui/overlays/blackboard.rs`): keep as fallback bindings for retained-only
-    callers that still do not own a store/controller.
+    (`ecosystem/fret-node/src/ui/overlays/blackboard.rs`): remain as fallback bindings for retained-only
+    compatibility harnesses that still do not own a store/controller, but are no longer public API.
   - `NodeGraphMiniMapOverlay::with_view_queue` / `NodeGraphMiniMapNavigationBinding::ViewQueue`
-    (`ecosystem/fret-node/src/ui/overlays/minimap.rs`): keep because the minimap still intentionally
-    exposes an explicit transport binding mode for B-layer integrations that want queue-driven viewport
-    ownership.
+    (`ecosystem/fret-node/src/ui/overlays/minimap.rs`): still needed because the minimap keeps an
+    explicit queue-driven navigation mode internally, but the direct retained queue-binding method is now
+    crate-private.
 
 - **Most likely next shrink targets**
   - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
@@ -169,6 +168,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
         controller-first constructor.
   - [x] Move raw queue / viewport transport into the explicit `fret_node::ui::advanced::*`
         namespace.
+  - [x] Demote retained widget / overlay queue binding methods to crate-private compatibility seams.
   - [x] Remove root `fret_node::ui::*` queue/helper re-exports from the public surface.
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
@@ -274,6 +274,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+
+
 
 
 

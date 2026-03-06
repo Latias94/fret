@@ -107,7 +107,8 @@ impl NodeGraphBlackboardOverlay {
         }
     }
 
-    pub fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
         self.edits = Some(edits);
         self
     }

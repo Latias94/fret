@@ -239,10 +239,10 @@ long-term public naming/ownership story are still open; `edit_queue` is trending
 transport/compatibility seam rather than the preferred app-facing teaching surface.
 
 For retained composition, the preferred teaching posture is now controller-first:
-`compat_retained` takes a controller binding at the declarative boundary, while retained widgets use
-`new(...)` plus optional `with_controller(...)` / `with_edit_queue(...)` only for explicit
-compatibility transport fallback.
-
+`compat_retained` takes a controller binding at the declarative boundary, while the public retained
+widget posture is `new(...)` plus optional `with_controller(...)`. Raw queue binding on retained
+widgets now stay crate-internal for compatibility harnesses, focused retained tests, and temporary
+migration glue.
 Queue-first APIs such as `NodeGraphEditQueue`, `NodeGraphViewQueue`, and
 `NodeGraphViewportHelper` should now be treated as advanced transport seams rather than the default
 app-facing integration surface. `NodeGraphViewportHelper` is now bounded to the advanced
@@ -494,6 +494,7 @@ Canonical gate families to keep alive:
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+
 
 
 

@@ -820,21 +820,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
-    /// Attaches a UI-side edit queue (`Model<NodeGraphEditQueue>`).
-    ///
-    /// The canvas drains queued transactions during layout and commits them through its normal
-    /// apply + history pipeline (undo/redo).
-    pub fn with_edit_queue(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
-        self.edit_queue = Some(queue);
-        self.edit_queue_key = None;
-        self
-    }
-
     /// Attaches a UI-side view queue (`Model<NodeGraphViewQueue>`).
     ///
     /// This is a message-passing surface for viewport commands that need arguments (e.g. framing a
     /// specific node set).
-    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
         self.view_queue = Some(queue);
         self.view_queue_key = None;
         self

@@ -113,7 +113,8 @@ impl NodeGraphMiniMapOverlay {
         self
     }
 
-    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
         self.bindings.navigation = NodeGraphMiniMapNavigationBinding::ViewQueue(queue);
         self
     }
