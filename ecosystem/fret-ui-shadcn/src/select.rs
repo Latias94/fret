@@ -1847,7 +1847,11 @@ fn select_impl<H: UiHost>(
             None
         };
 
-        let trigger_test_id = trigger_test_id.clone();
+        let trigger_test_id = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
         let test_id_prefix = test_id_prefix.clone();
         fn find_item_label_overrides(
             entries: &[SelectEntry],

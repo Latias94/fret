@@ -11,7 +11,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let select = shadcn::Select::new_controllable(cx, None, Some("apple"), None, false)
         .control_id(control_id.clone())
         .test_id_prefix("ui-gallery-select-label")
-        .trigger_test_id("ui-gallery-select-label-trigger")
         .into_element_parts(
             cx,
             |_cx| shadcn::SelectTrigger::new(),

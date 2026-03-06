@@ -31,7 +31,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let control_id = ControlId::from("ui-gallery-native-select-label");
     let native_select = shadcn::NativeSelect::new(value, open)
         .control_id(control_id.clone())
-        .trigger_test_id("ui-gallery-native-select-label-trigger")
         .test_id_prefix("ui-gallery-native-select-label")
         .options([
             shadcn::NativeSelectOption::placeholder("Select a fruit"),
