@@ -71,6 +71,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/time_picker` titles are now covered too: dialog titles keep ellipsis
   semantics beside the mode-toggle button because the title text explicitly fills the remaining
   header width and opts into `min-w-0`.
+- `fret-ui-material3/segmented_button` labels are now covered too: equal-width segment
+  labels keep centered one-line clip semantics because the label text explicitly fills the segment
+  slot and opts into `min-w-0`.
 
 ---
 
