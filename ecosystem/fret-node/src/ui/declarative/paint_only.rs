@@ -169,6 +169,7 @@ struct MarqueeDragState {
     active: bool,
     toggle: bool,
     base_selected_nodes: Arc<[crate::core::NodeId]>,
+    preview_selected_nodes: Arc<[crate::core::NodeId]>,
 }
 
 #[derive(Debug, Clone)]
@@ -982,6 +983,78 @@ fn update_selection_action_host(
             state.selected_groups = selected_groups;
         })
         .is_ok()
+}
+
+fn compute_marquee_candidate_nodes(
+    rect_canvas: Rect,
+    selection_mode: crate::io::NodeGraphSelectionMode,
+    geom: &CanvasGeometry,
+    index: &CanvasSpatialDerived,
+) -> Vec<crate::core::NodeId> {
+    let mut candidates = Vec::<crate::core::NodeId>::new();
+    index.query_nodes_in_rect(rect_canvas, &mut candidates);
+    candidates.retain(|id| {
+        let Some(node) = geom.nodes.get(id) else {
+            return false;
+        };
+        match selection_mode {
+            crate::io::NodeGraphSelectionMode::Full => rect_contains_rect(rect_canvas, node.rect),
+            crate::io::NodeGraphSelectionMode::Partial => rects_intersect(rect_canvas, node.rect),
+        }
+    });
+    candidates.sort();
+    candidates.dedup();
+    candidates
+}
+
+fn build_marquee_preview_selected_nodes(
+    marquee: &MarqueeDragState,
+    rect_canvas: Rect,
+    selection_mode: crate::io::NodeGraphSelectionMode,
+    geom: &CanvasGeometry,
+    index: &CanvasSpatialDerived,
+) -> Arc<[crate::core::NodeId]> {
+    let candidates = compute_marquee_candidate_nodes(rect_canvas, selection_mode, geom, index);
+    if !marquee.toggle {
+        return Arc::from(candidates.into_boxed_slice());
+    }
+
+    let mut selected_nodes = marquee.base_selected_nodes.to_vec();
+    for id in candidates {
+        if let Some(ix) = selected_nodes.iter().position(|value| *value == id) {
+            selected_nodes.remove(ix);
+        } else {
+            selected_nodes.push(id);
+        }
+    }
+    selected_nodes.sort();
+    selected_nodes.dedup();
+    Arc::from(selected_nodes.into_boxed_slice())
+}
+
+fn commit_marquee_selection_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    marquee: &MarqueeDragState,
+) -> bool {
+    let preview_selected_nodes = marquee.preview_selected_nodes.clone();
+    let toggle = marquee.toggle;
+    update_selection_action_host(
+        host,
+        view_state,
+        controller,
+        store,
+        move |selected_nodes, selected_edges, selected_groups| {
+            selected_nodes.clear();
+            selected_nodes.extend(preview_selected_nodes.iter().copied());
+            if !toggle {
+                selected_edges.clear();
+                selected_groups.clear();
+            }
+        },
+    )
 }
 
 fn hit_test_node_at_point(
@@ -1840,7 +1913,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_copied(&hovered_node, Invalidation::Paint)
         .unwrap_or(None);
     let hovered = hovered_node_value.is_some();
-    let selected_nodes_len = view_value.selected_nodes.len();
+    let effective_selected_nodes = marquee_value
+        .as_ref()
+        .filter(|marquee| marquee.active)
+        .map(|marquee| marquee.preview_selected_nodes.to_vec())
+        .unwrap_or_else(|| view_value.selected_nodes.clone());
+    let selected_nodes_len = effective_selected_nodes.len();
     let portal_fit_count = cx
         .app
         .models()
@@ -1995,8 +2073,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let node_drag_escape = node_drag.clone();
             let graph_debug = graph.clone();
             let view_zoom_kb = view_state.clone();
-            let view_escape = view_state.clone();
-            let controller_zoom_kb = controller.clone();
+             let controller_zoom_kb = controller.clone();
             let store_zoom_kb = store.clone();
             let portal_bounds_for_fit = portal_bounds_store.clone();
             let portal_debug_for_keys = portal_debug_flags.clone();
@@ -2034,19 +2111,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         }
 
                         let _ = host.models_mut().update(&drag_escape, |st| *st = None);
-                        if let Some(marquee) = marquee {
-                            let base_selected = marquee.base_selected_nodes.clone();
-                            let _ = update_selection_action_host(
-                                host,
-                                &view_escape,
-                                controller_zoom_kb.as_ref(),
-                                store_zoom_kb.as_ref(),
-                                |selected_nodes, _selected_edges, _selected_groups| {
-                                    selected_nodes.clear();
-                                    selected_nodes.extend(base_selected.iter().copied());
-                                },
-                            );
-                        }
                         let _ = host.models_mut().update(&marquee_escape, |st| *st = None);
                         let _ = host.models_mut().update(&node_drag_escape, |st| {
                             if let Some(st) = st.as_mut() {
@@ -2475,6 +2539,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 Arc::from([])
                             };
 
+                            let preview_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
+                                base_selected_nodes.clone()
+                            } else {
+                                Arc::from([])
+                            };
                             let _ = host.models_mut().update(&marquee_start, |st| {
                                 *st = Some(MarqueeDragState {
                                     start_screen: down.position,
@@ -2482,22 +2551,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                     active: false,
                                     toggle: multi,
                                     base_selected_nodes,
+                                    preview_selected_nodes,
                                 });
                             });
-
-                            if !multi {
-                                let _ = update_selection_action_host(
-                                    host,
-                                    &view_pan_down,
-                                    controller_pan_down.as_ref(),
-                                    store_pan_down.as_ref(),
-                                    |selected_nodes, selected_edges, selected_groups| {
-                                        selected_nodes.clear();
-                                        selected_edges.clear();
-                                        selected_groups.clear();
-                                    },
-                                );
-                            }
 
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
@@ -2666,74 +2722,19 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                     let cur_canvas = view.screen_to_canvas(bounds, mv.position);
                                     let rect_canvas = rect_from_points(start_canvas, cur_canvas);
                                     let selection_mode = interaction.selection_mode;
-
-                                    if marquee.toggle {
-                                        let mut candidates = Vec::<crate::core::NodeId>::new();
-                                        index.query_nodes_in_rect(rect_canvas, &mut candidates);
-                                        candidates.retain(|id| {
-                                            let Some(node) = geom.nodes.get(id) else {
-                                                return false;
-                                            };
-                                            match selection_mode {
-                                                crate::io::NodeGraphSelectionMode::Full => {
-                                                    rect_contains_rect(rect_canvas, node.rect)
-                                                }
-                                                crate::io::NodeGraphSelectionMode::Partial => {
-                                                    rects_intersect(rect_canvas, node.rect)
-                                                }
-                                            }
-                                        });
-
-                                        let base_selected = marquee.base_selected_nodes.clone();
-                                        let _ = update_selection_action_host(
-                                            host,
-                                            &view_pan,
-                                            controller_pan.as_ref(),
-                                            store_pan.as_ref(),
-                                            |selected_nodes, _selected_edges, _selected_groups| {
-                                                selected_nodes.clear();
-                                                selected_nodes
-                                                    .extend(base_selected.iter().copied());
-                                                for id in candidates.iter().copied() {
-                                                    if let Some(ix) = selected_nodes
-                                                        .iter()
-                                                        .position(|v| *v == id)
-                                                    {
-                                                        selected_nodes.remove(ix);
-                                                    } else {
-                                                        selected_nodes.push(id);
-                                                    }
-                                                }
-                                            },
+                                    let preview_selected_nodes =
+                                        build_marquee_preview_selected_nodes(
+                                            &marquee,
+                                            rect_canvas,
+                                            selection_mode,
+                                            geom,
+                                            index,
                                         );
-                                    } else {
-                                        let _ = update_selection_action_host(
-                                            host,
-                                            &view_pan,
-                                            controller_pan.as_ref(),
-                                            store_pan.as_ref(),
-                                            |selected_nodes, _selected_edges, _selected_groups| {
-                                                selected_nodes.clear();
-                                                index.query_nodes_in_rect(
-                                                    rect_canvas,
-                                                    selected_nodes,
-                                                );
-                                                selected_nodes.retain(|id| {
-                                                    let Some(node) = geom.nodes.get(id) else {
-                                                        return false;
-                                                    };
-                                                    match selection_mode {
-                                                        crate::io::NodeGraphSelectionMode::Full => {
-                                                            rect_contains_rect(rect_canvas, node.rect)
-                                                        }
-                                                        crate::io::NodeGraphSelectionMode::Partial => {
-                                                            rects_intersect(rect_canvas, node.rect)
-                                                        }
-                                                    }
-                                                });
-                                            },
-                                        );
-                                    }
+                                    let _ = host.models_mut().update(&marquee_move, |st| {
+                                        if let Some(st) = st.as_mut() {
+                                            st.preview_selected_nodes = preview_selected_nodes.clone();
+                                        }
+                                    });
                                 }
                             }
 
@@ -2901,13 +2902,23 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             return true;
                         }
 
-                        let active = host
+                        let marquee = host
                             .models_mut()
-                            .read(&marquee_end, |st| st.is_some())
+                            .read(&marquee_end, |st| st.clone())
                             .ok()
-                            .unwrap_or(false);
-                        if !active {
+                            .flatten();
+                        let Some(marquee) = marquee else {
                             return false;
+                        };
+
+                        if marquee.active || !marquee.toggle {
+                            let _ = commit_marquee_selection_action_host(
+                                host,
+                                &view_commit,
+                                controller_commit.as_ref(),
+                                store_commit.as_ref(),
+                                &marquee,
+                            );
                         }
 
                         host.release_pointer_capture();
@@ -2930,33 +2941,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_cancel = drag.clone();
             let marquee_cancel = marquee_drag.clone();
             let node_drag_cancel = node_drag.clone();
-            let view_cancel = view_state.clone();
-            let controller_cancel = controller.clone();
-            let store_cancel = store.clone();
             let on_pointer_cancel: OnPointerCancel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
                       _cancel: fret_ui::action::PointerCancelCx| {
-                    let marquee = host
-                        .models_mut()
-                        .read(&marquee_cancel, |st| st.clone())
-                        .ok()
-                        .flatten();
                     host.release_pointer_capture();
                     let _ = host.models_mut().update(&drag_cancel, |st| *st = None);
-                    if let Some(marquee) = marquee {
-                        let base_selected = marquee.base_selected_nodes.clone();
-                        let _ = update_selection_action_host(
-                            host,
-                            &view_cancel,
-                            controller_cancel.as_ref(),
-                            store_cancel.as_ref(),
-                            |selected_nodes, _selected_edges, _selected_groups| {
-                                selected_nodes.clear();
-                                selected_nodes.extend(base_selected.iter().copied());
-                            },
-                        );
-                    }
                     let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
                     host.invalidate(Invalidation::Layout);
@@ -3089,7 +3079,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 let geom_for_paint = derived_cache_value.geom.clone();
                 let style_tokens = style_tokens.clone();
                 let hovered_node_value = hovered_node_value;
-                let selected_nodes = view_value.selected_nodes.clone();
+                let selected_nodes = effective_selected_nodes.clone();
                 let marquee_value = marquee_value.clone();
                 let node_drag_value = node_drag_value.clone();
                 let hover_anchor_store = hover_anchor_store.clone();
@@ -3814,16 +3804,21 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 #[cfg(test)]
 mod tests {
     use std::any::Any;
+    use std::sync::Arc;
 
-    use fret_core::AppWindowId;
+    use fret_core::{AppWindowId, Point, Px, Rect};
     use fret_runtime::{ClipboardToken, Effect, ModelStore, ShareSheetToken, TimerToken};
     use fret_ui::action::UiActionHost;
 
     use super::{
-        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+        MarqueeDragState, build_diag_normalize_visible_node_transaction,
+        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
         build_node_drag_transaction, commit_graph_transaction,
+        commit_marquee_selection_action_host,
     };
-    use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
+    use crate::core::{
+        CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
+    };
     use crate::io::NodeGraphViewState;
     use crate::ops::GraphOp;
     use crate::runtime::store::NodeGraphStore;
@@ -3892,6 +3887,38 @@ mod tests {
             ports: Vec::new(),
             data: Value::Null,
         }
+    }
+
+    fn test_marquee_geometry() -> (Graph, crate::ui::canvas::CanvasGeometry, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::from_u128(91));
+        let node_a = NodeId::from_u128(9101);
+        let node_b = NodeId::from_u128(9102);
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.size = Some(CanvasSize {
+            width: 100.0,
+            height: 60.0,
+        });
+        let mut node_b_value = test_node(CanvasPoint { x: 140.0, y: 0.0 });
+        node_b_value.size = Some(CanvasSize {
+            width: 100.0,
+            height: 60.0,
+        });
+        graph.nodes.insert(node_a, node_a_value);
+        graph.nodes.insert(node_b, node_b_value);
+
+        let draw_order = vec![node_a, node_b];
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let mut presenter = crate::ui::presenter::DefaultNodeGraphPresenter::default();
+        let geom = crate::ui::canvas::CanvasGeometry::build_with_presenter(
+            &graph,
+            &draw_order,
+            &style,
+            1.0,
+            crate::io::NodeGraphNodeOrigin::default(),
+            &mut presenter,
+            None,
+        );
+        (graph, geom, node_a, node_b)
     }
 
     #[test]
@@ -4067,5 +4094,151 @@ mod tests {
         assert_eq!(graph_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(store_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(synced_zoom, 1.0);
+    }
+
+    #[test]
+    fn build_marquee_preview_selected_nodes_non_toggle_uses_current_candidates() {
+        let (graph, geom, node_a, node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_b]),
+            preview_selected_nodes: Arc::from([]),
+        };
+        let rect = Rect::new(
+            Point::new(Px(-10.0), Px(-10.0)),
+            fret_core::Size::new(Px(120.0), Px(80.0)),
+        );
+
+        let preview = build_marquee_preview_selected_nodes(
+            &marquee,
+            rect,
+            crate::io::NodeGraphSelectionMode::Partial,
+            &geom,
+            &spatial,
+        );
+
+        assert_eq!(preview.as_ref(), &[node_a]);
+    }
+
+    #[test]
+    fn build_marquee_preview_selected_nodes_toggle_flips_against_base_selection() {
+        let (graph, geom, node_a, node_b) = test_marquee_geometry();
+        let spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([]),
+        };
+        let rect = Rect::new(
+            Point::new(Px(-10.0), Px(-10.0)),
+            fret_core::Size::new(Px(260.0), Px(80.0)),
+        );
+
+        let preview = build_marquee_preview_selected_nodes(
+            &marquee,
+            rect,
+            crate::io::NodeGraphSelectionMode::Partial,
+            &geom,
+            &spatial,
+        );
+
+        assert_eq!(preview.as_ref(), &[node_b]);
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_clears_edges_and_groups_for_non_toggle() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9201);
+        let node_b = NodeId::from_u128(9202);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        });
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut host,
+            &view_state,
+            None,
+            None,
+            &marquee,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert!(selection.1.is_empty());
+        assert!(selection.2.is_empty());
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_preserves_edges_and_groups_for_toggle() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9301);
+        let node_b = NodeId::from_u128(9302);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        });
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut host,
+            &view_state,
+            None,
+            None,
+            &marquee,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert_eq!(selection.1, vec![edge]);
+        assert_eq!(selection.2, vec![group]);
     }
 }

@@ -144,6 +144,13 @@ What should be true after landing:
 - drag/marquee/selection commits have clear transaction-safe gates,
 - undo/redo semantics remain coherent from the declarative path.
 
+First landing in this worktree:
+
+- marquee preview selection now stays in local declarative reducer state instead of churning store
+  selection on every pointer move,
+- pointer-up commits the previewed selection through the same controller/store-backed selection seam,
+- escape/pointer-cancel now drop transient marquee state instead of issuing selection restore writes.
+
 ### Slice 3 - portal and overlay closure
 
 Why after callback/commit cleanup:
