@@ -241,42 +241,20 @@ impl NodeGraphStore {
         &mut self.view_state
     }
 
-    /// Replaces the view-state (pan/zoom/selection/draw order).
+    /// Replaces the full view-state payload.
     ///
     /// This is the controlled-mode counterpart of `set_viewport`/`set_selection`.
     pub fn replace_view_state(&mut self, mut view_state: NodeGraphViewState) {
         view_state.sanitize_for_graph(&self.graph);
         let before = self.view_state.clone();
-        if before.pan == view_state.pan
-            && before.zoom == view_state.zoom
-            && before.selected_nodes == view_state.selected_nodes
-            && before.selected_edges == view_state.selected_edges
-            && before.selected_groups == view_state.selected_groups
-        {
-            self.view_state = view_state;
+        if view_state_eq(&before, &view_state) {
             return;
         }
 
         self.view_state = view_state;
         let after = self.view_state.clone();
 
-        let mut changes: Vec<ViewChange> = Vec::new();
-        if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
-            changes.push(ViewChange::Viewport {
-                pan: after.pan,
-                zoom: after.zoom,
-            });
-        }
-        if before.selected_nodes != after.selected_nodes
-            || before.selected_edges != after.selected_edges
-            || before.selected_groups != after.selected_groups
-        {
-            changes.push(ViewChange::Selection {
-                nodes: after.selected_nodes.clone(),
-                edges: after.selected_edges.clone(),
-                groups: after.selected_groups.clone(),
-            });
-        }
+        let changes = collect_view_projection_changes(&before, &after);
 
         if !changes.is_empty() {
             self.emit(NodeGraphStoreEvent::ViewChanged {
@@ -295,38 +273,19 @@ impl NodeGraphStore {
         self.view_state.sanitize_for_graph(&self.graph);
         let after = self.view_state.clone();
 
-        if before.pan == after.pan
-            && before.zoom == after.zoom
-            && before.selected_nodes == after.selected_nodes
-            && before.selected_edges == after.selected_edges
-            && before.selected_groups == after.selected_groups
-        {
+        if view_state_eq(&before, &after) {
             return;
         }
 
-        let mut changes: Vec<ViewChange> = Vec::new();
-        if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
-            changes.push(ViewChange::Viewport {
-                pan: after.pan,
-                zoom: after.zoom,
-            });
-        }
-        if before.selected_nodes != after.selected_nodes
-            || before.selected_edges != after.selected_edges
-            || before.selected_groups != after.selected_groups
-        {
-            changes.push(ViewChange::Selection {
-                nodes: after.selected_nodes.clone(),
-                edges: after.selected_edges.clone(),
-                groups: after.selected_groups.clone(),
-            });
-        }
+        let changes = collect_view_projection_changes(&before, &after);
 
-        self.emit(NodeGraphStoreEvent::ViewChanged {
-            before: &before,
-            after: &after,
-            changes: &changes,
-        });
+        if !changes.is_empty() {
+            self.emit(NodeGraphStoreEvent::ViewChanged {
+                before: &before,
+                after: &after,
+                changes: &changes,
+            });
+        }
         self.notify_selectors();
     }
 
@@ -748,4 +707,40 @@ impl NodeGraphStore {
             sub.last = next;
         }
     }
+}
+
+fn view_state_eq(a: &NodeGraphViewState, b: &NodeGraphViewState) -> bool {
+    a.pan == b.pan
+        && a.zoom == b.zoom
+        && a.selected_nodes == b.selected_nodes
+        && a.selected_edges == b.selected_edges
+        && a.selected_groups == b.selected_groups
+        && a.draw_order == b.draw_order
+        && a.group_draw_order == b.group_draw_order
+        && a.interaction == b.interaction
+        && a.runtime_tuning == b.runtime_tuning
+}
+
+fn collect_view_projection_changes(
+    before: &NodeGraphViewState,
+    after: &NodeGraphViewState,
+) -> Vec<ViewChange> {
+    let mut changes: Vec<ViewChange> = Vec::new();
+    if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
+        changes.push(ViewChange::Viewport {
+            pan: after.pan,
+            zoom: after.zoom,
+        });
+    }
+    if before.selected_nodes != after.selected_nodes
+        || before.selected_edges != after.selected_edges
+        || before.selected_groups != after.selected_groups
+    {
+        changes.push(ViewChange::Selection {
+            nodes: after.selected_nodes.clone(),
+            edges: after.selected_edges.clone(),
+            groups: after.selected_groups.clone(),
+        });
+    }
+    changes
 }

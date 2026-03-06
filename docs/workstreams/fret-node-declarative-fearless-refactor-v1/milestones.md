@@ -132,6 +132,8 @@ runtime tuning.
 ### Evidence anchors
 
 - `ecosystem/fret-node/src/io/mod.rs`
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/runtime/store.rs`

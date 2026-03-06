@@ -1095,3 +1095,74 @@ fn store_replace_view_state_emits_view_changed_event() {
 
     assert_eq!(events.borrow().as_slice(), &["view"]);
 }
+
+#[test]
+fn store_replace_view_state_notifies_selectors_for_runtime_tuning_only_changes() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, _a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+    store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+    });
+
+    let runtime_flags: Rc<RefCell<Vec<bool>>> = Rc::new(RefCell::new(Vec::new()));
+    let runtime_flags2 = runtime_flags.clone();
+    store.subscribe_selector(
+        |s| {
+            s.view_state
+                .resolved_interaction_state()
+                .only_render_visible_elements
+        },
+        move |value| runtime_flags2.borrow_mut().push(*value),
+    );
+
+    let mut vs = store.view_state().clone();
+    vs.runtime_tuning.only_render_visible_elements = false;
+    store.replace_view_state(vs);
+
+    assert!(events.borrow().is_empty());
+    assert_eq!(runtime_flags.borrow().as_slice(), &[false]);
+    assert!(
+        !store
+            .view_state()
+            .runtime_tuning
+            .only_render_visible_elements
+    );
+}
+
+#[test]
+fn store_update_view_state_notifies_selectors_for_draw_order_only_changes() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+    store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+    });
+
+    let draw_order_snapshots: Rc<RefCell<Vec<Vec<NodeId>>>> = Rc::new(RefCell::new(Vec::new()));
+    let draw_order_snapshots2 = draw_order_snapshots.clone();
+    store.subscribe_selector(
+        |s| s.view_state.draw_order.clone(),
+        move |value| draw_order_snapshots2.borrow_mut().push(value.clone()),
+    );
+
+    store.update_view_state(|s| {
+        s.draw_order = vec![b, a];
+    });
+
+    assert!(events.borrow().is_empty());
+    assert_eq!(draw_order_snapshots.borrow().as_slice(), &[vec![b, a]]);
+    assert_eq!(store.view_state().draw_order.as_slice(), &[b, a]);
+}

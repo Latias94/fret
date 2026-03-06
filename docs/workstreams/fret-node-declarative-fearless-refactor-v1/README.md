@@ -122,6 +122,8 @@ update rather than an incidental refactor.
     (`NodeGraphInteractionConfig`) separately from `runtime_tuning`
     (`NodeGraphRuntimeTuning`), while runtime/widget code still resolves a combined
     `NodeGraphInteractionState` for compatibility.
+  - Store selector subscriptions now observe non-viewport view-state changes (draw order,
+    interaction config, runtime tuning) without emitting misleading empty `ViewChanged` events.
   - Full closure is still unresolved: `NodeGraphViewState` still carries persisted interaction
     policy alongside pure view state, and the long-term ownership/persistence story is not final.
 

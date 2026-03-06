@@ -65,9 +65,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - legacy serialized `interaction` payloads migrate at load time
 - [ ] Decide where these new types live and who owns persistence for them.
 - [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
-- [ ] Update store code and tests so the new boundary is explicit in subscriptions and controlled
+- [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled
       synchronization.
-- [ ] Add focused tests for serialization migration and store behavior after the split.
+- [x] Add focused tests for serialization migration and store behavior after the split.
 
 ## M3 - Controller / instance facade
 
