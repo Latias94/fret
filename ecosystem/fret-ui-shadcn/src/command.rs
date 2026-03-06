@@ -2598,6 +2598,23 @@ impl CommandPalette {
         self
     }
 
+    /// Installs a shared stable `test_id` prefix for command palette surfaces.
+    ///
+    /// This derives:
+    /// - `{prefix}-input`
+    /// - `{prefix}-listbox`
+    /// - `{prefix}-item-{sanitized_value}`
+    /// - `{prefix}-heading-{sanitized_heading}`
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.input_test_id = Some(Arc::<str>::from(format!("{prefix}-input")));
+        self.list_test_id = Some(Arc::<str>::from(format!("{prefix}-listbox")));
+        self.test_id_input = Some(Arc::<str>::from(format!("{prefix}-input")));
+        self.test_id_item_prefix = Some(Arc::<str>::from(format!("{prefix}-item-")));
+        self.test_id_heading_prefix = Some(Arc::<str>::from(format!("{prefix}-heading-")));
+        self
+    }
+
     /// Installs stable `test_id`s on item rows using `{prefix}{sanitized_value}`.
     pub fn test_id_item_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.test_id_item_prefix = Some(prefix.into());
@@ -5386,6 +5403,60 @@ mod tests {
             active_node.flags.selected,
             "highlighted row should be selected"
         );
+    }
+
+    #[test]
+    fn command_palette_test_id_prefix_derives_surface_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-test-id-prefix",
+            |cx| {
+                vec![
+                    CommandPalette::new(
+                        query.clone(),
+                        vec![CommandItem::new("Alpha"), CommandItem::new("Beta")],
+                    )
+                    .test_id_prefix("cmd")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "cmd-input"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-item-alpha"));
+
+        let _ = root;
     }
 
     #[test]
