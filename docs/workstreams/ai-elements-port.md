@@ -161,10 +161,12 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
   - `AI commit large (demo)` (`ai_commit_large_demo`): long file list + scroll + file-path click seam gate:
     - `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
-  - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
-    - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `AI stack trace (demo)` (`ai_stack_trace_demo`): docs-aligned `StackTrace` page with default-open, collapsed, and hide-internal examples; gated by:
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-demo-copy.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-collapsed.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-no-internal.json`
   - `AI stack trace large (demo)` (`ai_stack_trace_large_demo`): long frame list + scroll + file-path click seam gate:
-    - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`
   - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
   - `AI test results large (demo)` (`ai_test_results_large_demo`): long test list + scroll + activate seam gate:
@@ -191,6 +193,7 @@ this section as part of the “Version stamp” bump.
 
 - `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
 - `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
+- `StackTrace` compound parts are composed via closure-based `into_element_with_children(...)` instead of eager child collection so inherited provider state is established before parts resolve context.
 - `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.
 - `Test` rows (`test-results.tsx`): upstream renders tests as a non-interactive row by default; Fret keeps the default non-interactive but adds an optional activation seam (`Test::on_activate(OnTestActivate)`) for editor-style “open test output” flows.
 

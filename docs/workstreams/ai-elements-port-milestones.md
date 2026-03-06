@@ -152,8 +152,11 @@ Notes:
 - `Shimmer` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-shimmer-demo-pixels-changed.json`).
 - `Commit` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-commit-demo-copy.json`).
 - `Commit` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-commit-large-scroll.json`).
-- `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
-- `StackTrace` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-stack-trace-large-scroll.json`).
+- `StackTrace` is ported as a docs-aligned UI Gallery page (default-open, collapsed, hide-internal) with gates:
+  - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-collapsed.json`
+  - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-no-internal.json`
+- `StackTrace` large-list demo + scroll/click seam gate exists (`tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`).
 - `Terminal` v1 is ported as a viewer-only output surface (monospace output + copy/clear + auto-scroll) and gated:
   - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).

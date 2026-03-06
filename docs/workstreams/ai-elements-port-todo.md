@@ -142,7 +142,7 @@ Status legend:
 | `artifact` | Prototype | `fret-ui-ai` | Artifact container surfaces (`Artifact*`) + UI Gallery demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
-| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
+| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; docs-aligned gallery page now covers default-open, collapsed, and hide-internal examples with dedicated diag gates. |
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
@@ -238,11 +238,13 @@ Existing gates (UI Gallery `ai_commit_large_demo`):
 
 Existing gates (UI Gallery `ai_stack_trace_demo`):
 
-- `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-demo-copy.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-collapsed.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-no-internal.json`
 
 Existing gates (UI Gallery `ai_stack_trace_large_demo`):
 
-- `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`
 
 Existing gates (UI Gallery workflow):
 
@@ -329,7 +331,7 @@ Prioritize thin adapters over new engines:
 - [x] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
-  - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
+  - `StackTrace` is implemented with a docs-aligned UI Gallery page and dedicated gates for default-open copy flow, collapsed disclosure, and hide-internal behavior.
   - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
   - Parity polish checklist (make it measurable):
     - [~] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
@@ -342,7 +344,7 @@ Prioritize thin adapters over new engines:
     - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
       - commit: many files; stack trace: many frames; test results: many suites.
       - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
-      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`).
+      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`).
       - Done: test results many-tests scroll/activate gate (`tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`).
     - [~] Confirm extension hooks exist for app-owned effects:
       - commit: file row click / open file
