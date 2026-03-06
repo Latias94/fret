@@ -25,6 +25,8 @@ def main() -> None:
     roots = [
         WORKSPACE_ROOT / "apps/fret-cookbook/examples",
         WORKSPACE_ROOT / "apps/fret-examples/src",
+        WORKSPACE_ROOT / "apps/fret-ui-gallery/src/ui/pages",
+        WORKSPACE_ROOT / "apps/fret-ui-gallery/src/ui/snippets",
     ]
     files = iter_files(roots, include_glob="*.rs")
     if not files:
