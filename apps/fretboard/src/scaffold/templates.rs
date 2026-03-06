@@ -602,21 +602,21 @@ __PALETTE_BUTTON__
         .w_full();
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Todo"));
                     out.push_ui(
                         cx,
                         shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
                     );
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|cx, out| {
                     out.push_ui(cx, content);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()
@@ -993,7 +993,8 @@ __ADD_BTN_DEF__
             .w_full();
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Simple Todo"));
                     out.push_ui(
@@ -1001,14 +1002,13 @@ __ADD_BTN_DEF__
                         shadcn::CardDescription::new("View runtime + typed actions + keyed lists (no selector/query)."),
                     );
                     out.push(header_actions);
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|cx, out| {
                     out.push_ui(cx, content);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()
@@ -1301,6 +1301,8 @@ mod tests {
         assert!(src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(src.contains("cx.on_action_notify_models::<act::RefreshTip>"));
@@ -1345,6 +1347,8 @@ mod tests {
         assert!(src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));

@@ -182,7 +182,8 @@ impl View for FormBasicsView {
             .into_element(cx);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Form basics"));
                     out.push_ui(
@@ -191,14 +192,13 @@ impl View for FormBasicsView {
                             "A minimal form with validation (no extra form registry dependency).",
                         ),
                     );
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|_cx, out| {
                     out.push(body);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()

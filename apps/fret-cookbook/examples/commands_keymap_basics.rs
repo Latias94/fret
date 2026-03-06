@@ -178,35 +178,35 @@ impl View for CommandsKeymapBasicsView {
         .into_element(cx);
 
         let panel = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Panel"));
                     out.push_ui(
                         cx,
                         shadcn::CardDescription::new("State changes should be command-driven."),
                     );
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|_cx, out| {
                     out.push(panel_body);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_PANEL);
 
-        let body = ui::h_flex(|_cx| [left, panel])
+        let body = ui::h_flex(|cx| ui::children![cx; left, panel])
             .gap(Space::N6)
             .w_full()
             .into_element(cx);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Commands + keymap basics"));
                     out.push_ui(
@@ -215,14 +215,13 @@ impl View for CommandsKeymapBasicsView {
                             "Registers a command with a default keybinding, then gates availability from UI state.",
                         ),
                     );
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|_cx, out| {
                     out.push(body);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()

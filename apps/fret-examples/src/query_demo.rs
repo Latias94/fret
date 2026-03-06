@@ -192,7 +192,8 @@ impl View for QueryDemoView {
         .into_element(cx);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Query demo"));
                     out.push_ui(
@@ -200,21 +201,20 @@ impl View for QueryDemoView {
                         shadcn::CardDescription::new("Async resource state via fret-query."),
                     );
                     out.push(status_row);
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex_build(|_cx, out| {
                             out.extend([buttons, detail_body]);
                         })
                         .gap(Space::N4)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()

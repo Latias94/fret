@@ -6,8 +6,8 @@ use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiHostBoundIntoElement, UiPatch,
-    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -296,6 +296,16 @@ where
     }
 }
 
+impl<H: UiHost, B> UiChildIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -553,6 +563,16 @@ where
     }
 }
 
+impl<H: UiHost, B> UiChildIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
@@ -620,6 +640,7 @@ mod tests {
         SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
     use fret_ui_kit::{MetricRef, UiBuilderHostBoundIntoElementExt as _, UiExt as _};
 
     #[test]
@@ -992,6 +1013,51 @@ mod tests {
     }
 
     #[test]
+    fn card_build_children_macro_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let children = ui::children![cx;
+                Card::build(|_cx, _out| {}).ui().w_full(),
+                CardHeader::build(|_cx, _out| {}).ui().w_full(),
+                CardContent::build(|_cx, _out| {}).ui().w_full(),
+            ];
+
+            assert_eq!(children.len(), 3);
+            assert!(matches!(children[0].kind, ElementKind::ForegroundScope(_)));
+            assert!(matches!(children[1].kind, ElementKind::Container(_)));
+            assert!(matches!(children[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
+    fn card_build_push_ui_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, Card::build(|_cx, _out| {}));
+            out.push_ui(cx, CardHeader::build(|_cx, _out| {}));
+            out.push_ui(cx, CardContent::build(|_cx, _out| {}));
+
+            assert_eq!(out.len(), 3);
+            assert!(matches!(out[0].kind, ElementKind::ForegroundScope(_)));
+            assert!(matches!(out[1].kind, ElementKind::Container(_)));
+            assert!(matches!(out[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
     fn card_build_ui_builder_path_applies_layout_patches() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1050,8 +1116,8 @@ mod tests {
                 panic!("expected ui()-patched CardContent to be a container element");
             };
 
-            assert_eq!(*card_background, Some(background));
-            assert_eq!(*card_border_color, Some(border));
+            assert_eq!(card_background, &Some(background));
+            assert_eq!(card_border_color, &Some(border));
             assert_eq!(card_layout.size.max_width, Some(Length::Px(Px(320.0))));
             assert_eq!(header_layout.size.max_width, Some(Length::Px(Px(240.0))));
             assert_eq!(content_layout.size.max_width, Some(Length::Px(Px(200.0))));
@@ -1491,6 +1557,16 @@ where
 {
     #[track_caller]
     fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         CardContentBuild::into_element(self, cx)
     }
 }
