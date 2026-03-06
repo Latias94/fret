@@ -159,7 +159,10 @@ First landing in this worktree:
   activation, selection-only release, and cancel-drop semantics stay reviewable,
 - escape now also clears pending-selection-only sessions (not just marquee / node-drag sessions),
 - escape/pointer-cancel now drop transient marquee/click-selection state instead of issuing
-  selection restore writes.
+  selection restore writes, now via a shared cancel reducer that keeps the Escape-vs-pointer-cancel
+  node-drag semantics explicit,
+- pointer-driven layout/paint follow-up effects (`invalidate` / `notify` / `request_redraw`) now
+  route through dedicated helpers so reducer extraction does not duplicate host-side bookkeeping.
 
 ### Slice 3 - portal and overlay closure
 

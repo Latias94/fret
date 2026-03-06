@@ -1189,6 +1189,32 @@ impl LeftPointerReleaseOutcome {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarativeInteractionCancelMode {
+    Escape,
+    PointerCancel,
+}
+
+impl DeclarativeInteractionCancelMode {
+    fn includes_node_drag(self, state: Option<&NodeDragState>) -> bool {
+        match self {
+            Self::Escape => state.is_some_and(NodeDragState::is_live),
+            Self::PointerCancel => state.is_some(),
+        }
+    }
+
+    fn clear_node_drag(self, state: &mut Option<NodeDragState>) {
+        match self {
+            Self::Escape => {
+                if let Some(state) = state.as_mut() {
+                    state.cancel();
+                }
+            }
+            Self::PointerCancel => *state = None,
+        }
+    }
+}
+
 fn complete_node_drag_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
@@ -1306,6 +1332,50 @@ fn complete_left_pointer_release_action_host(
     }
 }
 
+fn cancel_declarative_interactions_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    mode: DeclarativeInteractionCancelMode,
+) -> bool {
+    let drag_active = host
+        .models_mut()
+        .read(drag, |state| state.is_some())
+        .ok()
+        .unwrap_or(false);
+    let marquee_active = host
+        .models_mut()
+        .read(marquee, |state| state.is_some())
+        .ok()
+        .unwrap_or(false);
+    let node_drag_active = host
+        .models_mut()
+        .read(node_drag, |state| mode.includes_node_drag(state.as_ref()))
+        .ok()
+        .unwrap_or(false);
+    let pending_selection_active = host
+        .models_mut()
+        .read(pending_selection, |state| state.is_some())
+        .ok()
+        .unwrap_or(false);
+
+    if !drag_active && !marquee_active && !node_drag_active && !pending_selection_active {
+        return false;
+    }
+
+    let _ = host.models_mut().update(drag, |state| *state = None);
+    let _ = host.models_mut().update(marquee, |state| *state = None);
+    let _ = host
+        .models_mut()
+        .update(pending_selection, |state| *state = None);
+    let _ = host
+        .models_mut()
+        .update(node_drag, |state| mode.clear_node_drag(state));
+    true
+}
+
 fn escape_cancel_declarative_interactions_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     drag: &Model<Option<DragState>>,
@@ -1313,38 +1383,14 @@ fn escape_cancel_declarative_interactions_action_host(
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
 ) -> bool {
-    let drag_active = host.models_mut().read(drag, |st| *st).ok().flatten();
-    let marquee_active = host
-        .models_mut()
-        .read(marquee, |st| st.is_some())
-        .ok()
-        .unwrap_or(false);
-    let node_drag_active = host
-        .models_mut()
-        .read(node_drag, |st| {
-            st.as_ref().is_some_and(NodeDragState::is_live)
-        })
-        .ok()
-        .unwrap_or(false);
-    let pending_selection_active = host
-        .models_mut()
-        .read(pending_selection, |st| st.is_some())
-        .ok()
-        .unwrap_or(false);
-
-    if drag_active.is_none() && !marquee_active && !node_drag_active && !pending_selection_active {
-        return false;
-    }
-
-    let _ = host.models_mut().update(drag, |st| *st = None);
-    let _ = host.models_mut().update(marquee, |st| *st = None);
-    let _ = host.models_mut().update(pending_selection, |st| *st = None);
-    let _ = host.models_mut().update(node_drag, |st| {
-        if let Some(st) = st.as_mut() {
-            st.cancel();
-        }
-    });
-    true
+    cancel_declarative_interactions_action_host(
+        host,
+        drag,
+        marquee,
+        node_drag,
+        pending_selection,
+        DeclarativeInteractionCancelMode::Escape,
+    )
 }
 
 fn pointer_cancel_declarative_interactions_action_host(
@@ -1354,32 +1400,43 @@ fn pointer_cancel_declarative_interactions_action_host(
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
 ) -> bool {
-    let had_any = host
-        .models_mut()
-        .read(drag, |st| st.is_some())
-        .ok()
-        .unwrap_or(false)
-        || host
-            .models_mut()
-            .read(marquee, |st| st.is_some())
-            .ok()
-            .unwrap_or(false)
-        || host
-            .models_mut()
-            .read(node_drag, |st| st.is_some())
-            .ok()
-            .unwrap_or(false)
-        || host
-            .models_mut()
-            .read(pending_selection, |st| st.is_some())
-            .ok()
-            .unwrap_or(false);
+    cancel_declarative_interactions_action_host(
+        host,
+        drag,
+        marquee,
+        node_drag,
+        pending_selection,
+        DeclarativeInteractionCancelMode::PointerCancel,
+    )
+}
 
-    let _ = host.models_mut().update(drag, |st| *st = None);
-    let _ = host.models_mut().update(marquee, |st| *st = None);
-    let _ = host.models_mut().update(node_drag, |st| *st = None);
-    let _ = host.models_mut().update(pending_selection, |st| *st = None);
-    had_any
+fn notify_and_redraw_action_host<H>(host: &mut H, action_cx: fret_ui::action::ActionCx)
+where
+    H: fret_ui::action::UiActionHost + ?Sized,
+{
+    host.notify(action_cx);
+    host.request_redraw(action_cx.window);
+}
+
+fn invalidate_notify_and_redraw_pointer_action_host<H>(
+    host: &mut H,
+    action_cx: fret_ui::action::ActionCx,
+    invalidation: Invalidation,
+) where
+    H: fret_ui::action::UiPointerActionHost + ?Sized,
+{
+    host.invalidate(invalidation);
+    notify_and_redraw_action_host(host, action_cx);
+}
+
+fn finish_declarative_pointer_session_action_host<H>(
+    host: &mut H,
+    action_cx: fret_ui::action::ActionCx,
+) where
+    H: fret_ui::action::UiPointerActionHost + ?Sized,
+{
+    host.release_pointer_capture();
+    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
 }
 
 fn hit_test_node_at_point(
@@ -2734,8 +2791,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 last_pos: down.position,
                             });
                         });
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
+                        notify_and_redraw_action_host(host, action_cx);
                         return true;
                     }
 
@@ -2824,8 +2880,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 }
                             }
 
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
+                            notify_and_redraw_action_host(host, action_cx);
                             return true;
                         }
 
@@ -2859,8 +2914,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 });
                             });
 
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
+                            notify_and_redraw_action_host(host, action_cx);
                             return true;
                         }
 
@@ -2874,13 +2928,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 });
                             });
                             host.capture_pointer();
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
+                            notify_and_redraw_action_host(host, action_cx);
                             return true;
                         }
 
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
+                        notify_and_redraw_action_host(host, action_cx);
                         return true;
                     }
 
@@ -2973,9 +3025,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
                             if needs_redraw {
                                 // Node dragging moves portals (layout) and the canvas chrome (paint).
-                                host.invalidate(Invalidation::Layout);
-                                host.notify(action_cx);
-                                host.request_redraw(action_cx.window);
+                                invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
                             }
                             return needs_redraw;
                         }
@@ -3051,8 +3101,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             }
 
                             let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
+                            notify_and_redraw_action_host(host, action_cx);
                             return true;
                         }
 
@@ -3110,9 +3159,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .unwrap_or(false);
 
                         if changed {
-                            host.invalidate(Invalidation::Paint);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
+                            invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Paint);
                         }
                         return changed;
                     };
@@ -3147,9 +3194,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     });
 
                     // Panning repositions portals (layout) and changes world mapping (hit-test + paint).
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
+                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
                     true
                 },
             );
@@ -3185,18 +3230,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             return false;
                         }
 
-                        host.release_pointer_capture();
-                        host.invalidate(Invalidation::Layout);
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
+                        finish_declarative_pointer_session_action_host(host, action_cx);
                         return true;
                     }
 
-                    host.release_pointer_capture();
                     let _ = host.models_mut().update(&drag_end, |st| *st = None);
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
+                    finish_declarative_pointer_session_action_host(host, action_cx);
                     true
                 },
             );
@@ -3209,7 +3248,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
                       _cancel: fret_ui::action::PointerCancelCx| {
-                    host.release_pointer_capture();
                     let _ = pointer_cancel_declarative_interactions_action_host(
                         host,
                         &drag_cancel,
@@ -3217,9 +3255,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         &node_drag_cancel,
                         &pending_selection_cancel,
                     );
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
+                    finish_declarative_pointer_session_action_host(host, action_cx);
                     true
                 },
             );
@@ -3273,9 +3309,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         return false;
                     }
 
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
+                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
                     true
                 },
             );
@@ -3325,9 +3359,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         return false;
                     }
 
-                    host.invalidate(Invalidation::Layout);
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
+                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
                     true
                 },
             );
@@ -4834,6 +4866,54 @@ mod tests {
             host.models
                 .read(&pending, |state| state.is_none())
                 .expect("pending readable")
+        );
+    }
+
+    #[test]
+    fn escape_cancel_declarative_interactions_action_host_ignores_already_canceled_node_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(0.0)),
+            phase: NodeDragPhase::Canceled,
+            nodes_sorted: Arc::from([NodeId::from_u128(9962)]),
+        }));
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(!escape_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&node_drag, |state| {
+                    state.as_ref().is_some_and(NodeDragState::is_canceled)
+                })
+                .expect("node drag readable")
+        );
+    }
+
+    #[test]
+    fn pointer_cancel_declarative_interactions_action_host_clears_already_canceled_node_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(0.0)),
+            phase: NodeDragPhase::Canceled,
+            nodes_sorted: Arc::from([NodeId::from_u128(9963)]),
+        }));
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(pointer_cancel_declarative_interactions_action_host(
+            &mut host, &drag, &marquee, &node_drag, &pending,
+        ));
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
         );
     }
 
