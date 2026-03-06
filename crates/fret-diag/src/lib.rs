@@ -44,6 +44,7 @@ mod diag_simple_dispatch;
 mod diag_stats;
 mod diag_suite;
 mod diag_suite_scripts;
+mod diag_summarize;
 mod evidence_index;
 mod frames_index;
 mod gates;
@@ -3106,6 +3107,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             stats_top_override,
         ),
+        "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,

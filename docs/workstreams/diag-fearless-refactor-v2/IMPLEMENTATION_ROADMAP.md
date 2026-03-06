@@ -155,8 +155,10 @@ Current status:
 - `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
   `regression.summary.json` additively without replacing their existing outputs.
 - `diag matrix` also writes `matrix.summary.json` as a stable compare-oriented sidecar.
-- Remaining work is now mostly about contract hardening and campaign-level aggregation,
-  not first-time emission plumbing.
+- `diag summarize` now provides a first consumer-side aggregation/index surface over many
+  `regression.summary.json` artifacts.
+- Remaining work is now mostly about contract hardening, richer campaign selection, and
+  campaign-level orchestration beyond simple aggregation.
 
 Goal:
 
@@ -183,8 +185,10 @@ Recommended PR slices:
 3. [done] extend summary rows for `diag repeat` and flake classification,
 4. [done] extend summary rows for `diag matrix` and `diag perf`,
 5. [done] write `regression.summary.json` under a stable location,
-6. [next] define campaign-level aggregation/index outputs over many summary artifacts,
-7. [next] tighten stable reason-code and evidence-path conventions across all lanes.
+6. [done] define a first campaign-level aggregation/index output over many summary artifacts,
+7. [next] tighten stable reason-code and evidence-path conventions across all lanes,
+8. [next] decide whether aggregation should stay as `diag summarize` or become part of a
+   future `diag campaign` surface.
 
 Gate expectations:
 

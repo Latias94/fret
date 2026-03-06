@@ -75,6 +75,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] flake policy,
   - [ ] capability/feature tags.
 - [ ] Decide whether to introduce a first-class “campaign” or “regression” orchestration layer.
+  - [x] Land a minimal aggregation/index consumer first via `fretboard diag summarize`.
+  - [ ] Decide whether that consumer should remain standalone or fold into a future campaign surface.
 - [ ] Define expected outputs for orchestrated runs:
   - [x] one machine-readable summary,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
