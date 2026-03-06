@@ -191,21 +191,27 @@ impl View for QueryDemoView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Query demo").into_element(cx),
-            shadcn::CardDescription::new("Async resource state via fret-query.").into_element(cx),
-            status_row,
-        ])
-        .into_element(cx);
-
-        let content_body = ui::v_flex_build(|_cx, out| {
-            out.extend([buttons, detail_body]);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Query demo"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new("Async resource state via fret-query."),
+            );
+            out.push(status_row);
         })
-        .gap(Space::N4)
-        .w_full()
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([content_body]).into_element(cx);
+        let content = shadcn::CardContent::build(|cx, out| {
+            out.push(
+                ui::v_flex_build(|_cx, out| {
+                    out.extend([buttons, detail_body]);
+                })
+                .gap(Space::N4)
+                .w_full()
+                .into_element(cx),
+            );
+        })
+        .into_element(cx);
 
         let card = shadcn::Card::new([header, content])
             .ui()

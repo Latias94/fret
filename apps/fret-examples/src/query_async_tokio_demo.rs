@@ -211,21 +211,27 @@ impl View for QueryAsyncTokioDemoView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Async query demo (Tokio)").into_element(cx),
-            shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle").into_element(cx),
-            status_row,
-        ])
-        .into_element(cx);
-
-        let content_body = ui::v_flex_build(|_cx, out| {
-            out.extend([buttons, detail_body]);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Async query demo (Tokio)"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle"),
+            );
+            out.push(status_row);
         })
-        .gap(Space::N4)
-        .w_full()
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([content_body]).into_element(cx);
+        let content = shadcn::CardContent::build(|cx, out| {
+            out.push(
+                ui::v_flex_build(|_cx, out| {
+                    out.extend([buttons, detail_body]);
+                })
+                .gap(Space::N4)
+                .w_full()
+                .into_element(cx),
+            );
+        })
+        .into_element(cx);
 
         let card = shadcn::Card::new([header, content])
             .ui()
