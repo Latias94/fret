@@ -150,7 +150,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] decide whether to keep JSON-only or add TOML / generated registry inputs later,
   - [x] add first-pass campaign metadata (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
   - [x] add direct script items in addition to suites,
-  - [ ] decide whether future manifests should move from top-level `suites`/`scripts` to ordered `items`,
+  - [x] move canonical manifest authoring from top-level `suites`/`scripts` to ordered `items`,
+  - [ ] decide when legacy top-level `suites`/`scripts` compatibility can be removed,
   - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
 - [ ] Make failed automation runs leave predictable evidence by default:
   - [ ] summary/index artifacts,

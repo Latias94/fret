@@ -7,8 +7,9 @@ Current rules:
 - one file per campaign (`*.json`),
 - `schema_version: 1`,
 - `kind: "diag_campaign_manifest"`,
-- each campaign may contain `suites`, `scripts`, or both,
-- at least one of `suites` / `scripts` must be non-empty,
+- canonical authoring uses ordered `items`,
+- each item has `kind` (`suite` or `script`) plus `value`,
+- legacy top-level `suites` / `scripts` is still accepted for compatibility,
 - supported metadata fields include `owner`, `platforms`, `tier`, and `expected_duration_ms`,
 - manifest entries override same-id built-in fallback definitions.
 

@@ -5,18 +5,13 @@
   "description": "Docking-focused smoke run covering arbitration and hardening basics.",
   "lane": "smoke",
   "profile": "bounded",
-  "suites": [
-    "diag-hardening-smoke-docking",
-    "docking-arbitration"
+  "items": [
+    { "kind": "suite", "value": "diag-hardening-smoke-docking" },
+    { "kind": "suite", "value": "docking-arbitration" }
   ],
   "owner": "diag",
-  "platforms": [
-    "native"
-  ],
+  "platforms": ["native"],
   "tier": "smoke",
   "expected_duration_ms": 120000,
-  "tags": [
-    "docking",
-    "smoke"
-  ]
+  "tags": ["docking", "smoke"]
 }

@@ -35,8 +35,8 @@ Current shipped behavior:
 
 Known gaps after the first landing:
 
-- manifests still use top-level `suites` / `scripts` rather than one ordered `items` list,
-- direct script-item support now exists, but ordering is still split across top-level `suites` / `scripts`,
+- canonical manifests now use one ordered `items` list; legacy top-level `suites` / `scripts` is still accepted for compatibility,
+- direct script-item support now exists and execution follows ordered `items`,
 - no persisted dashboard text/HTML projection yet,
 - no campaign-aware metadata resolver beyond the built-in registry,
 - cross-suite launch reuse still follows current `diag suite` behavior rather than a campaign-level runner.

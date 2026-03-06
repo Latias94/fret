@@ -231,7 +231,7 @@ Suggested surface:
 
 Recommended PR slices:
 
-1. decide whether manifests should keep top-level `suites` / `scripts` or move to ordered `items`,
+1. decide when legacy top-level `suites` / `scripts` compatibility can be removed,
 2. enrich metadata beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
 3. add richer lane composition (`matrix`, `perf`, `nightly/full`),
 4. decide whether campaign runs should persist a dashboard text or HTML projection,

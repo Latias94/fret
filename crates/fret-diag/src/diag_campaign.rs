@@ -1,8 +1,8 @@
 use super::*;
 
 use crate::registry::campaigns::{
-    CampaignDefinition, CampaignRegistry, campaign_to_json, lane_to_str, parse_lane,
-    source_kind_str,
+    CampaignDefinition, CampaignItemDefinition, CampaignItemKind, CampaignRegistry,
+    campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
 };
 use crate::regression_summary::RegressionLaneV1;
 
@@ -44,12 +44,6 @@ pub(crate) struct CampaignCmdContext {
 #[derive(Debug, Clone)]
 struct CampaignRunOptions {
     requested_lane: Option<RegressionLaneV1>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CampaignItemKind {
-    Suite,
-    Script,
 }
 
 #[derive(Debug, Clone)]
@@ -203,8 +197,8 @@ fn cmd_campaign_list(
     for campaign in registry.list_campaigns() {
         let mut details = vec![
             lane_to_str(campaign.lane).to_string(),
-            format!("suites={}", campaign.suites.len()),
-            format!("scripts={}", campaign.scripts.len()),
+            format!("suites={}", campaign.suite_count()),
+            format!("scripts={}", campaign.script_count()),
             format!("source={}", source_kind_str(&campaign.source)),
         ];
         if let Some(tier) = campaign.tier.as_deref() {
@@ -271,12 +265,16 @@ fn cmd_campaign_show(
     if !campaign.tags.is_empty() {
         println!("tags: {}", campaign.tags.join(", "));
     }
-    println!("suites ({}):", campaign.suites.len());
-    for suite in &campaign.suites {
+    println!("items ({}):", campaign.items.len());
+    for item in &campaign.items {
+        println!("  - {}: {}", item_kind_str(item.kind), item.value);
+    }
+    println!("suites ({}):", campaign.suite_count());
+    for suite in campaign.suites() {
         println!("  - {suite}");
     }
-    println!("scripts ({}):", campaign.scripts.len());
-    for script in &campaign.scripts {
+    println!("scripts ({}):", campaign.script_count());
+    for script in campaign.scripts() {
         println!("  - {script}");
     }
 
@@ -332,18 +330,11 @@ fn cmd_campaign_run(
     write_campaign_manifest(&campaign_root, campaign, &run_id, created_unix_ms, &ctx)?;
 
     let mut item_results: Vec<CampaignItemRunResult> = Vec::new();
-    for (index, suite_id) in campaign.suites.iter().enumerate() {
-        item_results.push(run_campaign_suite_item(
+    for (index, item) in campaign.items.iter().enumerate() {
+        item_results.push(run_campaign_item(
             index,
-            suite_id,
+            item,
             &suite_results_root,
-            &ctx,
-        )?);
-    }
-    for (index, script_path) in campaign.scripts.iter().enumerate() {
-        item_results.push(run_campaign_script_item(
-            index,
-            script_path,
             &script_results_root,
             &ctx,
         )?);
@@ -403,14 +394,8 @@ fn cmd_campaign_run(
         ));
     }
 
-    let suites_total = item_results
-        .iter()
-        .filter(|entry| entry.kind == CampaignItemKind::Suite)
-        .count();
-    let scripts_total = item_results
-        .iter()
-        .filter(|entry| entry.kind == CampaignItemKind::Script)
-        .count();
+    let suites_total = campaign.suite_count();
+    let scripts_total = campaign.script_count();
 
     if ctx.stats_json {
         let payload = serde_json::json!({
@@ -441,6 +426,23 @@ fn cmd_campaign_run(
     }
 
     Ok(())
+}
+
+fn run_campaign_item(
+    index: usize,
+    item: &CampaignItemDefinition,
+    suite_results_root: &Path,
+    script_results_root: &Path,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignItemRunResult, String> {
+    match item.kind {
+        CampaignItemKind::Suite => {
+            run_campaign_suite_item(index, &item.value, suite_results_root, ctx)
+        }
+        CampaignItemKind::Script => {
+            run_campaign_script_item(index, &item.value, script_results_root, ctx)
+        }
+    }
 }
 
 fn run_campaign_suite_item(
@@ -568,13 +570,6 @@ fn run_campaign_script_item(
     })
 }
 
-fn item_kind_str(kind: CampaignItemKind) -> &'static str {
-    match kind {
-        CampaignItemKind::Suite => "suite",
-        CampaignItemKind::Script => "script",
-    }
-}
-
 fn parse_campaign_run_options(rest: &[String]) -> Result<CampaignRunOptions, String> {
     let mut out = CampaignRunOptions {
         requested_lane: None,
@@ -597,6 +592,12 @@ fn parse_campaign_run_options(rest: &[String]) -> Result<CampaignRunOptions, Str
     Ok(out)
 }
 
+fn item_to_manifest_json(item: &CampaignItemDefinition) -> serde_json::Value {
+    serde_json::json!({
+        "kind": item_kind_str(item.kind),
+        "value": item.value,
+    })
+}
 fn write_campaign_manifest(
     campaign_root: &Path,
     campaign: &CampaignDefinition,
@@ -617,10 +618,12 @@ fn write_campaign_manifest(
             "out_dir": campaign_root.display().to_string(),
         },
         "resolved": {
-            "suite_count": campaign.suites.len(),
-            "script_count": campaign.scripts.len(),
-            "suites": campaign.suites,
-            "scripts": campaign.scripts,
+            "item_count": campaign.items.len(),
+            "items": campaign.items.iter().map(item_to_manifest_json).collect::<Vec<_>>(),
+            "suite_count": campaign.suite_count(),
+            "script_count": campaign.script_count(),
+            "suites": campaign.suites(),
+            "scripts": campaign.scripts(),
             "launch": ctx.launch,
             "launch_env": ctx.launch_env,
         }

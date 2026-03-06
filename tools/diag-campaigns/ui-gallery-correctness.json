@@ -5,18 +5,13 @@
   "description": "Broader UI gallery correctness pass for common interaction surfaces.",
   "lane": "correctness",
   "profile": "bounded",
-  "suites": [
-    "ui-gallery",
-    "ui-gallery-code-editor"
+  "items": [
+    { "kind": "suite", "value": "ui-gallery" },
+    { "kind": "suite", "value": "ui-gallery-code-editor" }
   ],
   "owner": "diag",
-  "platforms": [
-    "native"
-  ],
+  "platforms": ["native"],
   "tier": "correctness",
   "expected_duration_ms": 300000,
-  "tags": [
-    "ui-gallery",
-    "correctness"
-  ]
+  "tags": ["ui-gallery", "correctness"]
 }

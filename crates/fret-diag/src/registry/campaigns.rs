@@ -9,14 +9,26 @@ use crate::regression_summary::RegressionLaneV1;
 pub(crate) const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
 pub(crate) const DIAG_CAMPAIGNS_DIR: &str = "diag-campaigns";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum CampaignItemKind {
+    Suite,
+    Script,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CampaignItemDefinition {
+    pub kind: CampaignItemKind,
+    pub value: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CampaignDefinition {
     pub id: String,
     pub description: String,
     pub lane: RegressionLaneV1,
     pub profile: Option<String>,
-    pub suites: Vec<String>,
-    pub scripts: Vec<String>,
+    pub items: Vec<CampaignItemDefinition>,
     pub owner: Option<String>,
     pub platforms: Vec<String>,
     pub tier: Option<String>,
@@ -46,6 +58,8 @@ struct CampaignManifestV1 {
     #[serde(default)]
     profile: Option<String>,
     #[serde(default)]
+    items: Vec<CampaignManifestItemV1>,
+    #[serde(default)]
     suites: Vec<String>,
     #[serde(default)]
     scripts: Vec<String>,
@@ -61,6 +75,17 @@ struct CampaignManifestV1 {
     tags: Vec<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct CampaignManifestItemV1 {
+    kind: CampaignItemKind,
+    #[serde(default)]
+    value: Option<String>,
+    #[serde(default)]
+    suite: Option<String>,
+    #[serde(default)]
+    script: Option<String>,
+}
+
 const UI_GALLERY_SMOKE_SUITES: &[&str] = &["ui-gallery-lite-smoke", "ui-gallery-layout"];
 const UI_GALLERY_CORRECTNESS_SUITES: &[&str] = &["ui-gallery", "ui-gallery-code-editor"];
 const DOCKING_SMOKE_SUITES: &[&str] = &["diag-hardening-smoke-docking", "docking-arbitration"];
@@ -72,11 +97,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             description: "Fast UI gallery smoke coverage with layout sanity.".to_string(),
             lane: RegressionLaneV1::Smoke,
             profile: Some("bounded".to_string()),
-            suites: UI_GALLERY_SMOKE_SUITES
-                .iter()
-                .map(|suite| (*suite).to_string())
-                .collect(),
-            scripts: Vec::new(),
+            items: suite_items(UI_GALLERY_SMOKE_SUITES),
             owner: Some("diag".to_string()),
             platforms: vec!["native".to_string()],
             tier: Some("smoke".to_string()),
@@ -94,11 +115,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 .to_string(),
             lane: RegressionLaneV1::Correctness,
             profile: Some("bounded".to_string()),
-            suites: UI_GALLERY_CORRECTNESS_SUITES
-                .iter()
-                .map(|suite| (*suite).to_string())
-                .collect(),
-            scripts: Vec::new(),
+            items: suite_items(UI_GALLERY_CORRECTNESS_SUITES),
             owner: Some("diag".to_string()),
             platforms: vec!["native".to_string()],
             tier: Some("correctness".to_string()),
@@ -112,11 +129,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 .to_string(),
             lane: RegressionLaneV1::Smoke,
             profile: Some("bounded".to_string()),
-            suites: DOCKING_SMOKE_SUITES
-                .iter()
-                .map(|suite| (*suite).to_string())
-                .collect(),
-            scripts: Vec::new(),
+            items: suite_items(DOCKING_SMOKE_SUITES),
             owner: Some("diag".to_string()),
             platforms: vec!["native".to_string()],
             tier: Some("smoke".to_string()),
@@ -125,6 +138,38 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             source: CampaignDefinitionSource::Builtin,
         },
     ]
+}
+
+impl CampaignDefinition {
+    pub(crate) fn suites(&self) -> Vec<&str> {
+        self.items
+            .iter()
+            .filter(|item| item.kind == CampaignItemKind::Suite)
+            .map(|item| item.value.as_str())
+            .collect()
+    }
+
+    pub(crate) fn scripts(&self) -> Vec<&str> {
+        self.items
+            .iter()
+            .filter(|item| item.kind == CampaignItemKind::Script)
+            .map(|item| item.value.as_str())
+            .collect()
+    }
+
+    pub(crate) fn suite_count(&self) -> usize {
+        self.items
+            .iter()
+            .filter(|item| item.kind == CampaignItemKind::Suite)
+            .count()
+    }
+
+    pub(crate) fn script_count(&self) -> usize {
+        self.items
+            .iter()
+            .filter(|item| item.kind == CampaignItemKind::Script)
+            .count()
+    }
 }
 
 impl CampaignRegistry {
@@ -181,13 +226,16 @@ pub(crate) fn campaigns_dir_from_workspace_root(workspace_root: &Path) -> PathBu
 }
 
 pub(crate) fn campaign_to_json(campaign: &CampaignDefinition) -> serde_json::Value {
+    let suites = campaign.suites();
+    let scripts = campaign.scripts();
     serde_json::json!({
         "id": campaign.id,
         "description": campaign.description,
         "lane": campaign.lane,
         "profile": campaign.profile,
-        "suites": campaign.suites,
-        "scripts": campaign.scripts,
+        "items": campaign.items.iter().map(item_to_json).collect::<Vec<_>>(),
+        "suites": suites,
+        "scripts": scripts,
         "owner": campaign.owner,
         "platforms": campaign.platforms,
         "tier": campaign.tier,
@@ -198,6 +246,13 @@ pub(crate) fn campaign_to_json(campaign: &CampaignDefinition) -> serde_json::Val
             CampaignDefinitionSource::Builtin => None,
             CampaignDefinitionSource::Manifest(path) => Some(path.display().to_string()),
         },
+    })
+}
+
+pub(crate) fn item_to_json(item: &CampaignItemDefinition) -> serde_json::Value {
+    serde_json::json!({
+        "kind": item_kind_str(item.kind),
+        "value": item.value,
     })
 }
 
@@ -229,6 +284,23 @@ pub(crate) fn source_kind_str(source: &CampaignDefinitionSource) -> &'static str
         CampaignDefinitionSource::Builtin => "builtin",
         CampaignDefinitionSource::Manifest(_) => "manifest",
     }
+}
+
+pub(crate) fn item_kind_str(kind: CampaignItemKind) -> &'static str {
+    match kind {
+        CampaignItemKind::Suite => "suite",
+        CampaignItemKind::Script => "script",
+    }
+}
+
+fn suite_items(values: &[&str]) -> Vec<CampaignItemDefinition> {
+    values
+        .iter()
+        .map(|value| CampaignItemDefinition {
+            kind: CampaignItemKind::Suite,
+            value: (*value).to_string(),
+        })
+        .collect()
 }
 
 fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition>, String> {
@@ -301,27 +373,10 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         ));
     }
 
-    let mut suites = manifest
-        .suites
-        .into_iter()
-        .map(|suite| suite.trim().to_string())
-        .filter(|suite| !suite.is_empty())
-        .collect::<Vec<_>>();
-    suites.sort();
-    suites.dedup();
-
-    let mut scripts = manifest
-        .scripts
-        .into_iter()
-        .map(|script| script.trim().to_string())
-        .filter(|script| !script.is_empty())
-        .collect::<Vec<_>>();
-    scripts.sort();
-    scripts.dedup();
-
-    if suites.is_empty() && scripts.is_empty() {
+    let items = parse_manifest_items(path, manifest.items, manifest.suites, manifest.scripts)?;
+    if items.is_empty() {
         return Err(format!(
-            "campaign manifest must contain at least one suite or script: {}",
+            "campaign manifest must contain at least one item: {}",
             path.display()
         ));
     }
@@ -360,8 +415,7 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         description: description.to_string(),
         lane: manifest.lane,
         profile,
-        suites,
-        scripts,
+        items,
         owner,
         platforms,
         tier,
@@ -369,6 +423,58 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         tags,
         source: CampaignDefinitionSource::Manifest(path.to_path_buf()),
     })
+}
+
+fn parse_manifest_items(
+    path: &Path,
+    manifest_items: Vec<CampaignManifestItemV1>,
+    suites: Vec<String>,
+    scripts: Vec<String>,
+) -> Result<Vec<CampaignItemDefinition>, String> {
+    if !manifest_items.is_empty() {
+        let mut items = Vec::with_capacity(manifest_items.len());
+        for (index, item) in manifest_items.into_iter().enumerate() {
+            let value = match item.kind {
+                CampaignItemKind::Suite => item.value.or(item.suite),
+                CampaignItemKind::Script => item.value.or(item.script),
+            }
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "campaign manifest item {} is missing a value: {}",
+                    index,
+                    path.display()
+                )
+            })?;
+            items.push(CampaignItemDefinition {
+                kind: item.kind,
+                value,
+            });
+        }
+        return Ok(items);
+    }
+
+    let mut items = Vec::new();
+    for suite in suites {
+        let suite = suite.trim();
+        if !suite.is_empty() {
+            items.push(CampaignItemDefinition {
+                kind: CampaignItemKind::Suite,
+                value: suite.to_string(),
+            });
+        }
+    }
+    for script in scripts {
+        let script = script.trim();
+        if !script.is_empty() {
+            items.push(CampaignItemDefinition {
+                kind: CampaignItemKind::Script,
+                value: script.to_string(),
+            });
+        }
+    }
+    Ok(items)
 }
 
 #[cfg(test)]
@@ -399,7 +505,7 @@ mod tests {
         let registry = CampaignRegistry::builtin();
         let campaign = registry.resolve("ui-gallery-smoke").unwrap();
         assert_eq!(campaign.id, "ui-gallery-smoke");
-        assert_eq!(campaign.suites, UI_GALLERY_SMOKE_SUITES);
+        assert_eq!(campaign.suite_count(), 2);
         assert!(matches!(campaign.source, CampaignDefinitionSource::Builtin));
         assert_eq!(campaign.tier.as_deref(), Some("smoke"));
     }
@@ -427,7 +533,10 @@ mod tests {
   "description": "Manifest-backed smoke override.",
   "lane": "smoke",
   "profile": "bounded",
-  "scripts": ["tools/diag-scripts/ui-gallery-layout.json"],
+  "items": [
+    { "kind": "script", "value": "tools/diag-scripts/ui-gallery-layout.json" },
+    { "kind": "suite", "value": "ui-gallery-layout" }
+  ],
   "owner": "diag",
   "platforms": ["native"],
   "tier": "smoke",
@@ -440,10 +549,9 @@ mod tests {
         let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
         let campaign = registry.resolve("ui-gallery-smoke").unwrap();
         assert_eq!(campaign.description, "Manifest-backed smoke override.");
-        assert_eq!(
-            campaign.scripts,
-            vec!["tools/diag-scripts/ui-gallery-layout.json".to_string()]
-        );
+        assert_eq!(campaign.items.len(), 2);
+        assert_eq!(campaign.items[0].kind, CampaignItemKind::Script);
+        assert_eq!(campaign.items[1].kind, CampaignItemKind::Suite);
         assert_eq!(campaign.expected_duration_ms, Some(12345));
         assert!(matches!(
             campaign.source,

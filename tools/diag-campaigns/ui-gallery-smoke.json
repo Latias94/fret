@@ -5,19 +5,13 @@
   "description": "Fast UI gallery smoke coverage with layout sanity.",
   "lane": "smoke",
   "profile": "bounded",
-  "suites": [
-    "ui-gallery-lite-smoke",
-    "ui-gallery-layout"
+  "items": [
+    { "kind": "suite", "value": "ui-gallery-lite-smoke" },
+    { "kind": "suite", "value": "ui-gallery-layout" }
   ],
   "owner": "diag",
-  "platforms": [
-    "native"
-  ],
+  "platforms": ["native"],
   "tier": "smoke",
   "expected_duration_ms": 120000,
-  "tags": [
-    "ui-gallery",
-    "smoke",
-    "developer-loop"
-  ]
+  "tags": ["ui-gallery", "smoke", "developer-loop"]
 }
