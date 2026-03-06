@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::LayoutDirection;
+use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
@@ -1062,6 +1063,7 @@ struct ContextMenuRenderEnv {
     open: Model<bool>,
     cancel_open: ContextMenuCancelOpenShared,
     gating: WindowCommandGatingSnapshot,
+    test_id_prefix: Option<Arc<str>>,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -1209,7 +1211,11 @@ impl ContextMenuRenderEnv {
         let label = item.label.clone();
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let test_id = item.test_id.clone();
+        let test_id = item.test_id.clone().or_else(|| {
+            self.test_id_prefix.as_ref().map(|prefix| {
+                Arc::<str>::from(format!("{prefix}-item-{}", test_id_slug(value.as_ref())))
+            })
+        });
         let chrome_test_id = test_id
             .clone()
             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
@@ -2452,6 +2458,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     open_value: Arc<str>,
     placed: Rect,
     entries: Vec<ContextMenuEntry>,
+    test_id_prefix: Option<Arc<str>>,
     open: Model<bool>,
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
@@ -2647,6 +2654,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                 open: open.clone(),
                 cancel_open: cancel_open.clone(),
                 gating: gating.clone(),
+                test_id_prefix,
                 reserve_leading_slot,
                 item_count,
                 ring,
@@ -2713,6 +2721,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 pub struct ContextMenu {
     open: Model<bool>,
     disabled: bool,
+    test_id_prefix: Option<Arc<str>>,
     modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
@@ -2761,6 +2770,7 @@ impl ContextMenu {
         Self {
             open,
             disabled: false,
+            test_id_prefix: None,
             modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
@@ -2862,6 +2872,7 @@ impl ContextMenu {
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         let prefix = prefix.into();
         self.content_test_id = Some(Arc::<str>::from(format!("{prefix}-content")));
+        self.test_id_prefix = Some(prefix);
         self
     }
 
@@ -4355,6 +4366,7 @@ impl ContextMenu {
                                 open_value.clone(),
                                 geometry.floating,
                                 submenu_entries,
+                                self.test_id_prefix.clone(),
                                 open_for_submenu.clone(),
                                 typeahead_timeout_ticks,
                                 align_leading_icons,
