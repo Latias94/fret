@@ -2,14 +2,12 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, SemanticsRole, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InsetEdge, Length, PositionStyle,
-    SemanticsDecoration,
+    AnyElement, ContainerProps, ElementKind, Length, PositionStyle, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space,
-    ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
@@ -387,7 +385,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextOverflow};
     use fret_icons::IconId;
-    use fret_ui::element::{ElementKind, SpacingLength};
+    use fret_ui::element::{ElementKind, InsetEdge, SpacingLength};
     use fret_ui_kit::declarative::icon as decl_icon;
 
     fn contains_foreground_scope(el: &AnyElement) -> bool {
@@ -473,7 +471,10 @@ mod tests {
         });
 
         let ElementKind::Container(props) = &element.kind else {
-            panic!("expected Alert root to be a Container, got {:?}", element.kind);
+            panic!(
+                "expected Alert root to be a Container, got {:?}",
+                element.kind
+            );
         };
 
         assert_eq!(props.padding.right, SpacingLength::Px(Px(72.0)));
@@ -496,7 +497,10 @@ mod tests {
         });
 
         let ElementKind::Container(props) = &element.kind else {
-            panic!("expected AlertAction root to be a Container, got {:?}", element.kind);
+            panic!(
+                "expected AlertAction root to be a Container, got {:?}",
+                element.kind
+            );
         };
 
         assert_eq!(props.layout.position, PositionStyle::Absolute);
