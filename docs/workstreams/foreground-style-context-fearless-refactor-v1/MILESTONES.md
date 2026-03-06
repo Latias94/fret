@@ -25,6 +25,22 @@ Current snapshot (2026-03-06):
 - `input_group` is now fully covered for the v1 foreground slice: addon rows and button-content
   roots both attach inherited foreground directly to existing subtree roots without synthetic
   wrappers.
+- Follow-up layout audit work has now locked `radio_group` long-label behavior with a targeted
+  regression test: the default label text keeps word wrapping while shrinking inside the item row
+  via explicit grow + `min-w-0`, preventing the one-line overflow drift seen during the audit.
+- The same wrapped-label audit has now been extended into `fret-ui-ai` header surfaces:
+  `agent`, `sandbox`, and `tool` all had icon/label/badge rows tightened with explicit shrink-
+  friendly constraints, and each surface now has a targeted regression test that locks the label
+  text to `wrap: Word` plus `flex_grow(1.0)` + `min_w_0()`.
+- The audit has also reached `fret-ui-ai/sources_block`: both per-source title/link rows and the
+  collapsible trigger label now keep their truncation semantics while shrinking within horizontal
+  rows, with targeted regression tests covering the item-row and trigger-row paths.
+- `fret-ui-ai/web_preview` console rows are now also covered: timestamp + message log rows keep
+  word-wrap behavior without overflowing beside the timestamp, and the fix is locked with a
+  targeted regression test.
+- `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
+  / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
+  explicitly fill available width and opt into `min-w-0`.
 
 ---
 

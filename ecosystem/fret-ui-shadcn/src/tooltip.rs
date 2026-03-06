@@ -1562,6 +1562,36 @@ mod tests {
         });
     }
 
+    #[test]
+    fn tooltip_content_keeps_shrink_to_fit_width_instead_of_fill_width() {
+        use fret_ui::element::Length;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "tooltip-width", |cx| {
+            let content = TooltipContent::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(TextProps::new("tip")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &content.kind else {
+                panic!("expected TooltipContent to build a Container element");
+            };
+
+            assert_eq!(props.layout.size.width, Length::Auto);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(320.0))));
+        });
+    }
+
     #[derive(Default)]
     struct FakeServices;
 

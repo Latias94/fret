@@ -199,7 +199,10 @@ impl AgentHeader {
         );
 
         let name_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+            ),
             text: name,
             style: Some(text_sm_style(&theme, FontWeight::MEDIUM, false)),
             color: Some(theme.color_required("foreground")),
@@ -225,6 +228,7 @@ impl AgentHeader {
             out
         })
         .gap(Space::N2)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
         .items(Items::Center)
         .into_element(cx);
 
@@ -385,6 +389,52 @@ impl AgentInstructions {
             .gap(Space::N2)
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn agent_header_label_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let label = "A very long agent name that should wrap instead of overflowing the header row";
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "agent", |cx| {
+            AgentHeader::new(label)
+                .model("gpt-5-long-model-badge")
+                .into_element(cx)
+        });
+
+        let label = find_text_by_content(&el, label).expect("agent header label text");
+        assert_eq!(label.wrap, TextWrap::Word);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }
 
