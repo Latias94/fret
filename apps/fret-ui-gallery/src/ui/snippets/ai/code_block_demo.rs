@@ -157,16 +157,22 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let snippet_code: Arc<str> = Arc::from("cargo run -p fret-ui-gallery --release");
-    let snippet = ui_ai::Snippet::new([
-        ui_ai::SnippetText::new("$").into_element(cx),
-        ui_ai::SnippetInput::new(snippet_code.clone()).into_element(cx),
-        ui_ai::SnippetCopyButton::new(snippet_code)
-            .test_id("ui-ai-snippet-copy")
-            .copied_marker_test_id("ui-ai-snippet-copied-marker")
-            .into_element(cx),
-    ])
-    .test_id("ui-ai-snippet-root")
-    .into_element(cx);
+    let snippet = ui_ai::Snippet::with_code(snippet_code)
+        .test_id("ui-ai-code-block-snippet-root")
+        .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
+        .into_element_with_children(cx, |cx| {
+            vec![
+                ui_ai::SnippetAddon::new([ui_ai::SnippetText::new("$").into_element(cx)])
+                    .into_element(cx),
+                ui_ai::SnippetInput::from_context().into_element(cx),
+                ui_ai::SnippetAddon::new([ui_ai::SnippetCopyButton::from_context()
+                    .test_id("ui-ai-code-block-snippet-copy")
+                    .copied_marker_test_id("ui-ai-code-block-snippet-copied-marker")
+                    .into_element(cx)])
+                .align(ui_ai::SnippetAddonAlign::InlineEnd)
+                .into_element(cx),
+            ]
+        });
 
     ui::v_flex(|cx| {
         vec![

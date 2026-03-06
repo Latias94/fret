@@ -31,8 +31,25 @@ fn alpha(color: Color, a: f32) -> Color {
     }
 }
 
+/// Nearest `Snippet` context in scope.
+#[derive(Debug, Clone)]
+pub struct SnippetContext {
+    pub code: Arc<str>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct SnippetLocalState {
+    context: Option<SnippetContext>,
+}
+
+pub fn use_snippet_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SnippetContext> {
+    cx.inherited_state::<SnippetLocalState>()
+        .and_then(|st| st.context.clone())
+}
+
 /// AI Elements-aligned snippet surface (inline copyable code).
 pub struct Snippet {
+    code: Option<Arc<str>>,
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -42,6 +59,7 @@ pub struct Snippet {
 impl std::fmt::Debug for Snippet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Snippet")
+            .field("has_code", &self.code.is_some())
             .field("children_len", &self.children.len())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
@@ -52,11 +70,32 @@ impl std::fmt::Debug for Snippet {
 impl Snippet {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
+            code: None,
             children: children.into_iter().collect(),
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn with_code(code: impl Into<Arc<str>>) -> Self {
+        Self {
+            code: Some(code.into()),
+            children: Vec::new(),
+            test_id: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn code(mut self, code: impl Into<Arc<str>>) -> Self {
+        self.code = Some(code.into());
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -75,15 +114,17 @@ impl Snippet {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Snippet {
+            code: _,
+            children,
+            test_id,
+            layout,
+            chrome,
+        } = self;
         let theme = Theme::global(&*cx.app).clone();
 
-        let chrome = resolve_input_chrome(
-            &theme,
-            Size::default(),
-            &self.chrome,
-            InputTokenKeys::none(),
-        );
-        let mut layout = decl_style::layout_style(&theme, self.layout);
+        let chrome = resolve_input_chrome(&theme, Size::default(), &chrome, InputTokenKeys::none());
+        let mut layout = decl_style::layout_style(&theme, layout);
         layout.size.height = Length::Px(chrome.min_height);
 
         let mut props = input_chrome_container_props(layout, chrome, chrome.border_color);
@@ -91,8 +132,6 @@ impl Snippet {
         props.focus_within = true;
         props.focus_border_color = Some(chrome.border_color_focused);
         props.focus_ring = Some(decl_style::focus_ring(&theme, chrome.radius));
-        let children = self.children;
-        let test_id = self.test_id;
         let el = cx.container(props, move |cx| {
             vec![
                 ui::h_row(move |_cx| children)
@@ -110,6 +149,88 @@ impl Snippet {
             fret_ui::element::SemanticsDecoration::default()
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
+        )
+    }
+
+    pub fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        if let Some(code) = self.code.clone() {
+            cx.with_state(SnippetLocalState::default, |st| {
+                st.context = Some(SnippetContext { code });
+            });
+        }
+        self.children(children(cx)).into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SnippetAddonAlign {
+    #[default]
+    InlineStart,
+    InlineEnd,
+}
+
+/// Inline addon wrapper aligned with AI Elements `SnippetAddon`.
+#[derive(Debug)]
+pub struct SnippetAddon {
+    children: Vec<AnyElement>,
+    align: SnippetAddonAlign,
+}
+
+impl SnippetAddon {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            align: SnippetAddonAlign::default(),
+        }
+    }
+
+    pub fn align(mut self, align: SnippetAddonAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let pad_x = theme
+            .metric_by_key("component.input.padding_x")
+            .unwrap_or_else(|| fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme));
+        let pad_y = theme
+            .metric_by_key("component.input.padding_y")
+            .unwrap_or_else(|| fret_ui_kit::MetricRef::space(Space::N1).resolve(&theme));
+
+        let padding = match self.align {
+            SnippetAddonAlign::InlineStart => Edges {
+                top: pad_y,
+                right: Px(0.0),
+                bottom: pad_y,
+                left: pad_x,
+            },
+            SnippetAddonAlign::InlineEnd => Edges {
+                top: pad_y,
+                right: pad_x,
+                bottom: pad_y,
+                left: Px(0.0),
+            },
+        };
+        let children = self.children;
+
+        cx.container(
+            ContainerProps {
+                padding: padding.into(),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    ui::h_row(move |_cx| children)
+                        .gap(Space::N0)
+                        .items(Items::Center)
+                        .into_element(cx),
+                ]
+            },
         )
     }
 }
@@ -176,12 +297,18 @@ impl SnippetText {
 /// This uses `SelectableText` to preserve selection/copy outcomes.
 #[derive(Clone)]
 pub struct SnippetInput {
-    code: Arc<str>,
+    code: Option<Arc<str>>,
 }
 
 impl SnippetInput {
     pub fn new(code: impl Into<Arc<str>>) -> Self {
-        Self { code: code.into() }
+        Self {
+            code: Some(code.into()),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self { code: None }
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -194,7 +321,10 @@ impl SnippetInput {
             .metric_by_key("component.input.padding_y")
             .unwrap_or_else(|| fret_ui_kit::MetricRef::space(Space::N1).resolve(&theme));
 
-        let code = self.code;
+        let code = self
+            .code
+            .or_else(|| use_snippet_context(cx).map(|context| context.code))
+            .unwrap_or_else(|| Arc::<str>::from(""));
         let rich = AttributedText::new(
             code.clone(),
             Arc::<[TextSpan]>::from([TextSpan {
@@ -259,7 +389,7 @@ impl CopyFeedbackRef {
 /// Copy button aligned with AI Elements `SnippetCopyButton`.
 #[derive(Clone)]
 pub struct SnippetCopyButton {
-    code: Arc<str>,
+    code: Option<Arc<str>>,
     on_copy: Option<
         Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
     >,
@@ -271,7 +401,7 @@ pub struct SnippetCopyButton {
 impl std::fmt::Debug for SnippetCopyButton {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SnippetCopyButton")
-            .field("code_len", &self.code.len())
+            .field("code_len", &self.code.as_ref().map(|code| code.len()))
             .field("timeout_ms", &self.timeout.as_millis())
             .field("test_id", &self.test_id.as_deref())
             .field(
@@ -285,7 +415,17 @@ impl std::fmt::Debug for SnippetCopyButton {
 impl SnippetCopyButton {
     pub fn new(code: impl Into<Arc<str>>) -> Self {
         Self {
-            code: code.into(),
+            code: Some(code.into()),
+            on_copy: None,
+            timeout: Duration::from_millis(2000),
+            test_id: None,
+            copied_marker_test_id: None,
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            code: None,
             on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
@@ -326,7 +466,10 @@ impl SnippetCopyButton {
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
 
-        let code = self.code;
+        let code = self
+            .code
+            .or_else(|| use_snippet_context(cx).map(|context| context.code))
+            .unwrap_or_else(|| Arc::<str>::from(""));
         let on_copy = self.on_copy;
         let timeout = self.timeout;
         let test_id = self.test_id;
@@ -486,5 +629,86 @@ impl SnippetCopyButton {
                 children
             })
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(160.0)),
+        )
+    }
+
+    fn has_selectable_text(element: &AnyElement, text: &str) -> bool {
+        if matches!(
+            &element.kind,
+            ElementKind::SelectableText(props) if props.rich.text.as_ref() == text
+        ) {
+            return true;
+        }
+        element
+            .children
+            .iter()
+            .any(|child| has_selectable_text(child, text))
+    }
+
+    fn has_pressable_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if matches!(
+            &element.kind,
+            ElementKind::Pressable(props)
+                if props.a11y.test_id.as_deref() == Some(test_id)
+                    && props.a11y.label.as_deref() == Some("Copy")
+        ) {
+            return true;
+        }
+        element
+            .children
+            .iter()
+            .any(|child| has_pressable_test_id(child, test_id))
+    }
+
+    #[test]
+    fn snippet_children_can_consume_inherited_code_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Snippet::with_code("cargo nextest run -p fret-ui-ai")
+                    .test_id("ui-ai-snippet-root")
+                    .into_element_with_children(cx, |cx| {
+                        vec![
+                            SnippetAddon::new([SnippetText::new("$").into_element(cx)])
+                                .into_element(cx),
+                            SnippetInput::from_context().into_element(cx),
+                            SnippetAddon::new([SnippetCopyButton::from_context()
+                                .test_id("ui-ai-snippet-copy")
+                                .into_element(cx)])
+                            .align(SnippetAddonAlign::InlineEnd)
+                            .into_element(cx),
+                        ]
+                    })
+            });
+
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("ui-ai-snippet-root")
+        );
+        assert!(has_selectable_text(
+            &element,
+            "cargo nextest run -p fret-ui-ai"
+        ));
+        assert!(has_pressable_test_id(&element, "ui-ai-snippet-copy"));
     }
 }

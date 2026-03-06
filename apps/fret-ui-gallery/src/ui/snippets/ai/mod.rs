@@ -47,6 +47,7 @@ pub mod shimmer_demo;
 pub mod shimmer_duration_demo;
 pub mod shimmer_elements_demo;
 pub mod snippet_demo;
+pub mod snippet_plain;
 pub mod sources_demo;
 pub mod speech_input_demo;
 pub mod stack_trace_demo;
