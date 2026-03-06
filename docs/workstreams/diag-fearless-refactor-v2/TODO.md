@@ -114,6 +114,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] counters by lane/status/tool/reason,
   - [x] top reason codes,
   - [x] failing summaries ranking.
+- [x] Land one thin consumer over the aggregate index:
+  - [x] `fretboard diag dashboard` reads `regression.index.json`,
+  - [x] default output gives a first-open human summary,
+  - [x] `--json` preserves machine-readable access to the full index.
 - [ ] Add a short maintainer checklist for new diagnostics features:
   - [ ] which layer changes,
   - [ ] what gate must be added,

@@ -31,6 +31,7 @@ mod compare;
 mod compat;
 pub mod devtools;
 mod diag_compare;
+mod diag_dashboard;
 mod diag_list;
 mod diag_matrix;
 mod diag_perf;
@@ -3107,6 +3108,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             stats_top_override,
         ),
+        "dashboard" => diag_dashboard::cmd_dashboard(diag_dashboard::DashboardCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
         "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
             rest: rest.clone(),
             workspace_root: workspace_root.clone(),

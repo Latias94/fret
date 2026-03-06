@@ -241,6 +241,13 @@ Goal:
 
 - let presentation surfaces consume campaigns and summaries without defining their own semantics.
 
+Current status:
+
+- A first thin consumer now exists via `fretboard diag dashboard`, which reads
+  `regression.index.json` for human-oriented inspection.
+- The next step in this phase is no longer “whether a consumer is useful”, but how GUI/MCP
+  should reuse the same index/summary contracts without forking semantics.
+
 Primary code areas:
 
 - `apps/fret-devtools-mcp/src/native.rs`
@@ -324,7 +331,7 @@ Suggested minimums:
 - Phase C: one end-to-end evidence contract example
 - Phase D: summary serialization + fixture tests
 - Phase E: one implemented lane with a stable example command
-- Phase F: one GUI/MCP consumer example
+- Phase F: one thin consumer example is landed; next is GUI/MCP adoption
 - Phase G: metadata parsing + filtering tests
 
 ## 6) Definition of done for this roadmap
