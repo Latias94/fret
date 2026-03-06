@@ -1,5 +1,12 @@
 use super::*;
 
+use crate::regression_summary::{
+    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
+    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
+    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
+    RegressionSummaryV1, RegressionTotalsV1,
+};
+
 pub(crate) type SuiteChecks = diag_run::RunChecks;
 
 use crate::registry::suites::SuiteResolver;
@@ -18,6 +25,230 @@ fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) 
         return;
     }
     env.push((key.to_string(), value.to_string()));
+}
+
+fn suite_lane_from_name(suite_name: Option<&str>) -> RegressionLaneV1 {
+    let Some(suite_name) = suite_name else {
+        return RegressionLaneV1::Correctness;
+    };
+    let suite_name = suite_name.to_ascii_lowercase();
+    if suite_name.contains("smoke") {
+        RegressionLaneV1::Smoke
+    } else if suite_name.contains("perf") || suite_name.contains("steady") {
+        RegressionLaneV1::Perf
+    } else if suite_name.contains("matrix") {
+        RegressionLaneV1::Matrix
+    } else if suite_name.contains("nightly") || suite_name.contains("full") {
+        RegressionLaneV1::Nightly
+    } else {
+        RegressionLaneV1::Correctness
+    }
+}
+
+fn suite_row_to_regression_item(
+    row: &serde_json::Value,
+    resolved_out_dir: &Path,
+    lane: RegressionLaneV1,
+) -> RegressionItemSummaryV1 {
+    let item_id = row
+        .get("script")
+        .and_then(|v| v.as_str())
+        .unwrap_or("suite-row")
+        .to_string();
+    let stage = row.get("stage").and_then(|v| v.as_str());
+    let lint_error_issues = row
+        .pointer("/lint/error_issues")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let status = if lint_error_issues > 0 {
+        RegressionStatusV1::FailedDeterministic
+    } else {
+        match stage {
+            Some("passed") => RegressionStatusV1::Passed,
+            Some("failed") => RegressionStatusV1::FailedDeterministic,
+            Some(_) | None => RegressionStatusV1::FailedTooling,
+        }
+    };
+    let reason_code = row
+        .get("reason_code")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string())
+        .or_else(|| (lint_error_issues > 0).then(|| "diag.suite.lint_failed".to_string()))
+        .or_else(|| match stage {
+            Some("passed") => None,
+            Some("failed") => Some("diag.suite.script_failed".to_string()),
+            Some(_) | None => Some("tooling.diag_suite.unexpected_stage".to_string()),
+        });
+    let bundle_dir = row
+        .get("last_bundle_dir")
+        .and_then(|v| v.as_str())
+        .and_then(|v| (!v.trim().is_empty()).then_some(v.trim()))
+        .map(|v| PathBuf::from(v))
+        .map(|bundle_dir| {
+            if bundle_dir.is_absolute() {
+                bundle_dir
+            } else {
+                resolved_out_dir.join(bundle_dir)
+            }
+        });
+    let bundle_artifact = bundle_dir
+        .as_deref()
+        .and_then(resolve_bundle_artifact_path_no_materialize)
+        .map(|path| path.display().to_string());
+
+    RegressionItemSummaryV1 {
+        item_id: item_id.clone(),
+        kind: RegressionItemKindV1::Script,
+        name: item_id,
+        status,
+        reason_code,
+        lane,
+        owner: None,
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: None,
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact,
+            bundle_dir: bundle_dir.map(|path| path.display().to_string()),
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: None,
+            compare_json: None,
+            extra: row.get("evidence_highlights").cloned(),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: row
+                .get("script")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
+            suite: None,
+            campaign_case: None,
+            metadata: None,
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: row
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
+            details: Vec::new(),
+        }),
+    }
+}
+
+fn write_regression_summary_for_suite(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    regression_summary_path: &Path,
+    suite_name: Option<&str>,
+    generated_unix_ms: u64,
+    suite_payload: &serde_json::Value,
+) {
+    let lane = suite_lane_from_name(suite_name);
+    let mut items = suite_payload
+        .get("rows")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .map(|row| suite_row_to_regression_item(row, resolved_out_dir, lane))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let suite_status = suite_payload
+        .get("status")
+        .and_then(|v| v.as_str())
+        .unwrap_or("failed");
+    let failure_kind = suite_payload
+        .get("failure_kind")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    if items.is_empty() && suite_status != "passed" {
+        items.push(RegressionItemSummaryV1 {
+            item_id: suite_name.unwrap_or("suite").to_string(),
+            kind: RegressionItemKindV1::CampaignStep,
+            name: suite_name.unwrap_or("suite").to_string(),
+            status: RegressionStatusV1::FailedTooling,
+            reason_code: failure_kind
+                .clone()
+                .or_else(|| Some("tooling.diag_suite.failed".to_string())),
+            lane,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: None,
+            source: Some(RegressionSourceV1 {
+                script: None,
+                suite: suite_name.map(|v| v.to_string()),
+                campaign_case: Some("suite_setup".to_string()),
+                metadata: None,
+            }),
+            notes: Some(RegressionNotesV1 {
+                summary: Some("suite failed before row-level results were available".to_string()),
+                details: Vec::new(),
+            }),
+        });
+    }
+
+    let mut totals = RegressionTotalsV1::default();
+    for item in &items {
+        totals.record_status(item.status);
+    }
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: suite_name.unwrap_or("suite").to_string(),
+            lane,
+            profile: None,
+            schema_version: Some(1),
+            requested_by: Some("diag suite".to_string()),
+            filters: None,
+        },
+        RegressionRunSummaryV1 {
+            run_id: generated_unix_ms.to_string(),
+            created_unix_ms: generated_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(resolved_out_dir.display().to_string()),
+            tool: "fretboard diag suite".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    for item in &mut items {
+        if let Some(source) = item.source.as_mut()
+            && source.suite.is_none()
+        {
+            source.suite = suite_name.map(|v| v.to_string());
+        }
+    }
+    summary.items = items;
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+    summary.artifacts = Some(RegressionArtifactsV1 {
+        summary_dir: Some(resolved_out_dir.display().to_string()),
+        packed_report: None,
+        index_json: None,
+        html_report: None,
+    });
+
+    if let Err(err) = write_json_value(
+        regression_summary_path,
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    ) {
+        eprintln!(
+            "warning: failed to write regression summary {}: {}",
+            regression_summary_path.display(),
+            err
+        );
+    }
 }
 
 fn resolve_builtin_suite_scripts(
@@ -708,6 +939,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     let trace_chrome = false;
 
     let suite_summary_path = resolved_out_dir.join("suite.summary.json");
+    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
     let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
     let suite_summary_generated_unix_ms = now_unix_ms();
     let mut suite_stage_counts: std::collections::BTreeMap<String, u64> =
@@ -779,6 +1011,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     "rows": suite_rows,
                 });
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
         }
@@ -833,6 +1073,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     "rows": suite_rows,
                 });
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
         }
@@ -882,6 +1130,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
         }
@@ -945,6 +1201,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     }
                     let _ = write_json_value(&suite_summary_path, &payload);
+                    write_regression_summary_for_suite(
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &regression_summary_path,
+                        suite_summary_suite.as_deref(),
+                        suite_summary_generated_unix_ms,
+                        &payload,
+                    );
                     return Err("suite run failed (see suite.summary.json)".to_string());
                 }
             };
@@ -1156,6 +1420,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 return Err("suite run failed (see suite.summary.json)".to_string());
             }
         };
@@ -1220,6 +1492,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 std::process::exit(1);
             }
             _ => {
@@ -1258,6 +1538,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
                 let _ = write_json_value(&suite_summary_path, &payload);
+                write_regression_summary_for_suite(
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &regression_summary_path,
+                    suite_summary_suite.as_deref(),
+                    suite_summary_generated_unix_ms,
+                    &payload,
+                );
                 std::process::exit(1);
             }
         }
@@ -1358,6 +1646,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     });
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     let _ = write_json_value(&suite_summary_path, &payload);
+                    write_regression_summary_for_suite(
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &regression_summary_path,
+                        suite_summary_suite.as_deref(),
+                        suite_summary_generated_unix_ms,
+                        &payload,
+                    );
                     std::process::exit(1);
                 }
             }
@@ -2188,6 +2484,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         "rows": suite_rows,
     });
     let _ = write_json_value(&suite_summary_path, &payload);
+    write_regression_summary_for_suite(
+        &workspace_root,
+        &resolved_out_dir,
+        &regression_summary_path,
+        suite_summary_suite.as_deref(),
+        suite_summary_generated_unix_ms,
+        &payload,
+    );
     if !stats_json {
         println!("SUITE-SUMMARY {}", suite_summary_path.display());
     }

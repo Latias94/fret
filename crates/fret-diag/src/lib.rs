@@ -66,6 +66,7 @@ mod perf_seed_policy;
 mod post_run_checks;
 mod promoted_registry_builder;
 mod registry;
+pub mod regression_summary;
 mod run_artifacts;
 mod script_execution;
 mod script_registry;
