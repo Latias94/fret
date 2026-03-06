@@ -58,6 +58,7 @@ Companion docs:
   - [ ] `fret` for app authors
   - [ ] `fret-framework` for manual assembly
   - [ ] `fret-launch` for advanced integration
+- [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` (`chart_demo`, `bars_demo`, `error_bars_demo`).
 - [ ] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [ ] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 

@@ -49,11 +49,15 @@ This workstream is staged to keep the launch stack landable while tightening pub
 
 - `crates/fret-launch/src/runner/common/fn_driver.rs`
 - `crates/fret-launch/src/runner/common/winit_app_driver.rs`
+- `apps/fret-examples/src/chart_demo.rs`
+- `apps/fret-examples/src/bars_demo.rs`
+- `apps/fret-examples/src/error_bars_demo.rs`
 
 **Gates**
 
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
+- Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls unless a hook gap remains.
 
 ## M3 鈥?Config curation without capability loss
 
