@@ -204,6 +204,15 @@ Goal:
 
 - expose the lane model as a first-class repo workflow.
 
+Current status:
+
+- A first minimal `fretboard diag campaign` surface is now landed.
+- The new entry currently provides `list`, `show`, and `run` over a small built-in registry.
+- `run` composes existing `diag suite` and `diag summarize` flows instead of introducing a second execution engine.
+- Campaign runs now leave a predictable root under `campaigns/<campaign_id>/<run_id>/` with
+  `campaign.manifest.json`, `campaign.result.json`, `regression.index.json`, and
+  `regression.summary.json`.
+
 Primary code areas:
 
 - `crates/fret-diag/src/commands/`
@@ -220,11 +229,11 @@ Suggested surface:
 
 Recommended PR slices:
 
-1. add campaign config model and resolver,
-2. implement `smoke` as the first lane,
-3. implement `correctness`,
-4. add `matrix` and `perf` composition,
-5. add `nightly/full` presets.
+1. extract the built-in registry behind a clearer campaign resolver seam,
+2. enrich suite/campaign metadata (owner, platform, duration, flake policy, tags),
+3. add direct script items and richer lane composition (`matrix`, `perf`, `nightly/full`),
+4. decide whether campaign runs should persist a dashboard text or HTML projection,
+5. evaluate whether campaign manifests should become external JSON/TOML after the seam settles.
 
 Important rule:
 

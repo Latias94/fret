@@ -14,6 +14,33 @@ Related notes:
 
 This note proposes the first practical execution entry for campaign-oriented diagnostics automation.
 
+## Implementation status (2026-03-06)
+
+The first minimal implementation is now landed in `crates/fret-diag`.
+
+Current shipped surface:
+
+- `fretboard diag campaign list`
+- `fretboard diag campaign show <campaign_id>`
+- `fretboard diag campaign run <campaign_id>`
+
+Current shipped behavior:
+
+- a small built-in Rust registry resolves campaign ids,
+- campaign `run` expands to suites only (not direct script items yet),
+- each run writes under `campaigns/<campaign_id>/<run_id>/`,
+- suite runs reuse the existing `diag suite` implementation,
+- aggregate handoff reuses the existing `diag summarize` implementation,
+- the final artifact contract remains `regression.index.json` + `regression.summary.json`.
+
+Known gaps after the first landing:
+
+- no external JSON/TOML campaign manifest format yet,
+- no direct script-item support yet,
+- no persisted dashboard text/HTML projection yet,
+- no campaign-aware metadata resolver beyond the built-in registry,
+- cross-suite launch reuse still follows current `diag suite` behavior rather than a campaign-level runner.
+
 The intent is not to replace existing commands such as:
 
 - `diag run`
@@ -261,6 +288,10 @@ Deliver:
 - one minimal campaign registry or manifest resolver
 - campaign run directory creation
 
+Status:
+
+- Done for the first landing via a built-in registry in `crates/fret-diag/src/diag_campaign.rs`.
+
 Acceptance:
 
 - a known campaign id expands deterministically into suites/scripts,
@@ -279,6 +310,12 @@ Acceptance:
 - `diag dashboard --dir <campaign_run_dir>` works,
 - DevTools can read the resulting directory without a special adapter.
 
+Status:
+
+- Partially done: `diag campaign run` now emits `regression.index.json` and `regression.summary.json`
+  by delegating to `diag summarize`.
+- Still open: persisting one explicit human-readable dashboard artifact in the campaign run directory.
+
 ## Slice C - Discoverability
 
 Deliver:
@@ -290,6 +327,11 @@ Deliver:
 Acceptance:
 
 - a new contributor can discover a valid campaign id without grepping Rust source.
+
+Status:
+
+- Done for the minimal surface (`list` + `show` are implemented).
+- Still open: authoring documentation once campaign definitions stop being Rust-only.
 
 ## 12) Initial recommendation for naming
 

@@ -74,9 +74,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] expected duration,
   - [ ] flake policy,
   - [ ] capability/feature tags.
-- [ ] Decide whether to introduce a first-class “campaign” or “regression” orchestration layer.
+- [x] Decide whether to introduce a first-class “campaign” orchestration layer.
   - [x] Land a minimal aggregation/index consumer first via `fretboard diag summarize`.
-  - [ ] Decide whether that consumer should remain standalone or fold into a future campaign surface.
+  - [x] Land a first `fretboard diag campaign` surface that composes existing `suite` + `summarize` flows.
+  - [ ] Decide when campaign definitions should move from built-in Rust registry to external manifests.
 - [ ] Define expected outputs for orchestrated runs:
   - [x] one machine-readable summary,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
@@ -132,11 +133,22 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 ## Next focus after GUI refresh
 
-- [ ] Define the first campaign/suite execution slice over existing diag scripts:
+- [x] Define the first campaign/suite execution slice over existing diag scripts:
   - [x] Drafted command-surface and output-layout proposal in `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_EXECUTION_ENTRY_V1.md`.
-  - [ ] choose the CLI entry shape (`diag regression run`, `diag campaign run`, or equivalent),
-  - [ ] define the minimum stable output layout for suites/campaigns,
-  - [ ] keep DevTools and MCP consuming the same aggregate artifacts.
+  - [x] Chose the CLI entry shape: `fretboard diag campaign`.
+  - [x] Landed a minimal built-in campaign registry with `list` / `show` / `run`.
+  - [x] Landed the minimum stable output layout for campaign runs:
+    - `campaigns/<campaign_id>/<run_id>/campaign.manifest.json`
+    - `campaigns/<campaign_id>/<run_id>/campaign.result.json`
+    - `campaigns/<campaign_id>/<run_id>/suite-results/<suite>/...`
+    - `campaigns/<campaign_id>/<run_id>/regression.index.json`
+    - `campaigns/<campaign_id>/<run_id>/regression.summary.json`
+  - [x] Kept DevTools and MCP on the same aggregate artifact handoff (`regression.index.json` + `regression.summary.json`).
+- [ ] Expand the campaign surface beyond the first skeleton:
+  - [ ] move campaign definitions behind an explicit resolver seam,
+  - [ ] add richer suite metadata (owner/platform/tier/duration/tags),
+  - [ ] add direct script items in addition to suites,
+  - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
 - [ ] Make failed automation runs leave predictable evidence by default:
   - [ ] summary/index artifacts,
   - [ ] failing evidence bundles,

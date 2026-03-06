@@ -30,6 +30,7 @@ mod commands;
 mod compare;
 mod compat;
 pub mod devtools;
+mod diag_campaign;
 mod diag_compare;
 mod diag_dashboard;
 mod diag_list;
@@ -3113,6 +3114,36 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             workspace_root: workspace_root.clone(),
             resolved_out_dir: resolved_out_dir.clone(),
             stats_json,
+        }),
+        "campaign" => diag_campaign::cmd_campaign(diag_campaign::CampaignCmdContext {
+            pack_after_run,
+            rest: rest.clone(),
+            suite_script_inputs: suite_script_inputs.clone(),
+            suite_prewarm_scripts: suite_prewarm_scripts.clone(),
+            suite_prelude_scripts: suite_prelude_scripts.clone(),
+            suite_prelude_each_run,
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            devtools_ws_url: devtools_ws_url.clone(),
+            devtools_token: devtools_token.clone(),
+            devtools_session_id: devtools_session_id.clone(),
+            timeout_ms,
+            poll_ms,
+            stats_top,
+            stats_json,
+            warmup_frames,
+            max_test_ids,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            suite_lint,
+            pack_include_screenshots,
+            reuse_launch,
+            launch: launch.clone(),
+            launch_env: launch_env.clone(),
+            launch_high_priority,
+            launch_write_bundle_json,
+            keep_open,
+            checks: run_checks.clone(),
         }),
         "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
             rest: rest.clone(),
