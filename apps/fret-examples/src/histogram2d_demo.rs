@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::plot::axis::AxisLabelFormatter;
 use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
@@ -61,89 +61,80 @@ impl Histogram2DDemoDriver {
     }
 }
 
-impl WinitAppDriver for Histogram2DDemoDriver {
-    type WindowState = Histogram2DDemoWindowState;
+fn create_window_state(
+    _driver: &mut Histogram2DDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> Histogram2DDemoWindowState {
+    Histogram2DDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn handle_event(
+    _driver: &mut Histogram2DDemoDriver,
+    context: WinitEventContext<'_, Histogram2DDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(
+    _driver: &mut Histogram2DDemoDriver,
+    context: WinitRenderContext<'_, Histogram2DDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let canvas = Histogram2DPlotCanvas::new(state.plot.clone())
-                .x_axis_labels(AxisLabelFormatter::number(
-                    fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
-                ))
-                .y_axis_labels(AxisLabelFormatter::number(
-                    fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
-                ))
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = Histogram2DPlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let canvas = Histogram2DPlotCanvas::new(state.plot.clone())
+            .x_axis_labels(AxisLabelFormatter::number(
+                fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
+            ))
+            .y_axis_labels(AxisLabelFormatter::number(
+                fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
+            ))
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = Histogram2DPlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -162,7 +153,12 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    Histogram2DDemoDriver::default()
+    FnDriver::new(
+        Histogram2DDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
 }
 
 #[cfg(not(target_arch = "wasm32"))]

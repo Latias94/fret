@@ -3,7 +3,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
 use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
@@ -154,115 +155,107 @@ impl LinkedCursorDemoDriver {
     }
 }
 
-impl WinitAppDriver for LinkedCursorDemoDriver {
-    type WindowState = LinkedCursorDemoWindowState;
+fn create_window_state(
+    _driver: &mut LinkedCursorDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> LinkedCursorDemoWindowState {
+    LinkedCursorDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn hot_reload_window(
+    _driver: &mut LinkedCursorDemoDriver,
+    context: WinitHotReloadContext<'_, LinkedCursorDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut LinkedCursorDemoDriver,
+    context: WinitEventContext<'_, LinkedCursorDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
-        };
-
-        state.linked.tick(app);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        if state.root.is_none() {
-            let top_style = LinePlotStyle::default();
-            let top_canvas = LinePlotCanvas::new(state.top_plot.clone())
-                .style(top_style)
-                .debug_overlay(true)
-                .state(state.top_state.clone())
-                .output(state.top_output.clone());
-
-            let bottom_style = LinePlotStyle::default();
-            let bottom_canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
-                .style(bottom_style)
-                .debug_overlay(true)
-                .state(state.bottom_state.clone())
-                .output(state.bottom_output.clone());
-
-            let top_node = LinePlotCanvas::create_node(&mut state.ui, top_canvas);
-            let bottom_node = AreaPlotCanvas::create_node(&mut state.ui, bottom_canvas);
-            let root = FixedSplit::create_node_with_children(
-                &mut state.ui,
-                FixedSplit::vertical(0.5),
-                top_node,
-                bottom_node,
-            );
-
-            state.ui.set_root(root);
-            state.ui.set_focus(Some(top_node));
-            state.root = Some(root);
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+        }
+    };
 
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
+    state.linked.tick(app);
+}
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
+fn render(
+    _driver: &mut LinkedCursorDemoDriver,
+    context: WinitRenderContext<'_, LinkedCursorDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    if state.root.is_none() {
+        let top_style = LinePlotStyle::default();
+        let top_canvas = LinePlotCanvas::new(state.top_plot.clone())
+            .style(top_style)
+            .debug_overlay(true)
+            .state(state.top_state.clone())
+            .output(state.top_output.clone());
+
+        let bottom_style = LinePlotStyle::default();
+        let bottom_canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
+            .style(bottom_style)
+            .debug_overlay(true)
+            .state(state.bottom_state.clone())
+            .output(state.bottom_output.clone());
+
+        let top_node = LinePlotCanvas::create_node(&mut state.ui, top_canvas);
+        let bottom_node = AreaPlotCanvas::create_node(&mut state.ui, bottom_canvas);
+        let root = FixedSplit::create_node_with_children(
+            &mut state.ui,
+            FixedSplit::vertical(0.5),
+            top_node,
+            bottom_node,
+        );
+
+        state.ui.set_root(root);
+        state.ui.set_focus(Some(top_node));
+        state.root = Some(root);
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -280,7 +273,15 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    LinkedCursorDemoDriver::default()
+    FnDriver::new(
+        LinkedCursorDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -4,7 +4,8 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::geometry::Px;
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot::plot::axis::AxisLabelFormatter;
 use fret_plot::retained::{
@@ -107,156 +108,148 @@ impl InfLinesDemoDriver {
     }
 }
 
-impl WinitAppDriver for InfLinesDemoDriver {
-    type WindowState = InfLinesDemoWindowState;
+fn create_window_state(
+    _driver: &mut InfLinesDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> InfLinesDemoWindowState {
+    InfLinesDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn hot_reload_window(
+    _driver: &mut InfLinesDemoDriver,
+    context: WinitHotReloadContext<'_, InfLinesDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut InfLinesDemoDriver,
+    context: WinitEventContext<'_, InfLinesDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-                if matches!(
-                    event,
-                    Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
-                ) {
-                    let output = state
-                        .plot_output
-                        .read(app, |_app, o| *o)
-                        .unwrap_or_default();
-                    if output.revision != state.last_logged_output_revision {
-                        state.last_logged_output_revision = output.revision;
-                        if let Some(query) = output.snapshot.query {
-                            tracing::info!(
-                                "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
-                                query.x_min,
-                                query.x_max,
-                                query.y_min,
-                                query.y_max
-                            );
-                        }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+            if matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
+            ) {
+                let output = state
+                    .plot_output
+                    .read(app, |_app, o| *o)
+                    .unwrap_or_default();
+                if output.revision != state.last_logged_output_revision {
+                    state.last_logged_output_revision = output.revision;
+                    if let Some(query) = output.snapshot.query {
+                        tracing::info!(
+                            "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
+                            query.x_min,
+                            query.x_max,
+                            query.y_min,
+                            query.y_max
+                        );
                     }
                 }
             }
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(
+    _driver: &mut InfLinesDemoDriver,
+    context: WinitRenderContext<'_, InfLinesDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle {
-                series_tooltip: SeriesTooltipMode::NearestAtCursor,
-                ..Default::default()
-            };
-            let canvas = LinePlotCanvas::new(state.plot.clone())
-                .style(style)
-                .y_axis_labels(AxisLabelFormatter::custom(
-                    0x494e464c_5900u64,
-                    |v, _span| {
-                        if !v.is_finite() {
-                            return "NA".to_string();
-                        }
-                        format!("{v:.2} V")
-                    },
-                ))
-                .y2_axis_labels(AxisLabelFormatter::custom(
-                    0x494e464c_5902u64,
-                    |v, _span| {
-                        if !v.is_finite() {
-                            return "NA".to_string();
-                        }
-                        format!("{v:.1} A")
-                    },
-                ))
-                .y3_axis_labels(AxisLabelFormatter::custom(
-                    0x494e464c_5903u64,
-                    |v, _span| {
-                        if !v.is_finite() {
-                            return "NA".to_string();
-                        }
-                        format!("{v:.0} mA")
-                    },
-                ))
-                .y4_axis_labels(AxisLabelFormatter::custom(
-                    0x494e464c_5904u64,
-                    |v, _span| {
-                        if !v.is_finite() {
-                            return "NA".to_string();
-                        }
-                        format!("{v:.0} Pa")
-                    },
-                ))
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle {
+            series_tooltip: SeriesTooltipMode::NearestAtCursor,
+            ..Default::default()
+        };
+        let canvas = LinePlotCanvas::new(state.plot.clone())
+            .style(style)
+            .y_axis_labels(AxisLabelFormatter::custom(
+                0x494e464c_5900u64,
+                |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.2} V")
+                },
+            ))
+            .y2_axis_labels(AxisLabelFormatter::custom(
+                0x494e464c_5902u64,
+                |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.1} A")
+                },
+            ))
+            .y3_axis_labels(AxisLabelFormatter::custom(
+                0x494e464c_5903u64,
+                |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.0} mA")
+                },
+            ))
+            .y4_axis_labels(AxisLabelFormatter::custom(
+                0x494e464c_5904u64,
+                |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.0} Pa")
+                },
+            ))
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -274,7 +267,15 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    InfLinesDemoDriver::default()
+    FnDriver::new(
+        InfLinesDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
