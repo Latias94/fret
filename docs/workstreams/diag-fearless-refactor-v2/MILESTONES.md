@@ -54,6 +54,15 @@ Exit criteria:
 
 ## M3 — Regression orchestration model chosen
 
+Progress update:
+
+- The initial summary/evidence contract is no longer doc-only.
+- `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
+  `regression.summary.json` as an additive artifact.
+- `diag matrix` also leaves behind `matrix.summary.json` for compare-oriented consumers.
+- The remaining gap in this milestone is campaign aggregation and tighter reason/evidence
+  vocabulary standardization.
+
 Outcome:
 
 - Regression execution becomes a product surface instead of a loose collection of commands.

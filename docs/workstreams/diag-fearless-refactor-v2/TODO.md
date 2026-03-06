@@ -78,8 +78,12 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [ ] Define expected outputs for orchestrated runs:
   - [x] one machine-readable summary,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+    - implementation: `diag suite`, `diag repeat`, `diag perf`, and `diag matrix`
+      now emit `regression.summary.json`
   - [ ] stable reason codes,
   - [ ] evidence bundle/artifact paths,
+    - in progress: current summary emitters already attach bounded artifact/evidence paths,
+      but the path vocabulary still needs one explicit repo-level contract
   - [ ] optional compact pack for sharing.
 
 ## M4 — DevTools GUI alignment

@@ -148,6 +148,16 @@ Gate expectations:
 
 ## Phase D — Land `regression.summary.json` generation
 
+Current status:
+
+- Partially landed.
+- `crates/fret-diag/src/regression_summary.rs` now defines the shared summary model.
+- `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
+  `regression.summary.json` additively without replacing their existing outputs.
+- `diag matrix` also writes `matrix.summary.json` as a stable compare-oriented sidecar.
+- Remaining work is now mostly about contract hardening and campaign-level aggregation,
+  not first-time emission plumbing.
+
 Goal:
 
 - produce one machine-readable summary artifact from existing run primitives.
@@ -168,11 +178,13 @@ Recommended implementation direction:
 
 Recommended PR slices:
 
-1. add summary model types in `crates/fret-diag`,
-2. emit summary rows for `diag suite`,
-3. extend summary rows for `diag repeat` and flake classification,
-4. extend summary rows for `diag matrix` and `diag perf`,
-5. write `regression.summary.json` under a stable location.
+1. [done] add summary model types in `crates/fret-diag`,
+2. [done] emit summary rows for `diag suite`,
+3. [done] extend summary rows for `diag repeat` and flake classification,
+4. [done] extend summary rows for `diag matrix` and `diag perf`,
+5. [done] write `regression.summary.json` under a stable location,
+6. [next] define campaign-level aggregation/index outputs over many summary artifacts,
+7. [next] tighten stable reason-code and evidence-path conventions across all lanes.
 
 Gate expectations:
 
@@ -269,15 +281,15 @@ Gate expectations:
 Recommended near-term order:
 
 1. Phase B small seam extraction
-2. Phase D summary model and suite emission
-3. Phase E first `smoke` lane
+2. Phase D summary model and summary emission across core lanes
+3. Phase E first `smoke` lane or campaign index surface
 4. Phase C runtime evidence normalization where needed
 5. Phase F presentation surface alignment
 6. Phase G suite metadata scaling
 
 Reasoning:
 
-- summary generation unlocks CLI, CI, GUI, and MCP together,
+- summary generation already unlocks CLI, CI, GUI, and MCP together,
 - campaign entrypoints are easier once a summary/evidence model exists,
 - metadata scaling should wait until the first lane model is proven useful.
 
