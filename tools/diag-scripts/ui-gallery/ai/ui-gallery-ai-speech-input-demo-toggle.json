@@ -30,7 +30,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-listening-false" }
+        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-hint" }
       },
       "timeout_frames": 240
     },
@@ -39,7 +39,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-listening-true" }
+        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-btn-pulse-0" }
       },
       "timeout_frames": 240
     },
@@ -48,12 +48,29 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-listening-false" }
+        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-processing" }
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-btn-pulse-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-speech-input-demo-transcript" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-speech-input-demo-default-theme" },
 
     { "type": "capture_bundle", "label": "ui-gallery-ai-speech-input-demo-toggle" }
   ]
 }
-
