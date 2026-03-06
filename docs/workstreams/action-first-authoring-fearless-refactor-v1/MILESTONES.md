@@ -36,9 +36,13 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `apps/fret-cookbook/examples/virtual_list_basics.rs` (prefers `on_action_notify_models` for scroll actions)
 - `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)
+- `apps/fret-examples/src/custom_effect_v1_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/liquid_glass_demo.rs` (reset/preset/toggle-inspector actions now use the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` is the remaining intentional advanced example because it combines a model update with transient App-effect scheduling)
 - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
+- `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions)
 
 Hardening follow-up (open):
 
@@ -46,7 +50,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but should stay out of first-contact material unless repeated demo evidence promotes them.
+- Helper-surface convergence: README/docs/templates now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but should stay out of first-contact material unless repeated demo evidence promotes them. The remaining advanced `on_action_notify` teaching cases are locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
 
 ---
 

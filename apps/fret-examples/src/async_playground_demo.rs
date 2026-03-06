@@ -342,6 +342,8 @@ impl View for AsyncPlaygroundView {
             }
         });
 
+        // This stays on the advanced helper because the action also records a transient event
+        // that is consumed later in `render()` to apply the theme side effect.
         cx.on_action_notify::<act::ToggleTheme>({
             let dark = self.st.dark.clone();
             move |host, acx| {

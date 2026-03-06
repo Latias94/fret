@@ -396,6 +396,7 @@ practical steps:
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
         - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
         - Teaching-surface gate now covers ui-gallery pages/snippets for bare `cx.on_action*` regressions: `tools/gate_no_on_action_in_teaching_surfaces.py`
+        - Advanced helper exceptions are now locked by allowlist: `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`
         - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
@@ -445,6 +446,7 @@ practical steps:
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases: `toast_basics` (toast host APIs), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox spawning), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
+  - Remaining intentional advanced `fret-examples` case: `async_playground_demo::ToggleTheme` (model update + transient App-effect scheduling in one handler).
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
