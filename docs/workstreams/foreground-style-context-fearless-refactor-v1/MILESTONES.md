@@ -45,6 +45,9 @@ Current snapshot (2026-03-06):
 - The Material 3 button audit now also covers natural-width button chrome: icon-bearing
   buttons keep one-line clip semantics while remaining shrinkable between icon slots via explicit
   `min-w-0` + `flex-shrink: 1`, without forcing fill width on the label.
+- The Material 3 extended FAB audit now also covers natural-width FAB chrome:
+  icon-bearing extended FABs keep one-line clip semantics while remaining shrinkable beside the
+  icon via explicit `min-w-0` + `flex-shrink: 1`, without forcing fill width on the label.
 - `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
   / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
   explicitly fill available width and opt into `min-w-0`.
@@ -88,6 +91,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/button` is now covered too: icon-bearing buttons keep one-line clip
   semantics while remaining shrinkable inside natural-width button chrome because the label text
   now explicitly opts into `min-w-0` plus `flex-shrink: 1` without being forced to fill width.
+- `fret-ui-material3/fab` is now covered too: icon-bearing extended FABs keep one-line
+  clip semantics while remaining shrinkable inside natural-width floating-action chrome because the
+  label text now explicitly opts into `min-w-0` plus `flex-shrink: 1` without being forced to fill width.
 
 ---
 
