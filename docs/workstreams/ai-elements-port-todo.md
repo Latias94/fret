@@ -171,7 +171,7 @@ Status legend:
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
 | `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
-| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
+| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + docs-aligned UI Gallery demo + diag gates: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`, `tools/diag-scripts/ui-gallery-ai-transcription-demo-screenshot-zinc-dark.json`. Playback timing remains app-owned. |
 | `mic-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`MicSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-mic-selector-demo-select.json`. Device enumeration remains app-owned. |
 | `speech-input` | Prototype | `fret-ui-ai` | UI-only chrome port (`SpeechInput`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-speech-input-demo-toggle.json`. Capture + ASR backends remain app-owned. |
 | `voice-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`VoiceSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-voice-selector-demo-select.json`. Voice inventory + preview playback remain app-owned. |
