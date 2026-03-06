@@ -12,8 +12,9 @@ struct ImUiShadcnAdapterState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("imui-shadcn-adapter-demo", init_window, view)?
-        .with_main_window("imui_shadcn_adapter_demo", (840.0, 560.0))
+    FretApp::new("imui-shadcn-adapter-demo")
+        .window("imui_shadcn_adapter_demo", (840.0, 560.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

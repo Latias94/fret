@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use serde_json::{Map, Value};
 
 use super::ShadcnResolver;
@@ -236,94 +237,131 @@ impl ShadcnResolver {
             .map(|s| s.auto_apply_standard_actions)
             .unwrap_or(false);
 
-        let mut header_cells: Vec<AnyElement> = Vec::new();
-        for c in columns.iter() {
-            header_cells.push(fret_ui_shadcn::TableHead::new(c.label.clone()).into_element(cx));
-        }
-        if !row_actions.is_empty() {
-            header_cells
-                .push(fret_ui_shadcn::TableHead::new(Arc::<str>::from("Actions")).into_element(cx));
-        }
-        let header_row = fret_ui_shadcn::TableRow::new(cols, header_cells).into_element(cx);
-        let header = fret_ui_shadcn::TableHeader::new([header_row]).into_element(cx);
+        fret_ui_shadcn::Table::build(|cx, out| {
+            out.push_ui(
+                cx,
+                fret_ui_shadcn::TableHeader::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        fret_ui_shadcn::TableRow::build(cols, |cx, out| {
+                            for c in columns.iter() {
+                                out.push_ui(cx, fret_ui_shadcn::TableHead::new(c.label.clone()));
+                            }
+                            if !row_actions.is_empty() {
+                                out.push_ui(
+                                    cx,
+                                    fret_ui_shadcn::TableHead::new(Arc::<str>::from("Actions")),
+                                );
+                            }
+                        }),
+                    );
+                }),
+            );
 
-        let mut body_rows: Vec<AnyElement> = Vec::new();
-        for (row_index, item) in items.iter().enumerate() {
-            let obj = item.as_object();
+            out.push_ui(
+                cx,
+                fret_ui_shadcn::TableBody::build(|cx, out| {
+                    for (row_index, item) in items.iter().enumerate() {
+                        let obj = item.as_object();
+                        out.push_ui(
+                            cx,
+                            fret_ui_shadcn::TableRow::build(cols, |cx, out| {
+                                for col in columns.iter() {
+                                    let v = obj.and_then(|o| o.get(col.key.as_ref()));
+                                    let text = cell_text_for_value(v);
+                                    out.push_ui(
+                                        cx,
+                                        fret_ui_shadcn::TableCell::build(fret_ui_kit::ui::text(text)),
+                                    );
+                                }
 
-            let mut row_cells: Vec<AnyElement> = Vec::new();
-            for col in columns.iter() {
-                let v = obj.and_then(|o| o.get(col.key.as_ref()));
-                let text = cell_text_for_value(v);
-                let child = fret_ui_kit::ui::text(text).into_element(cx);
-                row_cells.push(fret_ui_shadcn::TableCell::new(child).into_element(cx));
-            }
+                                if !row_actions.is_empty() {
+                                    out.push_ui(
+                                        cx,
+                                        fret_ui_shadcn::TableCell::build(
+                                            fret_ui_kit::ui::h_flex_build(|cx, out| {
+                                                for ra in row_actions.iter() {
+                                                    let label = ra.label.clone();
+                                                    let action = ra.action.clone();
+                                                    let params_raw = ra.params.clone();
+                                                    let disabled = ra.disabled;
+                                                    let element_key: Arc<str> = Arc::<str>::from(
+                                                        format!("{}/row/{row_index}", key.0),
+                                                    );
+                                                    let event: Arc<str> = Arc::<str>::from(format!(
+                                                        "rowAction.{}",
+                                                        action.as_ref()
+                                                    ));
+                                                    let data_path = data_path.clone();
 
-            if !row_actions.is_empty() {
-                let mut buttons: Vec<AnyElement> = Vec::new();
-                for ra in row_actions.iter() {
-                    let label = ra.label.clone();
-                    let action = ra.action.clone();
-                    let params_raw = ra.params.clone();
-                    let disabled = ra.disabled;
-                    let element_key: Arc<str> =
-                        Arc::<str>::from(format!("{}/row/{row_index}", key.0));
-                    let event: Arc<str> =
-                        Arc::<str>::from(format!("rowAction.{}", action.as_ref()));
-                    let data_path = data_path.clone();
+                                                    let mut btn = fret_ui_shadcn::Button::new(
+                                                        label.clone(),
+                                                    )
+                                                    .disabled(disabled)
+                                                    .size(fret_ui_shadcn::ButtonSize::Sm);
+                                                    if let Some(variant) = ra.variant.as_ref() {
+                                                        let parsed = match variant.as_ref() {
+                                                            "default" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Default,
+                                                            ),
+                                                            "destructive" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Destructive,
+                                                            ),
+                                                            "outline" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Outline,
+                                                            ),
+                                                            "secondary" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Secondary,
+                                                            ),
+                                                            "ghost" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Ghost,
+                                                            ),
+                                                            "link" => Some(
+                                                                fret_ui_shadcn::ButtonVariant::Link,
+                                                            ),
+                                                            _ => None,
+                                                        };
+                                                        if let Some(parsed) = parsed {
+                                                            btn = btn.variant(parsed);
+                                                        }
+                                                    }
 
-                    let mut btn = fret_ui_shadcn::Button::new(label.clone())
-                        .disabled(disabled)
-                        .size(fret_ui_shadcn::ButtonSize::Sm);
-                    if let Some(variant) = ra.variant.as_ref() {
-                        let parsed = match variant.as_ref() {
-                            "default" => Some(fret_ui_shadcn::ButtonVariant::Default),
-                            "destructive" => Some(fret_ui_shadcn::ButtonVariant::Destructive),
-                            "outline" => Some(fret_ui_shadcn::ButtonVariant::Outline),
-                            "secondary" => Some(fret_ui_shadcn::ButtonVariant::Secondary),
-                            "ghost" => Some(fret_ui_shadcn::ButtonVariant::Ghost),
-                            "link" => Some(fret_ui_shadcn::ButtonVariant::Link),
-                            _ => None,
-                        };
-                        if let Some(parsed) = parsed {
-                            btn = btn.variant(parsed);
-                        }
+                                                    if let Some(state_model) = state_model.clone() {
+                                                        let queue = queue.clone();
+                                                        let auto_apply = auto_apply;
+                                                        let on_activate: OnActivate = Arc::new(
+                                                            move |host, acx, _reason| {
+                                                                emit_row_action(
+                                                                    host,
+                                                                    acx,
+                                                                    element_key.clone(),
+                                                                    event.clone(),
+                                                                    action.clone(),
+                                                                    params_raw.clone(),
+                                                                    state_model.clone(),
+                                                                    queue.clone(),
+                                                                    auto_apply,
+                                                                    data_path.clone(),
+                                                                    row_index,
+                                                                );
+                                                            },
+                                                        );
+                                                        btn = btn.on_activate(on_activate);
+                                                    }
+                                                    out.push(btn.into_element(cx));
+                                                }
+                                            })
+                                            .gap(fret_ui_kit::Space::N1)
+                                            .wrap(),
+                                        ),
+                                    );
+                                }
+                            }),
+                        );
                     }
-
-                    if let Some(state_model) = state_model.clone() {
-                        let queue = queue.clone();
-                        let auto_apply = auto_apply;
-                        let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
-                            emit_row_action(
-                                host,
-                                acx,
-                                element_key.clone(),
-                                event.clone(),
-                                action.clone(),
-                                params_raw.clone(),
-                                state_model.clone(),
-                                queue.clone(),
-                                auto_apply,
-                                data_path.clone(),
-                                row_index,
-                            );
-                        });
-                        btn = btn.on_activate(on_activate);
-                    }
-                    buttons.push(btn.into_element(cx));
-                }
-
-                let actions_cell = fret_ui_kit::ui::h_flex(move |_cx| buttons)
-                    .gap(fret_ui_kit::Space::N1)
-                    .wrap()
-                    .into_element(cx);
-                row_cells.push(fret_ui_shadcn::TableCell::new(actions_cell).into_element(cx));
-            }
-
-            body_rows.push(fret_ui_shadcn::TableRow::new(cols, row_cells).into_element(cx));
-        }
-
-        let body = fret_ui_shadcn::TableBody::new(body_rows).into_element(cx);
-        fret_ui_shadcn::Table::new([header, body]).into_element(cx)
+                }),
+            );
+        })
+        .into_element(cx)
     }
 }

@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Badge
+# shadcn/ui v4 Audit - Badge
 
 
 ## Upstream references (non-normative)
@@ -9,7 +9,7 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Badge` against the upstream shadcn/ui v4 docs and the
+This audit compares Fret's shadcn-aligned `Badge` against the upstream shadcn/ui v4 docs and the
 `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -22,6 +22,12 @@ This audit compares Fret’s shadcn-aligned `Badge` against the upstream shadcn/
 - Component code: `ecosystem/fret-ui-shadcn/src/badge.rs`
 
 ## Audit checklist
+
+### Authoring surface
+
+- Pass: `Badge::new(label)` covers the common shadcn authoring path.
+- Pass: `Badge::variant(...)` covers the upstream `default | secondary | destructive | outline` recipe surface.
+- Pass: Link-style composition is supported without a separate generic `compose()` builder; Fret models the upstream `asChild` outcome through badge-owned activation/render composition.
 
 ### Layout & geometry (shadcn parity)
 

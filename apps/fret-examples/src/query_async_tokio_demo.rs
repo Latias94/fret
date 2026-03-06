@@ -212,7 +212,8 @@ impl View for QueryAsyncTokioDemoView {
         .into_element(cx);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Async query demo (Tokio)"));
                     out.push_ui(
@@ -220,24 +221,25 @@ impl View for QueryAsyncTokioDemoView {
                         shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle"),
                     );
                     out.push(status_row);
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex_build(|_cx, out| {
                             out.extend([buttons, detail_body]);
                         })
                         .gap(Space::N4)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
-                })
-                .into_element(cx),
+                }),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .ui()
+        .w_full()
+        .max_w(Px(520.0))
         .into_element(cx);
 
         ui::v_flex_build(|_cx, out| {

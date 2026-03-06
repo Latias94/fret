@@ -14,6 +14,7 @@ use fret_diag::transport::{
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
     DevtoolsSessionRemovedV1, DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorV1,
 };
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use rmcp::handler::server::tool::ToolRouter;
@@ -494,6 +495,47 @@ impl FretDevtoolsMcp {
             ok,
             report_json: serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".to_string()),
         }))
+    }
+
+    #[tool(
+        description = "Request hit_test.explain and wait for hit_test.explain_ack (returns JSON text)."
+    )]
+    async fn fret_diag_hit_test_explain(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<HitTestExplainRequestV1>,
+    ) -> Result<String, String> {
+        let kind = *self.client_kind.lock().await;
+        if kind != DiagTransportKind::WebSocket {
+            return Err("hit_test.explain requires WebSocket transport".to_string());
+        }
+
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+        let selector = selector_from_request(&params.0)?;
+        let request_id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "hit_test.explain".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: Some(request_id),
+                payload: serde_json::json!({
+                    "schema_version": 1,
+                    "window": params.0.window,
+                    "target": selector,
+                }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
+
+        let msg = self
+            .wait_for_type_session_request_id(
+                "hit_test.explain_ack",
+                &session_id,
+                request_id,
+                params.0.timeout_ms,
+            )
+            .await
+            .ok_or_else(|| "timeout waiting for hit_test.explain_ack".to_string())?;
+        Ok(serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()))
     }
 
     #[tool(
@@ -1263,6 +1305,22 @@ struct RunScriptJsonRequestV1 {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+struct HitTestExplainRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    /// Target window ffi id.
+    window: u64,
+    /// Convenience selector input for the common case.
+    #[serde(default)]
+    test_id: Option<String>,
+    /// Full `UiSelectorV1` JSON text. Takes precedence over `test_id` when present.
+    #[serde(default)]
+    selector_json: Option<String>,
+    /// Wait timeout for `hit_test.explain_ack`.
+    timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct ScreenshotRequestToolV1 {
     #[serde(default)]
     session_id: Option<String>,
@@ -1408,6 +1466,29 @@ struct SessionInfoV1 {
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct SessionsSelectRequestV1 {
     session_id: String,
+}
+
+fn selector_from_request(req: &HitTestExplainRequestV1) -> Result<UiSelectorV1, String> {
+    if let Some(selector_json) = req
+        .selector_json
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return serde_json::from_str(selector_json).map_err(|e| e.to_string());
+    }
+    if let Some(test_id) = req
+        .test_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return Ok(UiSelectorV1::TestId {
+            id: test_id.to_string(),
+            root_z_index: None,
+        });
+    }
+    Err("missing selector_json or test_id".to_string())
 }
 
 fn serde_default_true() -> bool {

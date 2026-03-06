@@ -5,6 +5,16 @@
 //! - it enables a practical desktop-first default stack,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
 //!
+//! ## Choosing a native entry path
+//!
+//! - `fret::App::new(...).window(...).ui(...)?` is the recommended app-author path.
+//! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
+//!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
+//!   hatches when you need runner-level customization but
+//!   still want the `fret` defaults/bootstrap story.
+//! - `fret::run_native_with_compat_driver(...)` is a compatibility path for existing low-level
+//!   integrations that still implement `fret_launch::WinitAppDriver` directly.
+//!
 //! ## Getting started (desktop)
 //!
 //! ```no_run
@@ -56,6 +66,8 @@ mod pending_shortcut_overlay;
 mod app_entry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::App;
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use app_entry::App as AppBuilder;
 
 /// Runtime defaults applied by the `fret` facade (within the enabled crate features).
 ///
@@ -169,6 +181,9 @@ pub mod prelude {
     pub use fret_ui_kit::prelude::*;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::AppBuilder;
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::App as FretApp;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -227,11 +242,11 @@ pub struct UiAppDriver<S> {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl<S> UiAppDriver<S> {
-    fn new(inner: fret_bootstrap::ui_app_driver::UiAppDriver<S>) -> Self {
+    pub(crate) fn new(inner: fret_bootstrap::ui_app_driver::UiAppDriver<S>) -> Self {
         Self { inner }
     }
 
-    fn into_inner(self) -> fret_bootstrap::ui_app_driver::UiAppDriver<S> {
+    pub(crate) fn into_inner(self) -> fret_bootstrap::ui_app_driver::UiAppDriver<S> {
         self.inner
     }
 
@@ -573,30 +588,14 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
     apply_desktop_defaults_with(builder, Defaults::default())
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> fret_bootstrap::UiAppBootstrapBuilder<S> {
-    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
-        .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
-    #[cfg(feature = "shadcn")]
-    let driver = driver
-        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
-    let driver = configure(UiAppDriver::new(driver)).into_inner();
-    let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
-
-    builder
-}
-
-/// Run a native desktop demo using the `winit + wgpu` stack.
+/// Run a native desktop app using the compatibility driver path.
 ///
-/// This is a small convenience wrapper for examples that implement `WinitAppDriver` directly,
-/// keeping "how to boot the app" consistent with the `fret` golden path.
+/// Prefer `fret::App` / `UiAppBuilder` for general applications and
+/// `run_native_with_fn_driver(...)` for new advanced integrations. This helper exists for
+/// low-level integrations that still implement `fret_launch::WinitAppDriver` directly while
+/// wanting the higher-level defaults/bootstrap story from `fret`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
+pub fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,
     app: KernelApp,
     driver: D,
@@ -611,25 +610,83 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     Ok(())
 }
 
-/// Create a desktop-first UI app builder with conservative defaults applied.
+/// Run a native desktop app using the advanced `FnDriver` escape hatch.
 ///
-/// Defaults (when the corresponding features are enabled):
-/// - diagnostics (`diagnostics`)
-/// - layered config files (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`)
-/// - shadcn app integration (`shadcn`)
-/// - icon pack installation + optional SVG preloading
-/// - UI assets caches with default budgets (`ui-assets`)
+/// This is the recommended low-level path when the app wants the `fret` bootstrap/defaults story
+/// but needs runner-level customization without teaching `WinitAppDriver` as the primary model.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn app_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> Result<UiAppBuilder<S>> {
-    let builder = ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
-    let builder =
-        apply_desktop_defaults_with(builder, Defaults::default()).map_err(BootstrapError::from)?;
-    Ok(UiAppBuilder::from_bootstrap(builder))
+pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(
+        &'d mut D,
+        fret_launch::WinitEventContext<'cx, S>,
+        &'e fret_core::Event,
+    ),
+    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+) -> Result<()> {
+    run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+        |_hooks| {},
+    )
+}
+
+/// Run a native desktop app using the advanced `FnDriver` escape hatch, preserving hook
+/// configuration.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(
+        &'d mut D,
+        fret_launch::WinitEventContext<'cx, S>,
+        &'e fret_core::Event,
+    ),
+    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+        configure_hooks,
+    )
+    .configure(move |c| {
+        *c = config;
+    });
+
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
+
+    builder.run().map_err(RunnerError::from)?;
+    Ok(())
+}
+
+/// Run a native desktop app using a preconfigured advanced `FnDriver` instance.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_with_configured_fn_driver<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver: fret_launch::FnDriver<D, S>,
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
+        *c = config;
+    });
+
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
+
+    builder.run().map_err(RunnerError::from)?;
+    Ok(())
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
@@ -651,37 +708,198 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
 }
 
-/// Same as [`app_with_hooks`], but without a driver configuration hook.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn app<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-) -> Result<UiAppBuilder<S>> {
-    app_with_hooks(root_name, init_window, view, |d| d)
-}
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
+mod builder_surface_tests {
+    use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp, ViewElements};
+    use crate::view::{View, ViewCx};
+    use crate::{Defaults, prelude::FretApp as PreludeFretApp};
+    use fret_app::CreateWindowRequest;
+    use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
+    use fret_runtime::{CommandId, FrameId, TickId};
+    use fret_ui::ElementContext;
+    use fret_ui::element::Elements;
 
-/// Run a desktop-first UI app using default window settings.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> Result<()> {
-    app_with_hooks(root_name, init_window, view, configure)?
-        .with_main_window(root_name, (960.0, 720.0))
-        .run()
-}
+    fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> () {}
 
-/// Run a desktop-first UI app using default window settings.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-) -> Result<()> {
-    run_with_hooks(root_name, init_window, view, |d| d)
+    fn view(_cx: &mut ElementContext<'_, KernelApp>, _st: &mut ()) -> ViewElements {
+        ViewElements::default()
+    }
+
+    fn install_app(_app: &mut KernelApp) {}
+
+    fn install(_app: &mut KernelApp, _services: &mut dyn UiServices) {}
+
+    fn register_icon_pack(_registry: &mut IconRegistry) {}
+
+    fn on_event(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _event: &Event,
+    ) {
+    }
+
+    fn on_command(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _command: &CommandId,
+    ) {
+    }
+
+    fn handle_global_command(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _command: CommandId,
+    ) {
+    }
+
+    fn window_create_spec(
+        _app: &mut KernelApp,
+        _request: &CreateWindowRequest,
+    ) -> Option<fret_launch::WindowCreateSpec> {
+        None
+    }
+
+    fn window_created(_app: &mut KernelApp, _request: &CreateWindowRequest, _window: AppWindowId) {}
+
+    fn before_close_window(_app: &mut KernelApp, _window: AppWindowId) -> bool {
+        true
+    }
+
+    fn viewport_input(_app: &mut KernelApp, _event: ViewportInputEvent) {}
+
+    fn record_engine_frame(
+        _app: &mut KernelApp,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _context: &crate::kernel::render::WgpuContext,
+        _renderer: &mut crate::kernel::render::Renderer,
+        _dt_s: f32,
+        _tick_id: TickId,
+        _frame_id: FrameId,
+    ) -> fret_launch::EngineFrameUpdate {
+        fret_launch::EngineFrameUpdate::default()
+    }
+
+    fn dock_op(_app: &mut KernelApp, _op: DockOp) {}
+
+    fn record_view_engine_frame(
+        _app: &mut KernelApp,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut crate::view::ViewWindowState<SmokeView>,
+        _context: &crate::kernel::render::WgpuContext,
+        _renderer: &mut crate::kernel::render::Renderer,
+        _dt_s: f32,
+        _tick_id: TickId,
+        _frame_id: FrameId,
+    ) -> fret_launch::EngineFrameUpdate {
+        fret_launch::EngineFrameUpdate::default()
+    }
+
+    fn install_custom_effects(
+        _app: &mut KernelApp,
+        _service: &mut dyn fret_core::CustomEffectService,
+    ) {
+    }
+
+    struct SmokeView;
+
+    impl View for SmokeView {
+        fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+            Self
+        }
+
+        fn render(&mut self, _cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+            Elements::default()
+        }
+    }
+
+    #[test]
+    fn app_builder_ui_with_hooks_smoke() {
+        let _builder = FretApp::new("builder-ui-smoke")
+            .window("Builder UI Smoke", (640.0, 480.0))
+            .install_app(install_app)
+            .install(install)
+            .register_icon_pack(register_icon_pack)
+            .ui_with_hooks(init_window, view, |driver| {
+                driver
+                    .on_event(on_event)
+                    .on_command(on_command)
+                    .handle_global_command(handle_global_command)
+                    .window_create_spec(window_create_spec)
+                    .window_created(window_created)
+                    .before_close_window(before_close_window)
+                    .viewport_input(viewport_input)
+                    .record_engine_frame(record_engine_frame)
+                    .dock_op(dock_op)
+            })
+            .expect("ui_with_hooks should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder UI Smoke");
+                assert_eq!(config.main_window_size.width, 640.0);
+                assert_eq!(config.main_window_size.height, 480.0);
+            })
+            .init_app(|_app| {})
+            .install_custom_effects(install_custom_effects)
+            .on_gpu_ready(|_app, _context, _renderer| {});
+    }
+
+    #[test]
+    fn app_builder_view_with_hooks_smoke() {
+        let _builder = FretApp::new("builder-view-smoke")
+            .window("Builder View Smoke", (640.0, 480.0))
+            .view_with_hooks::<SmokeView>(|driver| {
+                driver
+                    .window_create_spec(window_create_spec)
+                    .window_created(window_created)
+                    .before_close_window(before_close_window)
+                    .viewport_input(viewport_input)
+                    .record_engine_frame(record_view_engine_frame)
+                    .dock_op(dock_op)
+            })
+            .expect("view_with_hooks should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder View Smoke");
+                assert_eq!(config.main_window_size.width, 640.0);
+                assert_eq!(config.main_window_size.height, 480.0);
+            });
+    }
+
+    #[test]
+    fn app_builder_ui_smoke() {
+        let _builder = AppBuilder::new("builder-ui-basic")
+            .defaults(Defaults::desktop_app())
+            .window("Builder UI Basic", (800.0, 600.0))
+            .ui(init_window, view)
+            .expect("ui should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "Builder UI Basic");
+                assert_eq!(config.main_window_size.width, 800.0);
+                assert_eq!(config.main_window_size.height, 600.0);
+            })
+            .init_app(|_app| {})
+            .on_gpu_ready(|_app, _context, _renderer| {});
+    }
+
+    #[test]
+    fn app_builder_view_smoke_uses_default_main_window() {
+        let _builder = PreludeFretApp::new("builder-view-default-main-window")
+            .minimal_defaults()
+            .view::<SmokeView>()
+            .expect("view should build")
+            .configure(|config| {
+                assert_eq!(config.main_window_title, "builder-view-default-main-window");
+                assert_eq!(config.main_window_size.width, 960.0);
+                assert_eq!(config.main_window_size.height, 720.0);
+            });
+    }
 }
 
 #[cfg(all(

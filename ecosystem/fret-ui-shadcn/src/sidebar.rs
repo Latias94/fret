@@ -2939,13 +2939,17 @@ impl SidebarMenuSkeleton {
             )
             .into_element(cx);
 
-        let mut out = Vec::new();
-        if let Some(icon) = icon {
-            out.push(icon);
-        }
-        out.push(text);
-
-        let mut node = shadcn_layout::container_hstack_centered(cx, props, Space::N2, out);
+        let mut node = shadcn_layout::container_hstack_centered_build(
+            cx,
+            props,
+            Space::N2,
+            move |_cx, out| {
+                if let Some(icon) = icon {
+                    out.push(icon);
+                }
+                out.push(text);
+            },
+        );
         if let Some(test_id) = self.test_id {
             node = node.test_id(test_id);
         }

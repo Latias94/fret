@@ -313,6 +313,20 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn activate(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Activate {
+            window: None,
+            target,
+        })
+    }
+
+    pub fn focus(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Focus {
+            window: None,
+            target,
+        })
+    }
+
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
             window: None,

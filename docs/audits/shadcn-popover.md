@@ -51,6 +51,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   wiring via `Popover::anchor_element(...)`.
   (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
   which covers common sizing recipes like "content width follows trigger".)
+- Note: Unlike modal overlays such as `Dialog` / `AlertDialog` / `Sheet` / `Drawer`, Popover keeps
+  anchor-aware content authoring as a first-class path (`into_element_with_anchor(...)`). Because of
+  that, Fret intentionally keeps closure-based authoring as the primary API today instead of adding
+  a generic `compose()` builder that would hide or weaken the anchor-rect contract.
 - Pass: Anchor overrides are treated as dismissable branches, so interacting with the anchor does
   not trigger outside-press dismissal.
 - Pass: Detached trigger wiring is available via `Popover::trigger_element(...)` (Base UI-like

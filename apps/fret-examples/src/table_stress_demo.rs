@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -65,7 +65,7 @@ struct DemoRow {
     score_text: Arc<str>,
 }
 
-struct TableStressWindowState {
+pub struct TableStressWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
@@ -94,7 +94,7 @@ struct TableStressWindowState {
 }
 
 #[derive(Default)]
-struct TableStressDriver;
+pub struct TableStressDriver;
 
 impl TableStressDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> TableStressWindowState {
@@ -258,233 +258,248 @@ impl TableStressDriver {
     }
 }
 
-impl WinitAppDriver for TableStressDriver {
-    type WindowState = TableStressWindowState;
+fn gpu_ready(
+    driver: &mut TableStressDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    renderer.set_perf_enabled(true);
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        renderer.set_perf_enabled(true);
+fn gpu_frame_prepare(
+    driver: &mut TableStressDriver,
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    state: &mut TableStressWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+) {
+    if state.profile_frames_left == 0 && state.exit_after_frames.is_none() {
+        return;
     }
 
-    fn gpu_frame_prepare(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        _context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        if state.profile_frames_left == 0 && state.exit_after_frames.is_none() {
-            return;
-        }
-
-        let now = Instant::now();
-        let should_report = match state.last_renderer_report {
-            None => true,
-            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
-        };
-        if should_report {
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    let pipeline_breakdown =
-                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+    let now = Instant::now();
+    let should_report = match state.last_renderer_report {
+        None => true,
+        Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+    };
+    if should_report {
+        if let Some(snap) = renderer.take_perf_snapshot() {
+            if snap.frames != 0 {
+                let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_svg_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.quad_draw_calls,
+                    snap.viewport_draw_calls,
+                    snap.image_draw_calls,
+                    snap.text_draw_calls,
+                    snap.path_draw_calls,
+                    snap.mask_draw_calls,
+                    snap.fullscreen_draw_calls,
+                    snap.clip_mask_draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.uniform_bind_group_switches,
+                    snap.texture_bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
+                if pipeline_breakdown {
                     try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_svg_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.quad_draw_calls,
-                        snap.viewport_draw_calls,
-                        snap.image_draw_calls,
-                        snap.text_draw_calls,
-                        snap.path_draw_calls,
-                        snap.mask_draw_calls,
-                        snap.fullscreen_draw_calls,
-                        snap.clip_mask_draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.uniform_bind_group_switches,
-                        snap.texture_bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
+                        "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                        snap.pipeline_switches_quad,
+                        snap.pipeline_switches_viewport,
+                        snap.pipeline_switches_mask,
+                        snap.pipeline_switches_text_mask,
+                        snap.pipeline_switches_text_color,
+                        snap.pipeline_switches_path,
+                        snap.pipeline_switches_path_msaa,
+                        snap.pipeline_switches_composite,
+                        snap.pipeline_switches_fullscreen,
+                        snap.pipeline_switches_clip_mask,
                     );
-                    if pipeline_breakdown {
-                        try_println!(
-                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
-                            snap.pipeline_switches_quad,
-                            snap.pipeline_switches_viewport,
-                            snap.pipeline_switches_mask,
-                            snap.pipeline_switches_text_mask,
-                            snap.pipeline_switches_text_color,
-                            snap.pipeline_switches_path,
-                            snap.pipeline_switches_path_msaa,
-                            snap.pipeline_switches_composite,
-                            snap.pipeline_switches_fullscreen,
-                            snap.pipeline_switches_clip_mask,
-                        );
-                    }
                 }
             }
-            state.last_renderer_report = Some(now);
         }
+        state.last_renderer_report = Some(now);
+    }
+}
+
+fn create_window_state(
+    _driver: &mut TableStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> TableStressWindowState {
+    TableStressDriver::build_ui(app, window)
+}
+
+fn hot_reload_window(
+    _driver: &mut TableStressDriver,
+    context: WinitHotReloadContext<'_, TableStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut TableStressDriver,
+    context: WinitWindowContext<'_, TableStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut TableStressDriver,
+    context: WinitWindowContext<'_, TableStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut TableStressDriver,
+    context: WinitCommandContext<'_, TableStressWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+    if command.as_str() == "table_stress_demo.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    }
+}
+
+fn handle_event(
+    _driver: &mut TableStressDriver,
+    context: WinitEventContext<'_, TableStressWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
+            state.ui.dispatch_event(app, services, event);
             return;
         }
 
-        if command.as_str() == "table_stress_demo.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
-                state.ui.dispatch_event(app, services, event);
+        match *key {
+            fret_core::KeyCode::Escape => {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 return;
             }
-
-            match *key {
-                fret_core::KeyCode::Escape => {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-                fret_core::KeyCode::KeyS => {
-                    Self::toggle_sorting(app, &state.table_state);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::KeyF => {
-                    Self::toggle_role_filter(app, &state.table_state);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::KeyG => {
-                    Self::toggle_global_filter(app, &state.table_state);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::KeyC => {
-                    Self::clear_filters(app, &state.table_state);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::KeyR => {
-                    let _ = app
-                        .models_mut()
-                        .update(&state.items_revision, |v| *v = v.wrapping_add(1));
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::Home => {
-                    state
-                        .scroll
-                        .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::End => {
-                    state.scroll.scroll_to_bottom();
-                    app.request_redraw(window);
-                    return;
-                }
-                _ => {}
+            fret_core::KeyCode::KeyS => {
+                TableStressDriver::toggle_sorting(app, &state.table_state);
+                app.request_redraw(window);
+                return;
             }
+            fret_core::KeyCode::KeyF => {
+                TableStressDriver::toggle_role_filter(app, &state.table_state);
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::KeyG => {
+                TableStressDriver::toggle_global_filter(app, &state.table_state);
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::KeyC => {
+                TableStressDriver::clear_filters(app, &state.table_state);
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::KeyR => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.items_revision, |v| *v = v.wrapping_add(1));
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::Home => {
+                state
+                    .scroll
+                    .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::End => {
+                state.scroll.scroll_to_bottom();
+                app.request_redraw(window);
+                return;
+            }
+            _ => {}
         }
-
-        state.ui.dispatch_event(app, services, event);
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-            ..
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        let frame_started = Instant::now();
-        let alloc_before_frame = alloc_profile::snapshot();
+fn render(
+    _driver: &mut TableStressDriver,
+    context: WinitRenderContext<'_, TableStressWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+        ..
+    } = context;
 
-        let render_started = Instant::now();
-        let columns = state.columns.clone();
-        let col_label_id = state.col_label_id.clone();
-        let col_label_name = state.col_label_name.clone();
-        let col_label_role = state.col_label_role.clone();
-        let col_label_score = state.col_label_score.clone();
-        let empty_text = state.empty_text.clone();
-        let root =
+    let frame_started = Instant::now();
+    let alloc_before_frame = alloc_profile::snapshot();
+
+    let render_started = Instant::now();
+    let columns = state.columns.clone();
+    let col_label_id = state.col_label_id.clone();
+    let col_label_name = state.col_label_name.clone();
+    let col_label_role = state.col_label_role.clone();
+    let col_label_score = state.col_label_score.clone();
+    let empty_text = state.empty_text.clone();
+    let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-stress-demo", |cx| {
                     cx.observe_model(&state.table_state, Invalidation::Layout);
@@ -662,96 +677,117 @@ impl WinitAppDriver for TableStressDriver {
                     )]
                 });
 
-        state.ui.set_root(root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let render_elapsed = render_started.elapsed();
-        let alloc_after_render = alloc_profile::snapshot();
+    state.ui.set_root(root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let render_elapsed = render_started.elapsed();
+    let alloc_after_render = alloc_profile::snapshot();
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
 
-        let layout_started = Instant::now();
-        frame.layout_all();
-        let layout_elapsed = layout_started.elapsed();
-        let alloc_after_layout = alloc_profile::snapshot();
+    let layout_started = Instant::now();
+    frame.layout_all();
+    let layout_elapsed = layout_started.elapsed();
+    let alloc_after_layout = alloc_profile::snapshot();
 
-        let paint_started = Instant::now();
-        frame.paint_all(scene);
-        let paint_elapsed = paint_started.elapsed();
-        let alloc_after_paint = alloc_profile::snapshot();
+    let paint_started = Instant::now();
+    frame.paint_all(scene);
+    let paint_elapsed = paint_started.elapsed();
+    let alloc_after_paint = alloc_profile::snapshot();
 
-        state.alloc_last_render_calls = alloc_after_render
-            .alloc_calls
-            .saturating_sub(alloc_before_frame.alloc_calls);
-        state.alloc_last_render_bytes = alloc_after_render
-            .alloc_bytes
-            .saturating_sub(alloc_before_frame.alloc_bytes);
-        state.alloc_last_layout_calls = alloc_after_layout
-            .alloc_calls
-            .saturating_sub(alloc_after_render.alloc_calls);
-        state.alloc_last_layout_bytes = alloc_after_layout
-            .alloc_bytes
-            .saturating_sub(alloc_after_render.alloc_bytes);
-        state.alloc_last_paint_calls = alloc_after_paint
-            .alloc_calls
-            .saturating_sub(alloc_after_layout.alloc_calls);
-        state.alloc_last_paint_bytes = alloc_after_paint
-            .alloc_bytes
-            .saturating_sub(alloc_after_layout.alloc_bytes);
+    state.alloc_last_render_calls = alloc_after_render
+        .alloc_calls
+        .saturating_sub(alloc_before_frame.alloc_calls);
+    state.alloc_last_render_bytes = alloc_after_render
+        .alloc_bytes
+        .saturating_sub(alloc_before_frame.alloc_bytes);
+    state.alloc_last_layout_calls = alloc_after_layout
+        .alloc_calls
+        .saturating_sub(alloc_after_render.alloc_calls);
+    state.alloc_last_layout_bytes = alloc_after_layout
+        .alloc_bytes
+        .saturating_sub(alloc_after_render.alloc_bytes);
+    state.alloc_last_paint_calls = alloc_after_paint
+        .alloc_calls
+        .saturating_sub(alloc_after_layout.alloc_calls);
+    state.alloc_last_paint_bytes = alloc_after_paint
+        .alloc_bytes
+        .saturating_sub(alloc_after_layout.alloc_bytes);
 
-        state.alloc_prev = alloc_after_paint;
-        state.alloc_last_calls = alloc_after_paint
-            .alloc_calls
-            .saturating_sub(alloc_before_frame.alloc_calls);
-        state.alloc_last_bytes = alloc_after_paint
-            .alloc_bytes
-            .saturating_sub(alloc_before_frame.alloc_bytes);
+    state.alloc_prev = alloc_after_paint;
+    state.alloc_last_calls = alloc_after_paint
+        .alloc_calls
+        .saturating_sub(alloc_before_frame.alloc_calls);
+    state.alloc_last_bytes = alloc_after_paint
+        .alloc_bytes
+        .saturating_sub(alloc_before_frame.alloc_bytes);
 
-        state.frame = state.frame.saturating_add(1);
-        if state.profile_frames_left > 0 {
-            state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
-            let since_start = state.started_at.elapsed();
-            let frame_elapsed = frame_started.elapsed();
-            tracing::info!(
-                "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms render={:.2}ms layout={:.2}ms paint={:.2}ms alloc={} ({} B) render_alloc={} ({} B) layout_alloc={} ({} B) paint_alloc={} ({} B)",
-                state.frame,
-                since_start.as_secs_f64() * 1000.0,
-                frame_elapsed.as_secs_f64() * 1000.0,
-                render_elapsed.as_secs_f64() * 1000.0,
-                layout_elapsed.as_secs_f64() * 1000.0,
-                paint_elapsed.as_secs_f64() * 1000.0,
-                state.alloc_last_calls,
-                state.alloc_last_bytes,
-                state.alloc_last_render_calls,
-                state.alloc_last_render_bytes,
-                state.alloc_last_layout_calls,
-                state.alloc_last_layout_bytes,
-                state.alloc_last_paint_calls,
-                state.alloc_last_paint_bytes
-            );
-        }
+    state.frame = state.frame.saturating_add(1);
+    if state.profile_frames_left > 0 {
+        state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
+        let since_start = state.started_at.elapsed();
+        let frame_elapsed = frame_started.elapsed();
+        tracing::info!(
+            "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms render={:.2}ms layout={:.2}ms paint={:.2}ms alloc={} ({} B) render_alloc={} ({} B) layout_alloc={} ({} B) paint_alloc={} ({} B)",
+            state.frame,
+            since_start.as_secs_f64() * 1000.0,
+            frame_elapsed.as_secs_f64() * 1000.0,
+            render_elapsed.as_secs_f64() * 1000.0,
+            layout_elapsed.as_secs_f64() * 1000.0,
+            paint_elapsed.as_secs_f64() * 1000.0,
+            state.alloc_last_calls,
+            state.alloc_last_bytes,
+            state.alloc_last_render_calls,
+            state.alloc_last_render_bytes,
+            state.alloc_last_layout_calls,
+            state.alloc_last_layout_bytes,
+            state.alloc_last_paint_calls,
+            state.alloc_last_paint_bytes
+        );
+    }
 
-        if let Some(limit) = state.exit_after_frames {
-            if state.frame >= limit {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
-            app.request_redraw(window);
+    if let Some(limit) = state.exit_after_frames {
+        if state.frame >= limit {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
+        app.request_redraw(window);
     }
+}
+
+fn window_create_spec(
+    _driver: &mut TableStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<TableStressDriver, TableStressWindowState>,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<TableStressDriver, TableStressWindowState> {
+    FnDriver::new(
+        TableStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -783,6 +819,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, TableStressDriver::default())
-        .context("run table_stress_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        TableStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run table_stress_demo app")
 }

@@ -843,7 +843,7 @@ impl InputGroup {
                         let entry = ControlEntry {
                             element: control_element_id,
                             enabled: !disabled,
-                            action: ControlAction::Noop,
+                            action: ControlAction::FocusOnly,
                         };
                         let _ = cx.app.models_mut().update(&control_registry, |reg| {
                             reg.register_control(
@@ -1193,7 +1193,7 @@ impl InputGroup {
                         let entry = ControlEntry {
                             element: control_element_id,
                             enabled: !disabled,
-                            action: ControlAction::Noop,
+                            action: ControlAction::FocusOnly,
                         };
                         let _ = cx.app.models_mut().update(&control_registry, |reg| {
                             reg.register_control(

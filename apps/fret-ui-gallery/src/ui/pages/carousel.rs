@@ -10,6 +10,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let loop_downgrade_cannot_loop = snippets::loop_downgrade_cannot_loop::render(cx);
         let focus = snippets::focus_watch::render(cx);
         let basic = snippets::basic::render(cx);
+        let usage = snippets::usage::render(cx);
         let parts = snippets::parts::render(cx);
         let sizes_thirds = snippets::sizes_thirds::render(cx);
         let sizes = snippets::sizes::render(cx);
@@ -32,6 +33,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let notes_stack = doc_layout::notes(
             cx,
             [
+                "API reference: `ecosystem/fret-ui-shadcn/src/carousel.rs`.",
+                "Carousel already supports both a compact builder (`Carousel::new/items`) and the upstream-shaped parts surface (`CarouselContent`, `CarouselItem`, `CarouselPrevious`, `CarouselNext`) via `into_element_parts(...)`, so the main parity gap here was usage clarity rather than missing mechanism work.",
                 "Preview follows shadcn Carousel demo: Basic, Sizes, and Spacing.",
                 "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret mirrors this via `CarouselItem::viewport_layout_breakpoint(tailwind::MD/LG, ...)`.",
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start`.",
@@ -40,7 +43,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
         let body = doc_layout::render_doc_page(
             cx,
-            Some("Preview follows shadcn Carousel demo cards (Fret builder API; not Embla)."),
+            Some("Preview follows shadcn Carousel docs flow: Demo -> Usage -> Sizes/Spacing/Options. Additional sections keep Fret-specific engine and diagnostics coverage visible."),
             vec![
                 DocSection::new("Demo", demo)
                     .description("A carousel with 5 items and previous/next buttons.")
@@ -74,6 +77,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-basic")
                     .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
+                DocSection::new("Usage", usage)
+                    .description("Copyable minimal usage for the builder + parts authoring surface.")
+                    .test_id_prefix("ui-gallery-carousel-usage")
+                    .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
                 DocSection::new("Parts", parts)
                     .description("Part-based authoring surface aligned with shadcn/ui v4 exports.")
 

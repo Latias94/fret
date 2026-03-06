@@ -48,10 +48,10 @@ pub fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBu
 Consumers then do:
 
 ```rust
-let app = fret::app("my-app", init_window, view)?;
-my_effect_pack::install_into(app)
-    .with_main_window("My App", (1100.0, 720.0))
-    .run()?;
+let app = fret::App::new("my-app")
+    .window("My App", (1100.0, 720.0))
+    .view::<MyView>()?;
+my_effect_pack::install_into(app).run()?;
 ```
 
 This keeps the “install surface” one call while respecting when services exist (custom effects and

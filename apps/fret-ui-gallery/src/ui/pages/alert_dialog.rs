@@ -44,6 +44,10 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("Default-sized modal alert dialog.")
                 .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Alert Dialog.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("A minimal alert dialog with default buttons.")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
@@ -69,10 +73,6 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Alert Dialog.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
                 .description("Guidelines and best practices for alert dialogs."),

@@ -13,7 +13,7 @@ That macro story is coherent with ADR 0109 and with the repo's mechanism-vs-poli
 However, the **user-facing launch story** is still more complicated than it should be:
 
 - `crates/fret-launch` intends to be a stable launch facade, but its root public surface still re-exports a large amount of runner plumbing.
-- `crates/fret-framework` is a clean manual-assembly facade, but it currently mirrors `fret-launch` power more than it curates it.
+- `crates/fret-framework` is a clean manual-assembly facade, and its `launch` umbrella should stay smaller and more curated than `fret-launch` itself.
 - `ecosystem/fret` already provides a good desktop-first golden path, but advanced customization drops users into runner-centric concepts relatively early.
 
 Compared with the reference posture in `repo-ref/zed/crates/gpui`, Fret is not missing power. It is missing a more strongly curated **surface contract**.
@@ -182,11 +182,14 @@ The intended stable surface should be small and explicit. Directionally, it shou
 - `WindowCreateSpec`,
 - `WinitAppBuilder`,
 - top-level `run_app*` entry points,
-- a small set of host-integration helper types that are intentionally supported.
+- a small set of host-integration helper types that are intentionally supported,
+- and dedicated specialized submodules for interop/media helpers that should stay public without
+  competing with the core crate-root story.
 
 Everything else should be one of:
 
 - internal-only,
+- moved under an explicit specialized submodule,
 - `#[doc(hidden)]` transitional,
 - or a later explicit contract decision.
 

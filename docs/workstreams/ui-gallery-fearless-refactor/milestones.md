@@ -5,12 +5,13 @@ This file defines milestones and acceptance criteria for the UI Gallery refactor
 
 ## Status
 
-As of 2026-03-02:
+As of 2026-03-06:
 
 - Milestones 0–3 are effectively complete in-tree (snippet-backed pages + enforcement tests + drift audit).
 - Milestone 4 remains optional / follow-up (taxonomy polish, consistency, etc).
 - AI Elements demos are snippet-backed (see `ai-elements-tracker.md`).
 - Material 3 pages are snippet-backed and routed through `src/ui/pages/material3/mod.rs`; see `material3-tracker.md` for remaining cleanup (delete legacy previews incrementally).
+- Main form/trigger controls now have focused label-association closure (stable automation anchors + dedicated diag gates) for `Select`, `NativeSelect`, `Slider`, `RadioGroup`, `ToggleGroup`, `Combobox`, `DatePicker`, `Switch`, `Input`, `Textarea`, and `Toggle`.
 
 ## Milestone 0 — Foundations
 
@@ -79,4 +80,5 @@ These are optional and should only be tackled once drift is eliminated.
 - “Copy/paste ready” mode: code snippets include required imports and model initialization.
 - Better diagnostics integration:
   - stable `test_id` surfaces for key interactive examples,
+  - focused label-association gates for the main form/trigger controls,
   - optional `fretboard diag` scripts for high-risk overlay families.

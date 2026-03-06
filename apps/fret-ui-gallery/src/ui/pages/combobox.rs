@@ -12,6 +12,8 @@ pub(super) fn preview_combobox(
     let conformance_demo =
         snippets::conformance_demo::render(cx, value.clone(), open.clone(), query.clone());
     let basic = snippets::basic::render(cx);
+    let usage = snippets::usage::render(cx);
+    let label = snippets::label::render(cx);
     let auto_highlight = snippets::auto_highlight::render(cx);
     let clear = snippets::clear_button::render(cx);
     let groups = snippets::groups::render(cx);
@@ -28,7 +30,8 @@ pub(super) fn preview_combobox(
     let notes = doc_layout::notes(
         cx,
         [
-            "Combobox is a Popover + Command recipe. Keep shadcn demo order stable so parity gaps are explicit and testable.",
+            "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
+            "Combobox is intentionally a Popover + Command recipe surface; it already supports upstream-shaped authoring through `Combobox::into_element_parts(...)` with trigger/input/content patches, so the main parity gap here was usage clarity rather than missing mechanism work.",
             "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
             "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
             "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
@@ -38,7 +41,7 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn ComboboxDemo order, with a small conformance-first section at the top to keep diag scripts stable.",
+            "Preview follows shadcn ComboboxDemo order, with a small conformance-first section at the top and a copyable Usage example near the front.",
         ),
         vec![
             DocSection::new("Conformance Demo", conformance_demo)
@@ -50,6 +53,14 @@ pub(super) fn preview_combobox(
             DocSection::new("Basic", basic)
                 .description("Upstream shadcn demo: basic framework combobox with search.")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for the recipe + parts patch API.")
+                .test_id_prefix("ui-gallery-combobox-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control`, `Combobox::control_id`, and `Combobox::test_id_prefix` so label clicks focus the trigger and keep derived automation anchors stable.")
+                .test_id_prefix("ui-gallery-combobox-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Auto Highlight", auto_highlight)
                 .description(
                     "Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).",

@@ -7,6 +7,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let demo = snippets::demo::render(cx);
     let outline = snippets::outline::render(cx);
     let with_text = snippets::with_text::render(cx);
+    let label = snippets::label::render(cx);
     let size = snippets::size::render(cx);
     let disabled = snippets::disabled::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -37,6 +38,10 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("With Text", with_text)
                 .description("Default variant with icon + text.")
                 .code_rust_from_file_region(snippets::with_text::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Toggle::control_id` so label clicks toggle the control.")
+                .test_id_prefix("ui-gallery-toggle-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Size", size)
                 .description("Size presets: Sm / Default / Lg.")
                 .code_rust_from_file_region(snippets::size::SOURCE, "example"),

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
@@ -24,7 +25,10 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
@@ -330,6 +334,21 @@ impl Popover {
             .default_open(default_open)
             .open_model(cx);
         Self::new(open)
+    }
+
+    /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.into_element(
+            cx,
+            move |cx| trigger.into_child_element(cx),
+            move |cx| content.into_child_element(cx),
+        )
     }
 
     pub fn align(mut self, align: PopoverAlign) -> Self {
@@ -1225,11 +1244,29 @@ pub struct PopoverTrigger {
     auto_toggle: bool,
 }
 
+pub struct PopoverTriggerBuild<H, T> {
+    child: Option<T>,
+    auto_toggle: bool,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl PopoverTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self {
             child,
             auto_toggle: true,
+        }
+    }
+
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> PopoverTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        PopoverTriggerBuild {
+            child: Some(child),
+            auto_toggle: true,
+            _phantom: PhantomData,
         }
     }
 
@@ -1253,6 +1290,52 @@ impl PopoverTrigger {
     }
 }
 
+impl<H: UiHost, T> PopoverTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    /// Mirrors [`PopoverTrigger::auto_toggle`] on the late-landing builder path.
+    pub fn auto_toggle(mut self, auto_toggle: bool) -> Self {
+        self.auto_toggle = auto_toggle;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> PopoverTrigger {
+        PopoverTrigger::new(
+            self.child
+                .expect("expected popover trigger child")
+                .into_child_element(cx),
+        )
+        .auto_toggle(self.auto_toggle)
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_trigger(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PopoverTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for PopoverTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PopoverTriggerBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `PopoverAnchor` (v4).
 ///
 /// This is a layout-only helper. Use [`Popover::anchor_element`] to wire the anchor element ID
@@ -1262,9 +1345,28 @@ pub struct PopoverAnchor {
     child: AnyElement,
 }
 
+pub struct PopoverAnchorBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl PopoverAnchor {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    /// Builder-first variant that late-lands the anchor child at `into_element(cx)` time.
+    ///
+    /// If you need the anchor ID before final landing, call [`PopoverAnchorBuild::into_anchor`] or
+    /// keep using [`PopoverAnchor::new`] with an already-landed child.
+    pub fn build<H: UiHost, T>(child: T) -> PopoverAnchorBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        PopoverAnchorBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
     }
 
     pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
@@ -1274,6 +1376,45 @@ impl PopoverAnchor {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> PopoverAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> PopoverAnchor {
+        PopoverAnchor::new(
+            self.child
+                .expect("expected popover anchor child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_anchor(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for PopoverAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PopoverAnchorBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for PopoverAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        PopoverAnchorBuild::into_element(self, cx)
     }
 }
 
@@ -1288,6 +1429,7 @@ pub struct PopoverContent {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl PopoverContent {
@@ -1301,6 +1443,7 @@ impl PopoverContent {
                 .min_w_0()
                 .min_h_0(),
             a11y_label: None,
+            test_id: None,
         }
     }
 
@@ -1319,6 +1462,11 @@ impl PopoverContent {
         self
     }
 
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
@@ -1326,22 +1474,26 @@ impl PopoverContent {
         let props = decl_style::container_props(theme, chrome, self.layout);
         let children = self.children;
         let label = self.a11y_label;
+        let test_id = self.test_id;
 
-        let container = cx.container(props, move |cx| {
-            vec![
-                ui::v_flex(move |_cx| children)
-                    .gap(Space::N4)
-                    .items_stretch()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
-            ]
-        });
-
-        container.attach_semantics(SemanticsDecoration {
+        let container = shadcn_layout::container_vstack_fill_width(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N4)
+                .items_stretch(),
+            children,
+        )
+        .attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::Panel),
             label,
             ..Default::default()
-        })
+        });
+
+        match test_id {
+            Some(test_id) => container.test_id(test_id),
+            None => container,
+        }
     }
 }
 
@@ -1447,6 +1599,7 @@ impl PopoverDescription {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant};
     use std::cell::Cell;
     use std::rc::Rc;
     use std::sync::Mutex;
@@ -1460,13 +1613,154 @@ mod tests {
     };
     use fret_core::{KeyCode, Modifiers};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{Px, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
-    use fret_ui::element::{LayoutStyle, Length, PressableProps};
+    use fret_ui::element::{ElementKind, LayoutStyle, Length, PressableProps};
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn popover_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(
+                cx,
+                PopoverTrigger::build(crate::Card::build(|_cx, _out| {})),
+            );
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn popover_anchor_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, PopoverAnchor::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn popover_build_opens_on_trigger_activate_with_late_landed_parts() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "popover-build-late-landed-parts",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let content = PopoverContent::new(vec![
+                    cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                ])
+                .test_id("popover-build-panel");
+
+                let trigger = PopoverTrigger::build(cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                ));
+                let popover = Popover::new(open.clone()).build(cx, trigger, content);
+                vec![popover]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center(trigger_bounds),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center(trigger_bounds),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
 
     #[test]
     fn popover_new_controllable_uses_controlled_model_when_provided() {
@@ -2757,6 +3051,105 @@ mod tests {
             .find(|n| n.id == controlled)
             .expect("controlled node");
         assert_eq!(controlled_node.role, SemanticsRole::Dialog);
+    }
+
+    #[test]
+    fn popover_trigger_keeps_authored_button_semantics_when_avatar_is_nested_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(240.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "popover-avatar-trigger-semantics",
+            move |cx| {
+                let avatar = Avatar::new([AvatarFallback::new("VC").into_element(cx)])
+                    .into_element(cx)
+                    .test_id("popover-avatar-trigger-leaf");
+                let trigger = Button::new("")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Icon)
+                    .a11y_label("Open profile card")
+                    .children([avatar])
+                    .test_id("popover-avatar-trigger")
+                    .into_element(cx);
+
+                vec![Popover::new(open.clone()).into_element(
+                    cx,
+                    |cx| PopoverTrigger::new(trigger).into_element(cx),
+                    |cx| {
+                        PopoverContent::new([PopoverTitle::new("Profile").into_element(cx)])
+                            .into_element(cx)
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-avatar-trigger"))
+            .expect("expected authored button trigger semantics node");
+        assert_eq!(
+            trigger.role,
+            SemanticsRole::Button,
+            "expected authored popover trigger button to own button semantics"
+        );
+        assert!(
+            trigger.actions.focus,
+            "expected authored trigger to remain focusable"
+        );
+        assert!(
+            trigger.actions.invoke,
+            "expected authored trigger to remain invokable"
+        );
+
+        let leaf = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-avatar-trigger-leaf"))
+            .expect("expected nested avatar leaf semantics node");
+        assert_eq!(
+            leaf.role,
+            SemanticsRole::Generic,
+            "expected nested avatar leaf to stay presentational"
+        );
+        assert!(
+            !leaf.actions.focus,
+            "expected nested avatar leaf to avoid owning focus semantics"
+        );
+        assert!(
+            !leaf.actions.invoke,
+            "expected nested avatar leaf to avoid owning invoke semantics"
+        );
     }
 
     fn render_popover_in_clipped_surface_frame(
@@ -5015,7 +5408,7 @@ mod tests {
             "popover-auto-toggle-default",
             |cx| {
                 let trigger_id = trigger_id.clone();
-                let trigger = PopoverTrigger::new(cx.pressable_with_id(
+                let trigger = PopoverTrigger::build(cx.pressable_with_id(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
@@ -5122,7 +5515,7 @@ mod tests {
             |cx| {
                 let trigger_id = trigger_id.clone();
                 let trigger_activated = trigger_activated.clone();
-                let trigger = PopoverTrigger::new(cx.pressable_with_id(
+                let trigger = PopoverTrigger::build(cx.pressable_with_id(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();

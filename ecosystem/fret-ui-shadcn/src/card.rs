@@ -5,7 +5,10 @@ use fret_core::{Px, TextWrap};
 use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
@@ -263,6 +266,45 @@ where
     }
 }
 
+impl<H: UiHost, B> UiPatchTarget for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -407,12 +449,12 @@ impl CardHeader {
                 vec![left_col, action],
             )
         } else {
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
                     .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full()),
+                    .items_start(),
                 left,
             )
         };
@@ -491,6 +533,45 @@ where
     }
 }
 
+impl<H: UiHost, B> UiPatchTarget for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
@@ -557,7 +638,8 @@ mod tests {
         ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
-    use fret_ui_kit::MetricRef;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+    use fret_ui_kit::{MetricRef, UiBuilderHostBoundIntoElementExt as _, UiExt as _};
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {
@@ -683,7 +765,7 @@ mod tests {
                 .first()
                 .unwrap_or_else(|| panic!("expected CardContent to have a single vstack child"));
 
-            let ElementKind::Column(ColumnProps { align, .. }) = &child.kind else {
+            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
                 panic!("expected CardContent child to be a column element");
             };
 
@@ -691,6 +773,62 @@ mod tests {
                 *align,
                 CrossAlign::Start,
                 "expected CardContent to avoid cross-axis stretch so inline-sized children (e.g. buttons) do not fill the card width"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardContent inner flow root to request fill width so wrapped text resolves against the card's inner width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardContent inner flow root to opt into min-w-0 so nested flex/text content can shrink and wrap"
+            );
+        });
+    }
+
+    #[test]
+    fn card_header_without_action_uses_fill_width_flow_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardHeader::new([
+                CardTitle::new("Overview").into_element(cx),
+                CardDescription::new(
+                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let child = el
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected CardHeader to have a single inner flow child"));
+
+            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
+                panic!("expected CardHeader child to be a column element");
+            };
+
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected CardHeader without an action slot to avoid cross-axis stretch on the inner flow root"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardHeader inner flow root to request fill width so wrapped title/description text resolves against the card width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardHeader inner flow root to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
             );
         });
     }
@@ -870,46 +1008,25 @@ mod tests {
             let eager = Card::new(Vec::<AnyElement>::new()).into_element(cx);
             let built = Card::build(|_cx, _out| {}).into_element(cx);
 
-            let ElementKind::ForegroundScope(ForegroundScopeProps {
-                foreground: eager_foreground,
-                ..
-            }) = &eager.kind
-            else {
-                panic!("expected eager Card to install a ForegroundScope wrapper");
-            };
-            let ElementKind::ForegroundScope(ForegroundScopeProps {
-                foreground: built_foreground,
-                ..
-            }) = &built.kind
-            else {
-                panic!("expected built Card to install a ForegroundScope wrapper");
-            };
+            let eager_foreground = eager.inherited_foreground;
+            let built_foreground = built.inherited_foreground;
             assert_eq!(built_foreground, eager_foreground);
-
-            let eager_surface = eager
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected eager Card foreground scope child"));
-            let built_surface = built
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected built Card foreground scope child"));
 
             let ElementKind::Container(ContainerProps {
                 layout: eager_layout,
                 padding: eager_padding,
                 ..
-            }) = &eager_surface.kind
+            }) = &eager.kind
             else {
-                panic!("expected eager Card surface to be a container element");
+                panic!("expected eager Card root to be a container element");
             };
             let ElementKind::Container(ContainerProps {
                 layout: built_layout,
                 padding: built_padding,
                 ..
-            }) = &built_surface.kind
+            }) = &built.kind
             else {
-                panic!("expected built Card surface to be a container element");
+                panic!("expected built Card root to be a container element");
             };
 
             assert_eq!(built_layout.overflow, eager_layout.overflow);
@@ -918,6 +1035,115 @@ mod tests {
             assert_eq!(built_padding.right, eager_padding.right);
             assert_eq!(built_padding.bottom, eager_padding.bottom);
             assert_eq!(built_padding.left, eager_padding.left);
+        });
+    }
+
+    #[test]
+    fn card_build_children_macro_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let children = ui::children![cx;
+                Card::build(|_cx, _out| {}).ui().w_full(),
+                CardHeader::build(|_cx, _out| {}).ui().w_full(),
+                CardContent::build(|_cx, _out| {}).ui().w_full(),
+            ];
+
+            assert_eq!(children.len(), 3);
+            assert!(matches!(children[0].kind, ElementKind::Container(_)));
+            assert!(children[0].inherited_foreground.is_some());
+            assert!(matches!(children[1].kind, ElementKind::Container(_)));
+            assert!(matches!(children[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
+    fn card_build_push_ui_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, Card::build(|_cx, _out| {}));
+            out.push_ui(cx, CardHeader::build(|_cx, _out| {}));
+            out.push_ui(cx, CardContent::build(|_cx, _out| {}));
+
+            assert_eq!(out.len(), 3);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+            assert!(matches!(out[1].kind, ElementKind::Container(_)));
+            assert!(matches!(out[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
+    fn card_build_ui_builder_path_applies_layout_patches() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let background = theme.color_token("background");
+            let border = theme.color_token("border");
+
+            let card = Card::build(|_cx, _out| {})
+                .ui()
+                .bg(ColorRef::Color(background))
+                .border_1()
+                .border_color(ColorRef::Color(border))
+                .max_w(Px(320.0))
+                .into_element(cx);
+            let header = CardHeader::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(240.0))
+                .into_element(cx);
+            let content = CardContent::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(200.0))
+                .into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                layout: card_layout,
+                background: card_background,
+                border_color: card_border_color,
+                ..
+            }) = &card.kind
+            else {
+                panic!("expected ui()-patched Card root to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: header_layout,
+                ..
+            }) = &header.kind
+            else {
+                panic!("expected ui()-patched CardHeader to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: content_layout,
+                ..
+            }) = &content.kind
+            else {
+                panic!("expected ui()-patched CardContent to be a container element");
+            };
+
+            assert_eq!(card_background, &Some(background));
+            assert_eq!(card_border_color, &Some(border));
+            assert_eq!(card_layout.size.max_width, Some(Length::Px(Px(320.0))));
+            assert_eq!(header_layout.size.max_width, Some(Length::Px(Px(240.0))));
+            assert_eq!(content_layout.size.max_width, Some(Length::Px(Px(200.0))));
         });
     }
 
@@ -1271,15 +1497,17 @@ impl CardContent {
         };
         let children = self.children;
         with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 // Upstream shadcn/ui `CardContent` is a plain `div` (`px-6`) rather than a flex
                 // container, so avoid the default `items: stretch` behavior that would expand
-                // inline-sized children (e.g. buttons) to fill the card width.
+                // inline-sized children (e.g. buttons) to fill the card width. Still request a
+                // fill-width flow root so wrapped text resolves against the section's inner width
+                // instead of shrink-wrapping to an intrinsic/min-content width.
                 shadcn_layout::VStackProps::default()
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
+                    .layout(LayoutRefinement::default()),
                 children,
             )
         })
@@ -1326,6 +1554,45 @@ where
             content = content.size(size);
         }
         content.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
     }
 }
 

@@ -16,27 +16,29 @@ Status legend:
 
 - `[x]` Write the v1 plan document (`docs/workstreams/state-management-v1.md`).
 - `[x]` Add a short section to `docs/workstreams/ecosystem-status.md` summarizing:
-  - typed messages (`fret::mvu::MessageRouter`)
+  - typed unit/payload actions (`fret::actions!`, `fret::payload_actions!`)
   - async resources (`ecosystem/fret-query`)
   - derived state (planned selectors)
 - `[x]` Add a "recommended crates" note to `docs/crate-usage-guide.md` for:
   - `fret-query` (async resources)
   - `fret-executor` (background + inbox helpers)
 
-## Phase 1 - Typed messages (remove stringly prefix parsing)
+## Phase 1 - Typed actions (remove stringly prefix parsing)
 
 Goal: eliminate dynamic `"prefix.{id}"` parsing from representative code.
 
-- `[x]` Make `fret::mvu::MessageRouter` resolvable in non-MVU code (public take/resolve API).
-  - Evidence anchor: `ecosystem/fret/src/mvu.rs`
-- `[x]` Migrate scaffold todo template to typed routing for per-item actions.
+- `[x]` Land typed payload actions v2 plus view-runtime handler sugar.
+  - Evidence anchors:
+    - `ecosystem/fret/src/actions.rs`
+    - `ecosystem/fret/src/view.rs`
+- `[x]` Migrate scaffold todo template to typed actions for per-item intents.
   - Target: `apps/fretboard/src/scaffold/templates.rs`
 - `[x]` Update golden-path todo doc example to match.
   - Target: `docs/examples/todo-app-golden-path.md`
-- `[x]` Migrate `todo_demo` dynamic toggle/remove commands to typed routing.
+- `[x]` Migrate `todo_demo` dynamic toggle/remove commands to payload actions.
   - Target: `apps/fret-examples/src/todo_demo.rs`
 - `[x]` Optional follow-ups:
-  - `[x]` `apps/fret-examples/src/markdown_demo.rs` (code block expand commands)
+  - `[x]` `apps/fret-examples/src/markdown_demo.rs` (payloaded code block expand intents)
   - `[x]` Consolidate todo variants into one official baseline (`apps/fret-examples/src/todo_demo.rs`).
 
 ## Phase 2 - Async resources (adopt `fret-query`)
@@ -70,10 +72,10 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
 ## Phase 4 - Consolidation
 
 - `[x]` Ensure at least one template + one demo demonstrate the full stack:
-  - typed messages + selectors + queries
+  - typed actions + selectors + queries
   - Evidence anchors:
-    - `apps/fretboard/src/scaffold/templates.rs` (todo template: `MessageRouter` + `use_selector` + `use_query`)
-    - `apps/fret-examples/src/markdown_demo.rs` (demo: typed router + `fret-query` + selector-derived summary)
+    - `apps/fretboard/src/scaffold/templates.rs` (todo template: actions + payload actions + `use_selector` + `use_query`)
+    - `apps/fret-examples/src/markdown_demo.rs` (demo: payload actions + `fret-query` + selector-derived summary)
 - `[x]` Add a short "state management" section to `docs/README.md` pointing to:
   - the workstream docs
   - the recommended crates
@@ -81,18 +83,14 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
 
 ## Phase 5 - Post-v1 polish
 
-- `[x]` Add a view-cache-safe typed routing helper (`KeyedMessageRouter<K, M>`) for stable dynamic commands.
-  - Evidence anchor: `ecosystem/fret/src/mvu.rs`
-- `[x]` Document the `view_cache(...)` caveat + recommended keyed router usage.
+- `[x]` Record that earlier typed-command-router drafts have been superseded by payload actions v2
+  and view-runtime action handlers.
   - Evidence anchors:
     - `docs/workstreams/state-management-v1.md`
-    - `docs/workstreams/ecosystem-status.md`
+    - `docs/adr/0312-payload-actions-v2.md`
 - `[x]` Publish extension-boundary guidance for `fret-query` + `fret-selector` and third-party integrations.
   - Evidence anchor: `docs/workstreams/state-management-v1-extension-contract.md`
 - `[x]` Add component ecosystem integration workstream + milestone tracker.
   - Evidence anchor: `docs/workstreams/component-ecosystem-state-integration-v1.md`
   - Evidence anchor: `docs/workstreams/component-ecosystem-state-integration-v1-todo.md`
-- `[x]` Optional: adopt `KeyedMessageRouter` in one view-cached example to replace bespoke lookup tables.
-  - Evidence anchor: `apps/fret-ui-gallery/src/spec.rs` (`with_data_grid_row_router` + keyed row command/resolve helpers)
-  - Evidence anchor: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_grid` inside `cached_subtree_with(...)` uses `data_grid_row_command`)
-  - Evidence anchor: `apps/fret-ui-gallery/src/driver.rs` (`on_command` resolves via `data_grid_row_for_command`)
+- `[ ]` Sweep remaining historical docs that still mention removed MVU-era routing surfaces.

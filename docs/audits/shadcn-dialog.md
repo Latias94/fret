@@ -50,6 +50,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: `DialogClose` is available as an explicit close affordance recipe (close button parity).
 - Pass: `DialogClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DialogClose::new(open)` as the explicit constructor.
+- Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
+  shadcn-specific composition concerns into the lower-level mechanism contract.
 
 ### Dismissal behavior
 
@@ -107,6 +109,16 @@ Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
   `DialogClose::from_scope()`.
 - Failure mode: `from_scope()` panics when rendered outside dialog content so misuse is caught
   early during development.
+
+## Authoring note: `compose()`
+
+`Dialog::compose()` is a recipe-layer bridge for authors who want a more composable part-based
+style than the raw closure root.
+
+- Scope: ergonomics only; it lowers into `Dialog::into_element_parts(...)`.
+- Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
+- Limitation: this is still not a full React-style nested children API; Fret stores already-built
+  elements and assembles them at the final call site.
 
 ## Follow-ups (recommended)
 

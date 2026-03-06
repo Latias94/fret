@@ -48,6 +48,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
   underlay layout/overflow.
 - Pass: `SheetClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `SheetClose::new(open)` as the explicit constructor.
+- Pass: `Sheet::compose()` provides a recipe-level builder for part assembly without pushing
+  shadcn-specific composition concerns into the lower-level mechanism contract.
 
 ### Placement & sizing
 
@@ -90,6 +92,16 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
   (`web_vs_fret_sheet_demo_panel_chrome_matches`, `web_vs_fret_sheet_side_panel_chrome_matches`, `web_vs_fret_sheet_side_right_panel_chrome_matches`, `web_vs_fret_sheet_side_bottom_panel_chrome_matches`, `web_vs_fret_sheet_side_left_panel_chrome_matches`).
 - Shadcn Web placement gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_sheet_demo_overlay_insets_match`, `web_vs_fret_sheet_side_top_overlay_insets_match`, `web_vs_fret_sheet_side_right_overlay_insets_match`, `web_vs_fret_sheet_side_bottom_overlay_insets_match`, `web_vs_fret_sheet_side_left_overlay_insets_match`).
+
+## Authoring note: `compose()`
+
+`Sheet::compose()` is a recipe-layer bridge for authors who want a more composable part-based
+style than the raw closure root.
+
+- Scope: ergonomics only; it lowers into `Sheet::into_element_parts(...)`.
+- Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
+- Limitation: this is still not a full React-style nested children API; Fret stores already-built
+  elements and assembles them at the final call site.
 
 ## Follow-ups (recommended)
 

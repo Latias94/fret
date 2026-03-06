@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -44,7 +44,7 @@ fn parse_env_bool(key: &str) -> bool {
     matches!(value.as_str(), "1" | "true" | "yes" | "on")
 }
 
-struct VirtualListStressWindowState {
+pub struct VirtualListStressWindowState {
     ui: UiTree<App>,
     scroll_handle: VirtualListScrollHandle,
     tall_rows_enabled: fret_app::Model<bool>,
@@ -57,7 +57,7 @@ struct VirtualListStressWindowState {
 }
 
 #[derive(Default)]
-struct VirtualListStressDriver;
+pub struct VirtualListStressDriver;
 
 impl VirtualListStressDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> VirtualListStressWindowState {
@@ -84,227 +84,242 @@ impl VirtualListStressDriver {
     }
 }
 
-impl WinitAppDriver for VirtualListStressDriver {
-    type WindowState = VirtualListStressWindowState;
+fn gpu_ready(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    renderer.set_perf_enabled(true);
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        renderer.set_perf_enabled(true);
+fn gpu_frame_prepare(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    state: &mut VirtualListStressWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+) {
+    if !state.auto_scroll && state.exit_after_frames.is_none() {
+        return;
     }
 
-    fn gpu_frame_prepare(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        _context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        if !state.auto_scroll && state.exit_after_frames.is_none() {
-            return;
-        }
-
-        let now = Instant::now();
-        let should_report = match state.last_renderer_report {
-            None => true,
-            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
-        };
-        if should_report {
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    let pipeline_breakdown =
-                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+    let now = Instant::now();
+    let should_report = match state.last_renderer_report {
+        None => true,
+        Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+    };
+    if should_report {
+        if let Some(snap) = renderer.take_perf_snapshot() {
+            if snap.frames != 0 {
+                let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_svg_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.quad_draw_calls,
+                    snap.viewport_draw_calls,
+                    snap.image_draw_calls,
+                    snap.text_draw_calls,
+                    snap.path_draw_calls,
+                    snap.mask_draw_calls,
+                    snap.fullscreen_draw_calls,
+                    snap.clip_mask_draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.uniform_bind_group_switches,
+                    snap.texture_bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
+                if pipeline_breakdown {
                     try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_svg_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.quad_draw_calls,
-                        snap.viewport_draw_calls,
-                        snap.image_draw_calls,
-                        snap.text_draw_calls,
-                        snap.path_draw_calls,
-                        snap.mask_draw_calls,
-                        snap.fullscreen_draw_calls,
-                        snap.clip_mask_draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.uniform_bind_group_switches,
-                        snap.texture_bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
+                        "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                        snap.pipeline_switches_quad,
+                        snap.pipeline_switches_viewport,
+                        snap.pipeline_switches_mask,
+                        snap.pipeline_switches_text_mask,
+                        snap.pipeline_switches_text_color,
+                        snap.pipeline_switches_path,
+                        snap.pipeline_switches_path_msaa,
+                        snap.pipeline_switches_composite,
+                        snap.pipeline_switches_fullscreen,
+                        snap.pipeline_switches_clip_mask,
                     );
-                    if pipeline_breakdown {
-                        try_println!(
-                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
-                            snap.pipeline_switches_quad,
-                            snap.pipeline_switches_viewport,
-                            snap.pipeline_switches_mask,
-                            snap.pipeline_switches_text_mask,
-                            snap.pipeline_switches_text_color,
-                            snap.pipeline_switches_path,
-                            snap.pipeline_switches_path_msaa,
-                            snap.pipeline_switches_composite,
-                            snap.pipeline_switches_fullscreen,
-                            snap.pipeline_switches_clip_mask,
-                        );
-                    }
                 }
             }
-            state.last_renderer_report = Some(now);
         }
+        state.last_renderer_report = Some(now);
+    }
+}
+
+fn create_window_state(
+    _driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> VirtualListStressWindowState {
+    VirtualListStressDriver::build_ui(app, window)
+}
+
+fn hot_reload_window(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitHotReloadContext<'_, VirtualListStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitWindowContext<'_, VirtualListStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitWindowContext<'_, VirtualListStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitCommandContext<'_, VirtualListStressWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+    if command.as_str() == "virtual_list_stress_demo.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    }
+}
+
+fn handle_event(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitEventContext<'_, VirtualListStressWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
+            state.ui.dispatch_event(app, services, event);
             return;
         }
 
-        if command.as_str() == "virtual_list_stress_demo.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
-                state.ui.dispatch_event(app, services, event);
+        match *key {
+            fret_core::KeyCode::Escape => {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 return;
             }
-
-            match *key {
-                fret_core::KeyCode::Escape => {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-                fret_core::KeyCode::Space => {
-                    let _ = app
-                        .models_mut()
-                        .update(&state.tall_rows_enabled, |v| *v = !*v);
-                    app.request_redraw(window);
-                }
-                fret_core::KeyCode::KeyR => {
-                    let _ = app.models_mut().update(&state.reversed, |v| *v = !*v);
-                    let _ = app
-                        .models_mut()
-                        .update(&state.items_revision, |v| *v = v.wrapping_add(1));
-                    app.request_redraw(window);
-                }
-                fret_core::KeyCode::Home => {
-                    state
-                        .scroll_handle
-                        .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
-                    app.request_redraw(window);
-                }
-                fret_core::KeyCode::End => {
-                    state.scroll_handle.scroll_to_bottom();
-                    app.request_redraw(window);
-                }
-                fret_core::KeyCode::KeyG => {
-                    state
-                        .scroll_handle
-                        .scroll_to_item(LIST_LEN / 2, fret_ui::ScrollStrategy::Center);
-                    app.request_redraw(window);
-                }
-                _ => {}
+            fret_core::KeyCode::Space => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.tall_rows_enabled, |v| *v = !*v);
+                app.request_redraw(window);
             }
+            fret_core::KeyCode::KeyR => {
+                let _ = app.models_mut().update(&state.reversed, |v| *v = !*v);
+                let _ = app
+                    .models_mut()
+                    .update(&state.items_revision, |v| *v = v.wrapping_add(1));
+                app.request_redraw(window);
+            }
+            fret_core::KeyCode::Home => {
+                state
+                    .scroll_handle
+                    .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
+                app.request_redraw(window);
+            }
+            fret_core::KeyCode::End => {
+                state.scroll_handle.scroll_to_bottom();
+                app.request_redraw(window);
+            }
+            fret_core::KeyCode::KeyG => {
+                state
+                    .scroll_handle
+                    .scroll_to_item(LIST_LEN / 2, fret_ui::ScrollStrategy::Center);
+                app.request_redraw(window);
+            }
+            _ => {}
         }
-
-        state.ui.dispatch_event(app, services, event);
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        state.frame = state.frame.wrapping_add(1);
+fn render(
+    _driver: &mut VirtualListStressDriver,
+    context: WinitRenderContext<'_, VirtualListStressWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let tall_rows_enabled = app
-            .models()
-            .read(&state.tall_rows_enabled, |v| *v)
-            .unwrap_or(false);
-        let reversed = app.models().read(&state.reversed, |v| *v).unwrap_or(false);
-        let items_revision = app
-            .models()
-            .read(&state.items_revision, |v| *v)
-            .unwrap_or(0);
+    state.frame = state.frame.wrapping_add(1);
 
-        let scroll_handle = state.scroll_handle.clone();
-        let offset_y = scroll_handle.offset().y;
+    let tall_rows_enabled = app
+        .models()
+        .read(&state.tall_rows_enabled, |v| *v)
+        .unwrap_or(false);
+    let reversed = app.models().read(&state.reversed, |v| *v).unwrap_or(false);
+    let items_revision = app
+        .models()
+        .read(&state.items_revision, |v| *v)
+        .unwrap_or(0);
 
-        let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+    let scroll_handle = state.scroll_handle.clone();
+    let offset_y = scroll_handle.offset().y;
+
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("virtual-list-stress", |cx| {
                 cx.observe_model(&state.tall_rows_enabled, Invalidation::Layout);
                 cx.observe_model(&state.reversed, Invalidation::Layout);
@@ -437,40 +452,61 @@ impl WinitAppDriver for VirtualListStressDriver {
                 )]
             });
 
-        state.ui.set_root(root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
+    state.ui.set_root(root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 
-        if let Some(limit) = state.exit_after_frames
-            && state.frame >= limit
-        {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if state.auto_scroll {
-            let index = ((state.frame as usize).saturating_mul(37)) % LIST_LEN;
-            state
-                .scroll_handle
-                .scroll_to_item(index, fret_ui::ScrollStrategy::Start);
-            app.request_redraw(window);
-        } else if state.exit_after_frames.is_some() {
-            app.request_redraw(window);
-        }
+    if let Some(limit) = state.exit_after_frames
+        && state.frame >= limit
+    {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.auto_scroll {
+        let index = ((state.frame as usize).saturating_mul(37)) % LIST_LEN;
+        state
+            .scroll_handle
+            .scroll_to_item(index, fret_ui::ScrollStrategy::Start);
+        app.request_redraw(window);
+    } else if state.exit_after_frames.is_some() {
+        app.request_redraw(window);
     }
+}
+
+fn window_create_spec(
+    _driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<VirtualListStressDriver, VirtualListStressWindowState>,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<VirtualListStressDriver, VirtualListStressWindowState> {
+    FnDriver::new(
+        VirtualListStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -492,6 +528,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, VirtualListStressDriver::default())
-        .context("run virtual_list_stress_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        VirtualListStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run virtual_list_stress_demo app")
 }

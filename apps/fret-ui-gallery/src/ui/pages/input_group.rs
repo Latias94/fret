@@ -35,7 +35,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Tooltip, Textarea, Spinner, Label, Dropdown, Button Group, Custom Input, RTL (plus an extra Kbd section).",
+            "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Tooltip, Textarea, Spinner, Label Association, Dropdown, Button Group, Custom Input, RTL (plus an extra Kbd section).",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -82,9 +82,9 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .description("Leading spinner while fetching results.")
                 .test_id_prefix("ui-gallery-input-group-spinner")
                 .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
-            DocSection::new("Label", label)
+            DocSection::new("Label Association", label)
                 .description(
-                    "Use `Label::for_control` + `InputGroup::control_id` for focus forwarding and `labelled-by` semantics.",
+                    "Use `Label::for_control` + `InputGroup::control_id` so label clicks focus the control and preserve `labelled-by` semantics.",
                 )
                 .test_id_prefix("ui-gallery-input-group-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),

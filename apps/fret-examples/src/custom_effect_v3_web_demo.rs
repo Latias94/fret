@@ -13,7 +13,7 @@ use fret_core::scene::{
     EffectParamsV1, EffectQuality, EffectStep, Paint, SceneOp,
 };
 use fret_core::{CustomEffectDescriptorV3, CustomEffectService as _, EffectId, Event};
-use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 
@@ -38,251 +38,262 @@ impl CustomEffectV3WebDriver {
     }
 }
 
-impl WinitAppDriver for CustomEffectV3WebDriver {
-    type WindowState = CustomEffectV3WebWindowState;
+fn gpu_ready(
+    driver: &mut CustomEffectV3WebDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    if driver.effect.is_some() {
+        return;
+    }
+    let Ok(effect) = renderer.register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(WGSL))
+    else {
+        return;
+    };
+    driver.effect = Some(effect);
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        if self.effect.is_some() {
-            return;
+fn create_window_state(
+    _driver: &mut CustomEffectV3WebDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> CustomEffectV3WebWindowState {
+    CustomEffectV3WebWindowState::default()
+}
+
+fn handle_event(
+    _driver: &mut CustomEffectV3WebDriver,
+    context: WinitEventContext<'_, CustomEffectV3WebWindowState>,
+    event: &fret_core::Event,
+) {
+}
+
+fn render(
+    _driver: &mut CustomEffectV3WebDriver,
+    context: WinitRenderContext<'_, CustomEffectV3WebWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        window,
+        bounds,
+        scene,
+        scale_factor,
+        ..
+    } = context;
+
+    let w = bounds.size.width.0.max(1.0);
+    let h = bounds.size.height.0.max(1.0);
+    let secs = CustomEffectV3WebDriver::time_seconds() as f32;
+
+    scene.clear();
+
+    fn union_rect(a: Rect, b: Rect) -> Rect {
+        let ax0 = a.origin.x;
+        let ay0 = a.origin.y;
+        let ax1 = a.origin.x + a.size.width;
+        let ay1 = a.origin.y + a.size.height;
+
+        let bx0 = b.origin.x;
+        let by0 = b.origin.y;
+        let bx1 = b.origin.x + b.size.width;
+        let by1 = b.origin.y + b.size.height;
+
+        let x0 = ax0.min(bx0);
+        let y0 = ay0.min(by0);
+        let x1 = ax1.max(bx1);
+        let y1 = ay1.max(by1);
+
+        Rect::new(
+            Point::new(x0, y0),
+            Size::new((x1 - x0).max(Px(0.0)), (y1 - y0).max(Px(0.0))),
+        )
+    }
+
+    // Background: a simple animated color grid.
+    let cols = 10u32;
+    let rows = 7u32;
+    let tile_w = (w / cols as f32).max(1.0);
+    let tile_h = (h / rows as f32).max(1.0);
+    for iy in 0..rows {
+        for ix in 0..cols {
+            let x = ix as f32 * tile_w;
+            let y = iy as f32 * tile_h;
+            let phase = secs * 0.7 + (ix as f32) * 0.35 + (iy as f32) * 0.22;
+            let r = 0.12 + 0.10 * phase.sin().abs();
+            let g = 0.10 + 0.12 * (phase * 1.3).cos().abs();
+            let b = 0.16 + 0.10 * (phase * 0.9).sin().abs();
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(iy * cols + ix),
+                rect: Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(tile_w), Px(tile_h))),
+                background: Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
+                border: Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
-        let Ok(effect) =
-            renderer.register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(WGSL))
-        else {
-            return;
+    }
+
+    if let Some(effect) = driver.effect {
+        // The shader operates in render-pixel space, so any distance-like params must be scaled.
+        // Keep `max_sample_offset_px` in logical px (the renderer scales it internally).
+        let sf = scale_factor.max(1.0e-6);
+        let params = EffectParamsV1 {
+            vec4s: [
+                // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
+                [22.0 * sf, 34.0 * sf, 3.0, 0.75],
+                // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
+                // - dispersion_quality: 0 = 3-tap, 1 = 7-tap Android-like.
+                [24.0 * sf, 0.18, 0.55, 1.0],
+                // (noise_alpha, reserved, reserved, reserved)
+                [0.012, 0.0, 0.0, 0.0],
+                // tint (rgb + alpha)
+                [1.0, 1.0, 1.0, 0.08],
+            ],
         };
-        self.effect = Some(effect);
-    }
 
-    fn create_window_state(
-        &mut self,
-        _app: &mut App,
-        _window: fret_core::AppWindowId,
-    ) -> Self::WindowState {
-        Self::WindowState::default()
-    }
+        // Two lenses in one backdrop source group:
+        // - Demonstrates renderer-provided `src_raw` + bounded `src_pyramid` sharing.
+        // - Allows multiple glass surfaces to reuse a single raw snapshot (and optionally a pyramid).
+        let lens_w = w.min(980.0) * 0.38;
+        let lens_h = h.min(720.0) * 0.42;
+        let gap = (w * 0.04).max(12.0);
+        let total_w = lens_w * 2.0 + gap;
+        let start_x = (w - total_w) * 0.5;
+        let lens_y = (h - lens_h) * 0.5;
 
-    fn handle_event(&mut self, _context: WinitEventContext<'_, Self::WindowState>, _event: &Event) {
-    }
+        let lens_a = Rect::new(
+            Point::new(Px(start_x), Px(lens_y)),
+            Size::new(Px(lens_w), Px(lens_h)),
+        );
+        let lens_b = Rect::new(
+            Point::new(Px(start_x + lens_w + gap), Px(lens_y)),
+            Size::new(Px(lens_w), Px(lens_h)),
+        );
+        let group_bounds = union_rect(lens_a, lens_b);
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            window,
-            bounds,
-            scene,
-            scale_factor,
-            ..
-        } = context;
+        scene.push(SceneOp::PushBackdropSourceGroupV1 {
+            bounds: group_bounds,
+            pyramid: Some(CustomEffectPyramidRequestV1 {
+                max_levels: 6,
+                max_radius_px: Px(32.0),
+            }),
+            quality: EffectQuality::Auto,
+        });
 
-        let w = bounds.size.width.0.max(1.0);
-        let h = bounds.size.height.0.max(1.0);
-        let secs = Self::time_seconds() as f32;
+        let chain = EffectChain::from_steps(&[
+            EffectStep::GaussianBlur {
+                radius_px: Px(18.0),
+                downsample: 2,
+            },
+            EffectStep::CustomV3 {
+                id: effect,
+                params,
+                max_sample_offset_px:
+                    crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(34.0, 0.55),
+                user0: None,
+                user1: None,
+                sources: CustomEffectSourcesV3 {
+                    want_raw: true,
+                    pyramid: Some(CustomEffectPyramidRequestV1 {
+                        max_levels: 6,
+                        max_radius_px: Px(32.0),
+                    }),
+                },
+            },
+        ])
+        .sanitize();
 
-        scene.clear();
-
-        fn union_rect(a: Rect, b: Rect) -> Rect {
-            let ax0 = a.origin.x;
-            let ay0 = a.origin.y;
-            let ax1 = a.origin.x + a.size.width;
-            let ay1 = a.origin.y + a.size.height;
-
-            let bx0 = b.origin.x;
-            let by0 = b.origin.y;
-            let bx1 = b.origin.x + b.size.width;
-            let by1 = b.origin.y + b.size.height;
-
-            let x0 = ax0.min(bx0);
-            let y0 = ay0.min(by0);
-            let x1 = ax1.max(bx1);
-            let y1 = ay1.max(by1);
-
-            Rect::new(
-                Point::new(x0, y0),
-                Size::new((x1 - x0).max(Px(0.0)), (y1 - y0).max(Px(0.0))),
-            )
-        }
-
-        // Background: a simple animated color grid.
-        let cols = 10u32;
-        let rows = 7u32;
-        let tile_w = (w / cols as f32).max(1.0);
-        let tile_h = (h / rows as f32).max(1.0);
-        for iy in 0..rows {
-            for ix in 0..cols {
-                let x = ix as f32 * tile_w;
-                let y = iy as f32 * tile_h;
-                let phase = secs * 0.7 + (ix as f32) * 0.35 + (iy as f32) * 0.22;
-                let r = 0.12 + 0.10 * phase.sin().abs();
-                let g = 0.10 + 0.12 * (phase * 1.3).cos().abs();
-                let b = 0.16 + 0.10 * (phase * 0.9).sin().abs();
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(iy * cols + ix),
-                    rect: Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(tile_w), Px(tile_h))),
-                    background: Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
-                    border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
-        }
-
-        if let Some(effect) = self.effect {
-            // The shader operates in render-pixel space, so any distance-like params must be scaled.
-            // Keep `max_sample_offset_px` in logical px (the renderer scales it internally).
-            let sf = scale_factor.max(1.0e-6);
-            let params = EffectParamsV1 {
-                vec4s: [
-                    // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
-                    [22.0 * sf, 34.0 * sf, 3.0, 0.75],
-                    // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
-                    // - dispersion_quality: 0 = 3-tap, 1 = 7-tap Android-like.
-                    [24.0 * sf, 0.18, 0.55, 1.0],
-                    // (noise_alpha, reserved, reserved, reserved)
-                    [0.012, 0.0, 0.0, 0.0],
-                    // tint (rgb + alpha)
-                    [1.0, 1.0, 1.0, 0.08],
-                ],
-            };
-
-            // Two lenses in one backdrop source group:
-            // - Demonstrates renderer-provided `src_raw` + bounded `src_pyramid` sharing.
-            // - Allows multiple glass surfaces to reuse a single raw snapshot (and optionally a pyramid).
-            let lens_w = w.min(980.0) * 0.38;
-            let lens_h = h.min(720.0) * 0.42;
-            let gap = (w * 0.04).max(12.0);
-            let total_w = lens_w * 2.0 + gap;
-            let start_x = (w - total_w) * 0.5;
-            let lens_y = (h - lens_h) * 0.5;
-
-            let lens_a = Rect::new(
-                Point::new(Px(start_x), Px(lens_y)),
-                Size::new(Px(lens_w), Px(lens_h)),
-            );
-            let lens_b = Rect::new(
-                Point::new(Px(start_x + lens_w + gap), Px(lens_y)),
-                Size::new(Px(lens_w), Px(lens_h)),
-            );
-            let group_bounds = union_rect(lens_a, lens_b);
-
-            scene.push(SceneOp::PushBackdropSourceGroupV1 {
-                bounds: group_bounds,
-                pyramid: Some(CustomEffectPyramidRequestV1 {
-                    max_levels: 6,
-                    max_radius_px: Px(32.0),
-                }),
+        for (i, lens) in [lens_a, lens_b].into_iter().enumerate() {
+            let base = 10_000 + i as u32 * 8;
+            scene.push(SceneOp::PushClipRRect {
+                rect: lens,
+                corner_radii: Corners::all(Px(24.0)),
+            });
+            scene.push(SceneOp::PushEffect {
+                bounds: lens,
+                mode: EffectMode::Backdrop,
+                chain: chain.clone(),
                 quality: EffectQuality::Auto,
             });
+            scene.push(SceneOp::PopEffect);
 
-            let chain = EffectChain::from_steps(&[
-                EffectStep::GaussianBlur {
-                    radius_px: Px(18.0),
-                    downsample: 2,
-                },
-                EffectStep::CustomV3 {
-                    id: effect,
-                    params,
-                    max_sample_offset_px:
-                        crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(
-                            34.0, 0.55,
-                        ),
-                    user0: None,
-                    user1: None,
-                    sources: CustomEffectSourcesV3 {
-                        want_raw: true,
-                        pyramid: Some(CustomEffectPyramidRequestV1 {
-                            max_levels: 6,
-                            max_radius_px: Px(32.0),
-                        }),
-                    },
-                },
-            ])
-            .sanitize();
-
-            for (i, lens) in [lens_a, lens_b].into_iter().enumerate() {
-                let base = 10_000 + i as u32 * 8;
-                scene.push(SceneOp::PushClipRRect {
-                    rect: lens,
-                    corner_radii: Corners::all(Px(24.0)),
-                });
-                scene.push(SceneOp::PushEffect {
-                    bounds: lens,
-                    mode: EffectMode::Backdrop,
-                    chain: chain.clone(),
-                    quality: EffectQuality::Auto,
-                });
-                scene.push(SceneOp::PopEffect);
-
-                // Draw chrome *after* the backdrop effect so it doesn't get sampled/warped by the
-                // chain itself (matches the authoring pattern used by `liquid_glass_demo`).
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(base),
-                    rect: lens,
-                    background: Paint::Solid(Color {
-                        r: 1.0,
-                        g: 1.0,
-                        b: 1.0,
-                        a: 0.08,
-                    })
-                    .into(),
-                    border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-                    corner_radii: Corners::all(Px(24.0)),
-                });
-                scene.push(SceneOp::PopClip);
-
-                // Outline highlight.
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(base + 1),
-                    rect: lens,
-                    background: Paint::Solid(Color::TRANSPARENT).into(),
-                    border: Edges::all(Px(1.0)),
-                    border_paint: Paint::Solid(Color {
-                        r: 1.0,
-                        g: 1.0,
-                        b: 1.0,
-                        a: 0.12,
-                    })
-                    .into(),
-                    corner_radii: Corners::all(Px(24.0)),
-                });
-            }
-
-            scene.push(SceneOp::PopBackdropSourceGroup);
-        } else {
-            // Fallback: show lens bounds even if CustomV3 registration failed.
-            let lens_w = w.min(980.0) * 0.48;
-            let lens_h = h.min(720.0) * 0.42;
-            let lens_x = (w - lens_w) * 0.5;
-            let lens_y = (h - lens_h) * 0.5;
-            let lens = Rect::new(
-                Point::new(Px(lens_x), Px(lens_y)),
-                Size::new(Px(lens_w), Px(lens_h)),
-            );
+            // Draw chrome *after* the backdrop effect so it doesn't get sampled/warped by the
+            // chain itself (matches the authoring pattern used by `liquid_glass_demo`).
             scene.push(SceneOp::Quad {
-                order: DrawOrder(10_000),
+                order: DrawOrder(base),
                 rect: lens,
                 background: Paint::Solid(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.25,
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 0.08,
                 })
                 .into(),
+                border: Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::all(Px(24.0)),
+            });
+            scene.push(SceneOp::PopClip);
+
+            // Outline highlight.
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(base + 1),
+                rect: lens,
+                background: Paint::Solid(Color::TRANSPARENT).into(),
                 border: Edges::all(Px(1.0)),
                 border_paint: Paint::Solid(Color {
                     r: 1.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.8,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 0.12,
                 })
                 .into(),
                 corner_radii: Corners::all(Px(24.0)),
             });
         }
 
-        app.request_redraw(window);
-        app.push_effect(Effect::RequestAnimationFrame(window));
+        scene.push(SceneOp::PopBackdropSourceGroup);
+    } else {
+        // Fallback: show lens bounds even if CustomV3 registration failed.
+        let lens_w = w.min(980.0) * 0.48;
+        let lens_h = h.min(720.0) * 0.42;
+        let lens_x = (w - lens_w) * 0.5;
+        let lens_y = (h - lens_h) * 0.5;
+        let lens = Rect::new(
+            Point::new(Px(lens_x), Px(lens_y)),
+            Size::new(Px(lens_w), Px(lens_h)),
+        );
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(10_000),
+            rect: lens,
+            background: Paint::Solid(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.25,
+            })
+            .into(),
+            border: Edges::all(Px(1.0)),
+            border_paint: Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.8,
+            })
+            .into(),
+            corner_radii: Corners::all(Px(24.0)),
+        });
     }
+
+    app.request_redraw(window);
+    app.push_effect(Effect::RequestAnimationFrame(window));
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<CustomEffectV3WebDriver, CustomEffectV3WebWindowState>,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
 }
 
 pub fn build_app() -> App {
@@ -299,6 +310,12 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    CustomEffectV3WebDriver::default()
+pub fn build_fn_driver() -> FnDriver<CustomEffectV3WebDriver, CustomEffectV3WebWindowState> {
+    FnDriver::new(
+        CustomEffectV3WebDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }

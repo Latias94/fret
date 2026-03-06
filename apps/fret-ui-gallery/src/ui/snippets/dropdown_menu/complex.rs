@@ -68,16 +68,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+    shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
         cx,
-        |cx| {
-            shadcn::DropdownMenuTrigger::new(
-                shadcn::Button::new("Complex Menu")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dropdown-menu-complex-trigger")
-                    .into_element(cx),
-            )
-        },
+        shadcn::DropdownMenuTrigger::build(
+            shadcn::Button::new("Complex Menu")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-dropdown-menu-complex-trigger"),
+        ),
         shadcn::DropdownMenuContent::new()
             .align(shadcn::DropdownMenuAlign::Start)
             .side_offset(Px(4.0))

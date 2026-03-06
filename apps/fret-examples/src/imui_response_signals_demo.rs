@@ -19,8 +19,9 @@ struct ImUiResponseSignalsState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("imui-response-signals-demo", init_window, view)?
-        .with_main_window("imui_response_signals_demo", (720.0, 520.0))
+    FretApp::new("imui-response-signals-demo")
+        .window("imui_response_signals_demo", (720.0, 520.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

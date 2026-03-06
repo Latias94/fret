@@ -74,6 +74,48 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Fret surface policy (builder-only crate root)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_builder_only_surface.py")
+  )
+
+Invoke-Checked `
+  "Fret launch surface policy (curated root exports)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_launch_surface_contract.py")
+  )
+
+Invoke-Checked `
+  "Fret launch root snapshot policy" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_launch_root_surface_snapshot.py")
+  )
+
+Invoke-Checked `
+  "Fret framework launch facade policy (curated manual-assembly exports)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_framework_launch_surface.py")
+  )
+
+Invoke-Checked `
+  "FnDriver example helper policy" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fn_driver_example_naming.py")
+  )
+
+Invoke-Checked `
+  "WinitAppDriver example hook coverage" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_winit_driver_example_hook_coverage.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no verbose models_mut action handlers)" `
   "python" `
   @(

@@ -4,11 +4,6 @@ pub const SOURCE: &str = include_str!("basic.rs");
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let trigger = shadcn::Button::new("Hover")
-        .variant(shadcn::ButtonVariant::Outline)
-        .test_id("ui-gallery-hover-card-basic-trigger")
-        .into_element(cx);
-
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
@@ -31,12 +26,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .items_stretch()
     .into_element(cx);
 
-    let content = shadcn::HoverCardContent::new(vec![body])
-        .into_element(cx)
-        .test_id("ui-gallery-hover-card-basic-content");
-
-    shadcn::HoverCard::new(trigger, content)
-        .into_element(cx)
-        .test_id("ui-gallery-hover-card-basic")
+    shadcn::HoverCard::build(
+        cx,
+        shadcn::Button::new("Hover")
+            .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-hover-card-basic-trigger"),
+        shadcn::HoverCardContent::new(vec![body]).test_id("ui-gallery-hover-card-basic-content"),
+    )
+    .into_element(cx)
+    .test_id("ui-gallery-hover-card-basic")
 }
 // endregion: example

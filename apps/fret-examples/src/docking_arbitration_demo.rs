@@ -13,9 +13,9 @@ use fret_docking::{
     DockingRuntime, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, FnDriver,
+    WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -2575,13 +2575,10 @@ impl DockingArbitrationDriver {
     }
 }
 
-impl WinitAppDriver for DockingArbitrationDriver {
-    type WindowState = DockingArbitrationWindowState;
-
-    fn init(&mut self, app: &mut App, main_window: AppWindowId) {
-        self.main_window = Some(main_window);
-        self.docking_runtime = Some(DockingRuntime::new(main_window));
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+fn init(driver: &mut DockingArbitrationDriver, app: &mut App, main_window: AppWindowId) {
+    driver.main_window = Some(main_window);
+    driver.docking_runtime = Some(DockingRuntime::new(main_window));
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
             svc.set_app_snapshot_provider(Some(Arc::new(|_app, _window| {
                 Some(json!({
                     "env": {
@@ -2592,362 +2589,375 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 }))
             })));
         });
-        self.logical_windows
-            .insert(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string());
-        self.sync_dev_state_models(app);
-        self.try_restore_layout_on_init(app, main_window);
+    driver.logical_windows.insert(
+        main_window,
+        DockingArbitrationDriver::MAIN_LOGICAL_WINDOW_ID.to_string(),
+    );
+    driver.sync_dev_state_models(app);
+    driver.try_restore_layout_on_init(app, main_window);
+}
+
+fn create_window_state(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DockingArbitrationWindowState {
+    DockingArbitrationDriver::build_ui(app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitHotReloadContext<'_, DockingArbitrationWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+    state.dock_space = None;
+}
+
+fn handle_model_changes(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitWindowContext<'_, DockingArbitrationWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitWindowContext<'_, DockingArbitrationWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitCommandContext<'_, DockingArbitrationWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        state,
+        ..
+    } = context;
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
+    }
+}
+
+fn handle_event(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitEventContext<'_, DockingArbitrationWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if fret_bootstrap::maybe_consume_event(app, window, event) {
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-        state.dock_space = None;
-    }
+    // Demo-only: synthesize a second pointer stream to validate ADR 0072 multi-pointer
+    // arbitration even on hardware without a touch screen / pen.
+    //
+    // F1 toggles the synth pointer. While enabled:
+    // - I/J/K/L move the pointer (logical pixels),
+    // - Space presses/releases the pointer (Left button semantics).
+    // - B presses/releases the mouse right button at the synth pointer position,
+    // - U/O emit mouse wheel up/down at the synth pointer position.
+    //
+    // These keys are consumed while enabled to keep the demo deterministic.
+    let mut dispatch_to_ui = true;
+    let mut synth_move_after = false;
+    let mut synth_button_after: Option<bool> = None;
+    let mut synth_mouse_right_after: Option<bool> = None;
+    let mut synth_wheel_after: Option<Point> = None;
+    let mut synth_mods = Modifiers::default();
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.record_model_changes(context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.record_global_changes(app, context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            state,
-            ..
-        } = context;
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
+    match event {
+        Event::KeyDown {
+            key: fret_core::KeyCode::F1,
+            repeat: false,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            synth.enabled = !synth.enabled;
+            if !synth.enabled && synth.pressed {
+                // Release deterministically before disabling.
+                synth.pressed = false;
+                synth_button_after = Some(false);
+            }
+            if !synth.enabled && synth.mouse_right_pressed {
+                synth.mouse_right_pressed = false;
+                synth_mouse_right_after = Some(false);
+            }
+            synth_mods = *modifiers;
+            dispatch_to_ui = false;
+            DockingArbitrationDriver::update_synth_debug(app, window, synth);
         }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if fret_bootstrap::maybe_consume_event(app, window, event) {
-            return;
-        }
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        // Demo-only: synthesize a second pointer stream to validate ADR 0072 multi-pointer
-        // arbitration even on hardware without a touch screen / pen.
-        //
-        // F1 toggles the synth pointer. While enabled:
-        // - I/J/K/L move the pointer (logical pixels),
-        // - Space presses/releases the pointer (Left button semantics).
-        // - B presses/releases the mouse right button at the synth pointer position,
-        // - U/O emit mouse wheel up/down at the synth pointer position.
-        //
-        // These keys are consumed while enabled to keep the demo deterministic.
-        let mut dispatch_to_ui = true;
-        let mut synth_move_after = false;
-        let mut synth_button_after: Option<bool> = None;
-        let mut synth_mouse_right_after: Option<bool> = None;
-        let mut synth_wheel_after: Option<Point> = None;
-        let mut synth_mods = Modifiers::default();
-
-        match event {
-            Event::KeyDown {
-                key: fret_core::KeyCode::F1,
-                repeat: false,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                synth.enabled = !synth.enabled;
-                if !synth.enabled && synth.pressed {
-                    // Release deterministically before disabling.
-                    synth.pressed = false;
-                    synth_button_after = Some(false);
+        Event::KeyDown {
+            key:
+                fret_core::KeyCode::KeyI
+                | fret_core::KeyCode::KeyJ
+                | fret_core::KeyCode::KeyK
+                | fret_core::KeyCode::KeyL,
+            repeat: false,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled {
+                let step = 24.0;
+                match event {
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyI,
+                        ..
+                    } => synth.position.y.0 -= step,
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyK,
+                        ..
+                    } => synth.position.y.0 += step,
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyJ,
+                        ..
+                    } => synth.position.x.0 -= step,
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyL,
+                        ..
+                    } => synth.position.x.0 += step,
+                    _ => {}
                 }
-                if !synth.enabled && synth.mouse_right_pressed {
-                    synth.mouse_right_pressed = false;
-                    synth_mouse_right_after = Some(false);
+
+                if let Some(metrics) = app.global::<fret_core::WindowMetricsService>()
+                    && let Some(size) = metrics.inner_size(window)
+                {
+                    synth.position.x.0 = synth.position.x.0.clamp(0.0, size.width.0.max(0.0));
+                    synth.position.y.0 = synth.position.y.0.clamp(0.0, size.height.0.max(0.0));
                 }
+
+                synth_mods = *modifiers;
+                synth_move_after = true;
+                dispatch_to_ui = false;
+                DockingArbitrationDriver::update_synth_debug(app, window, synth);
+            }
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Space,
+            repeat: false,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled && !synth.pressed {
+                synth.pressed = true;
+                synth_button_after = Some(true);
                 synth_mods = *modifiers;
                 dispatch_to_ui = false;
                 DockingArbitrationDriver::update_synth_debug(app, window, synth);
             }
-            Event::KeyDown {
-                key:
-                    fret_core::KeyCode::KeyI
-                    | fret_core::KeyCode::KeyJ
-                    | fret_core::KeyCode::KeyK
-                    | fret_core::KeyCode::KeyL,
-                repeat: false,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled {
-                    let step = 24.0;
-                    match event {
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyI,
-                            ..
-                        } => synth.position.y.0 -= step,
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyK,
-                            ..
-                        } => synth.position.y.0 += step,
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyJ,
-                            ..
-                        } => synth.position.x.0 -= step,
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyL,
-                            ..
-                        } => synth.position.x.0 += step,
-                        _ => {}
-                    }
-
-                    if let Some(metrics) = app.global::<fret_core::WindowMetricsService>()
-                        && let Some(size) = metrics.inner_size(window)
-                    {
-                        synth.position.x.0 = synth.position.x.0.clamp(0.0, size.width.0.max(0.0));
-                        synth.position.y.0 = synth.position.y.0.clamp(0.0, size.height.0.max(0.0));
-                    }
-
-                    synth_mods = *modifiers;
-                    synth_move_after = true;
-                    dispatch_to_ui = false;
-                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
-                }
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Space,
-                repeat: false,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled && !synth.pressed {
-                    synth.pressed = true;
-                    synth_button_after = Some(true);
-                    synth_mods = *modifiers;
-                    dispatch_to_ui = false;
-                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
-                }
-            }
-            Event::KeyUp {
-                key: fret_core::KeyCode::Space,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled && synth.pressed {
-                    synth.pressed = false;
-                    synth_button_after = Some(false);
-                    synth_mods = *modifiers;
-                    dispatch_to_ui = false;
-                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
-                }
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyB,
-                repeat: false,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled && !synth.mouse_right_pressed {
-                    synth.mouse_right_pressed = true;
-                    synth_mouse_right_after = Some(true);
-                    synth_mods = *modifiers;
-                    dispatch_to_ui = false;
-                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
-                }
-            }
-            Event::KeyUp {
-                key: fret_core::KeyCode::KeyB,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled && synth.mouse_right_pressed {
-                    synth.mouse_right_pressed = false;
-                    synth_mouse_right_after = Some(false);
-                    synth_mods = *modifiers;
-                    dispatch_to_ui = false;
-                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
-                }
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyU | fret_core::KeyCode::KeyO,
-                repeat: false,
-                modifiers,
-            } => {
-                let synth = self.synth_pointer_mut(app, window);
-                if synth.enabled {
-                    // Positive wheel Y means scrolling up (winit semantics).
-                    let delta = match event {
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyU,
-                            ..
-                        } => Point::new(Px(0.0), Px(24.0)),
-                        Event::KeyDown {
-                            key: fret_core::KeyCode::KeyO,
-                            ..
-                        } => Point::new(Px(0.0), Px(-24.0)),
-                        _ => Point::new(Px(0.0), Px(0.0)),
-                    };
-                    synth_wheel_after = Some(delta);
-                    synth_mods = *modifiers;
-                    dispatch_to_ui = false;
-                }
-            }
-            _ => {}
         }
-
-        if let Event::KeyDown {
-            key: fret_core::KeyCode::KeyQ | fret_core::KeyCode::KeyW | fret_core::KeyCode::KeyE,
+        Event::KeyUp {
+            key: fret_core::KeyCode::Space,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled && synth.pressed {
+                synth.pressed = false;
+                synth_button_after = Some(false);
+                synth_mods = *modifiers;
+                dispatch_to_ui = false;
+                DockingArbitrationDriver::update_synth_debug(app, window, synth);
+            }
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyB,
             repeat: false,
-            ..
-        } = event
-        {
-            let mode = match event {
-                Event::KeyDown {
-                    key: fret_core::KeyCode::KeyQ,
-                    ..
-                } => fret_editor::ViewportToolMode::Select,
-                Event::KeyDown {
-                    key: fret_core::KeyCode::KeyW,
-                    ..
-                } => fret_editor::ViewportToolMode::Move,
-                Event::KeyDown {
-                    key: fret_core::KeyCode::KeyE,
-                    ..
-                } => fret_editor::ViewportToolMode::Rotate,
-                _ => return,
-            };
-
-            if let Ok(mut tools) = self.viewport_tools.lock() {
-                let mut did_change = false;
-                for ((w, _target), mgr) in tools.tools.iter_mut() {
-                    if *w != window {
-                        continue;
-                    }
-                    if mgr.active != mode {
-                        mgr.active = mode;
-                        mgr.interaction = None;
-                        did_change = true;
-                    }
-                }
-                if did_change {
-                    app.request_redraw(window);
-                }
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled && !synth.mouse_right_pressed {
+                synth.mouse_right_pressed = true;
+                synth_mouse_right_after = Some(true);
+                synth_mods = *modifiers;
+                dispatch_to_ui = false;
+                DockingArbitrationDriver::update_synth_debug(app, window, synth);
             }
         }
-
-        if dispatch_to_ui {
-            state.ui.dispatch_event(app, services, event);
+        Event::KeyUp {
+            key: fret_core::KeyCode::KeyB,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled && synth.mouse_right_pressed {
+                synth.mouse_right_pressed = false;
+                synth_mouse_right_after = Some(false);
+                synth_mods = *modifiers;
+                dispatch_to_ui = false;
+                DockingArbitrationDriver::update_synth_debug(app, window, synth);
+            }
         }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyU | fret_core::KeyCode::KeyO,
+            repeat: false,
+            modifiers,
+        } => {
+            let synth = driver.synth_pointer_mut(app, window);
+            if synth.enabled {
+                // Positive wheel Y means scrolling up (winit semantics).
+                let delta = match event {
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyU,
+                        ..
+                    } => Point::new(Px(0.0), Px(24.0)),
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::KeyO,
+                        ..
+                    } => Point::new(Px(0.0), Px(-24.0)),
+                    _ => Point::new(Px(0.0), Px(0.0)),
+                };
+                synth_wheel_after = Some(delta);
+                synth_mods = *modifiers;
+                dispatch_to_ui = false;
+            }
+        }
+        _ => {}
+    }
 
-        // Inject synth pointer events after we update the synth state, so dock/overlay policies
-        // observe the correct final state for this frame.
-        if let Some(st) = self.synth_pointers.get(&window).cloned() {
-            if synth_move_after {
-                DockingArbitrationDriver::dispatch_synth_pointer_move(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    &st,
-                    synth_mods,
-                );
+    if let Event::KeyDown {
+        key: fret_core::KeyCode::KeyQ | fret_core::KeyCode::KeyW | fret_core::KeyCode::KeyE,
+        repeat: false,
+        ..
+    } = event
+    {
+        let mode = match event {
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyQ,
+                ..
+            } => fret_editor::ViewportToolMode::Select,
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyW,
+                ..
+            } => fret_editor::ViewportToolMode::Move,
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyE,
+                ..
+            } => fret_editor::ViewportToolMode::Rotate,
+            _ => return,
+        };
+
+        if let Ok(mut tools) = driver.viewport_tools.lock() {
+            let mut did_change = false;
+            for ((w, _target), mgr) in tools.tools.iter_mut() {
+                if *w != window {
+                    continue;
+                }
+                if mgr.active != mode {
+                    mgr.active = mode;
+                    mgr.interaction = None;
+                    did_change = true;
+                }
             }
-            if let Some(pressed) = synth_button_after {
-                DockingArbitrationDriver::dispatch_synth_pointer_button(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    &st,
-                    pressed,
-                    synth_mods,
-                );
-            }
-            if let Some(pressed) = synth_mouse_right_after {
-                DockingArbitrationDriver::dispatch_synth_mouse_button(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    &st,
-                    MouseButton::Right,
-                    pressed,
-                    synth_mods,
-                );
-            }
-            if let Some(delta) = synth_wheel_after {
-                DockingArbitrationDriver::dispatch_synth_mouse_wheel(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    &st,
-                    delta,
-                    synth_mods,
-                );
+            if did_change {
+                app.request_redraw(window);
             }
         }
     }
 
-    fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.record_viewport_input(event.clone());
-        });
+    if dispatch_to_ui {
+        state.ui.dispatch_event(app, services, event);
+    }
 
-        let cursor_target_px = event
-            .cursor_target_px_f32()
-            .map(|(x, y)| format!("{x:.1},{y:.1}"))
-            .unwrap_or_else(|| "n/a".to_string());
-        let target_px_per_screen_px = event.target_px_per_screen_px().unwrap_or(0.0);
-        let msg: Arc<str> = Arc::from(
+    // Inject synth pointer events after we update the synth state, so dock/overlay policies
+    // observe the correct final state for this frame.
+    if let Some(st) = driver.synth_pointers.get(&window).cloned() {
+        if synth_move_after {
+            DockingArbitrationDriver::dispatch_synth_pointer_move(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                &st,
+                synth_mods,
+            );
+        }
+        if let Some(pressed) = synth_button_after {
+            DockingArbitrationDriver::dispatch_synth_pointer_button(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                &st,
+                pressed,
+                synth_mods,
+            );
+        }
+        if let Some(pressed) = synth_mouse_right_after {
+            DockingArbitrationDriver::dispatch_synth_mouse_button(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                &st,
+                MouseButton::Right,
+                pressed,
+                synth_mods,
+            );
+        }
+        if let Some(delta) = synth_wheel_after {
+            DockingArbitrationDriver::dispatch_synth_mouse_wheel(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                &st,
+                delta,
+                synth_mods,
+            );
+        }
+    }
+}
+
+fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: ViewportInputEvent) {
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_viewport_input(event.clone());
+    });
+
+    let cursor_target_px = event
+        .cursor_target_px_f32()
+        .map(|(x, y)| format!("{x:.1},{y:.1}"))
+        .unwrap_or_else(|| "n/a".to_string());
+    let target_px_per_screen_px = event.target_px_per_screen_px().unwrap_or(0.0);
+    let msg: Arc<str> = Arc::from(
             format!(
                 "{:?} cursor_px=({:.1},{:.1}) uv=({:.3},{:.3}) target_px=({}, {}) cursor_target_px=({}) target_px_per_screen_px={:.3} target={:?} window={:?}",
                 event.kind,
@@ -2964,350 +2974,390 @@ impl WinitAppDriver for DockingArbitrationDriver {
             )
             .into_boxed_str(),
         );
-        app.with_global_mut(ViewportDebugService::default, |svc, app| {
-            if let Some(model) = svc.last_event.get(&event.window).cloned() {
-                let _ = app.models_mut().update(&model, |v| *v = msg.clone());
-                app.request_redraw(event.window);
-            }
+    app.with_global_mut(ViewportDebugService::default, |svc, app| {
+        if let Some(model) = svc.last_event.get(&event.window).cloned() {
+            let _ = app.models_mut().update(&model, |v| *v = msg.clone());
+            app.request_redraw(event.window);
+        }
+    });
+
+    if let Ok(mut state) = driver.viewport_tools.lock() {
+        let key = (event.window, event.target);
+        let mgr = state.tools.entry(key).or_insert_with(Default::default);
+        if mgr.handle_viewport_input(&event) {
+            app.request_redraw(event.window);
+        }
+    }
+}
+
+fn dock_op(driver: &mut DockingArbitrationDriver, app: &mut App, op: fret_core::DockOp) {
+    let changed = driver
+        .docking_runtime
+        .as_ref()
+        .map(|rt| rt.on_dock_op(app, op))
+        .unwrap_or(false);
+    if changed {
+        driver.sync_dev_state_models(app);
+        DevStateHooks::export_all(app);
+    }
+}
+
+fn render(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitRenderContext<'_, DockingArbitrationWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+    driver.render_dock(app, services, window, state, bounds);
+
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
         });
+    state.ui.set_inspection_active(inspection_active);
 
-        if let Ok(mut state) = self.viewport_tools.lock() {
-            let key = (event.window, event.target);
-            let mgr = state.tools.entry(key).or_insert_with(Default::default);
-            if mgr.handle_viewport_input(&event) {
-                app.request_redraw(event.window);
-            }
-        }
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+    if diag_enabled {
+        app.with_global_mut_untracked(
+            fret_runtime::WindowInteractionDiagnosticsStore::default,
+            |store, app| store.begin_frame(window, app.frame_id()),
+        );
     }
 
-    fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let changed = self
-            .docking_runtime
-            .as_ref()
-            .map(|rt| rt.on_dock_op(app, op))
-            .unwrap_or(false);
-        if changed {
-            self.sync_dev_state_models(app);
-            DevStateHooks::export_all(app);
-        }
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
             app,
-            services,
             window,
-            state,
             bounds,
             scale_factor,
-            scene,
-        } = context;
-        self.render_dock(app, services, window, state, bounds);
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
 
+    for effect in drive.effects {
+        app.push_effect(effect);
+    }
+
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
+
+    if injected_any {
+        // Let the runner apply effects (including commands) through the normal effect pipeline.
+        // Synchronous command flushing can stall pointer-heavy scripted drags and cause
+        // `fretboard diag run` to time out waiting for script progress.
         state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
-
-        let diag_enabled = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
-        if diag_enabled {
-            app.with_global_mut_untracked(
-                fret_runtime::WindowInteractionDiagnosticsStore::default,
-                |store, app| store.begin_frame(window, app.frame_id()),
-            );
-        }
-
-        scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+    }
 
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
+
+    if let Some(synth) = driver.synth_pointers.get(&window)
+        && synth.enabled
+    {
+        let red = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+        let half = 6.0;
+        let rect = Rect::new(
+            Point::new(Px(synth.position.x.0 - half), Px(synth.position.y.0 - half)),
+            Size::new(Px(half * 2.0), Px(half * 2.0)),
+        );
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(10_000),
+            rect,
+            background: fret_core::Paint::Solid(if synth.pressed {
+                Color { a: 0.25, ..red }
+            } else {
+                Color::TRANSPARENT
+            })
+            .into(),
+            border: Edges::all(Px(2.0)),
+            border_paint: fret_core::Paint::Solid(red).into(),
+
+            corner_radii: Corners::all(Px(2.0)),
         });
+    }
 
-        for effect in drive.effects {
-            app.push_effect(effect);
-        }
-
-        if drive.request_redraw {
-            app.request_redraw(window);
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
+    });
+}
 
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
-
-        if injected_any {
-            // Let the runner apply effects (including commands) through the normal effect pipeline.
-            // Synchronous command flushing can stall pointer-heavy scripted drags and cause
-            // `fretboard diag run` to time out waiting for script progress.
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        if let Some(synth) = self.synth_pointers.get(&window)
-            && synth.enabled
-        {
-            let red = Color {
-                r: 1.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            };
-            let half = 6.0;
-            let rect = Rect::new(
-                Point::new(Px(synth.position.x.0 - half), Px(synth.position.y.0 - half)),
-                Size::new(Px(half * 2.0), Px(half * 2.0)),
-            );
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(10_000),
-                rect,
-                background: fret_core::Paint::Solid(if synth.pressed {
-                    Color { a: 0.25, ..red }
-                } else {
-                    Color::TRANSPARENT
-                })
-                .into(),
-                border: Edges::all(Px(2.0)),
-                border_paint: fret_core::Paint::Solid(red).into(),
-
-                corner_radii: Corners::all(Px(2.0)),
-            });
-        }
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
+fn window_create_spec(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    match &request.kind {
+        CreateWindowKind::DockFloating { panel, .. } => Some(WindowCreateSpec::new(
+            format!("fret-demo docking_arbitration_demo 闁?{}", panel.kind.0),
+            fret_launch::WindowLogicalSize::new(720.0, 520.0),
+        )),
+        CreateWindowKind::DockRestore { logical_window_id } => {
+            let mut size = fret_launch::WindowLogicalSize::new(980.0, 720.0);
+            if let Some(restore) = &driver.restore
+                && let Some(window) = restore
+                    .layout
+                    .windows
+                    .iter()
+                    .find(|w| w.logical_window_id == logical_window_id.as_str())
+                && let Some(p) = &window.placement
+            {
+                size = fret_launch::WindowLogicalSize::new(p.width as f64, p.height as f64);
             }
-        });
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        match &request.kind {
-            CreateWindowKind::DockFloating { panel, .. } => Some(WindowCreateSpec::new(
-                format!("fret-demo docking_arbitration_demo — {}", panel.kind.0),
-                fret_launch::WindowLogicalSize::new(720.0, 520.0),
-            )),
-            CreateWindowKind::DockRestore { logical_window_id } => {
-                let mut size = fret_launch::WindowLogicalSize::new(980.0, 720.0);
-                if let Some(restore) = &self.restore
-                    && let Some(window) = restore
-                        .layout
-                        .windows
-                        .iter()
-                        .find(|w| w.logical_window_id == logical_window_id.as_str())
-                    && let Some(p) = &window.placement
-                {
-                    size = fret_launch::WindowLogicalSize::new(p.width as f64, p.height as f64);
-                }
-                Some(WindowCreateSpec::new(
-                    format!("fret-demo docking_arbitration_demo — {logical_window_id}"),
-                    size,
-                ))
-            }
+            Some(WindowCreateSpec::new(
+                format!("fret-demo docking_arbitration_demo 闁?{logical_window_id}"),
+                size,
+            ))
         }
     }
+}
 
-    fn window_created(
-        &mut self,
-        app: &mut App,
-        request: &fret_app::CreateWindowRequest,
-        new_window: AppWindowId,
-    ) {
-        match &request.kind {
-            CreateWindowKind::DockFloating { .. } => {
-                let _ = self
-                    .docking_runtime
-                    .as_ref()
-                    .map(|rt| rt.on_window_created(app, request, new_window))
-                    .unwrap_or(false);
-                let logical = self.alloc_floating_logical_window_id();
-                let logical_key = logical.clone();
-                self.logical_windows.insert(new_window, logical);
-                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
-                    reg.register(new_window, logical_key);
-                });
-                self.sync_dev_state_models(app);
-                DevStateHooks::export_all(app);
-            }
-            CreateWindowKind::DockRestore { logical_window_id } => {
-                self.logical_windows
-                    .insert(new_window, logical_window_id.clone());
-                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
-                    reg.register(new_window, logical_window_id.clone());
-                });
-                self.sync_dev_state_models(app);
-                if let Some(restore) = self.restore.as_mut() {
-                    restore.pending_logical_window_ids.remove(logical_window_id);
-                }
-                self.apply_layout_if_ready(app);
-            }
-        }
-    }
-
-    fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
-        if Some(window) == self.main_window {
-            if self.persist_layout_on_exit {
-                self.save_layout_on_exit(app);
-            }
-        } else {
-            self.logical_windows.remove(&window);
+fn window_created(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    match &request.kind {
+        CreateWindowKind::DockFloating { .. } => {
+            let _ = driver
+                .docking_runtime
+                .as_ref()
+                .map(|rt| rt.on_window_created(app, request, new_window))
+                .unwrap_or(false);
+            let logical = driver.alloc_floating_logical_window_id();
+            let logical_key = logical.clone();
+            driver.logical_windows.insert(new_window, logical);
             app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
-                reg.unregister(window);
+                reg.register(new_window, logical_key);
             });
-            self.sync_dev_state_models(app);
+            driver.sync_dev_state_models(app);
             DevStateHooks::export_all(app);
         }
+        CreateWindowKind::DockRestore { logical_window_id } => {
+            driver
+                .logical_windows
+                .insert(new_window, logical_window_id.clone());
+            app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                reg.register(new_window, logical_window_id.clone());
+            });
+            driver.sync_dev_state_models(app);
+            if let Some(restore) = driver.restore.as_mut() {
+                restore.pending_logical_window_ids.remove(logical_window_id);
+            }
+            driver.apply_layout_if_ready(app);
+        }
+    }
+}
 
-        let _ = self
-            .docking_runtime
-            .as_ref()
-            .map(|rt| rt.before_close_window(app, window))
-            .unwrap_or(false);
-        true
+fn before_close_window(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> bool {
+    if Some(window) == driver.main_window {
+        if driver.persist_layout_on_exit {
+            driver.save_layout_on_exit(app);
+        }
+    } else {
+        driver.logical_windows.remove(&window);
+        app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+            reg.unregister(window);
+        });
+        driver.sync_dev_state_models(app);
+        DevStateHooks::export_all(app);
     }
 
-    fn semantics_snapshot(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-        state.ui.semantics_snapshot_arc()
-    }
+    let _ = driver
+        .docking_runtime
+        .as_ref()
+        .map(|rt| rt.before_close_window(app, window))
+        .unwrap_or(false);
+    true
+}
 
-    fn accessibility_focus(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        state.ui.set_focus(Some(target));
-    }
+fn semantics_snapshot(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+    state.ui.semantics_snapshot_arc()
+}
 
-    fn accessibility_invoke(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
-    }
+fn accessibility_focus(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+) {
+    state.ui.set_focus(Some(target));
+}
 
-    fn accessibility_set_value_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_text(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
+fn accessibility_invoke(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+) {
+    fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
+}
 
-    fn accessibility_set_value_numeric(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: f64,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_numeric(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
+fn accessibility_set_value_text(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::set_value_text(&mut state.ui, app, services, target, value);
+}
 
-    fn accessibility_set_text_selection(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        anchor: u32,
-        focus: u32,
-    ) {
-        fret_ui_app::accessibility_actions::set_text_selection(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            anchor,
-            focus,
-        );
-    }
+fn accessibility_set_value_numeric(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: f64,
+) {
+    fret_ui_app::accessibility_actions::set_value_numeric(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
 
-    fn accessibility_replace_selected_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::replace_selected_text(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
+fn accessibility_set_text_selection(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    fret_ui_app::accessibility_actions::set_text_selection(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        anchor,
+        focus,
+    );
+}
+
+fn accessibility_replace_selected_text(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::replace_selected_text(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<DockingArbitrationDriver, DockingArbitrationWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.viewport_input = Some(viewport_input);
+    hooks.dock_op = Some(dock_op);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+    hooks.before_close_window = Some(before_close_window);
+    hooks.semantics_snapshot = Some(semantics_snapshot);
+    hooks.accessibility_focus = Some(accessibility_focus);
+    hooks.accessibility_invoke = Some(accessibility_invoke);
+    hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
+    hooks.accessibility_set_value_numeric = Some(accessibility_set_value_numeric);
+    hooks.accessibility_set_text_selection = Some(accessibility_set_text_selection);
+    hooks.accessibility_replace_selected_text = Some(accessibility_replace_selected_text);
+}
+
+fn build_fn_driver(
+    pending_layout: Option<fret_core::DockLayout>,
+    viewport_tools: Arc<Mutex<DemoViewportToolState>>,
+    layout_preset: DockingArbitrationLayoutPreset,
+    persist_layout_on_exit: bool,
+) -> FnDriver<DockingArbitrationDriver, DockingArbitrationWindowState> {
+    let driver_state = DockingArbitrationDriver::new(
+        pending_layout,
+        viewport_tools,
+        layout_preset,
+        persist_layout_on_exit,
+    );
+
+    FnDriver::new(driver_state, create_window_state, handle_event, render)
+        .with_init(init)
+        .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -3463,13 +3513,17 @@ pub fn run() -> anyhow::Result<()> {
         None
     };
 
-    let driver = DockingArbitrationDriver::new(
-        pending_layout,
-        viewport_tools,
-        layout_preset,
-        persist_layout_on_exit,
-    );
-    fret::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
+    fret::run_native_with_configured_fn_driver(
+        config,
+        app,
+        build_fn_driver(
+            pending_layout,
+            viewport_tools,
+            layout_preset,
+            persist_layout_on_exit,
+        ),
+    )
+    .context("run docking_arbitration_demo app")
 }
 
 fn diag_enabled_env() -> bool {

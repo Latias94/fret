@@ -5,7 +5,8 @@ use fret_app::App;
 use fret_diag::transport::DiagTransportKind;
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
-    DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1, UiSemanticsNodeGetAckV1,
+    DiagTransportMessageV1, UiHitTestExplainAckV1, UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+    UiSemanticsNodeGetAckV1,
 };
 
 use crate::{State, is_abs_path, pack, push_log};
@@ -259,6 +260,62 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                         .update(&st.semantics_selected_node_live_json, |v| *v = text);
                 }
             }
+            "hit_test.explain_ack" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                let payload = msg.payload.clone();
+                if let Ok(parsed) = serde_json::from_value::<UiHitTestExplainAckV1>(payload.clone())
+                {
+                    let expected_node_id = app
+                        .models()
+                        .read(&st.semantics_selected_id, |v| *v)
+                        .ok()
+                        .flatten();
+                    let expected_window_ffi = app
+                        .models()
+                        .read(&st.semantics_cache, |v| v.as_ref().map(|i| i.window))
+                        .ok()
+                        .flatten();
+                    let target_matches = matches!(
+                        &parsed.target,
+                        UiSelectorV1::NodeId { node, .. } if Some(*node) == expected_node_id
+                    );
+                    if !target_matches || expected_window_ffi != Some(parsed.window) {
+                        continue;
+                    }
+
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_hit_test_explain_status, |v| {
+                            *v = Some(Arc::<str>::from(parsed.status.clone()))
+                        });
+                    let _ = app.models_mut().update(
+                        &st.semantics_selected_hit_test_explain_updated_unix_ms,
+                        |v| *v = parsed.captured_unix_ms,
+                    );
+                    let summary = summarize_hit_test_explain(&parsed);
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_hit_test_explain_summary, |v| {
+                            *v = summary
+                        });
+                    if let Ok(text) = serde_json::to_string_pretty(&parsed) {
+                        let _ = app
+                            .models_mut()
+                            .update(&st.semantics_selected_hit_test_explain_json, |v| *v = text);
+                    }
+                } else if let Ok(text) = serde_json::to_string_pretty(&payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_hit_test_explain_json, |v| *v = text);
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_hit_test_explain_summary, |v| {
+                            v.clear()
+                        });
+                }
+            }
             _ => {}
         }
     }
@@ -296,6 +353,23 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
     let _ = app
         .models_mut()
         .update(&st.semantics_selected_node_live_children, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_hit_test_explain_json, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_hit_test_explain_summary, |v| {
+            v.clear()
+        });
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_hit_test_explain_status, |v| {
+            *v = None
+        });
+    let _ = app.models_mut().update(
+        &st.semantics_selected_hit_test_explain_updated_unix_ms,
+        |v| *v = None,
+    );
 }
 
 pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {
@@ -368,6 +442,14 @@ pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State
     let _ = st
         .devtools
         .semantics_node_get(None, window_ffi, selected_node_id);
+    let _ = st.devtools.hit_test_explain(
+        None,
+        window_ffi,
+        UiSelectorV1::NodeId {
+            node: selected_node_id,
+            root_z_index: None,
+        },
+    );
 }
 
 fn unix_ms_now() -> u64 {
@@ -475,4 +557,58 @@ fn resolve_bundle_dir_abs(out_dir: &str, dir: &str) -> Option<String> {
     }
     let base = PathBuf::from(out_dir);
     Some(base.join(dir).to_string_lossy().to_string())
+}
+
+fn summarize_hit_test_explain(ack: &UiHitTestExplainAckV1) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!("hittable={}", option_bool_text(ack.hittable)));
+    if let Some(reason) = ack.reason.as_deref() {
+        lines.push(format!("reason={reason}"));
+    }
+    if let Some(hit_test) = ack.hit_test.as_ref() {
+        lines.push(format!(
+            "includes_intended={} hit_path_contains_intended={}",
+            option_bool_text(hit_test.includes_intended),
+            option_bool_text(hit_test.hit_path_contains_intended)
+        ));
+        if let Some(reason) = hit_test.blocking_reason.as_deref() {
+            lines.push(format!("blocking_reason={reason}"));
+        }
+        if let Some(root) = hit_test.blocking_root {
+            lines.push(format!("blocking_root={root}"));
+        }
+        if let Some(layer_id) = hit_test.blocking_layer_id {
+            lines.push(format!("blocking_layer_id={layer_id}"));
+        }
+        if let Some(explain) = hit_test.routing_explain.as_deref() {
+            lines.push(format!("routing_explain={explain}"));
+        }
+        lines.push(format!(
+            "intended_node_id={} hit_node_id={} hit_semantics_node_id={}",
+            option_u64_text(hit_test.intended_node_id),
+            option_u64_text(hit_test.hit_node_id),
+            option_u64_text(hit_test.hit_semantics_node_id)
+        ));
+        if let Some(test_id) = hit_test.hit_semantics_test_id.as_deref() {
+            lines.push(format!("hit_semantics_test_id={test_id}"));
+        }
+    }
+    lines.join(
+        "
+",
+    )
+}
+
+fn option_bool_text(value: Option<bool>) -> &'static str {
+    match value {
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "unknown",
+    }
+}
+
+fn option_u64_text(value: Option<u64>) -> String {
+    value
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "unknown".to_string())
 }

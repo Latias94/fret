@@ -295,9 +295,13 @@ Completed in-tree state:
 - `ecosystem/fret` no longer exposes MVU modules or legacy re-exports.
 - `apps/fret-examples`, `apps/fret-demo`, and scaffold templates no longer carry MVU demo routing.
 - Guardrails prevent MVU from drifting back into code surfaces.
+- New in-tree work should target `View` + typed unit/payload actions only; keep this guide as an
+  external migration mapping reference.
 
 Evidence anchors:
 
+- `ecosystem/fret/src/view.rs` (current view-runtime authoring hooks)
+- `ecosystem/fret/src/actions.rs` (unit + payload action macros/traits)
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - `tools/gate_no_mvu_in_tree.py`
 - `tools/gate_no_mvu_in_cookbook.py`
@@ -393,8 +397,13 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   - `stack::h_flex(...)` → `ui::h_flex(...)` (forces `width: fill`)
   - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
   - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
+    - Internal policy/helper code that still wants a sink-based composition path can use `container_vstack_build(...)` / `container_hstack_build(...)` in `ecosystem/fret-ui-shadcn::layout` to stay on the same late-landing child pipeline without rebuilding a temporary `Vec<AnyElement>`.
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
   identity stable and reduce allocation noise.
+- For table-like composite trees, prefer `Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` when the children naturally come from loops or generated data; when the final cell child is itself a builder, prefer `TableCell::build(child)` over early `into_element(cx)` and keep `TableCell::new(child)` only for already-landed `AnyElement` values.
+- For overlay trigger/anchor wrappers used in sink-based or direct late-landing paths, prefer `DialogTrigger::build(child)` / `SheetTrigger::build(child)` / `DrawerTrigger::build(child)` / `PopoverTrigger::build(child)` / `PopoverAnchor::build(child)` / `HoverCardTrigger::build(child)` / `HoverCardAnchor::build(child)` / `TooltipTrigger::build(child)` / `TooltipAnchor::build(child)` when the wrapped child is still a builder or `UiIntoElement`; keep `*_Trigger::new(child)` / `*_Anchor::new(child)` for already-landed `AnyElement` values. `Dialog::compose().trigger(...)` / `Sheet::compose().trigger(...)` now also accept those dialog/sheet `*_Trigger::build(child)` values directly, removing the old eager landing cliff from the composition surface. For anchor wrappers that need `element_id()` before final landing, use `*_AnchorBuild::into_anchor(cx)` or stay on the eager `*_Anchor::new(child)` path.
+- For popover / hover-card / tooltip root authoring, prefer the host-bound late-landing constructors `Popover::build(cx, trigger, content)` / `HoverCard::build(cx, trigger, content)` / `HoverCard::build_controllable(cx, open, default_open, trigger, content)` / `Tooltip::build(cx, trigger, content)` when the trigger or content is still a builder-first value. `PopoverContent::test_id(...)` and `Tooltip::new(trigger, content)` now both cross that root boundary without forcing an early `into_element(cx)` just to attach semantics or diagnostics hooks.
+- For dropdown-menu root / parts authoring, prefer `DropdownMenu::build(cx, trigger, entries)` for direct trigger wiring and `DropdownMenu::build_parts(cx, DropdownMenuTrigger::build(child), DropdownMenuContent::new()..., entries)` for the shadcn part surface. Keep `DropdownMenuTrigger::new(child)` / `into_element_parts(...)` only for already-landed `AnyElement` triggers or compatibility call sites that still need the old trigger closure shape.
 - Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
   `AnyElement` at the end of a subtree boundary.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in

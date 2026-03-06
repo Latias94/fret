@@ -5,6 +5,7 @@ use crate::ui::snippets::tabs as snippets;
 
 pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let list = snippets::list::render(cx);
     let disabled = snippets::disabled::render(cx);
     let icons = snippets::icons::render(cx);
@@ -16,8 +17,9 @@ pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows `tabs-demo.tsx` (new-york-v4) order: Demo, list-only, disabled, icons, line, vertical, vertical line.",
-            "Password fields use `Input::password()` to mirror `type=\\\"password\\\"` in shadcn/ui examples.",
+            "Preview follows `tabs-demo.tsx` (new-york-v4) order: Demo, Usage, list-only, disabled, icons, line, vertical, vertical line.",
+            "Tabs already exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, so the main parity gap here is documentation clarity rather than missing authoring APIs.",
+            "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
             "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
         ],
     );
@@ -30,6 +32,11 @@ pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .description("Account/password card example with inputs and footer actions.")
                 .test_id_prefix("ui-gallery-tabs-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composable usage for Tabs.")
+                .test_id_prefix("ui-gallery-tabs-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("List", list)
                 .description("Tabs list without any mounted content.")
                 .test_id_prefix("ui-gallery-tabs-list")

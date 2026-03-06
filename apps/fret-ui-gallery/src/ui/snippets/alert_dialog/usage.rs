@@ -23,17 +23,18 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
 
-    shadcn::AlertDialog::new(open).into_element_parts(
-        cx,
-        |cx| {
-            let trigger = shadcn::Button::new("Open")
-                .variant(shadcn::ButtonVariant::Outline)
-                .into_element(cx);
-            shadcn::AlertDialogTrigger::new(trigger)
-        },
-        shadcn::AlertDialogPortal::new(),
-        shadcn::AlertDialogOverlay::new(),
-        move |cx| {
+    let trigger = shadcn::AlertDialogTrigger::new(
+        shadcn::Button::new("Open")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into_element(cx),
+    );
+
+    shadcn::AlertDialog::new(open)
+        .compose()
+        .trigger(trigger)
+        .portal(shadcn::AlertDialogPortal::new())
+        .overlay(shadcn::AlertDialogOverlay::new())
+        .content_with(move |cx| {
             let header = shadcn::AlertDialogHeader::new(vec![
                 shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
                 shadcn::AlertDialogDescription::new(
@@ -49,7 +50,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx);
 
             shadcn::AlertDialogContent::new(vec![header, footer]).into_element(cx)
-        },
-    )
+        })
+        .into_element(cx)
 }
 // endregion: example

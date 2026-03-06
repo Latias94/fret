@@ -5,6 +5,7 @@ use crate::ui::snippets::collapsible as snippets;
 
 pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let controlled_state = snippets::controlled_state::render(cx);
     let basic = snippets::basic::render(cx);
     let settings = snippets::settings_panel::render(cx);
@@ -15,6 +16,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
+            "Composable children-style authoring is available today via `fret_ui_shadcn::collapsible_primitives`, while the top-level wrapper keeps a closure-based ergonomic API.",
             "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
             "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
             "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
@@ -26,12 +28,16 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Collapsible docs flow: Demo, Controlled State, Basic, Settings Panel, File Tree, RTL.",
+            "Preview follows shadcn Collapsible docs flow: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("Uncontrolled disclosure with a compact trigger and a details list.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composable usage for Collapsible.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
                 .code_rust_from_file_region(snippets::controlled_state::SOURCE, "example"),

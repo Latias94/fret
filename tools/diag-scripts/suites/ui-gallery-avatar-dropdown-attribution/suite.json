@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open-trigger.json",
+    "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json",
+    "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-click-stable-open.json",
+    "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-escape-focus-restore.json",
+    "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-focus-trigger.json"
+  ]
+}

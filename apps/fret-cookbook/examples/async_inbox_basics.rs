@@ -207,15 +207,6 @@ impl View for AsyncInboxBasicsView {
         let progress = cx.watch_model(&self.st.progress).layout().copied_or(0.0);
         let inbox_stats = self.st.inbox.stats();
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Async inbox basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let start_button = shadcn::Button::new("Start background job")
             .variant(shadcn::ButtonVariant::Default)
             .size(shadcn::ButtonSize::Sm)
@@ -293,11 +284,30 @@ impl View for AsyncInboxBasicsView {
             .gap(Space::N3)
             .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(720.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Async inbox basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(720.0))
+        .into_element(cx);
 
         cx.on_action_notify_model_update::<act::ClearLog, String>(
             self.st.log.clone(),

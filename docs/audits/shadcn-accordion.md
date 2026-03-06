@@ -71,5 +71,6 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 
 ## Follow-ups (recommended)
 
-- Consider adding a composable surface mirroring Radix/shadcn (`AccordionItem` / `Trigger` /
-  `Content`) if authoring ergonomics become a priority.
+- Keep the composable `fret_ui_shadcn::accordion::composable` surface and the legacy builder API
+  aligned so gallery examples and recipes can choose the authoring shape that best matches upstream
+  docs without drifting in behavior.

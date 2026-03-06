@@ -5,6 +5,7 @@ use crate::ui::snippets::dropdown_menu as snippets;
 
 pub(super) fn preview_dropdown_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let parts = snippets::parts::render(cx);
     let basic = snippets::basic::render(cx);
     let submenu = snippets::submenu::render(cx);
@@ -23,7 +24,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut ElementContext<'_, App>) -> Vec<Any
         cx,
         [
             "Preview follows the upstream shadcn Dropdown Menu docs (v4 Base UI).",
-            "Examples are snippet-backed: Preview ≡ Code (single source of truth).",
+            "Dropdown Menu now has both a typed builder entry point and a Trigger/Content parts bridge, so the main remaining gap is docs clarity rather than mechanism coverage.",
             "Keep `ui-gallery-dropdown-menu-*` test IDs stable; multiple diag scripts depend on them.",
         ],
     );
@@ -31,13 +32,17 @@ pub(super) fn preview_dropdown_menu(cx: &mut ElementContext<'_, App>) -> Vec<Any
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Dropdown Menu examples, aligned with upstream shadcn docs (Base UI variant). \
-             Includes an extra `Parts` section for the Trigger/Content authoring surface.",
+            "Dropdown Menu examples aligned with upstream shadcn docs, plus a Fret parts adapter section for Trigger/Content authoring.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-dropdown-menu-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Dropdown Menu.")
+                .test_id_prefix("ui-gallery-dropdown-menu-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .test_id_prefix("ui-gallery-dropdown-menu-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),

@@ -19,21 +19,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let trigger_open = open.clone();
-    shadcn::Dialog::new(open.clone()).into_element_parts(
-        cx,
-        move |cx| {
-            shadcn::DialogTrigger::new(
-                shadcn::Button::new("Open Dialog (Parts)")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dialog-parts-trigger")
-                    .toggle_model(trigger_open.clone())
-                    .into_element(cx),
-            )
-        },
-        shadcn::DialogPortal::new(),
-        shadcn::DialogOverlay::new(),
-        move |cx| {
+    let trigger = shadcn::DialogTrigger::new(
+        shadcn::Button::new("Open Dialog (Parts)")
+            .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-dialog-parts-trigger")
+            .into_element(cx),
+    );
+
+    shadcn::Dialog::new(open)
+        .compose()
+        .trigger(trigger)
+        .portal(shadcn::DialogPortal::new())
+        .overlay(shadcn::DialogOverlay::new())
+        .content_with(move |cx| {
             shadcn::DialogContent::new([
                 shadcn::DialogClose::from_scope()
                     .into_element(cx)
@@ -49,7 +47,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .into_element(cx)
             .test_id("ui-gallery-dialog-parts-content")
-        },
-    )
+        })
+        .into_element(cx)
 }
 // endregion: example

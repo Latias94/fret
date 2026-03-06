@@ -7,8 +7,8 @@ use fret_docking::{
     create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
@@ -227,14 +227,14 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
     }
 }
 
-struct ContainerQueriesDockingDemoWindowState {
+pub struct ContainerQueriesDockingDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     dock_space: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
-struct ContainerQueriesDockingDemoDriver {
+pub struct ContainerQueriesDockingDemoDriver {
     docking_runtime: Option<DockingRuntime>,
 }
 
@@ -328,356 +328,408 @@ impl ContainerQueriesDockingDemoDriver {
     }
 }
 
-impl WinitAppDriver for ContainerQueriesDockingDemoDriver {
-    type WindowState = ContainerQueriesDockingDemoWindowState;
+fn init(driver: &mut ContainerQueriesDockingDemoDriver, _app: &mut App, main_window: AppWindowId) {
+    driver.docking_runtime = Some(DockingRuntime::new(main_window));
+}
 
-    fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
-        self.docking_runtime = Some(DockingRuntime::new(main_window));
+fn create_window_state(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ContainerQueriesDockingDemoWindowState {
+    ContainerQueriesDockingDemoDriver::build_ui(app, window)
+}
+
+fn hot_reload_window(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitHotReloadContext<'_, ContainerQueriesDockingDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+    state.dock_space = None;
+}
+
+fn handle_model_changes(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitWindowContext<'_, ContainerQueriesDockingDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitWindowContext<'_, ContainerQueriesDockingDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitCommandContext<'_, ContainerQueriesDockingDemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
+    }
+    if command.as_str() == "container_queries_docking_demo.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    }
+}
+
+fn handle_event(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitEventContext<'_, ContainerQueriesDockingDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if fret_bootstrap::maybe_consume_event(app, window, event) {
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn dock_op(driver: &mut ContainerQueriesDockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
+    let _ = driver
+        .docking_runtime
+        .as_ref()
+        .map(|rt| rt.on_dock_op(app, op))
+        .unwrap_or(false);
+}
+
+fn render(
+    driver: &mut ContainerQueriesDockingDemoDriver,
+    context: WinitRenderContext<'_, ContainerQueriesDockingDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    ContainerQueriesDockingDemoDriver::render_dock(app, services, window, state, bounds);
+
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    state.ui.set_inspection_active(inspection_active);
+
+    scene.clear();
+    {
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-        state.dock_space = None;
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.record_model_changes(context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.record_global_changes(app, context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
             app,
-            services,
             window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-        if command.as_str() == "container_queries_docking_demo.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if fret_bootstrap::maybe_consume_event(app, window, event) {
-            return;
-        }
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = self
-            .docking_runtime
-            .as_ref()
-            .map(|rt| rt.on_dock_op(app, op))
-            .unwrap_or(false);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
             bounds,
             scale_factor,
-            scene,
-        } = context;
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
 
-        ContainerQueriesDockingDemoDriver::render_dock(app, services, window, state, bounds);
+    for effect in drive.effects {
+        app.push_effect(effect);
+    }
 
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
 
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
 
-        scene.clear();
-        {
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
+    if injected_any {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+        loop {
+            let effects = app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window: w, command } => {
+                        if w.is_none() || w == Some(window) {
+                            handle_command(
+                                driver,
+                                WinitCommandContext {
+                                    app,
+                                    services,
+                                    window,
+                                    state,
+                                },
+                                command,
+                            );
+                            applied_any_command = true;
+                        } else {
+                            deferred_effects.push(Effect::Command { window: w, command });
+                        }
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
+
+            if !applied_any_command {
+                break;
+            }
         }
-
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
-
-        for effect in drive.effects {
+        for effect in deferred_effects {
             app.push_effect(effect);
         }
 
-        if drive.request_redraw {
-            app.request_redraw(window);
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
-
-        if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
-
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                let _ = state.ui.dispatch_command(app, services, &command);
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
-
-                if !applied_any_command {
-                    break;
-                }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
-
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
+        state.ui.request_semantics_snapshot();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
+        frame.layout_all();
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
 
-    fn window_created(
-        &mut self,
-        app: &mut App,
-        request: &fret_app::CreateWindowRequest,
-        new_window: AppWindowId,
-    ) {
-        let _ = self
-            .docking_runtime
-            .as_ref()
-            .map(|rt| rt.on_window_created(app, request, new_window))
-            .unwrap_or(false);
-    }
-
-    fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
-        let _ = self
-            .docking_runtime
-            .as_ref()
-            .map(|rt| rt.before_close_window(app, window))
-            .unwrap_or(false);
-        true
-    }
-
-    fn semantics_snapshot(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-        state.ui.semantics_snapshot_arc()
-    }
-
-    fn accessibility_focus(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        state.ui.set_focus(Some(target));
-    }
-
-    fn accessibility_invoke(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
-    }
-
-    fn accessibility_set_value_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_text(
-            &mut state.ui,
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
             app,
-            services,
-            target,
-            value,
-        );
-    }
-
-    fn accessibility_set_value_numeric(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: f64,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_numeric(
+            window,
+            bounds,
+            scale_factor,
             &mut state.ui,
-            app,
-            services,
-            target,
-            value,
+            element_runtime,
+            scene,
         );
-    }
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+    });
+}
 
-    fn accessibility_set_text_selection(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        anchor: u32,
-        focus: u32,
-    ) {
-        fret_ui_app::accessibility_actions::set_text_selection(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            anchor,
-            focus,
-        );
-    }
+fn window_create_spec(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-    fn accessibility_replace_selected_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::replace_selected_text(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
+fn window_created(
+    driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    let _ = driver
+        .docking_runtime
+        .as_ref()
+        .map(|rt| rt.on_window_created(app, request, new_window))
+        .unwrap_or(false);
+}
+
+fn before_close_window(
+    driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> bool {
+    let _ = driver
+        .docking_runtime
+        .as_ref()
+        .map(|rt| rt.before_close_window(app, window))
+        .unwrap_or(false);
+    true
+}
+
+fn semantics_snapshot(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    _app: &mut App,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+    state.ui.semantics_snapshot_arc()
+}
+
+fn accessibility_focus(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    _app: &mut App,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+) {
+    state.ui.set_focus(Some(target));
+}
+
+fn accessibility_invoke(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+) {
+    fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
+}
+
+fn accessibility_set_value_text(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::set_value_text(&mut state.ui, app, services, target, value);
+}
+
+fn accessibility_set_value_numeric(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: f64,
+) {
+    fret_ui_app::accessibility_actions::set_value_numeric(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
+
+fn accessibility_set_text_selection(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    fret_ui_app::accessibility_actions::set_text_selection(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        anchor,
+        focus,
+    );
+}
+
+fn accessibility_replace_selected_text(
+    _driver: &mut ContainerQueriesDockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ContainerQueriesDockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::replace_selected_text(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<
+        ContainerQueriesDockingDemoDriver,
+        ContainerQueriesDockingDemoWindowState,
+    >,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.dock_op = Some(dock_op);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+    hooks.before_close_window = Some(before_close_window);
+    hooks.semantics_snapshot = Some(semantics_snapshot);
+    hooks.accessibility_focus = Some(accessibility_focus);
+    hooks.accessibility_invoke = Some(accessibility_invoke);
+    hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
+    hooks.accessibility_set_value_numeric = Some(accessibility_set_value_numeric);
+    hooks.accessibility_set_text_selection = Some(accessibility_set_text_selection);
+    hooks.accessibility_replace_selected_text = Some(accessibility_replace_selected_text);
+}
+
+pub fn build_fn_driver()
+-> FnDriver<ContainerQueriesDockingDemoDriver, ContainerQueriesDockingDemoWindowState> {
+    FnDriver::new(
+        ContainerQueriesDockingDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_init(init)
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -704,6 +756,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = ContainerQueriesDockingDemoDriver::default();
-    fret::run_native_demo(config, app, driver).context("run container_queries_docking_demo app")
+    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+        .context("run container_queries_docking_demo app")
 }

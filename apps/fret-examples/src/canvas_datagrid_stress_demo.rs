@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
@@ -44,7 +44,7 @@ fn parse_env_bool(key: &str) -> bool {
     matches!(value.as_str(), "1" | "true" | "yes" | "on")
 }
 
-struct CanvasDataGridStressWindowState {
+pub struct CanvasDataGridStressWindowState {
     ui: UiTree<App>,
     rows: Arc<Vec<u64>>,
     cols: Arc<Vec<u64>>,
@@ -62,7 +62,7 @@ struct CanvasDataGridStressWindowState {
 }
 
 #[derive(Default)]
-struct CanvasDataGridStressDriver;
+pub struct CanvasDataGridStressDriver;
 
 impl CanvasDataGridStressDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> CanvasDataGridStressWindowState {
@@ -113,216 +113,222 @@ impl CanvasDataGridStressDriver {
     }
 }
 
-impl WinitAppDriver for CanvasDataGridStressDriver {
-    type WindowState = CanvasDataGridStressWindowState;
+fn gpu_ready(
+    _driver: &mut CanvasDataGridStressDriver,
+    _app: &mut App,
+    _context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    renderer.set_perf_enabled(true);
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        renderer.set_perf_enabled(true);
+fn gpu_frame_prepare(
+    _driver: &mut CanvasDataGridStressDriver,
+    app: &mut App,
+    _window: AppWindowId,
+    state: &mut CanvasDataGridStressWindowState,
+    renderer_context: &WgpuContext,
+    renderer: &mut Renderer,
+    _scale_factor: f32,
+) {
+    let _ = renderer_context;
+
+    if !state.auto_scroll && state.exit_after_frames.is_none() {
+        return;
     }
 
-    fn gpu_frame_prepare(
-        &mut self,
-        app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        _context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        if !state.auto_scroll && state.exit_after_frames.is_none() {
-            return;
-        }
+    let grid = app
+        .models()
+        .read(&state.grid_output, |v| *v)
+        .unwrap_or_default();
+    state.grid_hist.push_back(grid);
+    while state.grid_hist.len() > state.grid_hist_window {
+        state.grid_hist.pop_front();
+    }
 
-        let grid = app
-            .models()
-            .read(&state.grid_output, |v| *v)
-            .unwrap_or_default();
-        state.grid_hist.push_back(grid);
-        while state.grid_hist.len() > state.grid_hist_window {
-            state.grid_hist.pop_front();
-        }
+    let now = Instant::now();
+    let should_report = match state.last_renderer_report {
+        None => true,
+        Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+    };
+    if should_report {
+        if !state.grid_hist.is_empty() {
+            let mut totals_us: Vec<u32> = state
+                .grid_hist
+                .iter()
+                .map(|s| {
+                    s.ensure_axes_us
+                        .saturating_add(s.apply_overrides_us)
+                        .saturating_add(s.compute_viewport_us)
+                        .saturating_add(s.build_visible_items_us)
+                })
+                .collect();
+            totals_us.sort_unstable();
 
-        let now = Instant::now();
-        let should_report = match state.last_renderer_report {
-            None => true,
-            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
-        };
-        if should_report {
-            if !state.grid_hist.is_empty() {
-                let mut totals_us: Vec<u32> = state
-                    .grid_hist
-                    .iter()
-                    .map(|s| {
-                        s.ensure_axes_us
-                            .saturating_add(s.apply_overrides_us)
-                            .saturating_add(s.compute_viewport_us)
-                            .saturating_add(s.build_visible_items_us)
-                    })
-                    .collect();
-                totals_us.sort_unstable();
-
-                let sum_us: u64 = totals_us.iter().map(|v| *v as u64).sum();
-                let avg_ms = (sum_us as f64 / totals_us.len() as f64) / 1000.0;
-                let p95_idx = ((totals_us.len().saturating_mul(95)).saturating_add(99) / 100)
-                    .saturating_sub(1);
-                let p95_ms = totals_us.get(p95_idx).copied().unwrap_or_default() as f64 / 1000.0;
-
-                try_println!(
-                    "datagrid_canvas_stats: samples={} total_avg={:.3}ms total_p95={:.3}ms",
-                    totals_us.len(),
-                    avg_ms,
-                    p95_ms
-                );
-            }
-
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
-                    );
-                }
-            }
+            let sum_us: u64 = totals_us.iter().map(|v| *v as u64).sum();
+            let avg_ms = (sum_us as f64 / totals_us.len() as f64) / 1000.0;
+            let p95_idx =
+                ((totals_us.len().saturating_mul(95)).saturating_add(99) / 100).saturating_sub(1);
+            let p95_ms = totals_us.get(p95_idx).copied().unwrap_or_default() as f64 / 1000.0;
 
             try_println!(
-                "datagrid_canvas: visible_rows={} visible_cols={} visible_cells={} ensure_axes={:.3}ms overrides={:.3}ms viewport={:.3}ms build={:.3}ms",
-                grid.visible_rows,
-                grid.visible_cols,
-                grid.visible_cells,
-                grid.ensure_axes_us as f64 / 1000.0,
-                grid.apply_overrides_us as f64 / 1000.0,
-                grid.compute_viewport_us as f64 / 1000.0,
-                grid.build_visible_items_us as f64 / 1000.0
+                "datagrid_canvas_stats: samples={} total_avg={:.3}ms total_p95={:.3}ms",
+                totals_us.len(),
+                avg_ms,
+                p95_ms
             );
-
-            state.last_renderer_report = Some(now);
-        }
-    }
-
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
         }
 
-        if command.as_str() == "canvas_datagrid_stress_demo.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-            ..
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
-                state.ui.dispatch_event(app, services, event);
-                return;
-            }
-
-            match *key {
-                fret_core::KeyCode::Escape => {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-                _ => {}
+        if let Some(snap) = renderer.take_perf_snapshot() {
+            if snap.frames != 0 {
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
             }
         }
 
-        state.ui.dispatch_event(app, services, event);
+        try_println!(
+            "datagrid_canvas: visible_rows={} visible_cols={} visible_cells={} ensure_axes={:.3}ms overrides={:.3}ms viewport={:.3}ms build={:.3}ms",
+            grid.visible_rows,
+            grid.visible_cols,
+            grid.visible_cells,
+            grid.ensure_axes_us as f64 / 1000.0,
+            grid.apply_overrides_us as f64 / 1000.0,
+            grid.compute_viewport_us as f64 / 1000.0,
+            grid.build_visible_items_us as f64 / 1000.0
+        );
+
+        state.last_renderer_report = Some(now);
+    }
+}
+
+fn create_window_state(
+    _driver: &mut CanvasDataGridStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> CanvasDataGridStressWindowState {
+    CanvasDataGridStressDriver::build_ui(app, window)
+}
+
+fn handle_model_changes(
+    _driver: &mut CanvasDataGridStressDriver,
+    context: WinitWindowContext<'_, CanvasDataGridStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut CanvasDataGridStressDriver,
+    context: WinitWindowContext<'_, CanvasDataGridStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut CanvasDataGridStressDriver,
+    context: WinitCommandContext<'_, CanvasDataGridStressWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+    if command.as_str() == "canvas_datagrid_stress_demo.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    }
+}
 
-        state.frame = state.frame.wrapping_add(1);
+fn handle_event(
+    _driver: &mut CanvasDataGridStressDriver,
+    context: WinitEventContext<'_, CanvasDataGridStressWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-        let variable = app
-            .models()
-            .read(&state.variable_sizes, |v| *v)
-            .unwrap_or(false);
-        let clamp_rows = app
-            .models()
-            .read(&state.clamp_rows, |v| *v)
-            .unwrap_or(false);
-        let revision = app.models().read(&state.revision, |v| *v).unwrap_or(1);
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
 
-        let rows = Arc::clone(&state.rows);
-        let cols = Arc::clone(&state.cols);
-        let cell_texts = Arc::clone(&state.cell_texts);
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
+            state.ui.dispatch_event(app, services, event);
+            return;
+        }
 
-        let root = declarative::RenderRootContext::new(
-            &mut state.ui,
-            app,
-            services,
-            window,
-            bounds,
-        )
+        if matches!(*key, fret_core::KeyCode::Escape) {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+    }
+
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn render(
+    _driver: &mut CanvasDataGridStressDriver,
+    context: WinitRenderContext<'_, CanvasDataGridStressWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    state.frame = state.frame.wrapping_add(1);
+
+    let variable = app
+        .models()
+        .read(&state.variable_sizes, |v| *v)
+        .unwrap_or(false);
+    let clamp_rows = app
+        .models()
+        .read(&state.clamp_rows, |v| *v)
+        .unwrap_or(false);
+    let revision = app.models().read(&state.revision, |v| *v).unwrap_or(1);
+
+    let rows = Arc::clone(&state.rows);
+    let cols = Arc::clone(&state.cols);
+    let cell_texts = Arc::clone(&state.cell_texts);
+
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("canvas-datagrid-stress", |cx| {
             cx.observe_model(&state.variable_sizes, Invalidation::Layout);
             cx.observe_model(&state.clamp_rows, Invalidation::Layout);
@@ -342,20 +348,18 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                 .read(&state.grid_output, |v| *v)
                 .unwrap_or_default();
             let header: Arc<str> = Arc::from(format!(
-                "CanvasDataGrid stress | rows={} cols={} | visible={}x{} cells={} | compute={:.3}ms | variable={} clamp_rows={} | [Esc]=close",
+                "CanvasDataGrid stress | rows={} cols={} visible={}x{} cells={} variable={} clamp_rows={} frame={}",
                 rows.len(),
                 cols.len(),
                 grid.visible_rows,
                 grid.visible_cols,
                 grid.visible_cells,
-                (grid.ensure_axes_us + grid.apply_overrides_us + grid.compute_viewport_us + grid.build_visible_items_us) as f64 / 1000.0,
                 variable,
-                clamp_rows
+                clamp_rows,
+                state.frame,
             ));
 
-            let mut grid_slot = LayoutStyle::default();
-            grid_slot.size.width = Length::Fill;
-            grid_slot.size.height = Length::Fill;
+            let mut grid_slot = root_layout;
             grid_slot.flex.grow = 1.0;
             grid_slot.flex.basis = Length::Px(Px(0.0));
 
@@ -368,7 +372,6 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                 }
                 if variable {
                     axis = axis.size_override(|row_key| {
-                        // Simulate markdown-like variability: some rows are taller.
                         let h = if row_key % 17 == 0 {
                             Px(96.0)
                         } else if row_key % 7 == 0 {
@@ -448,34 +451,57 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             )]
         });
 
-        state.ui.set_root(root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
+    state.ui.set_root(root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 
-        if let Some(limit) = state.exit_after_frames {
-            if state.frame >= limit {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        if state.auto_scroll || state.exit_after_frames.is_some() {
-            app.request_redraw(window);
+    if let Some(limit) = state.exit_after_frames {
+        if state.frame >= limit {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.auto_scroll || state.exit_after_frames.is_some() {
+        app.request_redraw(window);
     }
+}
+
+fn window_create_spec(
+    _driver: &mut CanvasDataGridStressDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<
+        CanvasDataGridStressDriver,
+        CanvasDataGridStressWindowState,
+    >,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<CanvasDataGridStressDriver, CanvasDataGridStressWindowState> {
+    FnDriver::new(
+        CanvasDataGridStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -497,6 +523,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, CanvasDataGridStressDriver::default())
-        .context("run canvas_datagrid_stress_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        CanvasDataGridStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run canvas_datagrid_stress_demo app")
 }

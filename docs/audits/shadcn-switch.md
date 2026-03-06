@@ -30,6 +30,9 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ### Interaction
 
 - Pass: Click toggles the bound `Model<bool>`.
+- Note: `Switch` is a leaf control surface, so Fret intentionally does not add a generic
+  `compose()` builder here; the direct control API already matches the important shadcn/Radix
+  contract.
 - Pass: Supports optional state via `Switch::new_opt(Model<Option<bool>>)` where `None` renders as
   unchecked and click toggles to `Some(true)`.
 - Pass: Disabled state blocks interaction and applies reduced opacity.
@@ -56,4 +59,4 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 
 ## Follow-ups (recommended)
 
-- Consider exposing size variants (e.g. `sm` vs `default`) if parity needs it.
+- None at the moment.

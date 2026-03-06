@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
@@ -17,7 +18,8 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -91,14 +93,89 @@ pub struct SheetTrigger {
     child: AnyElement,
 }
 
+pub struct SheetTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl SheetTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> SheetTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        SheetTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTrigger::new(
+            self.child
+                .expect("expected sheet trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait SheetCompositionTriggerArg<H: UiHost> {
+    fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger;
+}
+
+impl<H: UiHost> SheetCompositionTriggerArg<H> for SheetTrigger {
+    fn into_sheet_trigger(self, _cx: &mut ElementContext<'_, H>) -> SheetTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> SheetCompositionTriggerArg<H> for SheetTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_sheet_trigger(self, cx: &mut ElementContext<'_, H>) -> SheetTrigger {
+        SheetTrigger::new(
+            self.child
+                .expect("expected sheet trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -190,6 +267,11 @@ fn with_sheet_open_provider<H: UiHost, R>(
         st.current = prev;
     });
     out
+}
+
+fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
+    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -411,6 +493,14 @@ impl Sheet {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This bridges Fret's closure-root authoring model with the nested part mental model used by
+    /// shadcn/Radix while keeping the underlying mechanism surface unchanged.
+    pub fn compose<H: UiHost>(self) -> SheetComposition<H> {
+        SheetComposition::new(self)
     }
 
     #[track_caller]
@@ -844,13 +934,124 @@ impl Sheet {
     }
 }
 
+/// Recipe-level builder for composing a sheet from shadcn-style parts.
+type SheetDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum SheetCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(SheetDeferredContent<H>),
+}
+
+pub struct SheetComposition<H: UiHost, TTrigger = SheetTrigger> {
+    sheet: Sheet,
+    trigger: Option<TTrigger>,
+    portal: SheetPortal,
+    overlay: SheetOverlay,
+    content: Option<SheetCompositionContent<H>>,
+}
+
+impl<H: UiHost, TTrigger> std::fmt::Debug for SheetComposition<H, TTrigger> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SheetComposition")
+            .field("sheet", &self.sheet)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl<H: UiHost> SheetComposition<H> {
+    pub fn new(sheet: Sheet) -> Self {
+        Self {
+            sheet,
+            trigger: None,
+            portal: SheetPortal::new(),
+            overlay: SheetOverlay::new(),
+            content: None,
+        }
+    }
+}
+
+impl<H: UiHost, TTrigger> SheetComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(self, trigger: TNextTrigger) -> SheetComposition<H, TNextTrigger> {
+        SheetComposition {
+            sheet: self.sheet,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
+    }
+
+    pub fn portal(mut self, portal: SheetPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: SheetOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(SheetCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(SheetCompositionContent::Deferred(Box::new(content)));
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: SheetCompositionTriggerArg<H>,
+    {
+        let trigger = self
+            .trigger
+            .expect("Sheet::compose().trigger(...) must be provided before into_element()")
+            .into_sheet_trigger(cx);
+        let content = self
+            .content
+            .expect("Sheet::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        match content {
+            SheetCompositionContent::Eager(content) => self.sheet.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            SheetCompositionContent::Deferred(content) => self.sheet.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
+    }
+}
+
 /// shadcn/ui `SheetClose` (v4).
 ///
 /// Upstream `SheetClose` is a thin wrapper around the underlying primitive's `Close` component.
 /// In Fret, sheets are backed by modal overlays, so this delegates to `DialogClose`.
 #[derive(Clone)]
 pub struct SheetClose {
-    inner: crate::DialogClose,
+    open: Option<Model<bool>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for SheetClose {
@@ -862,34 +1063,43 @@ impl std::fmt::Debug for SheetClose {
 impl SheetClose {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            // SheetClose should behave like a primitive close affordance (no forced positioning).
-            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
-            inner: crate::DialogClose::new(open)
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            open: Some(open),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default().relative().inset(Space::N0),
         }
     }
 
     /// Creates a close affordance that resolves the current sheet/dialog scope at render time.
     pub fn from_scope() -> Self {
         Self {
-            inner: crate::DialogClose::from_scope()
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            open: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default().relative().inset(Space::N0),
         }
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
-        self.inner = self.inner.refine_style(style);
+        self.chrome = self.chrome.merge(style);
         self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
-        self.inner = self.inner.refine_layout(layout);
+        self.layout = self.layout.merge(layout);
         self
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.inner.into_element(cx)
+        let open = self.open.unwrap_or_else(|| {
+            inherited_sheet_open(cx).unwrap_or_else(|| {
+                panic!("SheetClose::from_scope() must be used while rendering Sheet content")
+            })
+        });
+
+        crate::DialogClose::new(open)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
     }
 }
 
@@ -1031,7 +1241,9 @@ impl SheetContent {
 
         let mut children = self.children;
         if self.show_close_button {
-            let close = crate::dialog::DialogClose::from_scope().into_element(cx);
+            let open = inherited_sheet_open(cx)
+                .expect("SheetContent close button must be rendered inside Sheet content");
+            let close = crate::dialog::DialogClose::new(open).into_element(cx);
             children.push(close);
         }
         let container = shadcn_layout::container_vstack(
@@ -1190,18 +1402,38 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Edges, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn sheet_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, SheetTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
 
     #[test]
     fn sheet_new_controllable_uses_controlled_model_when_provided() {
@@ -1472,6 +1704,132 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+    #[test]
+    fn sheet_composition_trigger_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sheet-composition-trigger-accepts-late-child",
+            |cx| {
+                vec![
+                    Sheet::new(open.clone())
+                        .compose()
+                        .trigger(SheetTrigger::build(
+                            crate::Button::new("Open").test_id("sheet-compose-trigger-late-child"),
+                        ))
+                        .portal(SheetPortal::new())
+                        .overlay(SheetOverlay::new())
+                        .content(
+                            SheetContent::new([cx.text("Content")])
+                                .show_close_button(false)
+                                .into_element(cx),
+                        )
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn sheet_compose_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sheet-compose-content-with-from-scope",
+            |cx| {
+                let trigger = SheetTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![
+                    Sheet::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(SheetPortal::new())
+                        .overlay(SheetOverlay::new())
+                        .content_with(|cx| {
+                            let close = SheetClose::from_scope().into_element(cx);
+                            SheetContent::new(vec![close]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

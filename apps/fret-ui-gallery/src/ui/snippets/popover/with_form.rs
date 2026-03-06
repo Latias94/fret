@@ -36,54 +36,50 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
+    let content = shadcn::PopoverContent::new([
+        shadcn::PopoverHeader::new([
+            shadcn::PopoverTitle::new("Dimensions").into_element(cx),
+            shadcn::PopoverDescription::new("Set the dimensions for the layer.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::FieldGroup::new([
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Width")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
+                    .into_element(cx),
+                shadcn::Input::new(width.clone())
+                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Height")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
+                    .into_element(cx),
+                shadcn::Input::new(height.clone())
+                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .into_element(cx),
+        ])
+        .gap(Space::N4)
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
+    .test_id("ui-gallery-popover-with-form-panel");
+
     let popover = shadcn::Popover::new_controllable(cx, None, false)
         .align(shadcn::PopoverAlign::Start)
-        .into_element(
+        .build(
             cx,
-            |cx| {
-                let trigger = shadcn::Button::new("Open Popover")
+            shadcn::PopoverTrigger::build(
+                shadcn::Button::new("Open Popover")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .into_element(cx)
-                    .test_id("ui-gallery-popover-with-form-trigger");
-                shadcn::PopoverTrigger::new(trigger).into_element(cx)
-            },
-            |cx| {
-                shadcn::PopoverContent::new([
-                    shadcn::PopoverHeader::new([
-                        shadcn::PopoverTitle::new("Dimensions").into_element(cx),
-                        shadcn::PopoverDescription::new("Set the dimensions for the layer.")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::FieldGroup::new([
-                        shadcn::Field::new([
-                            shadcn::FieldLabel::new("Width")
-                                .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
-                                .into_element(cx),
-                            shadcn::Input::new(width.clone())
-                                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                                .into_element(cx),
-                        ])
-                        .orientation(shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                        shadcn::Field::new([
-                            shadcn::FieldLabel::new("Height")
-                                .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
-                                .into_element(cx),
-                            shadcn::Input::new(height.clone())
-                                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                                .into_element(cx),
-                        ])
-                        .orientation(shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                    ])
-                    .gap(Space::N4)
-                    .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
-                .into_element(cx)
-                .test_id("ui-gallery-popover-with-form-panel")
-            },
+                    .test_id("ui-gallery-popover-with-form-trigger"),
+            ),
+            content,
         )
         .test_id("ui-gallery-popover-with-form-popover");
 
