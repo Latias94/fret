@@ -69,6 +69,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `docking_arbitration_demo` now follows the same configured-`FnDriver` posture too, proving that multi-window docking arbitration, dev-state wiring, and floating-window lifecycle hooks still fit the existing free-hook surface while reducing the remaining direct `WinitAppDriver` example inventory to four.
 - `node_graph_legacy_demo` now follows the same pure free-hook `FnDriver` posture on the retained node-graph reference path too, reducing the remaining direct `WinitAppDriver` example inventory to three without expanding launch surface area.
 - `node_graph_domain_demo` now follows the same pure free-hook `FnDriver` posture on the domain/runtime-oriented node-graph path too, reducing the remaining direct `WinitAppDriver` example inventory to two without expanding launch surface area.
+- `gizmo3d_demo` now follows the same pure free-hook `FnDriver` posture on the viewport-tool / engine-frame / 3D overlay path too, reducing the remaining direct `WinitAppDriver` example inventory to one without expanding launch surface area.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`
