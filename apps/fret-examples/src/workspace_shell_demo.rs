@@ -3,8 +3,8 @@ use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
     CommandDispatchDecisionV1, CommandDispatchSourceV1, CommandScope, PlatformCapabilities,
@@ -1275,6 +1275,67 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
     }
 }
 
+fn create_window_state(
+    driver: &mut WorkspaceShellDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> WorkspaceShellWindowState {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn handle_model_changes(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitCommandContext<'_, WorkspaceShellWindowState>,
+    command: CommandId,
+) {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitEventContext<'_, WorkspaceShellWindowState>,
+    event: &Event,
+) {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitRenderContext<'_, WorkspaceShellWindowState>,
+) {
+    <WorkspaceShellDemoDriver as WinitAppDriver>::render(driver, context)
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        WorkspaceShellDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+    })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -1296,6 +1357,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = WorkspaceShellDemoDriver::default();
+    let driver = build_driver();
     fret::run_native_with_compat_driver(config, app, driver).context("run workspace_shell_demo app")
 }

@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
     BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model, PlatformCapabilities,
@@ -256,6 +256,97 @@ impl WinitAppDriver for ImeSmokeDriver {
     }
 }
 
+fn create_window_state(
+    driver: &mut ImeSmokeDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ImeSmokeWindowState {
+    <ImeSmokeDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut ImeSmokeDriver,
+    context: WinitHotReloadContext<'_, ImeSmokeWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <ImeSmokeDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn handle_model_changes(
+    driver: &mut ImeSmokeDriver,
+    context: WinitWindowContext<'_, ImeSmokeWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <ImeSmokeDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut ImeSmokeDriver,
+    context: WinitWindowContext<'_, ImeSmokeWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <ImeSmokeDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut ImeSmokeDriver,
+    context: WinitCommandContext<'_, ImeSmokeWindowState>,
+    command: CommandId,
+) {
+    <ImeSmokeDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut ImeSmokeDriver,
+    context: WinitEventContext<'_, ImeSmokeWindowState>,
+    event: &Event,
+) {
+    <ImeSmokeDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(driver: &mut ImeSmokeDriver, context: WinitRenderContext<'_, ImeSmokeWindowState>) {
+    <ImeSmokeDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut ImeSmokeDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <ImeSmokeDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+fn window_created(
+    driver: &mut ImeSmokeDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    <ImeSmokeDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        ImeSmokeDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+        hooks.window_created = Some(window_created);
+    })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -311,6 +402,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = ImeSmokeDriver::default();
+    let driver = build_driver();
     crate::run_native_with_compat_driver(config, app, driver).context("run ime_smoke_demo app")
 }

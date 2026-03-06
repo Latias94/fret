@@ -11,9 +11,9 @@ use fret_docking::{
     render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    DevStateExport, DevStateHook, DevStateHooks, WindowCreateSpec, WinitAppDriver,
-    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    DevStateExport, DevStateHook, DevStateHooks, FnDriver, WindowCreateSpec, WinitAppDriver,
+    WinitCommandContext, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
@@ -751,6 +751,208 @@ impl WinitAppDriver for DockingDemoDriver {
     }
 }
 
+fn init(driver: &mut DockingDemoDriver, app: &mut App, main_window: AppWindowId) {
+    <DockingDemoDriver as WinitAppDriver>::init(driver, app, main_window)
+}
+
+fn create_window_state(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DockingDemoWindowState {
+    <DockingDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut DockingDemoDriver,
+    context: WinitHotReloadContext<'_, DockingDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <DockingDemoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn handle_model_changes(
+    driver: &mut DockingDemoDriver,
+    context: WinitWindowContext<'_, DockingDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <DockingDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut DockingDemoDriver,
+    context: WinitWindowContext<'_, DockingDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <DockingDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut DockingDemoDriver,
+    context: WinitCommandContext<'_, DockingDemoWindowState>,
+    command: CommandId,
+) {
+    <DockingDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut DockingDemoDriver,
+    context: WinitEventContext<'_, DockingDemoWindowState>,
+    event: &Event,
+) {
+    <DockingDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn dock_op(driver: &mut DockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
+    <DockingDemoDriver as WinitAppDriver>::dock_op(driver, app, op)
+}
+
+fn render(driver: &mut DockingDemoDriver, context: WinitRenderContext<'_, DockingDemoWindowState>) {
+    <DockingDemoDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <DockingDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+fn window_created(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    <DockingDemoDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
+}
+
+fn before_close_window(driver: &mut DockingDemoDriver, app: &mut App, window: AppWindowId) -> bool {
+    <DockingDemoDriver as WinitAppDriver>::before_close_window(driver, app, window)
+}
+
+fn accessibility_snapshot(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_snapshot(driver, app, window, state)
+}
+
+fn accessibility_focus(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_focus(driver, app, window, state, target)
+}
+
+fn accessibility_invoke(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_invoke(
+        driver, app, services, window, state, target,
+    )
+}
+
+fn accessibility_set_value_text(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_set_value_text(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+fn accessibility_set_value_numeric(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: f64,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_set_value_numeric(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+fn accessibility_set_text_selection(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_set_text_selection(
+        driver, app, services, window, state, target, anchor, focus,
+    )
+}
+
+fn accessibility_replace_selected_text(
+    driver: &mut DockingDemoDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingDemoWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    <DockingDemoDriver as WinitAppDriver>::accessibility_replace_selected_text(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        DockingDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_init(init)
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.dock_op = Some(dock_op);
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+        hooks.window_created = Some(window_created);
+        hooks.before_close_window = Some(before_close_window);
+        hooks.accessibility_snapshot = Some(accessibility_snapshot);
+        hooks.accessibility_focus = Some(accessibility_focus);
+        hooks.accessibility_invoke = Some(accessibility_invoke);
+        hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
+        hooks.accessibility_set_value_numeric = Some(accessibility_set_value_numeric);
+        hooks.accessibility_set_text_selection = Some(accessibility_set_text_selection);
+        hooks.accessibility_replace_selected_text = Some(accessibility_replace_selected_text);
+    })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -807,6 +1009,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = DockingDemoDriver::default();
+    let driver = build_driver();
     fret::run_native_with_compat_driver(config, app, driver).context("run docking_demo app")
 }
