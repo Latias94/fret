@@ -162,7 +162,9 @@ First landing in this worktree:
   selection restore writes, now via a shared cancel reducer that keeps the Escape-vs-pointer-cancel
   node-drag semantics explicit,
 - pointer-driven layout/paint follow-up effects (`invalidate` / `notify` / `request_redraw`) now
-  route through dedicated helpers so reducer extraction does not duplicate host-side bookkeeping.
+  route through dedicated helpers so reducer extraction does not duplicate host-side bookkeeping,
+- keyboard capture now parses explicit declarative diag/zoom actions, so `Escape`, diagnostics
+  digits, and keyboard zoom no longer depend on one monolithic closure branch.
 
 ### Slice 3 - portal and overlay closure
 

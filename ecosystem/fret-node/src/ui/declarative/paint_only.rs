@@ -1439,6 +1439,293 @@ fn finish_declarative_pointer_session_action_host<H>(
     invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarativeDiagViewPreset {
+    CenteredSelectionOnDrag,
+    OffsetPartialMarquee,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarativeDiagKeyAction {
+    NudgeVisibleNode,
+    NormalizeVisibleNodeCentered,
+    NormalizeVisibleNodeForMarquee,
+    ArmFitToPortals,
+    DisablePortals,
+    EnablePortals,
+    TogglePaintOverrides,
+}
+
+impl DeclarativeDiagKeyAction {
+    fn from_key(enabled: bool, key: fret_core::KeyCode) -> Option<Self> {
+        if !enabled {
+            return None;
+        }
+
+        match key {
+            fret_core::KeyCode::Digit3 => Some(Self::NudgeVisibleNode),
+            fret_core::KeyCode::Digit4 => Some(Self::NormalizeVisibleNodeCentered),
+            fret_core::KeyCode::Digit5 => Some(Self::NormalizeVisibleNodeForMarquee),
+            fret_core::KeyCode::Digit9 => Some(Self::ArmFitToPortals),
+            fret_core::KeyCode::Digit8 => Some(Self::DisablePortals),
+            fret_core::KeyCode::Digit7 => Some(Self::EnablePortals),
+            fret_core::KeyCode::Digit6 => Some(Self::TogglePaintOverrides),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarativeKeyboardZoomAction {
+    ZoomIn,
+    ZoomOut,
+    Reset,
+}
+
+impl DeclarativeKeyboardZoomAction {
+    fn from_key(key: fret_core::KeyCode) -> Option<Self> {
+        match key {
+            fret_core::KeyCode::Equal
+            | fret_core::KeyCode::NumpadAdd
+            | fret_core::KeyCode::Digit1 => Some(Self::ZoomIn),
+            fret_core::KeyCode::Minus
+            | fret_core::KeyCode::NumpadSubtract
+            | fret_core::KeyCode::Digit2 => Some(Self::ZoomOut),
+            fret_core::KeyCode::Digit0 | fret_core::KeyCode::Numpad0 => Some(Self::Reset),
+            _ => None,
+        }
+    }
+}
+
+fn handle_declarative_escape_key_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+) -> bool {
+    escape_cancel_declarative_interactions_action_host(
+        host,
+        drag,
+        marquee,
+        node_drag,
+        pending_selection,
+    )
+}
+
+fn commit_diag_graph_transaction_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    build_tx: fn(&Graph) -> GraphTransaction,
+) -> bool {
+    let tx = host.models_mut().read(graph, build_tx).ok();
+    if let Some(tx) = tx.as_ref() {
+        let _ = commit_graph_transaction(host, graph, view_state, controller, store, tx);
+    }
+    true
+}
+
+fn apply_declarative_diag_view_preset_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    preset: DeclarativeDiagViewPreset,
+) -> bool {
+    update_view_state_action_host(host, view_state, controller, store, |state| {
+        match preset {
+            DeclarativeDiagViewPreset::CenteredSelectionOnDrag => {
+                state.pan.x = 380.0;
+                state.pan.y = 290.0;
+                state.zoom = 1.0;
+                state.interaction.selection_on_drag = true;
+            }
+            DeclarativeDiagViewPreset::OffsetPartialMarquee => {
+                state.pan.x = 540.0;
+                state.pan.y = 290.0;
+                state.zoom = 1.0;
+                state.interaction.selection_on_drag = true;
+                state.interaction.selection_mode = crate::io::NodeGraphSelectionMode::Partial;
+            }
+        }
+        state.selected_nodes.clear();
+        state.selected_edges.clear();
+        state.selected_groups.clear();
+    })
+}
+
+fn toggle_diag_paint_overrides_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    graph: &Model<Graph>,
+    diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
+    diag_paint_overrides_enabled: &Model<bool>,
+) -> bool {
+    let enable_next = host
+        .models_mut()
+        .read(diag_paint_overrides_enabled, |state| !*state)
+        .ok()
+        .unwrap_or(true);
+    let _ = host
+        .models_mut()
+        .update(diag_paint_overrides_enabled, |state| *state = enable_next);
+
+    let edge_id = host
+        .models_mut()
+        .read(graph, |graph| graph.edges.keys().next().copied())
+        .ok()
+        .flatten();
+
+    if let Some(edge_id) = edge_id {
+        if enable_next {
+            let mut stops = [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
+            stops[0] = GradientStop::new(0.0, Color::from_srgb_hex_rgb(0xff_3b_30));
+            stops[1] = GradientStop::new(1.0, Color::from_srgb_hex_rgb(0x34_c7_59));
+            let gradient = LinearGradient {
+                start: Point::new(Px(0.0), Px(0.0)),
+                end: Point::new(Px(240.0), Px(0.0)),
+                tile_mode: TileMode::Clamp,
+                color_space: ColorSpace::Srgb,
+                stop_count: 2,
+                stops,
+            };
+            let paint = PaintBindingV1::with_eval_space(
+                Paint::LinearGradient(gradient),
+                PaintEvalSpaceV1::ViewportPx,
+            );
+            diag_paint_overrides.set_edge_override(
+                edge_id,
+                Some(
+                    crate::ui::paint_overrides::EdgePaintOverrideV1 {
+                        dash: Some(DashPatternV1::new(Px(8.0), Px(4.0), Px(0.0))),
+                        stroke_width_mul: Some(1.6),
+                        stroke_paint: Some(paint),
+                    }
+                    .normalized(),
+                ),
+            );
+        } else {
+            diag_paint_overrides.set_edge_override(edge_id, None);
+        }
+    }
+
+    true
+}
+
+fn handle_declarative_diag_key_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action: DeclarativeDiagKeyAction,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    portal_bounds_store: &Model<PortalBoundsStore>,
+    portal_debug_flags: &Model<PortalDebugFlags>,
+    diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
+    diag_paint_overrides_enabled: &Model<bool>,
+) -> bool {
+    match action {
+        DeclarativeDiagKeyAction::NudgeVisibleNode => commit_diag_graph_transaction_action_host(
+            host,
+            graph,
+            view_state,
+            controller,
+            store,
+            build_diag_nudge_visible_node_transaction,
+        ),
+        DeclarativeDiagKeyAction::NormalizeVisibleNodeCentered => {
+            commit_diag_graph_transaction_action_host(
+                host,
+                graph,
+                view_state,
+                controller,
+                store,
+                build_diag_normalize_visible_node_transaction,
+            );
+            let _ = apply_declarative_diag_view_preset_action_host(
+                host,
+                view_state,
+                controller,
+                store,
+                DeclarativeDiagViewPreset::CenteredSelectionOnDrag,
+            );
+            true
+        }
+        DeclarativeDiagKeyAction::NormalizeVisibleNodeForMarquee => {
+            commit_diag_graph_transaction_action_host(
+                host,
+                graph,
+                view_state,
+                controller,
+                store,
+                build_diag_normalize_visible_node_transaction,
+            );
+            let _ = apply_declarative_diag_view_preset_action_host(
+                host,
+                view_state,
+                controller,
+                store,
+                DeclarativeDiagViewPreset::OffsetPartialMarquee,
+            );
+            true
+        }
+        DeclarativeDiagKeyAction::ArmFitToPortals => {
+            let _ = host.models_mut().update(portal_bounds_store, |state| {
+                state.pending_fit_to_portals = true;
+            });
+            true
+        }
+        DeclarativeDiagKeyAction::DisablePortals => {
+            let _ = host.models_mut().update(portal_debug_flags, |state| {
+                state.disable_portals = true;
+            });
+            let _ = host.models_mut().update(portal_bounds_store, |state| {
+                state.nodes_canvas_bounds.clear();
+                state.pending_fit_to_portals = false;
+            });
+            true
+        }
+        DeclarativeDiagKeyAction::EnablePortals => {
+            let _ = host.models_mut().update(portal_debug_flags, |state| {
+                state.disable_portals = false;
+            });
+            true
+        }
+        DeclarativeDiagKeyAction::TogglePaintOverrides => toggle_diag_paint_overrides_action_host(
+            host,
+            graph,
+            diag_paint_overrides,
+            diag_paint_overrides_enabled,
+        ),
+    }
+}
+
+fn handle_declarative_keyboard_zoom_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action: DeclarativeKeyboardZoomAction,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    min_zoom: f32,
+    max_zoom: f32,
+) -> bool {
+    const KB_ZOOM_STEP_MUL: f32 = 1.1;
+    update_view_state_action_host(host, view_state, controller, store, |state| {
+        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+        state.zoom = match action {
+            DeclarativeKeyboardZoomAction::ZoomIn => {
+                (zoom * KB_ZOOM_STEP_MUL).clamp(min_zoom, max_zoom)
+            }
+            DeclarativeKeyboardZoomAction::ZoomOut => {
+                (zoom * (1.0 / KB_ZOOM_STEP_MUL)).clamp(min_zoom, max_zoom)
+            }
+            DeclarativeKeyboardZoomAction::Reset => 1.0,
+        };
+    })
+}
+
 fn hit_test_node_at_point(
     view: PanZoom2D,
     bounds: Rect,
@@ -2486,272 +2773,60 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     }
 
                     if key.key == fret_core::KeyCode::Escape {
-                        if !escape_cancel_declarative_interactions_action_host(
+                        let handled = handle_declarative_escape_key_action_host(
                             host,
                             &drag_escape,
                             &marquee_escape,
                             &node_drag_escape,
                             &pending_selection_escape,
-                        ) {
-                            return false;
+                        );
+                        if handled {
+                            host.request_redraw(action_cx.window);
                         }
-                        host.request_redraw(action_cx.window);
-                        return true;
+                        return handled;
                     }
 
                     if !(key.modifiers.ctrl || key.modifiers.meta) {
                         return false;
                     }
 
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit3 {
-                        // Diagnostics-only: a deterministic graph mutation to validate that
-                        // geometry caches rebuild on graph revision changes (without relying on
-                        // demo command routing).
-                        let tx = host
-                            .models_mut()
-                            .read(&graph_debug, build_diag_nudge_visible_node_transaction)
-                            .ok();
-                        if let Some(tx) = tx.as_ref() {
-                            let _ = commit_graph_transaction(
-                                host,
-                                &graph_debug,
-                                &view_zoom_kb,
-                                controller_zoom_kb.as_ref(),
-                                store_zoom_kb.as_ref(),
-                                tx,
-                            );
-                        }
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit4 {
-                        // Diagnostics-only: normalize the graph/view so scripted hit tests can be
-                        // deterministic without relying on demo-specific command routing.
-                        //
-                        // - Move one visible node to (0,0) with a stable size.
-                        // - Hide all other nodes to avoid ambiguity.
-                        // - Set a deterministic pan so the node center lands at window center for
-                        //   the demo's default 980x720 config.
-                        let tx = host
-                            .models_mut()
-                            .read(&graph_debug, build_diag_normalize_visible_node_transaction)
-                            .ok();
-                        if let Some(tx) = tx.as_ref() {
-                            let _ = commit_graph_transaction(
-                                host,
-                                &graph_debug,
-                                &view_zoom_kb,
-                                controller_zoom_kb.as_ref(),
-                                store_zoom_kb.as_ref(),
-                                tx,
-                            );
-                        }
-
-                        let _ = update_view_state_action_host(
+                    if let Some(action) =
+                        DeclarativeDiagKeyAction::from_key(diag_keys_enabled, key.key)
+                    {
+                        let handled = handle_declarative_diag_key_action_host(
                             host,
+                            action,
+                            &graph_debug,
                             &view_zoom_kb,
                             controller_zoom_kb.as_ref(),
                             store_zoom_kb.as_ref(),
-                            |s| {
-                            s.pan.x = 380.0;
-                            s.pan.y = 290.0;
-                            s.zoom = 1.0;
-                            // `diag.script_v2` cannot currently synthesize pointer-modifier combos,
-                            // so enable selection-on-drag to make marquee tests deterministic.
-                            s.interaction.selection_on_drag = true;
-                            s.selected_nodes.clear();
-                            s.selected_edges.clear();
-                            s.selected_groups.clear();
-                            },
+                            &portal_bounds_for_fit,
+                            &portal_debug_for_keys,
+                            &diag_paint_overrides_for_keys,
+                            &diag_paint_overrides_enabled_for_keys,
                         );
-
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit5 {
-                        // Diagnostics-only: place the normalized node slightly away from the canvas
-                        // center so scripted marquee selection can start from the center (empty
-                        // space) and intersect the node via a deterministic drag.
-                        let tx = host
-                            .models_mut()
-                            .read(&graph_debug, build_diag_normalize_visible_node_transaction)
-                            .ok();
-                        if let Some(tx) = tx.as_ref() {
-                            let _ = commit_graph_transaction(
-                                host,
-                                &graph_debug,
-                                &view_zoom_kb,
-                                controller_zoom_kb.as_ref(),
-                                store_zoom_kb.as_ref(),
-                                tx,
-                            );
+                        if handled {
+                            host.request_redraw(action_cx.window);
                         }
-
-                        let _ = update_view_state_action_host(
-                            host,
-                            &view_zoom_kb,
-                            controller_zoom_kb.as_ref(),
-                            store_zoom_kb.as_ref(),
-                            |s| {
-                            // Shift pan.x so the node no longer covers the canvas center.
-                            s.pan.x = 540.0;
-                            s.pan.y = 290.0;
-                            s.zoom = 1.0;
-                            s.interaction.selection_on_drag = true;
-                            // Use partial selection so the scripted drag only needs to intersect.
-                            s.interaction.selection_mode =
-                                crate::io::NodeGraphSelectionMode::Partial;
-                            s.selected_nodes.clear();
-                            s.selected_edges.clear();
-                            s.selected_groups.clear();
-                            },
-                        );
-
-                        host.request_redraw(action_cx.window);
-                        return true;
+                        return handled;
                     }
 
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit9 {
-                        // Portal bounds are frame-lagged by contract and canvas bounds are only
-                        // learned after layout. Arm a pending fit request and let the paint pass
-                        // apply it deterministically once the prerequisites are available.
-                        let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
-                            st.pending_fit_to_portals = true;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit8 {
-                        let _ = host.models_mut().update(&portal_debug_for_keys, |st| {
-                            st.disable_portals = true;
-                        });
-                        // Ensure consumers don't keep using stale portal bounds.
-                        let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
-                            st.nodes_canvas_bounds.clear();
-                            st.pending_fit_to_portals = false;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit7 {
-                        let _ = host.models_mut().update(&portal_debug_for_keys, |st| {
-                            st.disable_portals = false;
-                        });
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit6 {
-                        let enable_next = host
-                            .models_mut()
-                            .read(&diag_paint_overrides_enabled_for_keys, |st| *st)
-                            .ok()
-                            .unwrap_or(false);
-                        let enable_next = !enable_next;
-                        let _ = host
-                            .models_mut()
-                            .update(&diag_paint_overrides_enabled_for_keys, |st| {
-                                *st = enable_next;
-                            });
-
-                        let (edge_id, _node_id) = host
-                            .models_mut()
-                            .read(&graph_debug, |g| {
-                                let edge = g.edges.keys().next().copied();
-                                let node = g
-                                    .nodes
-                                    .iter()
-                                    .find_map(|(id, n)| (!n.hidden).then_some(*id));
-                                (edge, node)
-                            })
-                            .ok()
-                            .unwrap_or((None, None));
-
-                        if let Some(edge_id) = edge_id {
-                            if enable_next {
-                                let mut stops =
-                                    [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
-                                stops[0] =
-                                    GradientStop::new(0.0, Color::from_srgb_hex_rgb(0xff_3b_30));
-                                stops[1] =
-                                    GradientStop::new(1.0, Color::from_srgb_hex_rgb(0x34_c7_59));
-                                let gradient = LinearGradient {
-                                    start: Point::new(Px(0.0), Px(0.0)),
-                                    end: Point::new(Px(240.0), Px(0.0)),
-                                    tile_mode: TileMode::Clamp,
-                                    color_space: ColorSpace::Srgb,
-                                    stop_count: 2,
-                                    stops,
-                                };
-                                let paint = PaintBindingV1::with_eval_space(
-                                    Paint::LinearGradient(gradient),
-                                    PaintEvalSpaceV1::ViewportPx,
-                                );
-                                diag_paint_overrides_for_keys.set_edge_override(
-                                    edge_id,
-                                    Some(
-                                        crate::ui::paint_overrides::EdgePaintOverrideV1 {
-                                            dash: Some(DashPatternV1::new(
-                                                Px(8.0),
-                                                Px(4.0),
-                                                Px(0.0),
-                                            )),
-                                            stroke_width_mul: Some(1.6),
-                                            stroke_paint: Some(paint),
-                                        }
-                                        .normalized(),
-                                    ),
-                                );
-                            } else {
-                                diag_paint_overrides_for_keys.set_edge_override(edge_id, None);
-                            }
-                        }
-
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    const KB_ZOOM_STEP_MUL: f32 = 1.1;
-                    let (factor, reset) = match key.key {
-                        fret_core::KeyCode::Equal | fret_core::KeyCode::NumpadAdd => {
-                            (KB_ZOOM_STEP_MUL, false)
-                        }
-                        fret_core::KeyCode::Minus | fret_core::KeyCode::NumpadSubtract => {
-                            (1.0 / KB_ZOOM_STEP_MUL, false)
-                        }
-                        // Diagnostics-friendly fallbacks (only digits are guaranteed to parse in
-                        // `diag.script_v2` key synthesis today).
-                        fret_core::KeyCode::Digit1 => (KB_ZOOM_STEP_MUL, false),
-                        fret_core::KeyCode::Digit2 => (1.0 / KB_ZOOM_STEP_MUL, false),
-                        fret_core::KeyCode::Digit0 | fret_core::KeyCode::Numpad0 => (1.0, true),
-                        _ => return false,
+                    let Some(action) = DeclarativeKeyboardZoomAction::from_key(key.key) else {
+                        return false;
                     };
-
-                    let updated = update_view_state_action_host(
+                    let handled = handle_declarative_keyboard_zoom_action_host(
                         host,
+                        action,
                         &view_zoom_kb,
                         controller_zoom_kb.as_ref(),
                         store_zoom_kb.as_ref(),
-                        |state| {
-                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                            let new_zoom = if reset {
-                                1.0
-                            } else {
-                                (zoom * factor).clamp(min_zoom, max_zoom)
-                            };
-                            state.zoom = new_zoom;
-                        },
+                        min_zoom,
+                        max_zoom,
                     );
-                    if !updated {
-                        return false;
+                    if handled {
+                        host.request_redraw(action_cx.window);
                     }
-
-                    host.request_redraw(action_cx.window);
-                    true
+                    handled
                 },
             );
             cx.key_on_key_down_capture_for(element, on_key_down_capture);
@@ -4114,15 +4189,19 @@ mod tests {
     use fret_ui::action::UiActionHost;
 
     use super::{
+        DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
         DragState, LeftPointerReleaseOutcome, MarqueeDragState, NodeDragPhase, NodeDragState,
-        PendingSelectionState, build_click_selection_preview_nodes,
+        PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
+        apply_declarative_diag_view_preset_action_host, build_click_selection_preview_nodes,
         build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
         build_marquee_preview_selected_nodes, build_node_drag_transaction,
         commit_graph_transaction, commit_marquee_selection_action_host,
         commit_node_drag_transaction, commit_pending_selection_action_host,
         complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
-        escape_cancel_declarative_interactions_action_host, node_drag_commit_delta,
-        pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
+        escape_cancel_declarative_interactions_action_host,
+        handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
+        node_drag_commit_delta, pointer_cancel_declarative_interactions_action_host,
+        pointer_crossed_threshold,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
@@ -4136,6 +4215,7 @@ mod tests {
     use crate::runtime::changes::NodeGraphChanges;
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::NodeGraphController;
+    use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
     use serde_json::Value;
 
     #[derive(Default)]
@@ -4867,6 +4947,169 @@ mod tests {
                 .read(&pending, |state| state.is_none())
                 .expect("pending readable")
         );
+    }
+
+    #[test]
+    fn declarative_diag_key_action_from_key_gates_on_diag_toggle() {
+        assert_eq!(
+            DeclarativeDiagKeyAction::from_key(false, fret_core::KeyCode::Digit3),
+            None
+        );
+        assert_eq!(
+            DeclarativeDiagKeyAction::from_key(true, fret_core::KeyCode::Digit3),
+            Some(DeclarativeDiagKeyAction::NudgeVisibleNode)
+        );
+        assert_eq!(
+            DeclarativeKeyboardZoomAction::from_key(fret_core::KeyCode::Digit0),
+            Some(DeclarativeKeyboardZoomAction::Reset)
+        );
+    }
+
+    #[test]
+    fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_selection() {
+        let mut host = TestActionHostImpl::default();
+        let view_state = host.models.insert(NodeGraphViewState {
+            zoom: 2.5,
+            selected_nodes: vec![NodeId::from_u128(9964)],
+            selected_edges: vec![EdgeId::new()],
+            selected_groups: vec![GroupId::new()],
+            ..Default::default()
+        });
+
+        assert!(apply_declarative_diag_view_preset_action_host(
+            &mut host,
+            &view_state,
+            None,
+            None,
+            DeclarativeDiagViewPreset::OffsetPartialMarquee,
+        ));
+        host.models
+            .read(&view_state, |state| {
+                assert_eq!(state.pan.x, 540.0);
+                assert_eq!(state.pan.y, 290.0);
+                assert_eq!(state.zoom, 1.0);
+                assert!(state.interaction.selection_on_drag);
+                assert_eq!(
+                    state.interaction.selection_mode,
+                    crate::io::NodeGraphSelectionMode::Partial
+                );
+                assert!(state.selected_nodes.is_empty());
+                assert!(state.selected_edges.is_empty());
+                assert!(state.selected_groups.is_empty());
+            })
+            .expect("view readable");
+    }
+
+    #[test]
+    fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_and_bounds() {
+        let mut host = TestActionHostImpl::default();
+        let graph = host.models.insert(Graph::default());
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state.nodes_canvas_bounds.insert(
+            NodeId::from_u128(9965),
+            Rect::new(
+                Point::new(Px(1.0), Px(2.0)),
+                fret_core::Size::new(Px(3.0), Px(4.0)),
+            ),
+        );
+        let portal_bounds = host.models.insert(portal_bounds_state);
+        let portal_debug = host.models.insert(PortalDebugFlags::default());
+        let diag_paint_overrides_enabled = host.models.insert(false);
+        let diag_paint_overrides = Arc::new(NodeGraphPaintOverridesMap::default());
+
+        assert!(handle_declarative_diag_key_action_host(
+            &mut host,
+            DeclarativeDiagKeyAction::DisablePortals,
+            &graph,
+            &view_state,
+            None,
+            None,
+            &portal_bounds,
+            &portal_debug,
+            &diag_paint_overrides,
+            &diag_paint_overrides_enabled,
+        ));
+        assert!(
+            host.models
+                .read(&portal_debug, |state| state.disable_portals)
+                .expect("portal debug readable")
+        );
+        host.models
+            .read(&portal_bounds, |state| {
+                assert!(!state.pending_fit_to_portals);
+                assert!(state.nodes_canvas_bounds.is_empty());
+            })
+            .expect("portal bounds readable");
+    }
+
+    #[test]
+    fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
+        let mut host = TestActionHostImpl::default();
+        let view_state = host.models.insert(NodeGraphViewState {
+            zoom: 2.5,
+            ..Default::default()
+        });
+
+        assert!(handle_declarative_keyboard_zoom_action_host(
+            &mut host,
+            DeclarativeKeyboardZoomAction::Reset,
+            &view_state,
+            None,
+            None,
+            0.1,
+            8.0,
+        ));
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.zoom)
+                .expect("view readable"),
+            1.0
+        );
+    }
+
+    #[test]
+    fn handle_declarative_diag_key_action_host_toggle_paint_overrides_sets_first_edge_override() {
+        let mut host = TestActionHostImpl::default();
+        let edge_id = EdgeId::new();
+        let mut graph_value = Graph::new(GraphId::new());
+        graph_value.edges.insert(
+            edge_id,
+            crate::core::Edge {
+                kind: crate::core::EdgeKind::Data,
+                from: crate::core::PortId::new(),
+                to: crate::core::PortId::new(),
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let graph = host.models.insert(graph_value);
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let portal_bounds = host.models.insert(PortalBoundsStore::default());
+        let portal_debug = host.models.insert(PortalDebugFlags::default());
+        let diag_paint_overrides_enabled = host.models.insert(false);
+        let diag_paint_overrides = Arc::new(NodeGraphPaintOverridesMap::default());
+
+        assert!(handle_declarative_diag_key_action_host(
+            &mut host,
+            DeclarativeDiagKeyAction::TogglePaintOverrides,
+            &graph,
+            &view_state,
+            None,
+            None,
+            &portal_bounds,
+            &portal_debug,
+            &diag_paint_overrides,
+            &diag_paint_overrides_enabled,
+        ));
+        assert!(
+            host.models
+                .read(&diag_paint_overrides_enabled, |state| *state)
+                .expect("flag readable")
+        );
+        assert!(diag_paint_overrides.edge_paint_override(edge_id).is_some());
     }
 
     #[test]

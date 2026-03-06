@@ -217,6 +217,9 @@ points rather than direct graph mutation.
   - Declarative Escape / pointer-cancel cleanup now shares a mode-aware transient reducer, while
     pointer post-event invalidation/notify/redraw bookkeeping goes through dedicated helpers, with
     focused tests covering the already-canceled node-drag divergence.
+  - Declarative keydown capture now dispatches through explicit diag/zoom action helpers, with
+    focused tests covering diag-key parsing, diag view presets, portal-disable cleanup, zoom
+    reset, and paint-override toggling.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -265,6 +268,8 @@ points rather than direct graph mutation.
 - left-release arbitration gates for pending-only, inactive-toggle-marquee, and no-state releases
 - cancel reducer + pointer session helper gates for Escape-vs-pointer-cancel divergence around
   already-canceled node drags
+- keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom
+  reset, and paint-override toggling
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors
