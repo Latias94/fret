@@ -47,12 +47,28 @@ pub fn with_current_color_provider<H: UiHost, R>(
     out
 }
 
-/// Returns a layout-transparent wrapper element that installs `color` as the inherited foreground
-/// for the subtree (v2).
+/// Returns a wrapper element that installs `color` as the inherited foreground for one explicit
+/// layout subtree (v2).
 ///
-/// This is the preferred API for new code: it avoids the “pre-built `AnyElement` misses inherited
-/// state” pitfall by encoding the inheritance boundary into the element tree rather than the
-/// build-time `ElementContext` stack.
+/// Prefer this helper when you already have a concrete layout root (for example a row/column/
+/// container) and want to avoid accidentally treating `ForegroundScope` like a layout fragment.
+#[track_caller]
+pub fn scope_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: ColorRef,
+    child: fret_ui::element::AnyElement,
+) -> fret_ui::element::AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let fg = color.resolve(theme);
+    cx.foreground_scope(fg, move |_cx| vec![child])
+}
+
+/// Returns a foreground scope wrapper around the children returned by `f`.
+///
+/// Important: `ForegroundScope` is paint-only and input-transparent, but it is **not** a layout
+/// fragment. When `f` returns multiple siblings, they are laid out inside the wrapper's own
+/// passthrough box rather than participating directly in the parent flow. Callers that need normal
+/// row/column flow should first build an explicit layout root and then use [`scope_element`].
 #[track_caller]
 pub fn scope_children<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,

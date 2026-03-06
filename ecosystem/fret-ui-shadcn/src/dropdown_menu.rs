@@ -1294,136 +1294,151 @@ fn checkable_menu_row_children<H: UiHost>(
                 ..Default::default()
             },
             move |cx| {
-                current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
-                    let indicator = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: fret_ui::element::PositionStyle::Absolute,
-                                inset: {
-                                    let mut inset = fret_ui::element::InsetStyle {
-                                        top: Some(Px(0.0)).into(),
-                                        right: None.into(),
-                                        bottom: Some(Px(0.0)).into(),
-                                        left: None.into(),
-                                    };
-                                    // new-york-v4: indicator slot uses `left-2`.
-                                    rtl::inset_style_set_inline_start(&mut inset, dir, pad_x);
-                                    inset
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(16.0)),
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
+                let indicator = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            position: fret_ui::element::PositionStyle::Absolute,
+                            inset: {
+                                let mut inset = fret_ui::element::InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: None.into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: None.into(),
+                                };
+                                // new-york-v4: indicator slot uses `left-2`.
+                                rtl::inset_style_set_inline_start(&mut inset, dir, pad_x);
+                                inset
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(16.0)),
+                                height: Length::Fill,
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle::default(),
-                                    direction: fret_core::Axis::Horizontal,
-                                    gap: Px(0.0).into(),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    if !indicator_on {
-                                        return Vec::new();
-                                    }
-
-                                    match indicator_kind {
-                                        CheckableIndicatorKind::Check => {
-                                            vec![decl_icon::icon_with(
-                                                cx,
-                                                ids::ui::CHECK,
-                                                Some(Px(16.0)),
-                                                Some(ColorRef::Color(indicator_fg)),
-                                            )]
-                                        }
-                                        CheckableIndicatorKind::RadioDot => vec![cx.container(
-                                            ContainerProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Px(Px(8.0));
-                                                    layout.size.height = Length::Px(Px(8.0));
-                                                    layout
-                                                },
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                background: Some(indicator_fg),
-                                                shadow: None,
-                                                border: Edges::all(Px(0.0)),
-                                                border_color: None,
-                                                corner_radii: fret_core::Corners::all(Px(999.0)),
-                                                ..Default::default()
-                                            },
-                                            |_cx| Vec::new(),
-                                        )],
-                                    }
-                                },
-                            )]
-                        },
-                    );
-
-                    let mut row: Vec<AnyElement> = Vec::with_capacity(
-                        2 + usize::from(
-                            leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
-                        ) + usize::from(trailing.is_some()),
-                    );
-
-                    if let Some(l) = leading {
-                        row.push(menu_icon_slot(cx, l));
-                    } else if let Some(icon) = leading_icon {
-                        let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                        row.push(menu_icon_slot(cx, icon_el));
-                    } else if reserve_leading_slot {
-                        row.push(menu_icon_slot_empty(cx));
-                    }
-
-                    let style = text_style.clone();
-                    let mut text = ui::text(label.clone())
-                        .layout(LayoutRefinement::default().min_w_0().flex_1())
-                        .text_size_px(style.size)
-                        .font_weight(style.weight)
-                        .nowrap()
-                        .text_color(ColorRef::Color(effective_fg));
-
-                    if let Some(line_height) = style.line_height {
-                        text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-                    }
-
-                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                        text = text.letter_spacing_em(letter_spacing_em);
-                    }
-
-                    row.push(text.into_element(cx));
-
-                    if let Some(t) = trailing {
-                        row.push(t);
-                    }
-
-                    let content = cx.flex(
-                        FlexProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                wrap: false,
                             },
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(8.0).into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |_cx| row,
-                    );
+                            move |cx| {
+                                if !indicator_on {
+                                    return Vec::new();
+                                }
 
-                    vec![content, indicator]
-                })
+                                match indicator_kind {
+                                    CheckableIndicatorKind::Check => {
+                                        vec![decl_icon::icon_with(
+                                            cx,
+                                            ids::ui::CHECK,
+                                            Some(Px(16.0)),
+                                            Some(ColorRef::Color(indicator_fg)),
+                                        )]
+                                    }
+                                    CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(8.0));
+                                                layout.size.height = Length::Px(Px(8.0));
+                                                layout
+                                            },
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            background: Some(indicator_fg),
+                                            shadow: None,
+                                            border: Edges::all(Px(0.0)),
+                                            border_color: None,
+                                            corner_radii: fret_core::Corners::all(Px(999.0)),
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    )],
+                                }
+                            },
+                        )]
+                    },
+                );
+
+                let mut row: Vec<AnyElement> = Vec::with_capacity(
+                    2 + usize::from(
+                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                    ) + usize::from(trailing.is_some()),
+                );
+
+                if let Some(l) = leading {
+                    row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
+                } else if reserve_leading_slot {
+                    row.push(menu_icon_slot_empty(cx));
+                }
+
+                let style = text_style.clone();
+                let mut text = ui::text(label.clone())
+                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                    .text_size_px(style.size)
+                    .font_weight(style.weight)
+                    .nowrap()
+                    .text_color(ColorRef::Color(effective_fg));
+
+                if let Some(line_height) = style.line_height {
+                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                }
+
+                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
+
+                row.push(text.into_element(cx));
+
+                if let Some(t) = trailing {
+                    row.push(t);
+                }
+
+                let content = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| row,
+                );
+
+                let root = cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |_cx| vec![content, indicator],
+                );
+
+                vec![current_color::scope_element(
+                    cx,
+                    ColorRef::Color(effective_fg),
+                    root,
+                )]
             },
         ),
     ]

@@ -751,8 +751,15 @@ impl Command {
                 theme.color_token("popover-foreground"),
             )
         };
-        let children =
-            current_color::scope_children(cx, ColorRef::Color(fg_root), move |_cx| self.children);
+        let content = ui::v_flex(move |_cx| self.children)
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+        let children = vec![current_color::scope_element(
+            cx,
+            ColorRef::Color(fg_root),
+            content,
+        )];
         shadcn_layout::container_flow_fill_width(cx, props, children)
     }
 }
