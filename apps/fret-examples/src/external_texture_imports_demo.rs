@@ -853,7 +853,7 @@ fn record_engine_frame(
         }
         #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
         ExternalTextureImportsMode::Dx12ClearSharedAllocation => {
-            let guard = match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::begin(
+            let guard = match fret_launch::dx12::Dx12SharedAllocationWriteGuard::begin(
                 context,
                 texture,
                 wgpu::wgt::TextureUses::COLOR_TARGET,

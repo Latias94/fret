@@ -15,7 +15,7 @@ use fret_ui::{ElementContext, Invalidation, Theme};
 use std::time::{Duration, Instant};
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
-use fret_launch::runner::apple_avfoundation_video as avf;
+use fret_launch::apple_avfoundation_video as avf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExternalVideoImportsMode {

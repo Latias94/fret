@@ -24,7 +24,7 @@ fn env_flag_default_false(name: &str) -> bool {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
-use fret_launch::runner::windows_mf_video as wmf;
+use fret_launch::windows_mf_video as wmf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExternalVideoImportsMode {
