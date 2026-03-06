@@ -41,3 +41,12 @@ Example:
 - generates bounded AI-only share zips under `<root>/share/*.ai.zip`,
 - writes `<root>/share/share.manifest.json` so maintainers, DevTools, and future GUI flows can
   treat one directory as the stable handoff surface.
+
+Automatic failure evidence:
+
+- `diag campaign run` now best-effort exports `share/share.manifest.json` automatically for failed
+  campaign roots when `regression.summary.json` is available,
+- filtered or multi-id campaign batches also best-effort export a batch-level
+  `share/share.manifest.json` when any selected campaign fails,
+- campaign and batch result manifests record `aggregate.share_manifest_path` plus `share_error`
+  when export fails.

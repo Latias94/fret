@@ -92,6 +92,9 @@ Current behavior:
 - generates AI-only share zips under `<root>/share/*.ai.zip`,
 - writes `<root>/share/share.manifest.json` with the selected items, share zip paths, and errors.
 
+For campaign runs, failed roots now also best-effort generate the same `share/share.manifest.json`
+automatically during `diag campaign run` when aggregate summaries are available.
+
 This keeps the default maintainer handoff bounded while still preserving the aggregate root as the
 main directory that DevTools and dashboard-style consumers should open.
 
@@ -112,8 +115,9 @@ Use this after a behavior lands or changes:
 
 1. run one campaign or one filtered campaign batch,
 2. inspect `regression.summary.json`,
-3. if failed, run `diag campaign share <root>`,
-4. attach `share/share.manifest.json` and the generated `*.ai.zip` outputs to the handoff.
+3. if failed, first check whether `share/share.manifest.json` was already generated automatically,
+4. if it is missing, run `diag campaign share <root>`,
+5. attach `share/share.manifest.json` and the generated `*.ai.zip` outputs to the handoff.
 
 ## Why this flow is recommended
 

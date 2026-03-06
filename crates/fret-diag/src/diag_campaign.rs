@@ -56,18 +56,22 @@ struct CampaignExecutionReport {
     out_dir: PathBuf,
     summary_path: PathBuf,
     index_path: PathBuf,
+    share_manifest_path: Option<PathBuf>,
     items_total: usize,
     items_failed: usize,
     suites_total: usize,
     scripts_total: usize,
     ok: bool,
     error: Option<String>,
+    share_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 struct CampaignExecutionOutcome {
     items_failed: usize,
     error: Option<String>,
+    share_manifest_path: Option<PathBuf>,
+    share_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +79,9 @@ struct CampaignBatchArtifacts {
     batch_root: PathBuf,
     summary_path: PathBuf,
     index_path: PathBuf,
+    share_manifest_path: Option<PathBuf>,
     summarize_error: Option<String>,
+    share_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -547,9 +553,11 @@ fn cmd_campaign_run(
                 "campaign_id": report.campaign_id,
                 "ok": report.ok,
                 "error": report.error,
+                "share_error": report.share_error,
                 "out_dir": report.out_dir.display().to_string(),
                 "summary_path": report.summary_path.display().to_string(),
                 "index_path": report.index_path.display().to_string(),
+                "share_manifest_path": report.share_manifest_path.as_ref().map(|path| path.display().to_string()),
                 "items_total": report.items_total,
                 "items_failed": report.items_failed,
                 "suites_total": report.suites_total,
@@ -571,6 +579,12 @@ fn cmd_campaign_run(
                 report.scripts_total,
                 report.out_dir.display()
             );
+        } else if let Some(share_manifest_path) = report.share_manifest_path.as_deref() {
+            println!(
+                "campaign: failed evidence exported (id={}, share_manifest={})",
+                report.campaign_id,
+                share_manifest_path.display()
+            );
         }
     } else {
         println!(
@@ -580,6 +594,9 @@ fn cmd_campaign_run(
         );
         if let Some(batch) = &batch {
             println!("  batch_root: {}", batch.batch_root.display());
+            if let Some(share_manifest_path) = batch.share_manifest_path.as_deref() {
+                println!("  share_manifest: {}", share_manifest_path.display());
+            }
         }
         for report in &reports {
             let status = if report.ok { "ok" } else { "failed" };
@@ -591,6 +608,9 @@ fn cmd_campaign_run(
                 report.items_failed,
                 report.out_dir.display()
             );
+            if let Some(share_manifest_path) = report.share_manifest_path.as_deref() {
+                println!("    share_manifest: {}", share_manifest_path.display());
+            }
         }
     }
 
@@ -622,6 +642,29 @@ fn cmd_campaign_run(
             error
         ));
     }
+    if let Some(batch) = &batch
+        && let Some(error) = batch.share_error.as_deref()
+    {
+        command_failures.push(format!(
+            "campaign batch share export failed under {}: {}",
+            batch.batch_root.display(),
+            error
+        ));
+    }
+    let report_share_failures = reports
+        .iter()
+        .filter_map(|report| {
+            report.share_error.as_deref().map(|error| {
+                format!(
+                    "campaign `{}` share export failed under {}: {}",
+                    report.campaign_id,
+                    report.out_dir.display(),
+                    error
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    command_failures.extend(report_share_failures);
     if !command_failures.is_empty() {
         return Err(command_failures.join("; "));
     }
@@ -680,10 +723,15 @@ fn execute_campaign(
     let index_path =
         campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
 
-    let (items_failed, report_error) =
+    let (items_failed, report_error, share_manifest_path, share_error) =
         match execute_campaign_inner(campaign, ctx, &campaign_root, created_unix_ms, &run_id) {
-            Ok(outcome) => (outcome.items_failed, outcome.error),
-            Err(error) => (campaign.items.len(), Some(error)),
+            Ok(outcome) => (
+                outcome.items_failed,
+                outcome.error,
+                outcome.share_manifest_path,
+                outcome.share_error,
+            ),
+            Err(error) => (campaign.items.len(), Some(error), None, None),
         };
 
     CampaignExecutionReport {
@@ -691,12 +739,14 @@ fn execute_campaign(
         out_dir: campaign_root,
         summary_path,
         index_path,
+        share_manifest_path,
         items_total: campaign.items.len(),
         items_failed,
         suites_total: campaign.suite_count(),
         scripts_total: campaign.script_count(),
         ok: report_error.is_none(),
         error: report_error,
+        share_error,
     }
 }
 
@@ -750,6 +800,15 @@ fn execute_campaign_inner(
         campaign_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     let index_path =
         campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let items_failed = item_results.iter().filter(|entry| !entry.ok).count();
+    let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
+        campaign_root,
+        &summary_path,
+        &ctx.workspace_root,
+        items_failed > 0,
+        ctx.stats_top,
+        ctx.warmup_frames,
+    );
     write_campaign_result(
         campaign_root,
         campaign,
@@ -761,20 +820,23 @@ fn execute_campaign_inner(
         summarize_result.as_ref().err(),
         &summary_path,
         &index_path,
+        share_manifest_path.as_deref(),
+        share_error.as_ref(),
         ctx,
     )?;
 
     if let Err(error) = summarize_result {
         return Ok(CampaignExecutionOutcome {
-            items_failed: item_results.iter().filter(|entry| !entry.ok).count(),
+            items_failed,
             error: Some(format!(
                 "campaign `{}` finished item execution but summarize failed: {}",
                 campaign.id, error
             )),
+            share_manifest_path,
+            share_error,
         });
     }
 
-    let items_failed = item_results.iter().filter(|entry| !entry.ok).count();
     if items_failed > 0 {
         let failing = item_results
             .iter()
@@ -794,12 +856,16 @@ fn execute_campaign_inner(
                 campaign_root.display(),
                 failing
             )),
+            share_manifest_path,
+            share_error,
         });
     }
 
     Ok(CampaignExecutionOutcome {
         items_failed: 0,
         error: None,
+        share_manifest_path,
+        share_error,
     })
 }
 
@@ -832,6 +898,15 @@ fn write_campaign_batch_artifacts(
         stats_json: false,
     });
     let summarize_error = summarize_result.err();
+    let failed_runs = reports.iter().filter(|report| !report.ok).count();
+    let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
+        &batch_root,
+        &summary_path,
+        &ctx.workspace_root,
+        failed_runs > 0,
+        ctx.stats_top,
+        ctx.warmup_frames,
+    );
 
     let finished_unix_ms = now_unix_ms();
     let duration_ms = finished_unix_ms.saturating_sub(created_unix_ms);
@@ -846,6 +921,8 @@ fn write_campaign_batch_artifacts(
         summarize_error.as_ref(),
         &summary_path,
         &index_path,
+        share_manifest_path.as_deref(),
+        share_error.as_ref(),
         ctx,
     )?;
 
@@ -853,7 +930,9 @@ fn write_campaign_batch_artifacts(
         batch_root,
         summary_path,
         index_path,
+        share_manifest_path,
         summarize_error,
+        share_error,
     })
 }
 
@@ -1181,8 +1260,34 @@ fn campaign_batch_to_json(batch: &CampaignBatchArtifacts) -> serde_json::Value {
         "out_dir": batch.batch_root.display().to_string(),
         "summary_path": batch.summary_path.is_file().then(|| batch.summary_path.display().to_string()),
         "index_path": batch.index_path.is_file().then(|| batch.index_path.display().to_string()),
+        "share_manifest_path": batch.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "summarize_error": batch.summarize_error,
+        "share_error": batch.share_error,
     })
+}
+
+fn maybe_write_failure_share_manifest(
+    root_dir: &Path,
+    summary_path: &Path,
+    workspace_root: &Path,
+    should_generate: bool,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> (Option<PathBuf>, Option<String>) {
+    if !should_generate || !summary_path.is_file() {
+        return (None, None);
+    }
+    match write_campaign_share_manifest(
+        root_dir,
+        summary_path,
+        workspace_root,
+        false,
+        stats_top,
+        warmup_frames,
+    ) {
+        Ok(path) => (Some(path), None),
+        Err(error) => (None, Some(error)),
+    }
 }
 
 fn campaign_batch_selection_slug(options: &CampaignRunOptions, selected_count: usize) -> String {
@@ -1246,10 +1351,12 @@ fn campaign_report_to_json(report: &CampaignExecutionReport) -> serde_json::Valu
         "campaign_id": report.campaign_id,
         "ok": report.ok,
         "error": report.error,
+        "share_error": report.share_error,
         "out_dir": report.out_dir.display().to_string(),
         "campaign_result_path": report.out_dir.join("campaign.result.json").display().to_string(),
         "summary_path": report.summary_path.is_file().then(|| report.summary_path.display().to_string()),
         "index_path": report.index_path.is_file().then(|| report.index_path.display().to_string()),
+        "share_manifest_path": report.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "items_total": report.items_total,
         "items_failed": report.items_failed,
         "suites_total": report.suites_total,
@@ -1340,6 +1447,8 @@ fn write_campaign_result(
     summarize_error: Option<&String>,
     summary_path: &Path,
     index_path: &Path,
+    share_manifest_path: Option<&Path>,
+    share_error: Option<&String>,
     ctx: &CampaignRunContext,
 ) -> Result<(), String> {
     let result_path = campaign_root.join("campaign.result.json");
@@ -1384,7 +1493,9 @@ fn write_campaign_result(
         "aggregate": {
             "summary_path": summary_path.is_file().then(|| summary_path.display().to_string()),
             "index_path": index_path.is_file().then(|| index_path.display().to_string()),
+            "share_manifest_path": share_manifest_path.map(|path| path.display().to_string()),
             "summarize_error": summarize_error.cloned(),
+            "share_error": share_error.cloned(),
         },
         "item_results": item_results.iter().map(|entry| serde_json::json!({
             "kind": item_kind_str(entry.kind),
@@ -1413,6 +1524,8 @@ fn write_campaign_batch_result(
     summarize_error: Option<&String>,
     summary_path: &Path,
     index_path: &Path,
+    share_manifest_path: Option<&Path>,
+    share_error: Option<&String>,
     ctx: &CampaignRunContext,
 ) -> Result<(), String> {
     let result_path = batch_root.join("batch.result.json");
@@ -1463,7 +1576,9 @@ fn write_campaign_batch_result(
         "aggregate": {
             "summary_path": summary_path.is_file().then(|| summary_path.display().to_string()),
             "index_path": index_path.is_file().then(|| index_path.display().to_string()),
+            "share_manifest_path": share_manifest_path.map(|path| path.display().to_string()),
             "summarize_error": summarize_error.cloned(),
+            "share_error": share_error.cloned(),
         },
         "runs": reports.iter().map(campaign_report_to_json).collect::<Vec<_>>(),
     });

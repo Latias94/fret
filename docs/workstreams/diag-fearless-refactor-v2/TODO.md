@@ -153,6 +153,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
 - [ ] Make failed automation runs leave predictable evidence by default:
   - [x] summary/index artifacts,
+  - [x] first automatic failing evidence export for campaign and batch roots,
   - [ ] failing evidence bundles,
   - [x] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
