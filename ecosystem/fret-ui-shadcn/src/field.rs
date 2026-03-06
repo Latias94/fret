@@ -1040,7 +1040,7 @@ impl FieldLabel {
                                     if let Some((true, element, focus_on_pointer_down)) = target {
                                         if focus_on_pointer_down {
                                             host.request_focus(element);
-                                            return false;
+                                            return true;
                                         }
                                         host.capture_pointer();
                                     }

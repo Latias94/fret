@@ -1,8 +1,8 @@
 use fret_app::App;
 use fret_core::{AppWindowId, Modifiers, MouseButton, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
-use fret_ui::tree::UiTree;
 use fret_ui::ElementContext;
+use fret_ui::tree::UiTree;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
