@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -404,6 +404,87 @@ impl WinitAppDriver for FormDemoDriver {
     }
 }
 
+fn create_window_state(
+    driver: &mut FormDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DemoWindowState {
+    <FormDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut FormDemoDriver,
+    context: WinitHotReloadContext<'_, DemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <FormDemoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn handle_model_changes(
+    driver: &mut FormDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <FormDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut FormDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <FormDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut FormDemoDriver,
+    context: WinitCommandContext<'_, DemoWindowState>,
+    command: CommandId,
+) {
+    <FormDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut FormDemoDriver,
+    context: WinitEventContext<'_, DemoWindowState>,
+    event: &Event,
+) {
+    <FormDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWindowState>) {
+    <FormDemoDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut FormDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <FormDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        FormDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+    })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -423,6 +504,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_with_compat_driver(config, app, FormDemoDriver::default())
-        .context("run form_demo app")
+    let driver = build_driver();
+
+    fret::run_native_with_compat_driver(config, app, driver).context("run form_demo app")
 }

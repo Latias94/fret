@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::Invalidation;
@@ -409,8 +409,67 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
+fn create_window_state(
+    driver: &mut SimpleTodoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> SimpleTodoWindowState {
+    <SimpleTodoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut SimpleTodoDriver,
+    context: WinitHotReloadContext<'_, SimpleTodoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <SimpleTodoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn handle_command(
+    driver: &mut SimpleTodoDriver,
+    context: WinitCommandContext<'_, SimpleTodoWindowState>,
+    command: CommandId,
+) {
+    <SimpleTodoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut SimpleTodoDriver,
+    context: WinitEventContext<'_, SimpleTodoWindowState>,
+    event: &Event,
+) {
+    <SimpleTodoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(driver: &mut SimpleTodoDriver, context: WinitRenderContext<'_, SimpleTodoWindowState>) {
+    <SimpleTodoDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut SimpleTodoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <SimpleTodoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
 pub fn build_driver() -> impl WinitAppDriver {
-    SimpleTodoDriver::default()
+    FnDriver::new(
+        SimpleTodoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]

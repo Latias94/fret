@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_plot::cartesian::{DataPoint, DataRect};
 use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
@@ -421,12 +421,115 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
+fn gpu_ready(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    <PlotStressDriver as WinitAppDriver>::gpu_ready(driver, app, context, renderer)
+}
+
+fn create_window_state(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> PlotStressWindowState {
+    <PlotStressDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut PlotStressDriver,
+    context: WinitHotReloadContext<'_, PlotStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <PlotStressDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn gpu_frame_prepare(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut PlotStressWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+) {
+    <PlotStressDriver as WinitAppDriver>::gpu_frame_prepare(
+        driver,
+        app,
+        window,
+        state,
+        context,
+        renderer,
+        scale_factor,
+    )
+}
+
+fn handle_model_changes(
+    driver: &mut PlotStressDriver,
+    context: WinitWindowContext<'_, PlotStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <PlotStressDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut PlotStressDriver,
+    context: WinitWindowContext<'_, PlotStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <PlotStressDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_event(
+    driver: &mut PlotStressDriver,
+    context: WinitEventContext<'_, PlotStressWindowState>,
+    event: &Event,
+) {
+    <PlotStressDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStressWindowState>) {
+    <PlotStressDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <PlotStressDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+fn build_driver_with_options(
+    points: usize,
+    series: usize,
+    max_frames: Option<u64>,
+) -> impl WinitAppDriver {
+    let driver = PlotStressDriver {
+        points,
+        series,
+        max_frames,
+    };
+
+    FnDriver::new(driver, create_window_state, handle_event, render).with_hooks(|hooks| {
+        hooks.gpu_ready = Some(gpu_ready);
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.window_create_spec = Some(window_create_spec);
+    })
+}
+
 pub fn build_driver() -> impl WinitAppDriver {
-    PlotStressDriver {
-        points: DEFAULT_POINTS,
-        series: DEFAULT_SERIES,
-        max_frames: None,
-    }
+    build_driver_with_options(DEFAULT_POINTS, DEFAULT_SERIES, None)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -477,11 +580,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = PlotStressDriver {
-        points,
-        series,
-        max_frames,
-    };
+    let driver = build_driver_with_options(points, series, max_frames);
 
     crate::run_native_with_compat_driver(config, app, driver).context("run plot_stress_demo app")
 }
