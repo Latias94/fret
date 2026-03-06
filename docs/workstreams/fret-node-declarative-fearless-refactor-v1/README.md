@@ -111,8 +111,11 @@ update rather than an incidental refactor.
     editor-grade node graph today?"
 
 - **Transaction boundary ambiguity in the declarative path**
-  - The paint-only surface currently commits some interactions by mutating the graph directly.
-  - That is acceptable for exploration, but not for the long-term reference architecture.
+  - The first M3 slice is now landed: the paint-only node-drag commit builds a
+    `GraphTransaction` and prefers `NodeGraphStore::dispatch_transaction(...)` when a store is
+    present.
+  - Broader declarative commit coverage is still unresolved: this pattern must extend to the rest of
+    committed edit flows and converge behind a clearer controller/instance surface.
 
 - **Overgrown view-state boundary**
   - `NodeGraphViewState` currently bundles pure view state together with interaction configuration

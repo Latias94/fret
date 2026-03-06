@@ -8,6 +8,7 @@ use fret_node::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use fret_node::io::NodeGraphViewState;
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::ui::{
     EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
     NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only,
@@ -21,6 +22,7 @@ const TEST_ID_CANVAS: &str = "node_graph.canvas";
 struct NodeGraphDemoState {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
+    store: Model<NodeGraphStore>,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
 }
 
@@ -32,12 +34,18 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
-    let graph = app.models_mut().insert(demo_graph());
-    let view = app.models_mut().insert(NodeGraphViewState::default());
+    let graph_state = demo_graph();
+    let view_state = NodeGraphViewState::default();
+    let graph = app.models_mut().insert(graph_state.clone());
+    let view = app.models_mut().insert(view_state.clone());
+    let store = app
+        .models_mut()
+        .insert(NodeGraphStore::new(graph_state, view_state));
     let paint_overrides = demo_paint_overrides();
     NodeGraphDemoState {
         graph,
         view,
+        store,
         paint_overrides,
     }
 }
@@ -47,6 +55,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::
     cx.observe_model(&st.view, Invalidation::Paint);
 
     let mut props = NodeGraphSurfacePaintOnlyProps::new(st.graph.clone(), st.view.clone());
+    props.store = Some(st.store.clone());
     props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
     props.paint_overrides = st.paint_overrides.clone();
     node_graph_surface_paint_only(cx, props).into()

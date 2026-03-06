@@ -27,6 +27,8 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
+use crate::ops::{GraphOp, GraphTransaction, apply_transaction, normalize_transaction};
+use crate::runtime::store::NodeGraphStore;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
@@ -87,6 +89,7 @@ impl Default for NodeGraphWheelZoomConfig {
 pub struct NodeGraphSurfacePaintOnlyProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
+    pub store: Option<Model<NodeGraphStore>>,
 
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
@@ -132,6 +135,7 @@ impl NodeGraphSurfacePaintOnlyProps {
         Self {
             graph,
             view_state,
+            store: None,
             pointer_region,
             canvas: CanvasProps::default(),
             geometry_overrides: None,
@@ -722,6 +726,104 @@ fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
     drag.nodes_sorted.binary_search(&id).is_ok()
 }
 
+fn build_node_drag_transaction(
+    graph: &Graph,
+    nodes: &[crate::core::NodeId],
+    dx: f32,
+    dy: f32,
+) -> GraphTransaction {
+    let mut tx = GraphTransaction::new();
+    for id in nodes.iter().copied() {
+        let Some(node) = graph.nodes.get(&id) else {
+            continue;
+        };
+        let from = node.pos;
+        let to = crate::core::CanvasPoint {
+            x: from.x + dx,
+            y: from.y + dy,
+        };
+        if from != to {
+            tx.push(GraphOp::SetNodePos { id, from, to });
+        }
+    }
+
+    let tx = normalize_transaction(tx);
+    if tx.is_empty() {
+        return tx;
+    }
+
+    let label = if tx.ops.len() == 1 {
+        "Move Node"
+    } else {
+        "Move Nodes"
+    };
+    tx.with_label(label)
+}
+
+fn sync_graph_and_view_state_from_store(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    store: &Model<NodeGraphStore>,
+) -> bool {
+    let Ok((next_view_state, next_graph)) = host.models_mut().read(store, |store| {
+        (store.view_state().clone(), store.graph().clone())
+    }) else {
+        return false;
+    };
+
+    let graph_synced = host
+        .models_mut()
+        .update(graph, |g| {
+            *g = next_graph;
+        })
+        .is_ok();
+    let view_synced = host
+        .models_mut()
+        .update(view_state, |state| {
+            *state = next_view_state;
+        })
+        .is_ok();
+    graph_synced && view_synced
+}
+
+fn commit_node_drag_transaction(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    store: Option<&Model<NodeGraphStore>>,
+    tx: &GraphTransaction,
+) -> bool {
+    if tx.is_empty() {
+        return true;
+    }
+
+    if let Some(store) = store {
+        return match host
+            .models_mut()
+            .update(store, |store| store.dispatch_transaction(tx))
+        {
+            Ok(Ok(_outcome)) => {
+                sync_graph_and_view_state_from_store(host, graph, view_state, store)
+            }
+            Ok(Err(_)) | Err(_) => false,
+        };
+    }
+
+    let Ok(mut scratch) = host.models_mut().read(graph, |g| g.clone()) else {
+        return false;
+    };
+    if apply_transaction(&mut scratch, tx).is_err() {
+        return false;
+    }
+
+    host.models_mut()
+        .update(graph, |g| {
+            *g = scratch;
+        })
+        .is_ok()
+}
+
 fn hit_test_node_at_point(
     view: PanZoom2D,
     bounds: Rect,
@@ -1260,6 +1362,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let NodeGraphSurfacePaintOnlyProps {
         graph,
         view_state,
+        store,
         pointer_region,
         canvas,
         geometry_overrides,
@@ -2530,6 +2633,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let node_drag_end = node_drag.clone();
             let graph_commit = graph.clone();
             let view_commit = view_state.clone();
+            let store_commit = store.clone();
             let on_pointer_up: OnPointerUp = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
@@ -2557,16 +2661,21 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 && dy.is_finite();
 
                             if commit && (dx.abs() > 1.0e-9 || dy.abs() > 1.0e-9) {
-                                let nodes = node_drag.nodes_sorted.clone();
-                                let _ = host.models_mut().update(&graph_commit, |g| {
-                                    for id in nodes.iter().copied() {
-                                        let Some(node) = g.nodes.get_mut(&id) else {
-                                            continue;
-                                        };
-                                        node.pos.x += dx;
-                                        node.pos.y += dy;
-                                    }
-                                });
+                                let tx = host
+                                    .models_mut()
+                                    .read(&graph_commit, |graph| {
+                                        build_node_drag_transaction(graph, node_drag.nodes_sorted.as_ref(), dx, dy)
+                                    })
+                                    .ok();
+                                if let Some(tx) = tx.as_ref() {
+                                    let _ = commit_node_drag_transaction(
+                                        host,
+                                        &graph_commit,
+                                        &view_commit,
+                                        store_commit.as_ref(),
+                                        tx,
+                                    );
+                                }
                             }
 
                             host.release_pointer_capture();
@@ -3454,4 +3563,81 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             })]
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_node_drag_transaction;
+    use crate::core::{CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey};
+    use crate::ops::GraphOp;
+    use serde_json::Value;
+
+    fn test_node(pos: CanvasPoint) -> Node {
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos,
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden: false,
+            collapsed: false,
+            ports: Vec::new(),
+            data: Value::Null,
+        }
+    }
+
+    #[test]
+    fn build_node_drag_transaction_uses_set_node_pos_ops() {
+        let mut graph = Graph::new(GraphId::from_u128(1));
+        let node_a = NodeId::from_u128(11);
+        let node_b = NodeId::from_u128(22);
+        let missing = NodeId::from_u128(33);
+        graph
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        graph
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: -5.0, y: 7.5 }));
+
+        let tx = build_node_drag_transaction(&graph, &[node_a, missing, node_b], 12.0, -4.5);
+
+        assert_eq!(tx.label.as_deref(), Some("Move Nodes"));
+        assert_eq!(tx.ops.len(), 2);
+        assert!(matches!(
+            tx.ops[0],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 22.0, y: 15.5 },
+            } if id == node_a
+        ));
+        assert!(matches!(
+            tx.ops[1],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: -5.0, y: 7.5 },
+                to: CanvasPoint { x: 7.0, y: 3.0 },
+            } if id == node_b
+        ));
+    }
+
+    #[test]
+    fn build_node_drag_transaction_returns_empty_for_noops() {
+        let mut graph = Graph::new(GraphId::from_u128(2));
+        let node = NodeId::from_u128(44);
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 3.0, y: 9.0 }));
+
+        let tx = build_node_drag_transaction(&graph, &[node], 0.0, 0.0);
+
+        assert!(tx.is_empty());
+        assert_eq!(tx.label, None);
+    }
 }

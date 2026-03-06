@@ -84,8 +84,18 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 
 ## M3 - Transaction-safe declarative commits
 
-- [ ] Replace direct committed graph mutation in the declarative interaction path with
-      transaction-safe controller/store entry points.
+- [x] Land the first declarative transaction-safe commit slice:
+  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` node-drag commit now builds a
+    `GraphTransaction` instead of mutating `Graph` in place.
+  - When `NodeGraphSurfacePaintOnlyProps.store` is present, the commit now prefers
+    `NodeGraphStore::dispatch_transaction(...)` and then syncs graph/view models back from store.
+  - When no store is present, the declarative path still applies the transaction as a transaction,
+    rather than doing ad-hoc position mutation.
+- [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphStore` so the default
+      declarative demo path exercises the transaction-safe architecture.
+- [x] Add a focused regression test for the drag transaction builder used by the declarative path.
+- [ ] Expand the same transaction-safe pattern to the rest of committed declarative edit paths,
+      rather than stopping at node drag.
 - [ ] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
       commits through transactions.
 - [ ] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.

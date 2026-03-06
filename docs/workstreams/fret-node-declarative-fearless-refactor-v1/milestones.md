@@ -136,6 +136,17 @@ Status target: architectural + API landing milestone
 Make the declarative path editor-grade by routing committed edits through store/controller entry
 points rather than direct graph mutation.
 
+### Progress note (2026-03-06)
+
+- First landing slice is complete:
+  - `node_graph_surface_paint_only` node-drag commit now builds a `GraphTransaction`.
+  - When a store exists, the declarative path dispatches through `NodeGraphStore` and syncs graph /
+    view models back from store.
+  - `apps/fret-examples/src/node_graph_demo.rs` now passes a store into the declarative surface so
+    the recommended demo path exercises the transaction-safe commit architecture.
+- Remaining M3 scope is still substantial: we still need a real controller/instance facade,
+  broader declarative commit coverage, and explicit undo/redo / controlled-mode gates.
+
 ### Deliverables
 
 - A thin `NodeGraphController` / `NodeGraphInstance` style facade (exact naming can change) that
@@ -167,6 +178,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/runtime/changes.rs`
 - `ecosystem/fret-node/src/runtime/lookups.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
 
 ## M4 - Declarative editor-grade interaction and portal closure
 
