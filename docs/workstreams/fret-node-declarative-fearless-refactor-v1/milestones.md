@@ -158,6 +158,9 @@ points rather than direct graph mutation.
     syncs graph / view models back from store.
   - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
     facade over store + optional view queue.
+  - The controller now also exposes XyFlow-style connection queries via
+    `node_connections` / `port_connections`, so app code can query node/handle adjacency
+    without reaching into store lookups directly.
   - The controller now also covers the first bounds-aware viewport helpers:
     `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
   - Those helpers now have a real store fallback when no `view_queue` exists, and still route

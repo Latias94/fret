@@ -106,9 +106,11 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       an internal detail of the controller.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
-- [ ] Add a clear mapping from XyFlow-style expectations to the controller API:
+- [x] Land the first XyFlow-style connection-query mapping on the controller surface:
+  - `NodeGraphController::node_connections`
+  - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
+- [ ] Add a clear mapping from the rest of XyFlow-style expectations to the controller API:
   - viewport helpers
-  - get node/handle connections
   - update node/edge style helpers where appropriate
 - [ ] Decide the long-term public naming/ownership story (`Controller` vs `Instance` vs split
       facades) before widening the teaching surface further.

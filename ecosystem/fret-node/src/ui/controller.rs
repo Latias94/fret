@@ -3,10 +3,11 @@ use fret_runtime::{Model, ModelStore};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHost;
 
-use crate::core::{CanvasPoint, EdgeId, Graph, NodeId};
+use crate::core::{CanvasPoint, EdgeId, Graph, NodeId, PortId};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
 use crate::runtime::fit_view::{FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target};
+use crate::runtime::lookups::{ConnectionSide, HandleConnection};
 use crate::runtime::store::{DispatchError, DispatchOutcome, NodeGraphStore};
 use crate::runtime::utils::{get_connected_edges, get_incomers, get_outgoers};
 
@@ -23,6 +24,20 @@ pub enum NodeGraphControllerError {
     StoreUnavailable,
     #[error(transparent)]
     Dispatch(#[from] DispatchError),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NodeGraphPortConnectionsQuery {
+    pub node_id: NodeId,
+    pub port_id: PortId,
+    pub side: ConnectionSide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NodeGraphNodeConnectionsQuery {
+    pub node_id: NodeId,
+    pub side: Option<ConnectionSide>,
+    pub port_id: Option<PortId>,
 }
 
 #[derive(Debug, Clone)]
@@ -437,6 +452,56 @@ impl NodeGraphController {
             .unwrap_or_default()
     }
 
+    pub fn port_connections<H: UiHost>(
+        &self,
+        host: &H,
+        query: NodeGraphPortConnectionsQuery,
+    ) -> Vec<HandleConnection> {
+        self.store
+            .read_ref(host, |store| {
+                sorted_connections(store.lookups().connections_for_port(
+                    query.node_id,
+                    query.side,
+                    query.port_id,
+                ))
+            })
+            .ok()
+            .unwrap_or_default()
+    }
+
+    pub fn node_connections<H: UiHost>(
+        &self,
+        host: &H,
+        query: NodeGraphNodeConnectionsQuery,
+    ) -> Vec<HandleConnection> {
+        self.store
+            .read_ref(host, |store| {
+                let lookups = store.lookups();
+                let connections = match (query.side, query.port_id) {
+                    (Some(side), Some(port_id)) => {
+                        lookups.connections_for_port(query.node_id, side, port_id)
+                    }
+                    (Some(side), None) => lookups.connections_for_node_side(query.node_id, side),
+                    (None, Some(port_id)) => store
+                        .graph()
+                        .ports
+                        .get(&port_id)
+                        .filter(|port| port.node == query.node_id)
+                        .and_then(|port| {
+                            lookups.connections_for_port(
+                                query.node_id,
+                                ConnectionSide::from_port_dir(port.dir),
+                                port_id,
+                            )
+                        }),
+                    (None, None) => lookups.connections_for_node(query.node_id),
+                };
+                sorted_connections(connections)
+            })
+            .ok()
+            .unwrap_or_default()
+    }
+
     fn dispatch_transaction_in_models(
         &self,
         models: &mut ModelStore,
@@ -564,6 +629,17 @@ fn normalize_requested_zoom(
     base.clamp(min_zoom, max_zoom)
 }
 
+fn sorted_connections(
+    connections: Option<&std::collections::HashMap<EdgeId, HandleConnection>>,
+) -> Vec<HandleConnection> {
+    let Some(connections) = connections else {
+        return Vec::new();
+    };
+    let mut out: Vec<_> = connections.values().copied().collect();
+    out.sort_by_key(|connection| connection.edge);
+    out
+}
+
 fn normalize_fit_view_padding(padding: f32) -> f32 {
     if padding.is_finite() {
         padding.clamp(0.0, 0.45)
@@ -602,7 +678,8 @@ mod tests {
 
     use super::{
         CONTROLLER_FIT_VIEW_MARGIN_PX_FALLBACK, CONTROLLER_FIT_VIEW_MAX_ZOOM,
-        CONTROLLER_FIT_VIEW_MIN_ZOOM, NodeGraphController,
+        CONTROLLER_FIT_VIEW_MIN_ZOOM, NodeGraphController, NodeGraphNodeConnectionsQuery,
+        NodeGraphPortConnectionsQuery,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
@@ -613,6 +690,7 @@ mod tests {
     use crate::runtime::fit_view::{
         FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
     };
+    use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
     use crate::ui::{
         NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue,
@@ -1332,9 +1410,73 @@ mod tests {
             .models
             .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
         let controller = NodeGraphController::new(store);
+        let expected = HandleConnection {
+            edge,
+            source_node: node_a,
+            source_port: a_out,
+            target_node: node_b,
+            target_port: b_in,
+            kind: EdgeKind::Data,
+        };
 
         assert_eq!(controller.outgoers(&host, node_a), vec![node_b]);
         assert_eq!(controller.incomers(&host, node_b), vec![node_a]);
         assert_eq!(controller.connected_edges(&host, node_a), vec![edge]);
+        assert_eq!(
+            controller.port_connections(
+                &host,
+                NodeGraphPortConnectionsQuery {
+                    node_id: node_a,
+                    port_id: a_out,
+                    side: ConnectionSide::Source,
+                },
+            ),
+            vec![expected],
+        );
+        assert_eq!(
+            controller.node_connections(
+                &host,
+                NodeGraphNodeConnectionsQuery {
+                    node_id: node_a,
+                    side: Some(ConnectionSide::Source),
+                    port_id: None,
+                },
+            ),
+            vec![expected],
+        );
+        assert_eq!(
+            controller.node_connections(
+                &host,
+                NodeGraphNodeConnectionsQuery {
+                    node_id: node_a,
+                    side: None,
+                    port_id: Some(a_out),
+                },
+            ),
+            vec![expected],
+        );
+        assert_eq!(
+            controller.node_connections(
+                &host,
+                NodeGraphNodeConnectionsQuery {
+                    node_id: node_b,
+                    side: Some(ConnectionSide::Target),
+                    port_id: Some(b_in),
+                },
+            ),
+            vec![expected],
+        );
+        assert!(
+            controller
+                .node_connections(
+                    &host,
+                    NodeGraphNodeConnectionsQuery {
+                        node_id: node_a,
+                        side: Some(ConnectionSide::Target),
+                        port_id: Some(a_out),
+                    },
+                )
+                .is_empty()
+        );
     }
 }

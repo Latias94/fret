@@ -54,7 +54,10 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
-pub use controller::{NodeGraphController, NodeGraphControllerError};
+pub use controller::{
+    NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
+    NodeGraphPortConnectionsQuery,
+};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use geometry_overrides::{
