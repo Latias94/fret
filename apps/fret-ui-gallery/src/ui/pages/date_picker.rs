@@ -373,6 +373,7 @@ pub(super) fn preview_date_picker(
         basic_month.clone(),
         basic_selected.clone(),
     );
+    let usage = snippets::usage::render(cx);
 
     let label = snippets::label::render(cx);
     let range = snippets::range::render(
@@ -428,12 +429,18 @@ pub(super) fn preview_date_picker(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors shadcn Date Picker docs (Basic + Range + Date of birth + Input + Time + Natural language + RTL). Extra: presets.",
+            "Preview follows shadcn Date Picker docs flow: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. Presets and dropdowns remain gallery extensions.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("A compact date picker trigger (docs: Date Picker demo).")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example")
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for the compact `DatePicker` builder surface.")
+                .test_id_prefix("ui-gallery-date-picker-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example")
                 .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Basic", basic)
