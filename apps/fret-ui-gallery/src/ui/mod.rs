@@ -35,7 +35,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, SemanticsDecoration};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
-#[cfg(feature = "gallery-dev")]
+#[cfg(feature = "gallery-ai")]
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;

@@ -813,13 +813,13 @@ fn page_preview(
             pages::material3::preview_material3_tooltip,
         ),
         other if other.starts_with("ai_") => {
-            #[cfg(feature = "gallery-dev")]
+            #[cfg(feature = "gallery-ai")]
             {
                 pages::preview_ai_by_id(cx, theme, other)
                     .unwrap_or_else(|| preview_ai_unwired(cx, theme, other))
             }
 
-            #[cfg(not(feature = "gallery-dev"))]
+            #[cfg(not(feature = "gallery-ai"))]
             {
                 preview_ai_unwired(cx, theme, other)
             }
