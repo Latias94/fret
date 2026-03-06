@@ -1,4 +1,4 @@
-# Crate audit (L1) — `fret-launch`
+# Crate audit (L1) 閳?`fret-launch`
 
 Focus: public surface hygiene, extension thresholds, and whether the current launch layer still
 needs fearless contraction before publication.
@@ -8,7 +8,7 @@ needs fearless contraction before publication.
 - Name: `fret-launch`
 - Path: `crates/fret-launch`
 - Owners / adjacent crates: `fret-framework`, `fret-bootstrap`, `fret`, `fret-runner-winit`, `fret-runner-web`
-- Current “layer”: advanced launch / runner integration facade
+- Current 閳ユ笓ayer閳? advanced launch / runner integration facade
 
 ## 1) Purpose (what this crate *is*)
 
@@ -92,7 +92,7 @@ Evidence anchors:
 ## 4) Dependency posture
 
 - Heavy backend/platform coupling is expected here and is architecturally acceptable.
-- The remaining maintainability risk is not “wrong dependencies”, but **surface drift** and large
+- The remaining maintainability risk is not 閳ユ辅rong dependencies閳? but **surface drift** and large
   desktop-runner implementation files.
 - Current file-size hotspots still sit in desktop runner internals (`app_handler.rs`, `effects.rs`,
   `window.rs`), which makes the public/root surface discipline even more important.
@@ -123,7 +123,7 @@ Evidence anchors:
 
 ### H1) `WinitAppDriver` still shapes the mental model more than intended
 
-- Failure mode: docs say “prefer `FnDriver`”, but examples and helper signatures still teach
+- Failure mode: docs say 閳ユ笡refer `FnDriver`閳? but examples and helper signatures still teach
   `impl WinitAppDriver` as the visible type boundary.
 - Why this matters: this is not a capability gap, but it weakens the de-emphasis story and makes a
   future hard contraction more expensive.
@@ -218,6 +218,11 @@ Evidence anchors:
 - `container_queries_docking_demo` confirms the helper is generic enough for another docking-heavy
   example with container-query behavior, reducing the remaining direct impl inventory again to five
   without expanding the hook matrix.
+- `docking_arbitration_demo` closes the next multi-window docking arbitration harness too:
+  viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all
+  fit the existing free-hook surface, reducing the remaining direct impl inventory again to four.
+- The current remaining direct example impl inventory is now limited to `components_gallery`,
+  `gizmo3d_demo`, `node_graph_domain_demo`, and `node_graph_legacy_demo`.
 
 Evidence anchors:
 
@@ -242,6 +247,7 @@ Evidence anchors:
 - `apps/fret-examples/src/canvas_datagrid_stress_demo.rs`
 - `apps/fret-examples/src/docking_demo.rs`
 - `apps/fret-examples/src/container_queries_docking_demo.rs`
+- `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
@@ -278,8 +284,8 @@ Evidence anchors:
 
 ## Current judgment
 
-- **Is the launcher crate external surface still too open?** Not critically. The major “accidental
-  public plumbing” problem has already been reduced.
+- **Is the launcher crate external surface still too open?** Not critically. The major 閳ユ竵ccidental
+  public plumbing閳?problem has already been reduced.
 - **Is extension/customization capability insufficient?** Not for the current target. General apps
   and editor-grade apps both have enough room.
 - **What still needs fearless closure?** Naming, docs/example posture, config curation, and disciplined caller migration; not more advanced hook surface.

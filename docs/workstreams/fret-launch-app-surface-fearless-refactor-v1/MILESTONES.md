@@ -1,8 +1,8 @@
-# Fret Launch + App Surface (Fearless Refactor v1) 鈥?Milestones
+# Fret Launch + App Surface (Fearless Refactor v1) 闂?Milestones
 
 This workstream is staged to keep the launch stack landable while tightening public contracts.
 
-## M0 鈥?Audit captured + documentation aligned
+## M0 闂?Audit captured + documentation aligned
 
 **Outcome**
 
@@ -15,7 +15,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Links from `docs/README.md` point to this folder.
 - The design doc includes evidence anchors for all major claims.
 
-## M1 鈥?Export inventory and contract classification
+## M1 闂?Export inventory and contract classification
 
 **Outcome**
 
@@ -36,7 +36,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - A reviewable export table exists in the implementation PR or linked audit note.
 - No new launch exports are added without classification.
 
-## M2 鈥?Single advanced driver recommendation
+## M2 闂?Single advanced driver recommendation
 
 **Outcome**
 
@@ -66,13 +66,14 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `canvas_datagrid_stress_demo` now also uses pure free `FnDriver` hooks, reducing the remaining direct `WinitAppDriver` example inventory to seven while keeping stress/perf reporting inside the existing hook set.
 - `fret::run_native_with_configured_fn_driver(...)` now covers the preconfigured-`FnDriver` posture (including `.with_init(...)`) without falling back to compat naming, and `docking_demo` uses it to reduce the remaining direct `WinitAppDriver` example inventory to six.
 - `container_queries_docking_demo` now follows the same configured-`FnDriver` posture, reducing the remaining direct `WinitAppDriver` example inventory to five without introducing any new docking/runtime hooks.
+- `docking_arbitration_demo` now follows the same configured-`FnDriver` posture too, proving that multi-window docking arbitration, dev-state wiring, and floating-window lifecycle hooks still fit the existing free-hook surface while reducing the remaining direct `WinitAppDriver` example inventory to four.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`
 - `python tools/gate_fn_driver_example_naming.py`
 - `python tools/gate_winit_driver_example_hook_coverage.py`
 
-## M3 鈥?Config curation without capability loss
+## M3 闂?Config curation without capability loss
 
 **Outcome**
 
@@ -91,7 +92,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret`
 - No regression in examples that depend on GPU init customization or window-create hooks.
 
-## M4 鈥?Cross-surface docs and naming closure
+## M4 闂?Cross-surface docs and naming closure
 
 **Outcome**
 
@@ -117,7 +118,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `python tools/gate_fret_framework_launch_surface.py`
 - `python tools/gate_fn_driver_example_naming.py`
 
-## M5 鈥?Optional follow-up: web/high-level symmetry
+## M5 闂?Optional follow-up: web/high-level symmetry
 
 **Outcome**
 

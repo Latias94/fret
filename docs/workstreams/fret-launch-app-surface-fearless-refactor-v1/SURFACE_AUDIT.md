@@ -1,4 +1,4 @@
-# Fret Launch + App Surface (Fearless Refactor v1) — Surface Audit
+# Fret Launch + App Surface (Fearless Refactor v1) 闁?Surface Audit
 
 Status: Post-example migration audit
 
@@ -129,7 +129,7 @@ Fret now supports the same broad layering outcome:
 
 ### What is intentionally different
 
-Fret’s advanced runtime posture is still explicitly **function-pointer / hook based** (`FnDriver`),
+Fret闁炽儲鐛?advanced runtime posture is still explicitly **function-pointer / hook based** (`FnDriver`),
 not a direct GPUI-style closure runtime.
 
 That difference is acceptable because it buys a few things Fret explicitly values:
@@ -249,6 +249,9 @@ Additional evidence:
 - `apps/fret-examples/src/virtual_list_stress_demo.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/canvas_datagrid_stress_demo.rs`
+- `apps/fret-examples/src/docking_demo.rs`
+- `apps/fret-examples/src/container_queries_docking_demo.rs`
+- `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `apps/fret-demo-web/src/wasm.rs`
 - `tools/gate_winit_driver_example_hook_coverage.py`
 
@@ -266,6 +269,8 @@ Interpretation update:
 - `canvas_datagrid_stress_demo` also migrates cleanly to pure free hooks, reducing that inventory again to 7 and further supporting the conclusion that `FnDriver` is not blocked on additional stress/perf hook surface.
 - `docking_demo` shows the remaining gap was not in `FnDriverHooks` at all, but in the facade posture: once `fret::run_native_with_configured_fn_driver(...)` exists for preconfigured `.with_init(...)` drivers, docking orchestration also migrates cleanly and the inventory drops again to 6.
 - `container_queries_docking_demo` confirms that the same helper is reusable rather than one-off: container-query-aware docking also migrates cleanly and the inventory drops again to 5, still without any new `FnDriverHooks`.
+- `docking_arbitration_demo` closes the next multi-window docking case too: viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all move to the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 4 without adding any new `FnDriverHooks`.
+- the current remaining direct-example inventory is now limited to `components_gallery`, `gizmo3d_demo`, `node_graph_domain_demo`, and `node_graph_legacy_demo`.
 
 ### H3) Specialized launch modules still need classification discipline
 
@@ -299,9 +304,9 @@ Evidence:
 
 ## Final judgment
 
-For the original question — “is the launcher/internal surface reasonable, and can users of the
+For the original question 闁?闁炽儲绗卻 the launcher/internal surface reasonable, and can users of the
 public `fret` facade extend/customize enough like Zed/GPUI while still being suitable for general
-apps?” — the current answer is:
+apps?闁?闁?the current answer is:
 
 - **General-purpose apps:** yes
 - **Advanced/editor-grade customization:** yes
