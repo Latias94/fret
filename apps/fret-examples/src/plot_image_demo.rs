@@ -6,7 +6,7 @@ use fret_core::{AppWindowId, Event, ImageColorSpace};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::retained::{
@@ -124,127 +124,118 @@ impl PlotImageDemoDriver {
     }
 }
 
-impl WinitAppDriver for PlotImageDemoDriver {
-    type WindowState = PlotImageDemoWindowState;
+fn create_window_state(
+    _driver: &mut PlotImageDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> PlotImageDemoWindowState {
+    PlotImageDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn handle_event(
+    _driver: &mut PlotImageDemoDriver,
+    context: WinitEventContext<'_, PlotImageDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    app.with_image_asset_cache(|cache, app| {
+        cache.handle_event(app, window, event);
+    });
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+        }
+    }
+}
 
-        app.with_image_asset_cache(|cache, app| {
-            cache.handle_event(app, window, event);
-        });
+fn render(
+    _driver: &mut PlotImageDemoDriver,
+    context: WinitRenderContext<'_, PlotImageDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    let image = PlotImageDemoDriver::use_image_asset(
+        app,
+        window,
+        state.image_key,
+        state.image_size,
+        &state.image_bytes,
+    );
+    if image != state.image {
+        state.image = image;
+        let _ = app.models_mut().update(&state.plot_state, |s| {
+            s.overlays.images.clear();
+            if let Some(image) = image {
+                s.overlays.images.push(
+                    PlotImage::new(
+                        image,
+                        fret_plot::cartesian::DataRect {
+                            x_min: 10.0,
+                            x_max: 90.0,
+                            y_min: -1.25,
+                            y_max: 1.25,
+                        },
+                        YAxis::Left,
+                    )
+                    .opacity(0.85)
+                    .layer(PlotImageLayer::BelowGrid),
+                );
             }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
-        }
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        let image = Self::use_image_asset(
-            app,
-            window,
-            state.image_key,
-            state.image_size,
-            &state.image_bytes,
-        );
-        if image != state.image {
-            state.image = image;
-            let _ = app.models_mut().update(&state.plot_state, |s| {
-                s.overlays.images.clear();
-                if let Some(image) = image {
-                    s.overlays.images.push(
-                        PlotImage::new(
-                            image,
-                            fret_plot::cartesian::DataRect {
-                                x_min: 10.0,
-                                x_max: 90.0,
-                                y_min: -1.25,
-                                y_max: 1.25,
-                            },
-                            YAxis::Left,
-                        )
-                        .opacity(0.85)
-                        .layer(PlotImageLayer::BelowGrid),
-                    );
-                }
-            });
-        }
-
-        if state.image.is_none() {
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle {
-                series_tooltip: SeriesTooltipMode::NearestAtCursor,
-                hover_threshold: Px(10.0),
-                ..Default::default()
-            };
-            let canvas = LinePlotCanvas::new(state.plot.clone())
-                .style(style)
-                .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
         });
-
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.image.is_none() {
+        app.push_effect(Effect::RequestAnimationFrame(window));
     }
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle {
+            series_tooltip: SeriesTooltipMode::NearestAtCursor,
+            hover_threshold: Px(10.0),
+            ..Default::default()
+        };
+        let canvas = LinePlotCanvas::new(state.plot.clone())
+            .style(style)
+            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
+
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -262,7 +253,12 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    PlotImageDemoDriver::default()
+    FnDriver::new(
+        PlotImageDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
 }
 
 #[cfg(not(target_arch = "wasm32"))]

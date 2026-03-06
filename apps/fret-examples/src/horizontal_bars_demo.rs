@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
@@ -214,80 +214,71 @@ impl HorizontalBarsDemoDriver {
     }
 }
 
-impl WinitAppDriver for HorizontalBarsDemoDriver {
-    type WindowState = HorizontalBarsDemoWindowState;
+fn create_window_state(
+    _driver: &mut HorizontalBarsDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> HorizontalBarsDemoWindowState {
+    HorizontalBarsDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn handle_event(
+    _driver: &mut HorizontalBarsDemoDriver,
+    context: WinitEventContext<'_, HorizontalBarsDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(
+    _driver: &mut HorizontalBarsDemoDriver,
+    context: WinitRenderContext<'_, HorizontalBarsDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let canvas = Self::build_canvas();
-            let node = ChartCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let canvas = HorizontalBarsDemoDriver::build_canvas();
+        let node = ChartCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -304,7 +295,12 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    HorizontalBarsDemoDriver::default()
+    FnDriver::new(
+        HorizontalBarsDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
 }
 
 #[cfg(not(target_arch = "wasm32"))]
