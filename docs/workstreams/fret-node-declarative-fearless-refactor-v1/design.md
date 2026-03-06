@@ -182,6 +182,9 @@ First landing in this worktree:
 - the first private paint-only submodule split is landed: release/cancel/session-host
   helpers now live in `paint_only/pointer_session.rs`, so the main surface file keeps orchestration
   responsibilities while this interaction slice gets a named boundary.
+- the second private paint-only submodule split is landed: pointer-move helpers and
+  outcomes now live in `paint_only/pointer_move.rs`, so drag/marquee/hover move handling stops
+  expanding the main surface file.
 
 ### Slice 3 - portal and overlay closure
 

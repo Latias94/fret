@@ -237,6 +237,9 @@ points rather than direct graph mutation.
   - Declarative paint-only release/cancel/session-host helpers now live under the
     first private submodule split, `paint_only/pointer_session.rs`, so the main surface file
     keeps orchestration responsibility while this interaction slice gains a named boundary.
+  - Declarative paint-only pointer-move helpers/outcomes now live under the second
+    private submodule split, `paint_only/pointer_move.rs`, so drag/marquee/hover move handling
+    no longer expands the main surface file.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -290,6 +293,8 @@ points rather than direct graph mutation.
   pointer-session finish assertions
 - first private `paint_only/pointer_session.rs` module split for release/cancel/session
   host helpers
+- second private `paint_only/pointer_move.rs` module split for drag/marquee/hover move
+  helpers and outcomes
 - cancel reducer + pointer session helper gates for Escape-vs-pointer-cancel divergence around
   already-canceled node drags
 - keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom

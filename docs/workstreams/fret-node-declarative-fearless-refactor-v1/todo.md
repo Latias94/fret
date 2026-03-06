@@ -253,6 +253,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed private submodule follow-up: release/cancel/session host helpers now live in
     `paint_only/pointer_session.rs`, keeping the main paint-only surface file focused on
     orchestration while tests keep the same behavior gates.
+  - Landed pointer-move submodule follow-up: drag/marquee/hover move helpers and their
+    outcomes now live in `paint_only/pointer_move.rs`, shrinking the main surface file without
+    changing the focused move-path gates.
   - Landed cancel/effects follow-up: Escape and pointer-cancel now share a mode-aware transient
     cleanup reducer, pointer session finish effects are routed through shared helpers, and focused
     tests lock the already-canceled node-drag divergence between Escape and pointer-cancel.
