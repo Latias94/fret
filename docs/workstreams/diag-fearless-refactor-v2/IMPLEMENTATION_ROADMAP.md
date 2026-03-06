@@ -231,12 +231,13 @@ Suggested surface:
 
 Recommended PR slices:
 
-1. decide when legacy top-level `suites` / `scripts` compatibility can be removed,
-2. enrich metadata beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
-3. extend the landed failing-evidence defaults from share manifests into richer bundled evidence,
-4. add richer lane composition (`matrix`, `perf`, `nightly/full`),
+1. finish the canonical artifact/evidence contract now that campaign, share, and failure packaging are landed,
+2. extract the next high-ROI orchestration seams: `artifact resolution/materialization`, `run planning/context`, and `suite/campaign resolution`,
+3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
+4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
 5. decide whether campaign runs should persist a dashboard text or HTML projection,
-6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term.
+6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term,
+7. remove legacy top-level `suites` / `scripts` compatibility only after manifest authoring and evidence contracts stabilize.
 
 Important rule:
 
