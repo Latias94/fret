@@ -17,8 +17,8 @@ use crate::Graph;
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::{
-    NodeGraphCanvas, NodeGraphController, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
+    NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphInternalsStore,
+    NodeGraphOverlayState, NodeGraphViewQueue,
 };
 
 #[derive(Clone)]
@@ -26,7 +26,6 @@ pub struct NodeGraphSurfaceCompatRetainedProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
     pub store: Option<Model<NodeGraphStore>>,
-    pub edit_queue: Option<Model<NodeGraphEditQueue>>,
     pub view_queue: Option<Model<NodeGraphViewQueue>>,
     pub overlays: Option<Model<NodeGraphOverlayState>>,
     pub internals: Option<Arc<NodeGraphInternalsStore>>,
@@ -40,7 +39,6 @@ impl NodeGraphSurfaceCompatRetainedProps {
             graph,
             view_state,
             store: None,
-            edit_queue: None,
             view_queue: None,
             overlays: None,
             internals: None,
@@ -65,7 +63,6 @@ pub fn node_graph_surface_compat_retained<H: UiHost + 'static>(
         graph,
         view_state,
         store,
-        edit_queue,
         view_queue,
         overlays,
         internals,
@@ -81,20 +78,12 @@ pub fn node_graph_surface_compat_retained<H: UiHost + 'static>(
         let mut canvas = NodeGraphCanvas::new(graph.clone(), view_state.clone());
         if let Some(store) = store.clone() {
             let mut controller = NodeGraphController::new(store);
-            if let Some(edit_queue) = edit_queue.clone() {
-                controller = controller.with_edit_queue(edit_queue);
-            }
             if let Some(view_queue) = view_queue.clone() {
                 controller = controller.with_view_queue(view_queue);
             }
             canvas = canvas.with_controller(controller);
-        } else {
-            if let Some(edit_queue) = edit_queue.clone() {
-                canvas = canvas.with_edit_queue(edit_queue);
-            }
-            if let Some(view_queue) = view_queue.clone() {
-                canvas = canvas.with_view_queue(view_queue);
-            }
+        } else if let Some(view_queue) = view_queue.clone() {
+            canvas = canvas.with_view_queue(view_queue);
         }
         if let Some(overlays) = overlays.clone() {
             canvas = canvas.with_overlay_state(overlays);
