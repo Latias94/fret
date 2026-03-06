@@ -7,6 +7,7 @@ pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let sizes = snippets::sizes::render(cx);
     let airplane_mode = snippets::airplane_mode::render(cx);
     let bluetooth = snippets::bluetooth::render(cx);
+    let label = snippets::label::render(cx);
     let label_card = snippets::label_card::render(cx);
     let rtl = snippets::rtl::render(cx);
     let extras = snippets::extras::render(cx);
@@ -35,6 +36,10 @@ pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Bluetooth", bluetooth)
                 .test_id_prefix("ui-gallery-switch-bluetooth")
                 .code_rust_from_file_region(snippets::bluetooth::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Switch::control_id` so label clicks toggle the switch.")
+                .test_id_prefix("ui-gallery-switch-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Label Card", label_card)
                 .test_id_prefix("ui-gallery-switch-label-card")
                 .code_rust_from_file_region(snippets::label_card::SOURCE, "example"),
