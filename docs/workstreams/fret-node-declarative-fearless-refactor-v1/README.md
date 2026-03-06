@@ -238,9 +238,10 @@ This is intentionally not the final shape yet. Richer viewport commands, callbac
 long-term public naming/ownership story are still open; `edit_queue` is trending toward a
 transport/compatibility seam rather than the preferred app-facing teaching surface.
 
-For retained overlay composition, the preferred teaching posture is now `new(...)` plus optional
-`with_controller(...)` / `with_edit_queue(...)` bindings when a surface needs controller-first
-behavior with explicit compatibility transport fallback.
+For retained composition, the preferred teaching posture is now controller-first:
+`compat_retained` takes a controller binding at the declarative boundary, while retained widgets use
+`new(...)` plus optional `with_controller(...)` / `with_edit_queue(...)` only for explicit
+compatibility transport fallback.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 

@@ -175,9 +175,8 @@ points rather than direct graph mutation.
     `NodeGraphCanvas::with_controller` carries optional edit/view queues,
     `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new(...).with_controller(...)` prefer
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
-    now gives retained symbol actions the same controller-first path, and `compat_retained`
-    constructs controller-first canvas wiring whenever a store exists without exposing a public
-    `edit_queue` prop.
+    now gives retained symbol actions the same controller-first path, and `compat_retained` now
+    takes a controller binding directly instead of exposing public queue transport props.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -255,7 +254,7 @@ real editors.
 
 - Retained portal + rename overlay glue now has a controller-first path
   (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new(...).with_controller(...)`),
-  and `compat_retained` now relies on store/controller wiring without a public `edit_queue` prop.
+  and `compat_retained` now relies on a controller binding instead of public queue transport props.
 - `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
   app-facing examples need to teach raw `edit_queue` mutation.
 - The retained widget test harness is back in sync with the latest `fret-ui` retained bridge

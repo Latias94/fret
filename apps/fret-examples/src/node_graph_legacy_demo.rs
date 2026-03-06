@@ -2526,7 +2526,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                                     models.graph.clone(),
                                     models.view.clone(),
                                 );
-                            surface_props.store = Some(models.store.clone());
+                            surface_props.controller = Some(models.controller.clone());
                             surface_props.overlays = Some(models.overlays.clone());
                             surface_props.internals = internals;
                             surface_props.test_id =

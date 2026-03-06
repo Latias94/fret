@@ -119,7 +119,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       falling back to raw queue transport.
     - `NodeGraphOverlayHost::new(...).with_controller(...)` and `compat_retained` now teach
       controller-first rename / portal composition instead of requiring raw queue mutation at the
-      app boundary, and `compat_retained` no longer exposes a public `edit_queue` prop.
+      app boundary, and `compat_retained` now takes a controller binding instead of exposing public
+      `edit_queue` / `view_queue` transport props.
     - `NodeGraphBlackboardOverlay` now also exposes `new + with_edit_queue/with_controller`, so
       retained symbol actions can prefer controller/store commits without hiding the fallback
       transport seam.
@@ -192,8 +193,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - `NodeGraphOverlayHost::new(...).with_controller(...)` now prefers
     `NodeGraphController::submit_transaction_and_sync_graph_model`.
   - Raw `edit_queue` now remains only as a compatibility transport seam for retained-only
-    widget bindings; the `compat_retained` declarative surface no longer exposes it as a public
-    prop.
+    widget bindings; the `compat_retained` declarative surface now binds through a controller and
+    no longer exposes public queue transport props.
 - [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
       currently blurry.
 - [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
