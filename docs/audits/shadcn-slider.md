@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Slider
+# shadcn/ui v4 Audit - Slider
 
 
 ## Upstream references (non-normative)
@@ -9,7 +9,7 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Slider` against the upstream shadcn/ui v4 docs and the
+This audit compares Fret's shadcn-aligned `Slider` against the upstream shadcn/ui v4 docs and the
 `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -26,6 +26,13 @@ This audit compares Fret’s shadcn-aligned `Slider` against the upstream shadcn
   - Pointer-to-value mapping helpers: `ecosystem/fret-ui-kit/src/declarative/slider.rs`
 
 ## Audit checklist
+
+### Authoring surface
+
+- Pass: `Slider::new(model)` covers the common controlled authoring path.
+- Pass: `Slider::new_controllable(...)` covers the upstream `defaultValue`-style authoring path.
+- Pass: `range(...)`, `step(...)`, `orientation(...)`, and `on_value_commit(...)` cover the important shadcn/Radix recipe surface.
+- Note: `Slider` already has the composition and interaction hooks it needs, so Fret intentionally does not add a generic `compose()` builder here.
 
 ### Layout & geometry (shadcn parity)
 
