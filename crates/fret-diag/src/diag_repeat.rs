@@ -1,5 +1,231 @@
 use super::*;
 
+use crate::regression_summary::{
+    RegressionArtifactsV1, RegressionAttemptsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
+    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
+    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
+    RegressionSummaryV1, RegressionTotalsV1,
+};
+
+fn repeat_run_to_regression_item(
+    run: &serde_json::Value,
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    script_path: &Path,
+) -> RegressionItemSummaryV1 {
+    let index = run.get("index").and_then(|v| v.as_u64()).unwrap_or(0);
+    let stage = run.get("stage").and_then(|v| v.as_str());
+    let lint_error_issues = run
+        .pointer("/lint/error_issues")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let status = if lint_error_issues > 0 {
+        RegressionStatusV1::FailedDeterministic
+    } else {
+        match stage {
+            Some("passed") => RegressionStatusV1::Passed,
+            Some("failed") => RegressionStatusV1::FailedDeterministic,
+            Some("error") | Some(_) | None => RegressionStatusV1::FailedTooling,
+        }
+    };
+    let reason_code = run
+        .get("reason_code")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string())
+        .or_else(|| (lint_error_issues > 0).then(|| "diag.repeat.lint_failed".to_string()))
+        .or_else(|| match stage {
+            Some("passed") => None,
+            Some("failed") => Some("diag.repeat.run_failed".to_string()),
+            Some("error") | Some(_) | None => Some("tooling.diag_repeat.run_error".to_string()),
+        });
+    let bundle_artifact = run
+        .get("bundle_artifact")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    let bundle_dir = run
+        .get("last_bundle_dir")
+        .and_then(|v| v.as_str())
+        .and_then(|v| (!v.trim().is_empty()).then_some(v.trim()))
+        .map(PathBuf::from)
+        .map(|path| {
+            if path.is_absolute() {
+                path
+            } else {
+                resolved_out_dir.join(path)
+            }
+        })
+        .map(|path| path.display().to_string());
+
+    RegressionItemSummaryV1 {
+        item_id: format!("repeat-run-{index}"),
+        kind: RegressionItemKindV1::Script,
+        name: format!("repeat run #{index}"),
+        status,
+        reason_code,
+        lane: RegressionLaneV1::Correctness,
+        owner: None,
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: Some(RegressionAttemptsV1 {
+            attempts_total: 1,
+            attempts_passed: u32::from(status == RegressionStatusV1::Passed),
+            attempts_failed: u32::from(status != RegressionStatusV1::Passed),
+            retried: false,
+            repeat_summary_path: None,
+            shrink_summary_path: None,
+        }),
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact,
+            bundle_dir,
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: None,
+            compare_json: None,
+            extra: run.get("evidence").cloned(),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: Some(normalize_repo_relative_path(workspace_root, script_path)),
+            suite: None,
+            campaign_case: Some("repeat".to_string()),
+            metadata: None,
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: run
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string())
+                .or_else(|| {
+                    run.get("error")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string())
+                }),
+            details: Vec::new(),
+        }),
+    }
+}
+
+fn write_regression_summary_for_repeat(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    script_path: &Path,
+    generated_unix_ms: u64,
+    payload: &serde_json::Value,
+) {
+    let mut items = payload
+        .get("runs")
+        .and_then(|v| v.as_array())
+        .map(|runs| {
+            runs.iter()
+                .map(|run| {
+                    repeat_run_to_regression_item(
+                        run,
+                        workspace_root,
+                        resolved_out_dir,
+                        script_path,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if items.is_empty() && payload.get("status").and_then(|v| v.as_str()) != Some("passed") {
+        items.push(RegressionItemSummaryV1 {
+            item_id: "repeat".to_string(),
+            kind: RegressionItemKindV1::CampaignStep,
+            name: "repeat".to_string(),
+            status: RegressionStatusV1::FailedTooling,
+            reason_code: payload
+                .get("error_reason_code")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string())
+                .or_else(|| Some("tooling.diag_repeat.failed".to_string())),
+            lane: RegressionLaneV1::Correctness,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: None,
+            source: Some(RegressionSourceV1 {
+                script: Some(normalize_repo_relative_path(workspace_root, script_path)),
+                suite: None,
+                campaign_case: Some("repeat_setup".to_string()),
+                metadata: None,
+            }),
+            notes: Some(RegressionNotesV1 {
+                summary: Some("repeat failed before run-level rows were available".to_string()),
+                details: Vec::new(),
+            }),
+        });
+    }
+
+    let mut totals = RegressionTotalsV1::default();
+    let mixed_pass_and_fail = items
+        .iter()
+        .any(|item| item.status == RegressionStatusV1::Passed)
+        && items
+            .iter()
+            .any(|item| item.status != RegressionStatusV1::Passed);
+    if mixed_pass_and_fail {
+        for item in &mut items {
+            if item.status == RegressionStatusV1::FailedDeterministic {
+                item.status = RegressionStatusV1::FailedFlaky;
+            }
+        }
+    }
+    for item in &items {
+        totals.record_status(item.status);
+    }
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: normalize_repo_relative_path(workspace_root, script_path),
+            lane: RegressionLaneV1::Correctness,
+            profile: Some("repeat".to_string()),
+            schema_version: Some(1),
+            requested_by: Some("diag repeat".to_string()),
+            filters: None,
+        },
+        RegressionRunSummaryV1 {
+            run_id: generated_unix_ms.to_string(),
+            created_unix_ms: generated_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(resolved_out_dir.display().to_string()),
+            tool: "fretboard diag repeat".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    summary.items = items;
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+    summary.artifacts = Some(RegressionArtifactsV1 {
+        summary_dir: Some(resolved_out_dir.display().to_string()),
+        packed_report: None,
+        index_json: None,
+        html_report: None,
+    });
+
+    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    if let Err(err) = write_json_value(
+        &regression_summary_path,
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    ) {
+        eprintln!(
+            "warning: failed to write regression summary {}: {}",
+            regression_summary_path.display(),
+            err
+        );
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct RepeatCmdContext {
     pub pack_after_run: bool,
@@ -678,6 +904,13 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     }
     let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
     std::fs::write(&out_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
+    write_regression_summary_for_repeat(
+        &workspace_root,
+        &resolved_out_dir,
+        &src,
+        now_unix_ms(),
+        &payload,
+    );
 
     if stats_json {
         println!("{pretty}");
