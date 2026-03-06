@@ -2,24 +2,30 @@
 
 This checklist is scoped to the launch/public-surface refactor only.
 
+Companion docs:
+
+- Design: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`
+- Export inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`
+- Milestones: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
+
 ## Setup / Inventory
 
-- [ ] Inventory every root export in `crates/fret-launch/src/lib.rs`.
-- [ ] Group those exports into:
-  - [ ] stable public contract
-  - [ ] transitional public surface
-  - [ ] internal plumbing that should stop being part of the public story
-- [ ] Inventory which lower-level launch types are referenced directly from `ecosystem/fret`.
-- [ ] Inventory which lower-level launch types are re-exported through `crates/fret-framework` bundles.
+- [x] Inventory every root export in `crates/fret-launch/src/lib.rs`.
+- [x] Group those exports into:
+  - [x] stable public contract
+  - [x] transitional public surface
+  - [x] compatibility/internal-plumbing path that should stop being part of the default public story
+- [x] Inventory which lower-level launch types are referenced directly from `ecosystem/fret`.
+- [x] Inventory which lower-level launch types are re-exported through `crates/fret-framework` bundles.
 
 ## Surface contract decisions
 
 - [ ] Decide whether `pub mod runner` should remain public in `crates/fret-launch`.
 - [ ] Decide the intended long-term advanced entry recommendation:
   - [ ] `FnDriver` only
-  - [ ] `FnDriver` recommended, `WinitAppDriver` compatibility-only
-- [ ] Write down a deprecation/migration posture for `WinitAppDriver` if we choose a single-path model.
-- [ ] Decide which host-integration helper types are truly contract-worthy.
+  - [x] `FnDriver` recommended, `WinitAppDriver` compatibility-only
+- [x] Write down a deprecation/migration posture for `WinitAppDriver` if we choose a single-path model.
+- [x] Decide which host-integration helper types are currently contract-worthy enough to keep at crate root.
 
 ## Config curation
 
