@@ -1,0 +1,138 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Confirmation docs-aligned screenshots (zinc dark)",
+    "tags": [
+      "ui-gallery",
+      "ai-elements",
+      "confirmation",
+      "docs",
+      "screenshots",
+      "zinc-dark"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Sets theme preset to zinc/dark.",
+      "Navigates to the AI Confirmation page.",
+      "Captures workflow + request + accepted + rejected docs sections."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 920.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
+    },
+    { "type": "wait_frames", "n": 3 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai_confirmation_demo" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-confirmation-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-confirmation-demo" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-ai-confirmation-demo" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-confirmation-demo-content" },
+      "delta_y": -200.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-confirmation-docs.01-workflow-zinc-dark" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-confirmation-request-content" },
+      "delta_y": -200.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-confirmation-docs.02-request-zinc-dark" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-confirmation-accepted-content" },
+      "delta_y": -200.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-confirmation-docs.03-accepted-zinc-dark" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-confirmation-rejected-content" },
+      "delta_y": -200.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-confirmation-docs.04-rejected-zinc-dark" },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-confirmation-docs-zinc-dark" }
+  ]
+}

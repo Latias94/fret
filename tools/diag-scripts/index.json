@@ -5993,6 +5993,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-select-label-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "label",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Select page.",
+        "Scrolls the Label Association example into view.",
+        "Clicks the FieldLabel and verifies focus moves to the Select trigger."
+      ]
+    },
+    {
       "id": "ui-gallery-select-open-jitter-click-stable-v2",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-open-jitter-click-stable-v2.json",
       "required_capabilities": [
