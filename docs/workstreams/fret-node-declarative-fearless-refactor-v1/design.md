@@ -167,7 +167,9 @@ First landing in this worktree:
   digits, and keyboard zoom no longer depend on one monolithic closure branch,
 - left-button pointer-down now also routes through explicit snapshot/reducer helpers, so pan
   start, hit-node preview, marquee arming, and empty-space clear stop competing inside one
-  oversized event closure.
+  oversized event closure,
+- pointer-move now also dispatches through dedicated node-drag, marquee, and hover helpers,
+  so activation/preview/paint-only hover updates no longer live in one monolithic branch.
 
 ### Slice 3 - portal and overlay closure
 

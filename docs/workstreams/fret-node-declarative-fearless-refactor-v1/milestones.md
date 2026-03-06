@@ -223,6 +223,9 @@ points rather than direct graph mutation.
   - Declarative left-button pointer-down now dispatches through explicit snapshot/reducer
     helpers, with focused tests covering pan-start cleanup plus hit-node, marquee, and
     empty-space-clear branches.
+  - Declarative pointer-move now dispatches through explicit node-drag, marquee, and hover
+    helpers, with focused tests covering drag activation, canceled drag cleanup, marquee
+    preview/cancel, and hover hit updates.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -275,6 +278,8 @@ points rather than direct graph mutation.
   reset, and paint-override toggling
 - pointer-down reducer gates for pan-start cleanup plus hit-node, marquee, and empty-space
   clear branches
+- pointer-move reducer gates for drag activation, canceled drag cleanup, marquee
+  preview/cancel, and hover hit updates
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors

@@ -253,6 +253,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed pointer-down reducer follow-up: pan start, hit-node preview/drag arming, marquee
     arming, and empty-space clear now route through explicit snapshot/reducer helpers, with
     focused tests covering the pan, hit-node, marquee, and clear-selection branches.
+  - Landed pointer-move reducer follow-up: node-drag activation/update, marquee preview, and
+    hover hit-testing now route through explicit helpers, with focused tests covering drag
+    activation, canceled drag cleanup, marquee preview/cancel, and hover hit updates.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.
