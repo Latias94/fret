@@ -269,7 +269,8 @@ Recommended PR slices:
      consumer over `regression.index.json`,
 3. [in progress] add summary browsing panels,
    - `apps/fret-devtools` now includes a first read-only `Regression` details tab over the shared aggregate artifacts,
-4. add flake/evidence drill-down UX.
+   - the tab now supports failing-summary drill-down and bundle-dir path copying without introducing a new campaign model,
+4. [in progress] add flake/evidence drill-down UX.
 
 Important rule:
 

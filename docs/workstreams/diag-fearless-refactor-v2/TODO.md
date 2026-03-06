@@ -102,6 +102,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] `apps/fret-devtools` now includes a read-only `Regression` details tab,
   - [x] the tab reads `regression.summary.json` and `regression.index.json` from the existing artifacts root,
   - [x] the tab exposes a manual refresh path without defining a parallel campaign model.
+- [x] Add the first GUI drill-down over failing regression summaries:
+  - [x] the `Regression` tab now lists `failing_summaries` from `regression.index.json`,
+  - [x] selecting a row loads the corresponding `regression.summary.json`,
+  - [x] selected summary path and bundle dirs can be copied for evidence follow-up.
 - [x] Expose aggregate summary/index artifacts through the MCP consumer lane:
   - [x] `apps/fret-devtools-mcp` now exposes `regression.summary.json`,
   - [x] `apps/fret-devtools-mcp` now exposes `regression.index.json`,

@@ -9,7 +9,8 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
+    RegressionSummaryV1,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -132,6 +133,10 @@ struct State {
     regression_dashboard_human: Model<String>,
     regression_loaded_dir: Model<Option<Arc<str>>>,
     regression_last_error: Model<Option<Arc<str>>>,
+    regression_selected_summary_path: Model<Option<Arc<str>>>,
+    regression_selected_summary_json: Model<String>,
+    regression_selected_bundle_dirs: Model<Vec<Arc<str>>>,
+    regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
     semantics_cache: Model<Option<Arc<semantics::SemanticsIndex>>>,
@@ -287,6 +292,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_dashboard_human = app.models_mut().insert(String::new());
     let regression_loaded_dir = app.models_mut().insert(None::<Arc<str>>);
     let regression_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let regression_selected_summary_path = app.models_mut().insert(None::<Arc<str>>);
+    let regression_selected_summary_json = app.models_mut().insert(String::new());
+    let regression_selected_bundle_dirs = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
             "filesystem transport: polling FRET_DIAG_DIR={}",
@@ -402,6 +411,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_dashboard_human,
         regression_loaded_dir,
         regression_last_error,
+        regression_selected_summary_path,
+        regression_selected_summary_json,
+        regression_selected_bundle_dirs,
+        regression_selected_error,
         log_lines,
         semantics_cache,
         semantics_source_hash,
@@ -524,6 +537,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.regression_dashboard_human, Invalidation::Paint);
     cx.observe_model(&st.regression_loaded_dir, Invalidation::Paint);
     cx.observe_model(&st.regression_last_error, Invalidation::Paint);
+    cx.observe_model(&st.regression_selected_summary_path, Invalidation::Paint);
+    cx.observe_model(&st.regression_selected_summary_json, Invalidation::Paint);
+    cx.observe_model(&st.regression_selected_bundle_dirs, Invalidation::Paint);
+    cx.observe_model(&st.regression_selected_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
     cx.observe_model(&st.semantics_error, Invalidation::Paint);
@@ -1887,39 +1904,218 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_summary_json, |v| v.clone())
         .unwrap_or_default();
+    let selected_summary_path = cx
+        .app
+        .models()
+        .read(&st.regression_selected_summary_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let selected_summary_json = cx
+        .app
+        .models()
+        .read(&st.regression_selected_summary_json, |v| v.clone())
+        .unwrap_or_default();
+    let selected_bundle_dirs = cx
+        .app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.clone())
+        .unwrap_or_default();
+    let selected_error = cx
+        .app
+        .models()
+        .read(&st.regression_selected_error, |v| v.clone())
+        .ok()
+        .flatten();
     let can_refresh = cx
         .app
         .models()
         .read(&st.target_out_dir, |v| v.is_some())
         .unwrap_or(false);
+    let repo_root = repo_root_from_script_paths(&st.script_paths);
+    let failing_rows = regression_failing_summary_rows(&index_json, 10);
 
-    let mut parts: Vec<String> = Vec::new();
-    if let Some(dir) = loaded_dir.as_deref() {
-        parts.push(format!("loaded_dir: {dir}"));
-    }
-    if let Some(err) = error.as_deref() {
-        parts.push(format!("error: {err}"));
-    }
-    if !dashboard.trim().is_empty() {
-        parts.push("dashboard:".to_string());
-        parts.push(dashboard);
-    }
-    if !index_json.trim().is_empty() {
-        parts.push("regression.index.json:".to_string());
-        parts.push(index_json);
-    }
-    if !summary_json.trim().is_empty() {
-        parts.push("regression.summary.json:".to_string());
-        parts.push(summary_json);
-    }
-
-    let content = if parts.is_empty() {
-        "<empty>".to_string()
-    } else {
-        parts.join("
+    let aggregate_content = {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(dir) = loaded_dir.as_deref() {
+            parts.push(format!("loaded_dir: {dir}"));
+        }
+        if let Some(err) = error.as_deref() {
+            parts.push(format!("error: {err}"));
+        }
+        if !dashboard.trim().is_empty() {
+            parts.push("dashboard:".to_string());
+            parts.push(dashboard);
+        }
+        if !index_json.trim().is_empty() {
+            parts.push("regression.index.json:".to_string());
+            parts.push(index_json.clone());
+        }
+        if !summary_json.trim().is_empty() {
+            parts.push("regression.summary.json:".to_string());
+            parts.push(summary_json.clone());
+        }
+        if parts.is_empty() {
+            "<empty>".to_string()
+        } else {
+            parts.join("
 
 ")
+        }
     };
+
+    let failing_list = if failing_rows.is_empty() {
+        cx.text("No failing summaries in the current regression index.")
+    } else {
+        let mut rows: Vec<AnyElement> = Vec::new();
+        for row in failing_rows {
+            let label = format!(
+                "{} | lane={} failures={} items={}",
+                row.path, row.lane, row.failures, row.items_total
+            );
+            let resolved_summary_path = resolve_repo_or_abs_path(&repo_root, &row.path);
+            let resolved_summary_path_str = resolved_summary_path.to_string_lossy().to_string();
+            let selected_summary_path_model = st.regression_selected_summary_path.clone();
+            let selected_summary_json_model = st.regression_selected_summary_json.clone();
+            let selected_bundle_dirs_model = st.regression_selected_bundle_dirs.clone();
+            let selected_error_model = st.regression_selected_error.clone();
+            let log_lines_model = st.log_lines.clone();
+            let copy_path = resolved_summary_path_str.clone();
+            let select_path = resolved_summary_path_str.clone();
+            let on_select: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let path = PathBuf::from(&select_path);
+                match load_regression_summary_drilldown(&path) {
+                    Ok(data) => {
+                        let _ = host.models_mut().update(&selected_summary_path_model, |v| {
+                            *v = Some(Arc::<str>::from(select_path.clone()));
+                        });
+                        let _ = host.models_mut().update(&selected_summary_json_model, |v| {
+                            *v = data.summary_json;
+                        });
+                        let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| {
+                            *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
+                        });
+                        let _ = host.models_mut().update(&selected_error_model, |v| *v = None);
+                    }
+                    Err(err) => {
+                        let _ = host.models_mut().update(&selected_summary_path_model, |v| {
+                            *v = Some(Arc::<str>::from(select_path.clone()));
+                        });
+                        let _ = host.models_mut().update(&selected_summary_json_model, |v| v.clear());
+                        let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| v.clear());
+                        let _ = host.models_mut().update(&selected_error_model, |v| {
+                            *v = Some(Arc::<str>::from(format!(
+                                "failed to load selected regression summary {}: {err}",
+                                path.display()
+                            )))
+                        });
+                        let _ = host.models_mut().update(&log_lines_model, |v| {
+                            v.push(Arc::<str>::from(format!(
+                                "regression summary drill-down load failed: {}",
+                                path.display()
+                            )));
+                            if v.len() > 2000 {
+                                let drain = v.len().saturating_sub(2000);
+                                v.drain(0..drain);
+                            }
+                        });
+                    }
+                }
+                host.request_redraw(action_cx.window);
+            });
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText { text: copy_path.clone() });
+                host.request_redraw(action_cx.window);
+            });
+            rows.push(
+                ui::h_row(|cx| {
+                    [
+                        shadcn::Button::new(label.clone())
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(on_select)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy path")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(on_copy)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(fret_ui_kit::Space::N2)
+                .into_element(cx),
+            );
+        }
+        ui::v_stack(|_cx| rows)
+            .gap(fret_ui_kit::Space::N2)
+            .into_element(cx)
+    };
+
+    let selected_bundle_dirs_text = selected_bundle_dirs
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("
+");
+    let selected_detail_content = {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(path) = selected_summary_path.as_deref() {
+            parts.push(format!("selected_summary_path: {path}"));
+        }
+        if !selected_bundle_dirs_text.trim().is_empty() {
+            parts.push("bundle_dirs:".to_string());
+            parts.push(selected_bundle_dirs_text.clone());
+        }
+        if let Some(err) = selected_error.as_deref() {
+            parts.push(format!("error: {err}"));
+        }
+        if !selected_summary_json.trim().is_empty() {
+            parts.push("selected regression.summary.json:".to_string());
+            parts.push(selected_summary_json);
+        }
+        if parts.is_empty() {
+            "<empty>".to_string()
+        } else {
+            parts.join("
+
+")
+        }
+    };
+
+    let selected_actions = ui::h_row(|cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+        if let Some(path) = selected_summary_path.as_ref().map(|v| v.to_string()) {
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText { text: path.clone() });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy selected path")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        if !selected_bundle_dirs_text.trim().is_empty() {
+            let bundle_dirs = selected_bundle_dirs_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: bundle_dirs.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy bundle dirs")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        out
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .into_element(cx);
 
     ui::v_stack(|cx| {
         [
@@ -1935,7 +2131,43 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             })
             .gap(fret_ui_kit::Space::N2)
             .into_element(cx),
-            text_blob(cx, content),
+            shadcn::Card::new([
+                shadcn::CardHeader::new([
+                    shadcn::CardTitle::new("Aggregate").into_element(cx),
+                    shadcn::CardDescription::new(
+                        "Shared aggregate artifacts loaded from the current diagnostics artifacts root.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardContent::new([text_blob(cx, aggregate_content)]).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::Card::new([
+                shadcn::CardHeader::new([
+                    shadcn::CardTitle::new("Failing Summaries").into_element(cx),
+                    shadcn::CardDescription::new(
+                        "Click a summary row to load its drill-down payload and copy its evidence path.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardContent::new([failing_list]).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::Card::new([
+                shadcn::CardHeader::new([
+                    shadcn::CardTitle::new("Selected Summary").into_element(cx),
+                    shadcn::CardDescription::new(
+                        "Drill-down view over one failing regression summary and its bundle directories.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardContent::new([selected_actions, text_blob(cx, selected_detail_content)])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
         ]
     })
     .gap(fret_ui_kit::Space::N2)
@@ -3399,6 +3631,21 @@ fn regression_artifacts_root(app: &mut App, st: &State) -> Option<PathBuf> {
     Some(resolve_repo_or_abs_path(&repo_root, out_dir.as_ref()))
 }
 
+pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_summary_path, |v| *v = None);
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_summary_json, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_bundle_dirs, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_error, |v| *v = None);
+}
+
 pub(crate) fn clear_regression_artifacts(app: &mut App, st: &State) {
     let _ = app
         .models_mut()
@@ -3415,6 +3662,7 @@ pub(crate) fn clear_regression_artifacts(app: &mut App, st: &State) {
     let _ = app
         .models_mut()
         .update(&st.regression_last_error, |v| *v = None);
+    clear_regression_selection(app, st);
 }
 
 pub(crate) fn refresh_regression_artifacts(app: &mut App, st: &mut State) {
@@ -3463,6 +3711,91 @@ pub(crate) fn refresh_regression_artifacts(app: &mut App, st: &mut State) {
     let _ = app.models_mut().update(&st.regression_last_error, |v| {
         *v = error;
     });
+    reload_selected_regression_summary(app, st);
+}
+
+#[derive(Debug, Clone)]
+struct RegressionFailingSummaryRow {
+    path: String,
+    lane: String,
+    failures: u64,
+    items_total: u64,
+}
+
+#[derive(Debug, Clone)]
+struct RegressionSummaryDrilldownData {
+    summary_json: String,
+    bundle_dirs: Vec<String>,
+}
+
+fn regression_failing_summary_rows(index_json: &str, top: usize) -> Vec<RegressionFailingSummaryRow> {
+    let Ok(payload) = serde_json::from_str::<serde_json::Value>(index_json) else {
+        return Vec::new();
+    };
+    payload
+        .get("failing_summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .take(top)
+                .map(|row| RegressionFailingSummaryRow {
+                    path: row.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    lane: row.get("lane").and_then(|v| v.as_str()).unwrap_or("<unknown>").to_string(),
+                    failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
+                    items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
+                })
+                .filter(|row| !row.path.trim().is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn load_regression_summary_drilldown(summary_path: &Path) -> Result<RegressionSummaryDrilldownData, String> {
+    let summary_json = std::fs::read_to_string(summary_path).map_err(|e| e.to_string())?;
+    let summary: RegressionSummaryV1 = serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
+    let mut bundle_dirs: Vec<String> = Vec::new();
+    for item in summary.items {
+        if item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+        if let Some(dir) = item.evidence.and_then(|e| e.bundle_dir)
+            && !dir.trim().is_empty()
+            && !bundle_dirs.iter().any(|existing| existing == &dir)
+        {
+            bundle_dirs.push(dir);
+        }
+    }
+    Ok(RegressionSummaryDrilldownData { summary_json, bundle_dirs })
+}
+
+pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
+    let Some(path) = app
+        .models()
+        .read(&st.regression_selected_summary_path, |v| v.clone())
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    match load_regression_summary_drilldown(Path::new(path.as_ref())) {
+        Ok(data) => {
+            let _ = app.models_mut().update(&st.regression_selected_summary_json, |v| *v = data.summary_json);
+            let _ = app.models_mut().update(&st.regression_selected_bundle_dirs, |v| {
+                *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
+            });
+            let _ = app.models_mut().update(&st.regression_selected_error, |v| *v = None);
+        }
+        Err(err) => {
+            let _ = app.models_mut().update(&st.regression_selected_summary_json, |v| v.clear());
+            let _ = app.models_mut().update(&st.regression_selected_bundle_dirs, |v| v.clear());
+            let _ = app.models_mut().update(&st.regression_selected_error, |v| {
+                *v = Some(Arc::<str>::from(format!(
+                    "failed to load selected regression summary {}: {err}",
+                    path
+                )))
+            });
+        }
+    }
 }
 
 fn build_regression_dashboard_human(
@@ -3652,5 +3985,68 @@ mod tests {
         assert!(human.contains("items_total: 6"));
         assert!(human.contains("top reason codes:"));
         assert!(human.contains("pixel_diff: 2"));
+    }
+
+
+    #[test]
+    fn regression_failing_summary_rows_reads_ranked_rows() {
+        let rows = regression_failing_summary_rows(
+            &serde_json::json!({
+                "failing_summaries": [
+                    { "path": "a/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 },
+                    { "path": "b/regression.summary.json", "lane": "perf", "failures": 1, "items_total": 3 }
+                ]
+            })
+            .to_string(),
+            1,
+        );
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].path, "a/regression.summary.json");
+        assert_eq!(rows[0].lane, "smoke");
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_collects_failed_bundle_dirs() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 2, "passed": 1, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
+            "items": [
+                { "item_id": "a", "kind": "script", "name": "a", "status": "passed", "lane": "smoke" },
+                {
+                    "item_id": "b",
+                    "kind": "script",
+                    "name": "b",
+                    "status": "failed_deterministic",
+                    "lane": "smoke",
+                    "evidence": { "bundle_dir": "target/fret-diag/runs/bundle-a" }
+                },
+                {
+                    "item_id": "c",
+                    "kind": "script",
+                    "name": "c",
+                    "status": "failed_tooling",
+                    "lane": "smoke",
+                    "evidence": { "bundle_dir": "target/fret-diag/runs/bundle-a" }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert!(data.summary_json.contains("failed_deterministic"));
+        assert_eq!(data.bundle_dirs, vec!["target/fret-diag/runs/bundle-a".to_string()]);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
