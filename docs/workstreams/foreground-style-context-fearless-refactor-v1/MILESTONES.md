@@ -65,6 +65,12 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/navigation_rail` labels are now covered too: rail labels keep one-line clip
   semantics within fixed-width item slots because the label text explicitly fills the slot and opts
   into `min-w-0`.
+- `fret-ui-material3/date_picker` month titles are now covered too: header titles keep
+  centered ellipsis semantics between the previous/next buttons because the title text explicitly
+  fills the remaining header width and opts into `min-w-0`.
+- `fret-ui-material3/time_picker` titles are now covered too: dialog titles keep ellipsis
+  semantics beside the mode-toggle button because the title text explicitly fills the remaining
+  header width and opts into `min-w-0`.
 
 ---
 

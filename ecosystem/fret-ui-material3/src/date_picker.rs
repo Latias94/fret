@@ -830,6 +830,11 @@ fn month_nav_header<H: UiHost>(
         let mut props = TextProps::new(title);
         props.style = style;
         props.color = Some(color);
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        props.layout.flex.grow = 1.0;
+        props.layout.flex.basis = Length::Px(Px(0.0));
+        props.align = fret_core::TextAlign::Center;
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
@@ -1150,4 +1155,61 @@ fn absolute_fill_layout() -> LayoutStyle {
         left: Some(Px(0.0)).into(),
     };
     layout
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, TextProps};
+    use time::Month;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(420.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn date_picker_month_titles_can_truncate_between_nav_buttons() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let month = Date::from_calendar_date(2026, Month::September, 1).expect("date");
+        let month_model = app.models_mut().insert(CalendarMonth::from_date(month));
+        let selected_model = app.models_mut().insert(None::<Date>);
+        let expected_title = "September 2026";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-date-picker",
+            |cx| {
+                DockedDatePicker::new(month_model.clone(), selected_model.clone())
+                    .test_id("m3-date-picker")
+                    .into_element(cx)
+            },
+        );
+
+        let title = find_text_by_content(&el, expected_title).expect("date picker month title");
+        assert_eq!(title.wrap, TextWrap::None);
+        assert_eq!(title.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title.layout.size.width, Length::Fill);
+        assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(title.layout.flex.grow, 1.0);
+        assert_eq!(title.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(title.align, fret_core::TextAlign::Center);
+    }
 }
