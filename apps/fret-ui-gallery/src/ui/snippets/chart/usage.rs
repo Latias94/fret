@@ -58,7 +58,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .gap(Space::N4)
             .items_start()
             .justify_center()
-            .layout(LayoutRefinement::default().w_full().h_full().p(Space::N4))
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .padding(Space::N4)
             .into_element(cx)
         })
 }

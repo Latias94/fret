@@ -5,7 +5,7 @@ use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::prelude::*;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -39,19 +39,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         json_schema: None,
     };
 
-    let tools = {
-        let item_1 = ui_ai::AgentTool::new("web_search", tool_web_search)
+    let tools = ui_ai::AgentTools::multiple_uncontrolled([
+        ui_ai::AgentTool::new("web_search", tool_web_search)
             .trigger_test_id("ui-ai-agent-demo-tool-search-trigger")
-            .into_item(cx);
-        let item_2 = ui_ai::AgentTool::new("read_url", tool_read_url)
+            .into_item(cx),
+        ui_ai::AgentTool::new("read_url", tool_read_url)
             .trigger_test_id("ui-ai-agent-demo-tool-read-file-trigger")
-            .into_item(cx);
-
-        let accordion = shadcn::Accordion::multiple_uncontrolled([] as [&'static str; 0])
-            .items([item_1, item_2]);
-
-        ui_ai::AgentTools::new(accordion).into_element(cx)
-    };
+            .into_item(cx),
+    ])
+    .into_element(cx);
 
     let output_schema = Arc::from(
         "z.object({\n  sentiment: z.enum(['positive', 'negative', 'neutral']),\n  score: z.number(),\n  summary: z.string(),\n})",
@@ -80,8 +76,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Agent (AI Elements)"),
-            cx.text("Schema + tools disclosure chrome. Apps own tool execution."),
+            cx.text("Agent"),
+            cx.text(
+                "Composable agent chrome with model, instructions, expandable tool schemas, and structured output.",
+            ),
             agent,
         ]
     })

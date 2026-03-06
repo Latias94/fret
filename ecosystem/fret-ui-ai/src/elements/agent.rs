@@ -436,6 +436,37 @@ mod tests {
         assert_eq!(label.layout.flex.basis, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
+
+    #[test]
+    fn agent_tools_multiple_uncontrolled_renders_label_and_item_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let tool = AgentToolDefinition {
+            description: Some(Arc::from("Search the web for information")),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": { "query": { "type": "string" } },
+                "required": ["query"]
+            }),
+            json_schema: None,
+        };
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "agent-tools", |cx| {
+                AgentTools::multiple_uncontrolled([AgentTool::new("web_search", tool)
+                    .trigger_test_id("agent-tool-trigger")
+                    .into_item(cx)])
+                .into_element(cx)
+            });
+
+        let label = find_text_by_content(&el, "Tools").expect("tools label text");
+        assert_eq!(label.text.as_ref(), "Tools");
+
+        let description = find_text_by_content(&el, "Search the web for information")
+            .expect("tool description text");
+        assert_eq!(description.text.as_ref(), "Search the web for information");
+    }
 }
 
 /// `Tools` section wrapper (label + bordered accordion).
@@ -462,6 +493,15 @@ impl AgentTools {
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    /// Rust-friendly compound entrypoint that mirrors the upstream docs shape more closely.
+    ///
+    /// Unlike provider-backed AI elements, `AgentTools` does not need live inherited state while
+    /// its children are being built. A direct item-based constructor is enough to preserve the
+    /// official `AgentTools -> AgentTool*` composition model without introducing extra mechanism.
+    pub fn multiple_uncontrolled(items: impl IntoIterator<Item = AccordionItem>) -> Self {
+        Self::new(Accordion::multiple_uncontrolled([] as [&'static str; 0]).items(items))
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
