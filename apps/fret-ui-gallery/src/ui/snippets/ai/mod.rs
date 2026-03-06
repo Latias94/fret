@@ -17,6 +17,7 @@ pub mod confirmation_accepted;
 pub mod confirmation_demo;
 pub mod confirmation_rejected;
 pub mod confirmation_request;
+pub mod context_default;
 pub mod context_demo;
 pub mod conversation_demo;
 pub mod environment_variables_demo;
