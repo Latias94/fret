@@ -1856,14 +1856,18 @@ impl NodeGraphDemoDriver {
         };
 
         let blackboard_node = if toggles.show_blackboard() {
-            Some(ui.create_node_retained(NodeGraphBlackboardOverlay::new(
-                models.graph.clone(),
-                models.view.clone(),
-                models.edits.clone(),
-                models.overlays.clone(),
-                canvas_node,
-                style.clone(),
-            )))
+            Some(
+                ui.create_node_retained(
+                    NodeGraphBlackboardOverlay::new(
+                        models.graph.clone(),
+                        models.view.clone(),
+                        models.overlays.clone(),
+                        canvas_node,
+                        style.clone(),
+                    )
+                    .with_controller(models.controller.clone()),
+                ),
+            )
         } else {
             None
         };

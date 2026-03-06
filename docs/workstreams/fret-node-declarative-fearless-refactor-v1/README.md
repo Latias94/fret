@@ -228,15 +228,19 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - diagnostics-only paint-only graph hotkeys now also build/commit transactions instead of teaching
   direct `Graph` mutation,
 - it can sync external graph/view models from store after commits,
-- retained rename / portal / compatibility glue now also prefers controller-owned transaction
-  submission when a controller/store exists,
-- the retained legacy demo now routes its canvas / rename overlay / portal / minimap glue through the
-  same controller-first surface,
+- retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
+  transaction submission when a controller/store exists,
+- the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
+  glue through the same controller-first surface,
 - the default declarative demo now uses it.
 
 This is intentionally not the final shape yet. Richer viewport commands, callback layering, and the
 long-term public naming/ownership story are still open; `edit_queue` is trending toward a
 transport/compatibility seam rather than the preferred app-facing teaching surface.
+
+For retained overlay composition, the preferred teaching posture is now `new(...)` plus optional
+`with_controller(...)` / `with_edit_queue(...)` bindings when a surface needs controller-first
+behavior with explicit compatibility transport fallback.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
@@ -453,6 +457,8 @@ This workstream is complete only when it leaves behind:
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `tools/diag-scripts/node-graph/`

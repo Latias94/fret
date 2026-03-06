@@ -174,8 +174,9 @@ points rather than direct graph mutation.
   - Retained edit glue now also converges on the controller-first path:
     `NodeGraphCanvas::with_controller` carries optional edit/view queues,
     `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new_with_controller` prefer
-    controller-owned transaction submission, and `compat_retained` constructs controller-first
-    canvas wiring whenever a store exists.
+    controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
+    now gives retained symbol actions the same controller-first path, and `compat_retained`
+    constructs controller-first canvas wiring whenever a store exists.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -191,8 +192,10 @@ points rather than direct graph mutation.
   - `apps/fret-examples/src/node_graph_domain_demo.rs` now acts as the retained-backed best-practice
     sample for controller-first canvas / overlay / portal composition.
   - `apps/fret-examples/src/node_graph_legacy_demo.rs` now also routes retained canvas / rename
-    overlay / portal / minimap glue through the controller-first path, so the legacy demo no longer
-    teaches raw edit queue mutation first for those core surfaces.
+    overlay / blackboard / portal / minimap glue through the controller-first path, so the legacy
+    demo no longer teaches raw edit queue mutation first for those core surfaces.
+  - Feature-gated retained coverage now also includes a blackboard controller-first gate proving
+    symbol creation prefers controller/store commit over raw queue transport.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more
   declarative commit coverage, and explicit undo/redo / controlled-mode gates.
 
@@ -230,6 +233,8 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+- `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_domain_demo.rs`

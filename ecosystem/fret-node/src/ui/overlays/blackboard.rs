@@ -18,7 +18,7 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
-use crate::ui::{NodeGraphEditQueue, NodeGraphOverlayState, NodeGraphStyle};
+use crate::ui::{NodeGraphController, NodeGraphEditQueue, NodeGraphOverlayState, NodeGraphStyle};
 
 use super::{SymbolRenameOverlay, clamp_rect_to_bounds};
 
@@ -66,7 +66,8 @@ struct BlackboardLayout {
 pub struct NodeGraphBlackboardOverlay {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
-    edits: Model<NodeGraphEditQueue>,
+    edits: Option<Model<NodeGraphEditQueue>>,
+    controller: Option<NodeGraphController>,
     overlays: Model<NodeGraphOverlayState>,
     canvas_node: fret_core::NodeId,
     style: NodeGraphStyle,
@@ -82,7 +83,6 @@ impl NodeGraphBlackboardOverlay {
     pub fn new(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
-        edits: Model<NodeGraphEditQueue>,
         overlays: Model<NodeGraphOverlayState>,
         canvas_node: fret_core::NodeId,
         style: NodeGraphStyle,
@@ -90,7 +90,8 @@ impl NodeGraphBlackboardOverlay {
         Self {
             graph,
             view_state,
-            edits,
+            edits: None,
+            controller: None,
             overlays,
             canvas_node,
             style,
@@ -99,6 +100,29 @@ impl NodeGraphBlackboardOverlay {
             keyboard_active: None,
             text_blobs: Vec::new(),
             last_layout: None,
+        }
+    }
+
+    pub fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+        self.edits = Some(edits);
+        self
+    }
+
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.controller = Some(controller);
+        self
+    }
+
+    fn submit_transaction<H: fret_ui::UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
+        if let Some(controller) = &self.controller {
+            let _ = controller.submit_transaction_and_sync_graph_model(host, &self.graph, tx);
+            return;
+        }
+
+        if let Some(edits) = &self.edits {
+            let _ = edits.update(host, |q, _cx| {
+                q.push(tx.clone());
+            });
         }
     }
 
@@ -319,9 +343,7 @@ impl NodeGraphBlackboardOverlay {
                     label: Some("Add Symbol".to_string()),
                     ops: vec![GraphOp::AddSymbol { id, symbol }],
                 };
-                let _ = self.edits.update(host, |q, _cx| {
-                    q.push(tx);
-                });
+                self.submit_transaction(host, &tx);
             }
             BlackboardAction::InsertRef { symbol } => {
                 let center = Self::viewport_center_canvas_point(host, &self.view_state, bounds);
@@ -350,9 +372,7 @@ impl NodeGraphBlackboardOverlay {
                     label: Some("Insert Symbol Ref".to_string()),
                     ops: vec![GraphOp::AddNode { id, node }],
                 };
-                let _ = self.edits.update(host, |q, _cx| {
-                    q.push(tx);
-                });
+                self.submit_transaction(host, &tx);
             }
             BlackboardAction::Rename { symbol } => {
                 let _ = self.overlays.update(host, |s, _cx| {
@@ -403,9 +423,7 @@ impl NodeGraphBlackboardOverlay {
                     label: Some("Delete Symbol".to_string()),
                     ops,
                 };
-                let _ = self.edits.update(host, |q, _cx| {
-                    q.push(tx);
-                });
+                self.submit_transaction(host, &tx);
             }
         }
     }

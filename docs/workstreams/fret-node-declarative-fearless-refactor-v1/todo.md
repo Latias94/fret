@@ -108,6 +108,10 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     new app/UI glue no longer needs to teach raw queue mutation first.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
+- [ ] Collapse the remaining legacy-demo-only raw `edit_queue` command hotkey (`Bump Float Value`)
+      into controller-owned submission helpers so example code stops teaching ad-hoc queue mutation.
+- [ ] Normalize retained controller binding APIs toward `new + with_*` composition where it improves
+      teaching clarity, instead of growing more parallel constructor names.
   - Progress: retained edit glue now prefers controller-owned submission helpers when a controller is
     available:
     - `NodeGraphCanvas::with_controller` now carries both store + optional edit/view queues.
@@ -115,9 +119,12 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       falling back to raw queue transport.
     - `NodeGraphOverlayHost::new_with_controller` and `compat_retained` now teach controller-first
       rename / portal composition instead of requiring raw queue mutation at the app boundary.
+    - `NodeGraphBlackboardOverlay` now also exposes `new + with_edit_queue/with_controller`, so
+      retained symbol actions can prefer controller/store commits without hiding the fallback
+      transport seam.
     - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /
-      overlay / portal / minimap wiring, leaving raw `edit_queue` mainly for transport-only or
-      compatibility seams that still need explicit queue ownership.
+      overlay / blackboard / portal / minimap wiring, leaving raw `edit_queue` mainly for
+      transport-only or compatibility seams that still need explicit queue ownership.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
