@@ -45,6 +45,7 @@ pub enum ControlAction {
     ToggleOptionalBool(Model<Option<bool>>),
     ToggleCheckedState(Model<CheckedState>),
     Noop,
+    FocusOnly,
 }
 
 impl ControlAction {
@@ -68,6 +69,7 @@ impl ControlAction {
                     .update(model, |v: &mut CheckedState| *v = v.toggle());
             }
             ControlAction::Noop => {}
+            ControlAction::FocusOnly => {}
         }
     }
 }
