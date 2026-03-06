@@ -2684,31 +2684,44 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 .disabled(!can_refresh || summarize_in_flight)
                 .on_click(CMD_REGRESSION_SUMMARIZE)
                 .into_element(cx),
-            cx.text(summarize_status_line),
         ]
     })
     .gap(fret_ui_kit::Space::N2)
     .items_center()
     .into_element(cx);
 
-    let overview_card = shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Regression Workspace").into_element(cx),
-            shadcn::CardDescription::new(
-                "Summary-first view over aggregate artifacts, failing summaries, and evidence actions.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([
-            status_row,
-            top_actions,
-            cx.text(loaded_dir_line),
-            text_blob_sized(cx, aggregate_preview.clone(), Px(120.0)),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let loaded_dir_text = cx.text(loaded_dir_line);
+    let summarize_status_text = cx.text(summarize_status_line);
+    let aggregate_preview_blob = text_blob_sized(cx, aggregate_preview.clone(), Px(96.0));
+    let overview_status_section = diag_section(
+        cx,
+        "Aggregate Status",
+        "Keep artifacts-root readiness and current failure counters visible at the top of the workspace.",
+        vec![status_row, loaded_dir_text, summarize_status_text],
+    );
+    let overview_actions_section = diag_section(
+        cx,
+        "Primary Actions",
+        "Refresh aggregate artifacts or run summarize without losing sight of the current counters.",
+        vec![top_actions],
+    );
+    let overview_preview_section = diag_section(
+        cx,
+        "Dashboard Preview",
+        "A compact aggregate preview stays available here, while full debug payloads live lower in the tab.",
+        vec![aggregate_preview_blob],
+    );
+
+    let overview_card = diag_card(
+        cx,
+        "Regression Workspace",
+        "Summary-first view over aggregate artifacts, failing summaries, and evidence actions.",
+        vec![
+            overview_status_section,
+            overview_actions_section,
+            overview_preview_section,
+        ],
+    );
 
     let left_card = diag_card(
         cx,
