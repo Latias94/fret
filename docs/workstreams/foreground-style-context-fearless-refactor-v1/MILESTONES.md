@@ -28,6 +28,10 @@ Current snapshot (2026-03-06):
 - Follow-up layout audit work has now locked `radio_group` long-label behavior with a targeted
   regression test: the default label text keeps word wrapping while shrinking inside the item row
   via explicit grow + `min-w-0`, preventing the one-line overflow drift seen during the audit.
+- The same wrapped-label audit has now been extended into `fret-ui-ai` header surfaces:
+  `agent`, `sandbox`, and `tool` all had icon/label/badge rows tightened with explicit shrink-
+  friendly constraints, and each surface now has a targeted regression test that locks the label
+  text to `wrap: Word` plus `flex_grow(1.0)` + `min_w_0()`.
 
 ---
 
