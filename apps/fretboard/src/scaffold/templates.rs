@@ -619,14 +619,13 @@ __PALETTE_BUTTON__
                 .into_element(cx),
             );
         })
-        .refine_style(
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_token("background")))
-                .rounded(Radius::Lg)
-                .border_1()
-                .border_color(ColorRef::Color(theme.color_token("border"))),
-        )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .ui()
+        .bg(ColorRef::Color(theme.color_token("background")))
+        .rounded(Radius::Lg)
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_token("border")))
+        .w_full()
+        .max_w(Px(520.0))
         ;
 
         let page = ui::container(|cx| ui::children![cx;
@@ -1012,14 +1011,13 @@ __ADD_BTN_DEF__
                 .into_element(cx),
             );
         })
-        .refine_style(
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_token("background")))
-                .rounded(Radius::Lg)
-                .border_1()
-                .border_color(ColorRef::Color(theme.color_token("border"))),
-        )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .ui()
+        .bg(ColorRef::Color(theme.color_token("background")))
+        .rounded(Radius::Lg)
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_token("border")))
+        .w_full()
+        .max_w(Px(520.0))
         ;
 
         let page = ui::container(|cx| {
@@ -1309,6 +1307,8 @@ mod tests {
         assert!(!src.contains("cx.on_action_notify_model_update::<act::RefreshTip"));
         assert!(!src.contains("cx.on_action_notify_model_set::<act::Filter"));
         assert!(!src.contains("decl_style::container_props"));
+        assert!(!src.contains(".refine_style("));
+        assert!(!src.contains(".refine_layout("));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(
@@ -1349,6 +1349,8 @@ mod tests {
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
+        assert!(!src.contains(".refine_style("));
+        assert!(!src.contains(".refine_layout("));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(

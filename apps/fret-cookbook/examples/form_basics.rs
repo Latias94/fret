@@ -1,6 +1,6 @@
 use fret::prelude::*;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui::CommandAvailability;
+use fret_ui::element::SemanticsDecoration;
 
 mod act {
     fret::actions!([
@@ -201,7 +201,9 @@ impl View for FormBasicsView {
                 .into_element(cx),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(640.0)))
+        .ui()
+        .w_full()
+        .max_w(Px(640.0))
         .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()

@@ -1,7 +1,7 @@
 use std::{
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicU64, Ordering},
     },
     time::Duration,
 };
@@ -304,7 +304,9 @@ impl View for AsyncInboxBasicsView {
                 .into_element(cx),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
+        .ui()
+        .w_full()
+        .max_w(Px(720.0))
         .into_element(cx);
 
         cx.on_action_notify_model_update::<act::ClearLog, String>(

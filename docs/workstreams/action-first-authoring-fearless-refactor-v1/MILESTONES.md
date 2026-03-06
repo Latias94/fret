@@ -32,7 +32,7 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
 - `ecosystem/fret-ui-kit/src/ui.rs` (`UiElementSinkExt` for builder-first `*_build` sink composition)
-- `ecosystem/fret-ui-shadcn/src/card.rs` (`Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` allow late child landing across the query-demo card tree)
+- `ecosystem/fret-ui-shadcn/src/card.rs` (`Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` allow late child landing and host-bound `.ui()` patching across the query-demo card tree)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions and now late-land their todo-card trees via `Card::build(...)`)
 - `docs/first-hour.md` / `docs/examples/README.md` / `docs/examples/todo-app-golden-path.md` / `docs/fearless-refactoring.md` / `docs/crate-usage-guide.md` / `docs/ui-ergonomics-and-interop.md` (first-contact, golden-path, and ergonomics docs now teach the same three entrypoints and defer raw `on_action_notify` to cookbook/reference host-side cases)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (gallery teaching page now calls out the same default path and keeps advanced host-side cases out of the gallery narrative)

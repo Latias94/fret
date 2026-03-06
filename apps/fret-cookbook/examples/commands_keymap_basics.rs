@@ -1,7 +1,7 @@
 use fret::prelude::*;
 use fret_app::{
-    format_sequence, CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord,
-    KeymapService, Platform, PlatformFilter,
+    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
+    PlatformFilter, format_sequence,
 };
 use fret_core::{KeyCode, Modifiers};
 use fret_ui::CommandAvailability;
@@ -195,7 +195,8 @@ impl View for CommandsKeymapBasicsView {
                 .into_element(cx),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full())
+        .ui()
+        .w_full()
         .into_element(cx)
         .test_id(TEST_ID_PANEL);
 
@@ -224,7 +225,9 @@ impl View for CommandsKeymapBasicsView {
                 .into_element(cx),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(860.0)))
+        .ui()
+        .w_full()
+        .max_w(Px(860.0))
         .into_element(cx)
         .key_context("cookbook.commands_keymap_basics");
 
