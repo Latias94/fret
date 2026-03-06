@@ -16,6 +16,9 @@ Current snapshot (2026-03-06):
 - `dropdown_menu`, `select`, and `tabs` have now been audited and locked with targeted regression
   tests that prove inherited foreground attaches to real subtree roots without synthetic wrapper
   nodes.
+- `context_menu` and `menubar` are now also covered by targeted menu-row regression tests, so the
+  menu-family audit has explicit evidence for wrapper-free inherited icon foreground on existing
+  subtree nodes.
 
 ---
 
