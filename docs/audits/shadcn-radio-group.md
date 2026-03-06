@@ -30,6 +30,9 @@ examples in `repo-ref/ui`.
 
 - Pass: `RadioGroupItem` supports composable contents via `RadioGroupItem::children(...)` while keeping
   the convenient `RadioGroup::item(RadioGroupItem::new(value, label))` builder shape.
+- Note: Because `RadioGroupItem::new(value, label)` already covers the common shadcn authoring path and
+  `children(...)` covers richer card content, Fret intentionally does not add a separate generic
+  `compose()` builder for this component.
 - Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).
 
