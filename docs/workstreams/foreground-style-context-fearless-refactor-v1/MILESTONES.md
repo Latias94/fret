@@ -22,9 +22,9 @@ Current snapshot (2026-03-06):
 - `message`, `task`, and `alert` now have explicit regression coverage for wrapper-free inherited
   foreground, and `message` no longer lowers a single-root content stack through transitional
   `scope_children(...)`.
-- `input_group` has been reviewed and is mostly migrated, but one single-root button-content path
-  still uses transitional `scope_children(...)`; it remains tracked as follow-up rather than a
-  blocker for v1 foreground inheritance.
+- `input_group` is now fully covered for the v1 foreground slice: addon rows and button-content
+  roots both attach inherited foreground directly to existing subtree roots without synthetic
+  wrappers.
 
 ---
 

@@ -200,6 +200,15 @@ pub(crate) fn container_flow<H: UiHost>(
 /// Use this for panel/content roots (popover/hover-card-like surfaces) where wrapped text should
 /// resolve its wrap width against the container's inner width rather than shrink-wrapping to its
 /// min-content size.
+///
+/// Important:
+///
+/// - This is intentionally stronger than `container_flow(...)`: the inner flow child requests
+///   `w_full().min_w_0()`, and the layout engine will promote an auto-sized passthrough wrapper to
+///   a definite width when needed so percent sizing does not collapse to zero.
+/// - Use it only for roots that are expected to own panel/content width.
+/// - Do not use it for shrink-wrapped trigger/button/menu-row chrome; those surfaces should keep
+///   intrinsic width and rely on `container_flow(...)` (or a custom row/flex root) instead.
 pub(crate) fn container_flow_fill_width<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,
