@@ -62,7 +62,7 @@ pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .description("shadcn demo: single, range, multiple, vertical, and controlled.")
                     .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
                 DocSection::new("Label Association", label)
-                    .description("Use `FieldLabel::for_control` + `Slider::control_id` to focus the active thumb on label click.")
+                    .description("Use `FieldLabel::for_control`, `Slider::control_id`, and `Slider::test_id_prefix` to focus the active thumb and keep derived automation anchors stable.")
                     .test_id_prefix("ui-gallery-slider-label")
                     .code_rust_from_file_region(snippets::label::SOURCE, "example"),
                 DocSection::new("Extras", extras)

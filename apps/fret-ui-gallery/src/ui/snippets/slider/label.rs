@@ -25,7 +25,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let slider = shadcn::Slider::new(value)
         .range(0.0, 100.0)
         .control_id(control_id.clone())
-        .test_id("ui-gallery-slider-label")
+        .test_id_prefix("ui-gallery-slider-label")
         .into_element(cx);
 
     shadcn::FieldGroup::new([shadcn::Field::new([
