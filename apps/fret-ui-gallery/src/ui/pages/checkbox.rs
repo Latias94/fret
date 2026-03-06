@@ -7,6 +7,7 @@ pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let checked_state = snippets::checked_state::render(cx);
+    let label = snippets::label::render(cx);
     let invalid_state = snippets::invalid_state::render(cx);
     let basic = snippets::basic::render(cx);
     let description_section = snippets::description::render(cx);
@@ -45,6 +46,10 @@ pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             DocSection::new("Checked State", checked_state)
                 .description("Controlled checked model and optional/indeterminate model.")
                 .code_rust_from_file_region(snippets::checked_state::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Checkbox::control_id` so label clicks toggle the checkbox.")
+                .test_id_prefix("ui-gallery-checkbox-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Invalid State", invalid_state)
                 .description("Invalid styling uses `aria_invalid` on the checkbox and destructive label text.")
                 .code_rust_from_file_region(snippets::invalid_state::SOURCE, "example"),
