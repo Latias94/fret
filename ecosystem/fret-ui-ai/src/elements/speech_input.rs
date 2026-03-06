@@ -8,12 +8,18 @@
 //!   button chrome and emits an intent (`on_listening_change`).
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use fret_core::{Color, Point, Px, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
-use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::element::{AnyElement, SemanticsDecoration, VisualTransformProps};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, UiHost};
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::declarative::motion::drive_loop_progress;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
+use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Spinner};
 
 pub type OnSpeechInputListeningChange =
@@ -26,6 +32,8 @@ pub struct SpeechInput {
     processing: Option<Model<bool>>,
     default_processing: bool,
     disabled: bool,
+    variant: ButtonVariant,
+    size: ButtonSize,
     on_listening_change: Option<OnSpeechInputListeningChange>,
     test_id: Option<Arc<str>>,
 }
@@ -38,6 +46,8 @@ impl std::fmt::Debug for SpeechInput {
             .field("processing", &self.processing.as_ref().map(|m| m.id()))
             .field("default_processing", &self.default_processing)
             .field("disabled", &self.disabled)
+            .field("variant", &self.variant)
+            .field("size", &self.size)
             .field(
                 "has_on_listening_change",
                 &self.on_listening_change.is_some(),
@@ -55,6 +65,8 @@ impl SpeechInput {
             processing: None,
             default_processing: false,
             disabled: false,
+            variant: ButtonVariant::Default,
+            size: ButtonSize::Icon,
             on_listening_change: None,
             test_id: None,
         }
@@ -86,6 +98,18 @@ impl SpeechInput {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Button chrome variant for the idle/listening surface.
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    /// Button size for the record control.
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.size = size;
         self
     }
 
@@ -122,6 +146,15 @@ impl SpeechInput {
 
             let disabled = self.disabled || processing_now;
             let on_listening_change = self.on_listening_change.clone();
+            let variant = self.variant;
+            let size = self.size;
+            let pulse_period = Duration::from_secs(2);
+            let pulse_progress = drive_loop_progress(cx, listening_now, pulse_period);
+            let theme = Theme::global(&*cx.app).snapshot();
+            let pulse_center = Point::new(
+                Px(icon_button_diameter(&theme, size).0 / 2.0),
+                Px(icon_button_diameter(&theme, size).0 / 2.0),
+            );
 
             let icon = if processing_now {
                 Spinner::new().into_element(cx)
@@ -163,21 +196,143 @@ impl SpeechInput {
             });
 
             let mut btn = Button::new(label)
-                .size(ButtonSize::Icon)
+                .size(size)
                 .variant(if listening_now {
                     ButtonVariant::Destructive
                 } else {
-                    ButtonVariant::Default
+                    variant
                 })
+                .style(button_style_for_state(&theme, listening_now))
+                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                 .children([icon])
                 .disabled(disabled)
                 .on_activate(on_activate);
 
-            if let Some(test_id) = self.test_id {
+            if let Some(test_id) = self.test_id.clone() {
                 btn = btn.test_id(test_id);
             }
 
-            btn.into_element(cx)
+            let button = btn.into_element(cx);
+
+            if !listening_now {
+                return button;
+            }
+
+            let mut layers = Vec::with_capacity(4);
+            for index in 0..3 {
+                let ring = speech_input_pulse_ring(
+                    cx,
+                    &theme,
+                    pulse_progress.progress,
+                    pulse_center,
+                    index,
+                    self.test_id.as_ref(),
+                );
+                layers.push(ring);
+            }
+            layers.push(button);
+
+            let mut props = fret_ui::element::ContainerProps::default();
+            props.layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().relative().flex_shrink_0(),
+            );
+
+            cx.container(props, move |_cx| layers)
         })
     }
+}
+
+fn button_style_for_state(theme: &fret_ui::ThemeSnapshot, listening: bool) -> ButtonStyle {
+    let border = theme.color_token("border");
+    let idle_bg = theme.color_token("primary");
+    let idle_fg = theme.color_token("primary-foreground");
+    let listening_bg = theme.color_token("destructive");
+    let listening_fg = ColorRef::Named(ThemeNamedColorKey::White);
+
+    let (base_bg, hover_bg, base_fg) = if listening {
+        (listening_bg, alpha(listening_bg, 0.88), listening_fg)
+    } else {
+        (idle_bg, alpha(idle_bg, 0.88), ColorRef::Color(idle_fg))
+    };
+
+    ButtonStyle::default()
+        .background(
+            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(base_bg))).when(
+                fret_ui_kit::WidgetStates::HOVERED,
+                Some(ColorRef::Color(hover_bg)),
+            ),
+        )
+        .foreground(fret_ui_kit::WidgetStateProperty::new(Some(base_fg)))
+        .border_color(fret_ui_kit::WidgetStateProperty::new(Some(
+            ColorRef::Color(border),
+        )))
+}
+
+fn speech_input_pulse_ring<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &fret_ui::ThemeSnapshot,
+    progress: f32,
+    center: Point,
+    index: usize,
+    test_id_prefix: Option<&Arc<str>>,
+) -> AnyElement {
+    let phase = (progress + (index as f32 / 3.0)).fract();
+    let scale = 1.0 + 0.4 * phase;
+    let alpha_value = 0.32 * (1.0 - phase).clamp(0.0, 1.0);
+    let ring_color = alpha(theme.color_token("destructive"), alpha_value);
+    let transform = Transform2D::translation(center)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-center.x.0), Px(-center.y.0)));
+
+    let ring = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .rounded(Radius::Full)
+                .border_width(Px(2.0))
+                .border_color(ColorRef::Color(ring_color)),
+            LayoutRefinement::default().w_full().h_full(),
+        ),
+        |_cx| Vec::new(),
+    );
+
+    let ring = cx.visual_transform_props(
+        VisualTransformProps {
+            layout: decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().absolute().inset_px(Px(0.0)),
+            ),
+            transform,
+        },
+        move |_cx| vec![ring],
+    );
+
+    if let Some(prefix) = test_id_prefix {
+        return ring.attach_semantics(
+            SemanticsDecoration::default()
+                .test_id(Arc::<str>::from(format!("{prefix}-pulse-{index}"))),
+        );
+    }
+
+    ring
+}
+
+fn icon_button_diameter(theme: &fret_ui::ThemeSnapshot, size: ButtonSize) -> Px {
+    let size_key = match size {
+        ButtonSize::Xs | ButtonSize::IconXs => "xs",
+        ButtonSize::Sm | ButtonSize::IconSm => "sm",
+        ButtonSize::Default | ButtonSize::Icon => "md",
+        ButtonSize::Lg | ButtonSize::IconLg => "lg",
+    };
+
+    theme
+        .metric_by_key(&format!("component.size.{size_key}.icon_button.size"))
+        .or_else(|| theme.metric_by_key(&format!("component.size.{size_key}.button.h")))
+        .unwrap_or(Px(36.0))
+}
+
+fn alpha(mut color: Color, alpha: f32) -> Color {
+    color.a = alpha.clamp(0.0, 1.0);
+    color
 }

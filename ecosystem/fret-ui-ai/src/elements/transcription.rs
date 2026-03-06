@@ -8,7 +8,7 @@ use fret_core::{
     Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::action::ActionCx;
+use fret_ui::action::{ActionCx, OnActivate};
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, PressableProps, SemanticsDecoration, TextProps,
 };
@@ -137,7 +137,7 @@ impl Transcription {
             default_current_time: 0.0,
             on_seek: None,
             test_id_root: None,
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            layout: LayoutRefinement::default().min_w_0(),
         }
     }
 
@@ -266,6 +266,8 @@ pub struct TranscriptionSegment {
     segment: TranscriptionSegmentData,
     index: usize,
     test_id: Option<Arc<str>>,
+    text_style: Option<TextStyle>,
+    on_activate: Option<OnActivate>,
     layout: LayoutRefinement,
 }
 
@@ -277,6 +279,8 @@ impl std::fmt::Debug for TranscriptionSegment {
             .field("end_second", &self.segment.end_second)
             .field("text", &self.segment.text)
             .field("test_id", &self.test_id.as_deref())
+            .field("text_style", &self.text_style)
+            .field("has_on_activate", &self.on_activate.is_some())
             .finish()
     }
 }
@@ -287,6 +291,8 @@ impl TranscriptionSegment {
             segment,
             index,
             test_id: None,
+            text_style: None,
+            on_activate: None,
             layout: LayoutRefinement::default(),
         }
     }
@@ -298,6 +304,18 @@ impl TranscriptionSegment {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Override the segment text style while keeping the default active/past/future coloring.
+    pub fn text_style(mut self, style: TextStyle) -> Self {
+        self.text_style = Some(style);
+        self
+    }
+
+    /// Compose additional activation behavior after the upstream-aligned `on_seek` callback.
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
         self
     }
 
@@ -316,6 +334,7 @@ impl TranscriptionSegment {
         let is_past = current_time >= seg.end_second;
 
         let on_seek = controller.on_seek.clone();
+        let on_activate = self.on_activate;
 
         let base = if is_active {
             primary(&theme)
@@ -328,62 +347,48 @@ impl TranscriptionSegment {
         let fg_on_hover = theme.color_token("foreground");
 
         let test_id = self.test_id;
-        let index = self.index;
         let layout = self.layout;
 
-        let style = text_sm(&theme);
+        let style = self.text_style.unwrap_or_else(|| text_sm(&theme));
         let text = seg.text.clone();
-
-        if on_seek.is_none() {
-            let mut props = TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(style),
-                color: Some(base),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            };
-            props.layout.size.width = Length::Auto;
-            let el = cx.text_props(props);
-            let Some(test_id) = test_id else {
-                return el;
-            };
-            return el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Text)
-                    .test_id(test_id),
-            );
-        }
 
         cx.pressable_with_id_props(move |cx, st, _id| {
             let mut pressable = PressableProps::default();
             pressable.enabled = true;
             pressable.focusable = true;
             pressable.a11y.role = Some(SemanticsRole::Button);
-            pressable.a11y.label = Some(Arc::<str>::from(format!("Transcription segment {index}")));
+            pressable.a11y.label = Some(text.clone());
             pressable.a11y.test_id = test_id.clone();
             pressable.layout = decl_style::layout_style(&theme, layout);
 
-            let fg = if st.hovered { fg_on_hover } else { base };
+            let fg = if st.hovered && on_seek.is_some() {
+                fg_on_hover
+            } else {
+                base
+            };
 
-            cx.pressable_on_activate({
-                let on_seek = on_seek.clone();
-                let start = seg.start_second;
-                Arc::new(move |host, action_cx, _reason| {
-                    if let Some(cb) = on_seek.clone() {
-                        cb(host, action_cx, start);
-                    }
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                })
-            });
+            if on_seek.is_some() || on_activate.is_some() {
+                cx.pressable_on_activate({
+                    let on_seek = on_seek.clone();
+                    let on_activate = on_activate.clone();
+                    let start = seg.start_second;
+                    Arc::new(move |host, action_cx, reason| {
+                        if let Some(cb) = on_seek.clone() {
+                            cb(host, action_cx, start);
+                        }
+                        if let Some(cb) = on_activate.clone() {
+                            cb(host, action_cx, reason);
+                        }
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                    })
+                });
+            }
 
             let mut text_props = TextProps {
                 layout: LayoutStyle::default(),
                 text: text.clone(),
-                style: Some(style),
+                style: Some(style.clone()),
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
@@ -394,5 +399,111 @@ impl TranscriptionSegment {
             let content = cx.text_props(text_props);
             (pressable, vec![content])
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(240.0)),
+        )
+    }
+
+    fn single_segment() -> Arc<[TranscriptionSegmentData]> {
+        Arc::from(vec![TranscriptionSegmentData::new(0.0, 1.0, "Hello")])
+    }
+
+    #[test]
+    fn transcription_root_defaults_do_not_force_fill_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "transcription", |cx| {
+                Transcription::from_arc(single_segment()).into_element(cx)
+            });
+
+        let ElementKind::Flex(props) = &el.kind else {
+            panic!("expected Transcription root to render a flex container");
+        };
+
+        assert_ne!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn transcription_segment_without_seek_still_renders_pressable_button() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "transcription-segment",
+            |cx| Transcription::from_arc(single_segment()).into_element(cx),
+        );
+
+        let segment = el.children.first().expect("expected segment child");
+        let ElementKind::Pressable(props) = &segment.kind else {
+            panic!("expected TranscriptionSegment to render as a pressable button");
+        };
+
+        assert!(
+            props.focusable,
+            "expected upstream-aligned button semantics"
+        );
+        assert_eq!(props.a11y.role, Some(SemanticsRole::Button));
+        assert_eq!(props.a11y.label.as_deref(), Some("Hello"));
+    }
+
+    #[test]
+    fn transcription_segment_text_style_override_applies_to_text_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let override_style = TextStyle {
+            font: FontId::default(),
+            size: Px(18.0),
+            line_height: Some(Px(28.0)),
+            ..Default::default()
+        };
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "transcription-style",
+            |cx| {
+                Transcription::from_arc(single_segment()).into_element_with_children(cx, {
+                    let override_style = override_style.clone();
+                    move |cx, seg, index| {
+                        TranscriptionSegment::new(seg, index)
+                            .text_style(override_style.clone())
+                            .into_element(cx)
+                    }
+                })
+            },
+        );
+
+        let segment = el.children.first().expect("expected segment child");
+        let ElementKind::Pressable(_) = &segment.kind else {
+            panic!("expected segment root to remain a pressable");
+        };
+        let text = segment.children.first().expect("expected text child");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected segment content to render as text");
+        };
+        let style = props.style.as_ref().expect("expected text style");
+
+        assert_eq!(style.size, Px(18.0));
+        assert_eq!(style.line_height, Some(Px(28.0)));
     }
 }
