@@ -1,14 +1,22 @@
 pub const SOURCE: &str = include_str!("speech_input_demo.rs");
 
 // region: example
-use fret_core::{SemanticsRole, TimerToken};
+use fret_core::{
+    AttributedText, Color, DecorationLineStyle, FontWeight, Px, SemanticsRole, TextAlign,
+    TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap, TimerToken, UnderlineStyle,
+};
 use fret_runtime::{Effect, Model};
-use fret_ui::Invalidation;
-use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+use fret_ui::element::{
+    LayoutStyle, Length, PressableA11y, PressableProps, SemanticsDecoration, SemanticsProps,
+    StyledTextProps, TextInkOverflow, TextProps,
+};
+use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Card, CardContent, prelude::*};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_shadcn::{ButtonSize, ButtonVariant, Card, CardContent, CardSize, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -78,6 +86,113 @@ fn push_transcript_line(current: &mut String, sample_ix: usize) {
     current.push_str(next);
 }
 
+fn muted_fg(theme: &Theme) -> Color {
+    theme
+        .color_by_key("muted-foreground")
+        .or_else(|| theme.color_by_key("muted_foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"))
+}
+
+fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style
+}
+
+fn fill_text_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout
+}
+
+fn body_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    style: TextStyle,
+    color: Color,
+    align: TextAlign,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: fill_text_layout(),
+        text: text.into(),
+        style: Some(style),
+        color: Some(color),
+        wrap: TextWrap::WordBreak,
+        overflow: TextOverflow::Clip,
+        align,
+        ink_overflow: TextInkOverflow::None,
+    })
+}
+
+fn underlined_text(text: Arc<str>) -> AttributedText {
+    let spans: Arc<[TextSpan]> = Arc::from([TextSpan {
+        len: text.len(),
+        shaping: Default::default(),
+        paint: TextPaintStyle {
+            underline: Some(UnderlineStyle {
+                color: None,
+                style: DecorationLineStyle::Solid,
+            }),
+            ..Default::default()
+        },
+    }]);
+    AttributedText::new(text, spans)
+}
+
+fn clear_action<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    transcript: Model<String>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let muted = muted_fg(theme);
+    let foreground = theme.color_token("foreground");
+    let text_style = text_sm(theme, FontWeight::NORMAL);
+    let focus_ring = decl_style::focus_ring(
+        theme,
+        theme.metric_by_key("metric.radius.sm").unwrap_or(Px(4.0)),
+    );
+    let label = Arc::<str>::from("Clear");
+
+    cx.pressable(
+        PressableProps {
+            focus_ring: Some(focus_ring),
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(Arc::clone(&label)),
+                test_id: Some(Arc::from("ui-ai-speech-input-demo-clear")),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, state| {
+            let transcript = transcript.clone();
+            cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&transcript, |value| value.clear());
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+            }));
+
+            let color = if state.hovered || state.pressed {
+                foreground
+            } else {
+                muted
+            };
+
+            vec![cx.styled_text_props(StyledTextProps {
+                layout: LayoutStyle::default(),
+                rich: underlined_text(Arc::clone(&label)),
+                style: Some(text_style.clone()),
+                color: Some(color),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: TextInkOverflow::None,
+            })]
+        },
+    )
+}
+
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let (listening, processing, transcript, next_sample, timer_token) = ensure_models(cx);
 
@@ -131,6 +246,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         true
                     }),
                 );
+
+                let theme = Theme::global(&*cx.app);
+                let muted = muted_fg(theme);
+                let foreground = theme.color_token("foreground");
+                let muted_text_style = text_sm(theme, FontWeight::NORMAL);
+                let transcript_label_style = text_sm(theme, FontWeight::SEMIBOLD);
+                let transcript_body_style = text_sm(theme, FontWeight::NORMAL);
 
                 let listening_now = cx
                     .get_model_copied(&listening, Invalidation::Paint)
@@ -192,22 +314,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     }))
                     .into_element(cx);
 
-                let clear_button = (!transcript_now.is_empty()).then(|| {
-                    Button::new("Clear")
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::Sm)
-                        .test_id("ui-ai-speech-input-demo-clear")
-                        .on_activate(Arc::new({
-                            let transcript = transcript.clone();
-                            move |host, action_cx, _reason| {
-                                let _ =
-                                    host.models_mut().update(&transcript, |value| value.clear());
-                                host.notify(action_cx);
-                                host.request_redraw(action_cx.window);
-                            }
-                        }))
-                        .into_element(cx)
-                });
+                let clear_button =
+                    (!transcript_now.is_empty()).then(|| clear_action(cx, transcript.clone()));
 
                 let mut control_row = vec![speech_input];
                 if let Some(clear_button) = clear_button {
@@ -220,9 +328,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     } else if processing_now {
                         "Transcribing audio…"
                     } else {
-                        "Click the microphone to start speaking."
+                        "Click the microphone to start speaking"
                     };
-                    cx.text(message)
+                    body_text(cx, message, muted_text_style, muted, TextAlign::Center)
                         .attach_semantics(SemanticsDecoration::default().test_id(
                             if processing_now {
                                 "ui-ai-speech-input-demo-processing"
@@ -231,21 +339,43 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             },
                         ))
                 } else {
-                    let content = CardContent::new([
-                        cx.text("Transcript:"),
-                        cx.text(transcript_now.clone()).attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id("ui-ai-speech-input-demo-transcript"),
-                        ),
-                    ])
+                    let content = ui::v_flex(move |cx| {
+                        vec![
+                            body_text(
+                                cx,
+                                "Transcript:",
+                                transcript_label_style,
+                                muted,
+                                TextAlign::Start,
+                            ),
+                            body_text(
+                                cx,
+                                transcript_now.clone(),
+                                transcript_body_style,
+                                foreground,
+                                TextAlign::Start,
+                            )
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("ui-ai-speech-input-demo-transcript"),
+                            ),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
+                    let content = CardContent::new([content]).into_element(cx);
+
                     Card::new([content])
+                        .size(CardSize::Sm)
+                        .refine_style(ChromeRefinement::default().shadow_none())
                         .refine_layout(
                             LayoutRefinement::default()
                                 .w_full()
                                 .min_w_0()
-                                .max_w(fret_core::Px(460.0)),
+                                .max_w(Px(448.0)),
                         )
                         .into_element(cx)
                 };
@@ -256,14 +386,20 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             .gap(Space::N2)
                             .items_center()
                             .justify_center()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .layout(LayoutRefinement::default().min_w_0())
                             .into_element(cx);
 
                         vec![row, transcript_surface]
                     })
                     .gap(Space::N4)
                     .items_center()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .justify_center()
+                    .layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .min_h(Px(280.0)),
+                    )
                     .into_element(cx),
                 ]
             },
