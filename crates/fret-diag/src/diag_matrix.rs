@@ -1,5 +1,202 @@
 use super::*;
 
+use crate::regression_summary::{
+    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
+    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
+    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
+    RegressionSummaryV1, RegressionTotalsV1,
+};
+
+fn matrix_comparison_to_regression_item(
+    workspace_root: &Path,
+    comparison: &serde_json::Value,
+    matrix_summary_path: &Path,
+    target: &str,
+) -> RegressionItemSummaryV1 {
+    let raw_script = comparison
+        .get("script")
+        .and_then(|v| v.as_str())
+        .unwrap_or("matrix");
+    let script = normalize_repo_relative_path(workspace_root, Path::new(raw_script));
+    let report = comparison
+        .get("report")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let ok = report.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+    let diff_count = report
+        .get("diffs")
+        .and_then(|v| v.as_array())
+        .map(|diffs| diffs.len())
+        .unwrap_or(0);
+    let bundle_a = report
+        .get("bundle_a")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    let bundle_b = report
+        .get("bundle_b")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+
+    RegressionItemSummaryV1 {
+        item_id: format!("matrix:{script}"),
+        kind: RegressionItemKindV1::MatrixCase,
+        name: script.clone(),
+        status: if ok {
+            RegressionStatusV1::Passed
+        } else {
+            RegressionStatusV1::FailedDeterministic
+        },
+        reason_code: (!ok).then(|| "diag.matrix.compare_failed".to_string()),
+        lane: RegressionLaneV1::Matrix,
+        owner: None,
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: None,
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact: bundle_b.clone().or_else(|| bundle_a.clone()),
+            bundle_dir: None,
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: None,
+            compare_json: Some(matrix_summary_path.display().to_string()),
+            extra: Some(serde_json::json!({
+                "target": target,
+                "bundle_a": bundle_a,
+                "bundle_b": bundle_b,
+                "report": report,
+            })),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: Some(script.clone()),
+            suite: Some(target.to_string()),
+            campaign_case: Some("cached_vs_uncached".to_string()),
+            metadata: None,
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: Some(format!("diffs={diff_count}")),
+            details: Vec::new(),
+        }),
+    }
+}
+
+fn write_regression_summary_for_matrix(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    generated_unix_ms: u64,
+    target: &str,
+    payload: &serde_json::Value,
+    matrix_summary_path: &Path,
+) {
+    let mut items = payload
+        .get("comparisons")
+        .and_then(|v| v.as_array())
+        .map(|comparisons| {
+            comparisons
+                .iter()
+                .map(|comparison| {
+                    matrix_comparison_to_regression_item(
+                        workspace_root,
+                        comparison,
+                        matrix_summary_path,
+                        target,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if items.is_empty() {
+        items.push(RegressionItemSummaryV1 {
+            item_id: format!("matrix:{target}"),
+            kind: RegressionItemKindV1::CampaignStep,
+            name: target.to_string(),
+            status: RegressionStatusV1::FailedTooling,
+            reason_code: Some("tooling.diag_matrix.no_rows".to_string()),
+            lane: RegressionLaneV1::Matrix,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: Some(RegressionEvidenceV1 {
+                bundle_artifact: None,
+                bundle_dir: None,
+                triage_json: None,
+                script_result_json: None,
+                ai_packet_dir: None,
+                pack_path: None,
+                screenshots_manifest: None,
+                perf_summary_json: None,
+                compare_json: Some(matrix_summary_path.display().to_string()),
+                extra: Some(payload.clone()),
+            }),
+            source: Some(RegressionSourceV1 {
+                script: None,
+                suite: Some(target.to_string()),
+                campaign_case: Some("matrix".to_string()),
+                metadata: None,
+            }),
+            notes: Some(RegressionNotesV1 {
+                summary: Some("matrix completed without comparison rows".to_string()),
+                details: Vec::new(),
+            }),
+        });
+    }
+
+    let mut totals = RegressionTotalsV1::default();
+    for item in &items {
+        totals.record_status(item.status);
+    }
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: target.to_string(),
+            lane: RegressionLaneV1::Matrix,
+            profile: Some("matrix".to_string()),
+            schema_version: Some(1),
+            requested_by: Some("diag matrix".to_string()),
+            filters: payload.get("options").cloned(),
+        },
+        RegressionRunSummaryV1 {
+            run_id: generated_unix_ms.to_string(),
+            created_unix_ms: generated_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(resolved_out_dir.display().to_string()),
+            tool: "fretboard diag matrix".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    summary.items = items;
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+    summary.artifacts = Some(RegressionArtifactsV1 {
+        summary_dir: Some(resolved_out_dir.display().to_string()),
+        packed_report: None,
+        index_json: Some(matrix_summary_path.display().to_string()),
+        html_report: None,
+    });
+
+    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    if let Err(err) = write_json_value(
+        &regression_summary_path,
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    ) {
+        eprintln!(
+            "warning: failed to write regression summary {}: {}",
+            regression_summary_path.display(),
+            err
+        );
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct MatrixCmdContext {
     pub rest: Vec<String>,
@@ -190,30 +387,51 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         comparisons.push((script.clone(), report));
     }
 
+    let generated_unix_ms = now_unix_ms();
+    let matrix_payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": generated_unix_ms,
+        "kind": "diag_matrix_summary",
+        "target": target,
+        "ok": ok,
+        "out_dir_uncached": uncached_paths.out_dir.display().to_string(),
+        "out_dir_cached": cached_paths.out_dir.display().to_string(),
+        "options": {
+            "warmup_frames": compare_opts.warmup_frames,
+            "eps_px": compare_opts.eps_px,
+            "ignore_bounds": compare_opts.ignore_bounds,
+            "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
+            "check_view_cache_reuse_min": reuse_gate,
+            "check_view_cache_reuse_stable_min": reuse_stable_gate,
+            "check_overlay_synthesis_min": overlay_synthesis_gate,
+            "check_viewport_input_min": viewport_input_gate,
+        },
+        "comparisons": comparisons.iter().map(|(script, report)| serde_json::json!({
+            "script": script.display().to_string(),
+            "report": report.to_json(),
+        })).collect::<Vec<_>>(),
+    });
+    let matrix_summary_path = resolved_out_dir.join("matrix.summary.json");
+    if let Err(err) = write_json_value(&matrix_summary_path, &matrix_payload) {
+        eprintln!(
+            "warning: failed to write matrix summary {}: {}",
+            matrix_summary_path.display(),
+            err
+        );
+    }
+    write_regression_summary_for_matrix(
+        &workspace_root,
+        &resolved_out_dir,
+        generated_unix_ms,
+        &target,
+        &matrix_payload,
+        &matrix_summary_path,
+    );
+
     if stats_json {
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "ok": ok,
-            "out_dir_uncached": uncached_paths.out_dir.display().to_string(),
-            "out_dir_cached": cached_paths.out_dir.display().to_string(),
-            "options": {
-                "warmup_frames": compare_opts.warmup_frames,
-                "eps_px": compare_opts.eps_px,
-                "ignore_bounds": compare_opts.ignore_bounds,
-                "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
-                "check_view_cache_reuse_min": reuse_gate,
-                "check_view_cache_reuse_stable_min": reuse_stable_gate,
-                "check_overlay_synthesis_min": overlay_synthesis_gate,
-                "check_viewport_input_min": viewport_input_gate,
-            },
-            "comparisons": comparisons.iter().map(|(script, report)| serde_json::json!({
-                "script": script.display().to_string(),
-                "report": report.to_json(),
-            })).collect::<Vec<_>>(),
-        });
         println!(
             "{}",
-            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+            serde_json::to_string_pretty(&matrix_payload).unwrap_or_else(|_| "{}".to_string())
         );
         if !ok {
             std::process::exit(1);
@@ -248,5 +466,47 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
             report.print_human();
         }
         Err("matrix compare failed".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matrix_comparison_to_regression_item_marks_failed_compare() {
+        let workspace_root = Path::new("F:/repo");
+        let comparison = serde_json::json!({
+            "script": "F:/repo/apps/ui-gallery/button.diag.ron",
+            "report": {
+                "ok": false,
+                "bundle_a": "F:/repo/out/uncached/bundle.json",
+                "bundle_b": "F:/repo/out/cached/bundle.json",
+                "diffs": [
+                    { "kind": "scene_mismatch", "key": "root", "field": "bounds", "a": 1, "b": 2 }
+                ],
+                "options": { "warmup_frames": 8 }
+            }
+        });
+
+        let item = matrix_comparison_to_regression_item(
+            workspace_root,
+            &comparison,
+            Path::new("F:/repo/out/matrix.summary.json"),
+            "ui-gallery",
+        );
+
+        assert_eq!(item.status, RegressionStatusV1::FailedDeterministic);
+        assert_eq!(
+            item.reason_code.as_deref(),
+            Some("diag.matrix.compare_failed")
+        );
+        assert_eq!(item.name, "apps/ui-gallery/button.diag.ron");
+        assert_eq!(
+            item.evidence
+                .as_ref()
+                .and_then(|e| e.compare_json.as_deref()),
+            Some("F:/repo/out/matrix.summary.json")
+        );
     }
 }
