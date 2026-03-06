@@ -157,7 +157,11 @@ fn patch_text_color_recursive(el: &mut AnyElement, from: Color, to: Color) {
     }
 }
 
-fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color) {
+fn patch_inherited_foreground_recursive(el: &mut AnyElement, from: Color, to: Color) {
+    if el.inherited_foreground == Some(from) {
+        el.inherited_foreground = Some(to);
+    }
+
     if let ElementKind::ForegroundScope(props) = &mut el.kind {
         if props.foreground == Some(from) {
             props.foreground = Some(to);
@@ -165,7 +169,7 @@ fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color)
     }
 
     for child in &mut el.children {
-        patch_foreground_scope_recursive(child, from, to);
+        patch_inherited_foreground_recursive(child, from, to);
     }
 }
 
@@ -213,7 +217,7 @@ fn alert_with_patch<H: UiHost>(
     if variant == AlertVariant::Destructive {
         if let Some(description) = body_children.get_mut(1) {
             patch_text_color_recursive(description, muted_fg, destructive_description);
-            patch_foreground_scope_recursive(description, muted_fg, destructive_description);
+            patch_inherited_foreground_recursive(description, muted_fg, destructive_description);
         }
     }
 
@@ -259,8 +263,8 @@ fn alert_with_patch<H: UiHost>(
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
 
-    cx.container(props, move |cx| {
-        let mut out: Vec<AnyElement> = vec![cx.foreground_scope(fg, move |_cx| vec![main])];
+    cx.container(props, move |_cx| {
+        let mut out: Vec<AnyElement> = vec![main.inherit_foreground(fg)];
         if let Some(action) = action {
             out.push(action);
         }
@@ -341,25 +345,19 @@ impl AlertDescription {
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::text(text)
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_weight(FontWeight::NORMAL)
-                        .wrap(TextWrap::Word)
-                        .into_element(cx),
-                ]
-            }),
-            AlertDescriptionContent::Children(children) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::v_flex(move |_cx| children)
-                        .gap(Space::N1)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx),
-                ]
-            }),
+            AlertDescriptionContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_weight(FontWeight::NORMAL)
+                .wrap(TextWrap::Word)
+                .into_element(cx)
+                .inherit_foreground(fg),
+            AlertDescriptionContent::Children(children) => ui::v_flex(move |_cx| children)
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .inherit_foreground(fg),
         }
     }
 }
@@ -373,6 +371,20 @@ mod tests {
     use fret_icons::IconId;
     use fret_ui::element::ElementKind;
     use fret_ui_kit::declarative::icon as decl_icon;
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     #[test]
     fn alert_stamps_role_without_layout_wrapper() {
@@ -471,5 +483,34 @@ mod tests {
             icon.inherit_color,
             "expected Alert icon to inherit currentColor via ForegroundScope"
         );
+    }
+
+    #[test]
+    fn alert_attaches_foreground_to_main_content_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_fg = Theme::global(&*cx.app).color_token("foreground");
+            let el = Alert::new([
+                decl_icon::icon_with(cx, IconId::new_static("lucide.terminal"), None, None),
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+            ])
+            .into_element(cx);
+
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected alert subtree to carry inherited foreground");
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected Alert to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 }

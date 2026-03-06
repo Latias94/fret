@@ -48,10 +48,10 @@ pub fn with_current_color_provider<H: UiHost, R>(
 }
 
 /// Returns a wrapper element that installs `color` as the inherited foreground for one explicit
-/// layout subtree (v2).
+/// layout subtree without introducing a layout wrapper (v2).
 ///
-/// Prefer this helper when you already have a concrete layout root (for example a row/column/
-/// container) and want to avoid accidentally treating `ForegroundScope` like a layout fragment.
+/// This stamps the returned subtree root directly, so fill/shrink/sibling flow semantics remain
+/// owned by the original element.
 #[track_caller]
 pub fn scope_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -60,15 +60,14 @@ pub fn scope_element<H: UiHost>(
 ) -> fret_ui::element::AnyElement {
     let theme = Theme::global(&*cx.app);
     let fg = color.resolve(theme);
-    cx.foreground_scope(fg, move |_cx| vec![child])
+    child.inherit_foreground(fg)
 }
 
-/// Returns a foreground scope wrapper around the children returned by `f`.
+/// Returns the children from `f` with `color` stamped as their inherited foreground.
 ///
-/// Important: `ForegroundScope` is paint-only and input-transparent, but it is **not** a layout
-/// fragment. When `f` returns multiple siblings, they are laid out inside the wrapper's own
-/// passthrough box rather than participating directly in the parent flow. Callers that need normal
-/// row/column flow should first build an explicit layout root and then use [`scope_element`].
+/// This preserves normal sibling participation in parent layout because it does not insert an
+/// extra wrapper node. The closure also runs with `color` installed as the authoring-time
+/// `currentColor` provider so nested builders can read it via [`inherited_current_color`].
 #[track_caller]
 pub fn scope_children<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
@@ -80,7 +79,12 @@ where
 {
     let theme = Theme::global(&*cx.app);
     let fg = color.resolve(theme);
-    vec![cx.foreground_scope(fg, f)]
+    with_current_color_provider(cx, color, |cx| {
+        f(cx)
+            .into_iter()
+            .map(|child| child.inherit_foreground(fg))
+            .collect()
+    })
 }
 
 #[cfg(test)]
@@ -131,6 +135,66 @@ mod tests {
             });
 
             assert!(inherited_current_color(cx).is_none());
+        });
+    }
+
+    #[test]
+    fn scope_element_stamps_inherited_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let expected = fret_core::Color {
+                r: 0.25,
+                g: 0.5,
+                b: 0.75,
+                a: 1.0,
+            };
+            let child = cx.text("hello");
+
+            let el = scope_element(cx, ColorRef::Color(expected), child);
+
+            assert!(matches!(el.kind, fret_ui::element::ElementKind::Text(_)));
+            assert_eq!(
+                el.inherited_foreground,
+                Some(expected),
+                "expected scope_element(...) to stamp inherited foreground on the existing root"
+            );
+        });
+    }
+
+    #[test]
+    fn scope_children_stamps_each_root_and_installs_provider() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let expected = fret_core::Color {
+                r: 0.1,
+                g: 0.2,
+                b: 0.3,
+                a: 1.0,
+            };
+
+            let els = scope_children(cx, ColorRef::Color(expected), |cx| {
+                let inherited = inherited_current_color(cx);
+                assert!(matches!(
+                    inherited,
+                    Some(ColorRef::Color(color)) if color == expected
+                ));
+
+                [cx.text("a"), cx.text("b")]
+            });
+
+            assert_eq!(els.len(), 2, "expected sibling count to be preserved");
+            assert!(
+                els.iter()
+                    .all(|el| matches!(el.kind, fret_ui::element::ElementKind::Text(_)))
+            );
+            assert!(
+                els.iter()
+                    .all(|el| el.inherited_foreground == Some(expected))
+            );
         });
     }
 }

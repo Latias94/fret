@@ -1,6 +1,6 @@
 # Foreground Style Context (Fearless Refactor v1) — TODO
 
-Status: Draft
+Status: In progress
 Last updated: 2026-03-06
 
 Related:
@@ -33,16 +33,16 @@ visible.
 
 | Family | Component / Area | Primary anchor | Owner | Current inheritance shape | Primary risk hypothesis | Priority | Review status | Evidence / Gate | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Menu / Overlay | `dropdown_menu` | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `fret-ui-shadcn` | Mixed `scope_element(...)` and `scope_children(...)` | Multi-sibling wrapper semantics inside menu content/rows can drift layout ownership | P0 | `[ ]` | Menu-family unit tests + overlay/text-wrap regression gate | High-value first audit target |
-| Form / Overlay | `select` | `ecosystem/fret-ui-shadcn/src/select.rs` | `fret-ui-shadcn` | `scope_children(...)` in recipe composition | Trigger/content/value layout may change when color inheritance inserts a wrapper | P0 | `[ ]` | Select/content layout regression + wrapped-text gate | Related to wrapped text and menu-like surfaces |
-| Navigation | `tabs` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | `fret-ui-shadcn` | `scope_children(...)` in part composition | Trigger/content alignment and shrink/fill expectations may become wrapper-sensitive | P1 | `[ ]` | Trigger-row geometry test + shrink/fill regression | Review with focus on trigger row geometry |
-| Form / Layout | `input_group` | `ecosystem/fret-ui-shadcn/src/input_group.rs` | `fret-ui-shadcn` | Mix of direct `foreground_scope(...)` and `scope_children(...)` | Addons and input rows can hide layout ownership changes behind muted foreground inheritance | P0 | `[ ]` | Row/addon layout test + explicit-vs-inherited foreground gate | Likely to expose row/slot edge cases |
-| AI / Content | `fret-ui-ai/message` | `ecosystem/fret-ui-ai/src/elements/message.rs` | `fret-ui-ai` | `scope_children(...)` around composed stack | Message body/content roots may pick up hidden wrapper semantics under text-heavy layouts | P1 | `[ ]` | Text-wrap/content-root regression test | Good non-shadcn ecosystem case |
-| Surface | `card` | `ecosystem/fret-ui-shadcn/src/card.rs` | `fret-ui-shadcn` | Direct `foreground_scope(...)` | Wrapper may be safe today but still teaches the wrong authoring model | P2 | `[ ]` | Simple unit test documenting preferred migration target | Useful for migration examples |
-| Surface / Content | `alert` | `ecosystem/fret-ui-shadcn/src/alert.rs` | `fret-ui-shadcn` | Direct `foreground_scope(...)` around content blocks | Description/content composition may drift when text and icons share inherited foreground | P1 | `[ ]` | Text-heavy alert layout regression | Check text-heavy variants |
-| Menu / Overlay | `context_menu` | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | `fret-ui-shadcn` | Direct `foreground_scope(...)` | Menu item/icon composition may still rely on wrapper-shaped inheritance | P1 | `[ ]` | Menu-item icon/text inheritance test | Review alongside `dropdown_menu` |
-| Menu / Navigation | `menubar` | `ecosystem/fret-ui-shadcn/src/menubar.rs` | `fret-ui-shadcn` | Direct `foreground_scope(...)` | Similar to `context_menu`; risk is lower but shape is still legacy | P2 | `[ ]` | Menubar item inheritance regression | Can likely migrate with menu-family pass |
-| AI / Content | `task` | `ecosystem/fret-ui-ai/src/elements/task.rs` | `fret-ui-ai` | Direct `foreground_scope(...)` | AI task rows may hide wrapper-induced layout drift in rich content blocks | P2 | `[ ]` | Rich-content row regression test | Review after message/task surfaces are grouped |
+| Menu / Overlay | `dropdown_menu` | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `fret-ui-shadcn` | Mixed `scope_element(...)` and `scope_children(...)` | Multi-sibling wrapper semantics inside menu content/rows can drift layout ownership | P0 | `[x]` | `dropdown_menu_checkable_row_attaches_foreground_to_existing_root` | Audited: current row path stamps inherited foreground on the existing content root container |
+| Form / Overlay | `select` | `ecosystem/fret-ui-shadcn/src/select.rs` | `fret-ui-shadcn` | `scope_children(...)` in recipe composition | Trigger/content/value layout may change when color inheritance inserts a wrapper | P0 | `[x]` | `select_scroll_buttons_attach_foreground_to_icon_without_wrapper` | Audited: scroll-arrow recipe remains single-root and no longer relies on a synthetic wrapper |
+| Navigation | `tabs` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | `fret-ui-shadcn` | `scope_children(...)` in part composition | Trigger/content alignment and shrink/fill expectations may become wrapper-sensitive | P1 | `[x]` | `tabs_trigger_content_attaches_foreground_without_wrapper` + `tabs_content_defaults_to_flex_grow_fill_like_shadcn` | Audited: trigger content stamps inherited foreground on the real flex root while fill/min-w-0 behavior stays covered |
+| Form / Layout | `input_group` | `ecosystem/fret-ui-shadcn/src/input_group.rs` | `fret-ui-shadcn` | Mixed direct stamping plus one transitional `scope_children(...)` single-root path | Addons and input rows can hide layout ownership changes behind muted foreground inheritance | P0 | `[~]` | `input_group_addons_scope_muted_foreground_for_current_color_parity` | Reviewed: major addon rows stamp inherited foreground directly, but one button-content path still uses transitional single-root `scope_children(...)` |
+| AI / Content | `fret-ui-ai/message` | `ecosystem/fret-ui-ai/src/elements/message.rs` | `fret-ui-ai` | Direct subtree stamping on the message content stack | Message body/content roots may pick up hidden wrapper semantics under text-heavy layouts | P1 | `[x]` | `message_content_user_bubble_attaches_foreground_without_wrapper` + `message_content_assistant_defaults_to_fill_width_for_stable_wrap` | Audited: user bubble now stamps inherited foreground on the existing stack root, and assistant content keeps full-width flow for stable wrapping |
+| Surface | `card` | `ecosystem/fret-ui-shadcn/src/card.rs` | `fret-ui-shadcn` | Direct subtree stamping via `.inherit_foreground(...)` | Wrapper may be safe today but still teaches the wrong authoring model | P2 | `[x]` | `card_root_has_default_vertical_padding_and_visible_overflow` | Audited: card root already carries inherited foreground on the existing container root |
+| Surface / Content | `alert` | `ecosystem/fret-ui-shadcn/src/alert.rs` | `fret-ui-shadcn` | Direct subtree stamping via `.inherit_foreground(...)` | Description/content composition may drift when text and icons share inherited foreground | P1 | `[x]` | `alert_attaches_foreground_to_main_content_without_wrapper` + `alert_forces_icon_to_inherit_current_color` | Audited: main alert content stamps inherited foreground on the existing root and icons still follow current color |
+| Menu / Overlay | `context_menu` | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | `fret-ui-shadcn` | Direct subtree stamping via `.inherit_foreground(...)` | Menu item/icon composition may still rely on wrapper-shaped inheritance if legacy surfaces regress | P1 | `[x]` | `context_menu_row_attaches_inherited_foreground_without_wrapper` | Audited: menu-row leading icon now carries inherited foreground directly on the icon node |
+| Menu / Navigation | `menubar` | `ecosystem/fret-ui-shadcn/src/menubar.rs` | `fret-ui-shadcn` | Direct subtree stamping via `.inherit_foreground(...)` | Similar to `context_menu`; ensure menu rows stay wrapper-free while icon color still inherits | P2 | `[x]` | `menubar_row_attaches_inherited_foreground_without_wrapper` | Audited: menu-row leading icon inherits foreground without adding a layout wrapper |
+| AI / Content | `task` | `ecosystem/fret-ui-ai/src/elements/task.rs` | `fret-ui-ai` | Direct subtree stamping via `.inherit_foreground(...)` | AI task rows may hide wrapper-induced layout drift in rich content blocks | P2 | `[x]` | `task_trigger_default_row_attaches_foreground_without_wrapper` | Audited: default task trigger row now carries inherited foreground on the existing row root without a synthetic wrapper |
 
 - Suggested review states:
   - `[ ]` not reviewed
@@ -50,17 +50,17 @@ visible.
   - `[x]` reviewed and outcome recorded
   - `[!]` blocked by larger mechanism decision
 
-- [ ] FSC-audit-001 Inventory all current author-facing foreground inheritance entry points.
+- [x] FSC-audit-001 Inventory all current author-facing foreground inheritance entry points.
   - Minimum scope:
     - `cx.foreground_scope(...)`
     - `current_color::scope_element(...)`
     - `current_color::scope_children(...)`
-- [ ] FSC-audit-002 Audit all in-tree `scope_children(...)` call sites and classify them:
+- [x] FSC-audit-002 Audit all in-tree `scope_children(...)` call sites and classify them:
   - safe temporary use,
   - migration candidate,
   - immediate correctness risk.
-- [ ] FSC-audit-003 Audit direct `cx.foreground_scope(...)` call sites outside `fret-ui-kit`.
-- [ ] FSC-audit-004 Write down the current runtime contract of `ForegroundScope` in one place:
+- [x] FSC-audit-003 Audit direct `cx.foreground_scope(...)` call sites outside `fret-ui-kit`.
+- [x] FSC-audit-004 Write down the current runtime contract of `ForegroundScope` in one place:
   - mount shape,
   - measurement behavior,
   - paint inheritance behavior,
@@ -74,69 +74,69 @@ visible.
 
 ## B. Mechanism Design Closure
 
-- [ ] FSC-design-010 Decide the carrier for inherited foreground in `crates/fret-ui`.
+- [x] FSC-design-010 Decide the carrier for inherited foreground in `crates/fret-ui`.
   - Preferred direction: traversal-owned paint/text context, not `LayoutStyle`.
-- [ ] FSC-design-011 Define the precedence contract:
+- [x] FSC-design-011 Define the precedence contract:
   - explicit foreground,
   - inherited foreground,
   - theme fallback.
 - [ ] FSC-design-012 Decide whether overlay roots inherit foreground automatically or must be
   threaded explicitly.
-- [ ] FSC-design-013 Decide the initial v1 consumer set.
+- [x] FSC-design-013 Decide the initial v1 consumer set.
   - Minimum expected set:
     - `Text`
     - `StyledText`
     - `SelectableText`
     - icon-like surfaces
     - spinner/loading glyphs if applicable
-- [ ] FSC-design-014 Decide whether full text-style cascade is in scope for v1 or deferred to v2.
+- [x] FSC-design-014 Decide whether full text-style cascade is in scope for v1 or deferred to v2.
 
 ---
 
 ## C. Mechanism Prototype (`crates/fret-ui`)
 
-- [ ] FSC-mech-020 Add a minimal inherited foreground context path that does not require a
+- [x] FSC-mech-020 Add a minimal inherited foreground context path that does not require a
   synthetic author-facing wrapper node.
-- [ ] FSC-mech-021 Teach real subtree roots to install inherited foreground.
+- [x] FSC-mech-021 Teach real subtree roots to install inherited foreground.
   - Candidate roots:
     - `Container`
     - `Pressable`
     - flex/row/column roots
-- [ ] FSC-mech-022 Teach paint consumers to read the new inherited foreground carrier.
-- [ ] FSC-mech-023 Keep `ForegroundScope` working through a compatibility bridge while migration is
+- [x] FSC-mech-022 Teach paint consumers to read the new inherited foreground carrier.
+- [x] FSC-mech-023 Keep `ForegroundScope` working through a compatibility bridge while migration is
   in flight.
-- [ ] FSC-mech-024 Add comments/docs at the mechanism boundary clarifying that inherited foreground
+- [x] FSC-mech-024 Add comments/docs at the mechanism boundary clarifying that inherited foreground
   is context, not a layout fragment.
 
 ---
 
 ## D. Migration (`ecosystem/*`)
 
-- [ ] FSC-migrate-030 Migrate high-risk shadcn surfaces first.
+- [~] FSC-migrate-030 Migrate high-risk shadcn surfaces first.
   - Initial candidates:
     - `dropdown_menu`
     - `select`
     - `tabs`
     - `input_group`
-- [ ] FSC-migrate-031 Migrate nearby ecosystem surfaces that compose layout-heavy content under
+- [~] FSC-migrate-031 Migrate nearby ecosystem surfaces that compose layout-heavy content under
   inherited foreground.
   - Initial candidates:
     - `fret-ui-ai/message`
     - other menu/list/overlay content roots found by the audit
 - [ ] FSC-migrate-032 Stop introducing new `scope_children(...)` usages in new code.
-- [ ] FSC-migrate-033 Convert helper APIs/doc examples to prefer real layout roots carrying
+- [x] FSC-migrate-033 Convert helper APIs/doc examples to prefer real layout roots carrying
   inherited foreground.
 
 ---
 
 ## E. Regression Gates
 
-- [ ] FSC-gates-040 Add a unit/integration test proving that inherited foreground does not change
+- [x] FSC-gates-040 Add a unit/integration test proving that inherited foreground does not change
   sibling flow ownership when attached to a real layout root.
 - [ ] FSC-gates-041 Add a regression test for wrapped text under migrated menu/overlay content.
 - [ ] FSC-gates-042 Add a regression test proving explicit color still overrides inherited
   foreground.
-- [ ] FSC-gates-043 Add a compatibility test for legacy `ForegroundScope` during the migration
+- [x] FSC-gates-043 Add a compatibility test for legacy `ForegroundScope` during the migration
   window.
 - [ ] FSC-gates-044 Consider a grep/lint-style guard that flags new `scope_children(...)` usage once
   the replacement path is stable.
@@ -145,7 +145,7 @@ visible.
 
 ## F. Docs + ADRs
 
-- [ ] FSC-docs-050 Keep this workstream doc set updated as decisions close.
+- [x] FSC-docs-050 Keep this workstream doc set updated as decisions close.
 - [ ] FSC-docs-051 Update user-facing authoring guidance once the replacement path exists.
 - [ ] FSC-docs-052 Add or update an ADR when any hard contract changes are approved.
   - Trigger examples:

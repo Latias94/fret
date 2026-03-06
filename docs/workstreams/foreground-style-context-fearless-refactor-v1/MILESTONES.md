@@ -1,11 +1,30 @@
 # Foreground Style Context (Fearless Refactor v1) — Milestones
 
-Status: Draft
+Status: In progress
 
 Related:
 
 - Design: `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/foreground-style-context-fearless-refactor-v1/TODO.md`
+
+Current snapshot (2026-03-06):
+
+- `M2` is effectively landed for foreground-only v1 through an attached inherited-foreground carrier
+  plus compatibility support for legacy `ForegroundScope`.
+- `M3` is in progress: `input_group`, `card`, `alert`, `badge`, `menubar`, `context_menu`, and
+  selected `fret-ui-ai` surfaces have been migrated off synthetic foreground wrappers.
+- `dropdown_menu`, `select`, and `tabs` have now been audited and locked with targeted regression
+  tests that prove inherited foreground attaches to real subtree roots without synthetic wrapper
+  nodes.
+- `context_menu` and `menubar` are now also covered by targeted menu-row regression tests, so the
+  menu-family audit has explicit evidence for wrapper-free inherited icon foreground on existing
+  subtree nodes.
+- `message`, `task`, and `alert` now have explicit regression coverage for wrapper-free inherited
+  foreground, and `message` no longer lowers a single-root content stack through transitional
+  `scope_children(...)`.
+- `input_group` has been reviewed and is mostly migrated, but one single-root button-content path
+  still uses transitional `scope_children(...)`; it remains tracked as follow-up rather than a
+  blocker for v1 foreground inheritance.
 
 ---
 

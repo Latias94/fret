@@ -4306,7 +4306,21 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
-    use fret_ui::element::PressableA11y;
+    use fret_ui::element::{AnyElement, ElementKind, PressableA11y};
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     #[test]
     fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
@@ -4334,6 +4348,63 @@ mod tests {
         let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
 
         assert_eq!(menu.side_offset, Px(9.0));
+    }
+
+    #[test]
+    fn dropdown_menu_checkable_row_attaches_foreground_to_existing_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_fg = fret_core::Color {
+                r: 0.2,
+                g: 0.4,
+                b: 0.8,
+                a: 1.0,
+            };
+            let text_style = fret_core::TextStyle {
+                size: Px(14.0),
+                weight: fret_core::FontWeight::NORMAL,
+                line_height: Some(Px(20.0)),
+                ..Default::default()
+            };
+
+            let els = checkable_menu_row_children(
+                cx,
+                Arc::from("Alpha"),
+                None,
+                Some(fret_icons::IconId::new_static("lucide.check")),
+                false,
+                None,
+                CheckableIndicatorKind::Check,
+                true,
+                false,
+                fret_core::Color::TRANSPARENT,
+                expected_fg,
+                text_style,
+                Px(14.0),
+                Px(20.0),
+                Px(8.0),
+                Px(12.0),
+                Px(6.0),
+                Px(6.0),
+            );
+
+            assert_eq!(els.len(), 1);
+            let root = find_first_inherited_foreground_node(&els[0])
+                .expect("expected menu row subtree to carry inherited foreground");
+            assert!(matches!(root.kind, ElementKind::Container(_)));
+            assert_eq!(root.inherited_foreground, Some(expected_fg));
+            assert_eq!(root.children.len(), 2);
+            assert!(
+                !contains_foreground_scope(root),
+                "expected checkable menu row to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 
     #[test]

@@ -639,7 +639,7 @@ impl InputGroup {
                             } else {
                                 flex
                             };
-                            vec![cx.foreground_scope(muted_foreground, move |_cx| vec![content])]
+                            vec![content.inherit_foreground(muted_foreground)]
                         },
                     )
                 };
@@ -1019,7 +1019,7 @@ impl InputGroup {
                                 } else {
                                     row
                                 };
-                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
+                                vec![row.inherit_foreground(muted_foreground)]
                             },
                         )
                     });
@@ -1088,7 +1088,7 @@ impl InputGroup {
                                 } else {
                                     row
                                 };
-                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
+                                vec![row.inherit_foreground(muted_foreground)]
                             },
                         )
                     });
@@ -2258,10 +2258,11 @@ mod tests {
     }
 
     fn find_foreground_scope_with_color(node: &AnyElement, color: Color) -> bool {
-        let matches = match &node.kind {
-            ElementKind::ForegroundScope(props) => props.foreground == Some(color),
-            _ => false,
-        };
+        let matches = node.inherited_foreground == Some(color)
+            || match &node.kind {
+                ElementKind::ForegroundScope(props) => props.foreground == Some(color),
+                _ => false,
+            };
         if matches {
             return true;
         }
@@ -2513,7 +2514,7 @@ mod tests {
 
                 assert!(
                     find_foreground_scope_with_color(&el, muted),
-                    "expected addons to stamp a ForegroundScope with muted-foreground"
+                    "expected addons to stamp inherited foreground with muted-foreground"
                 );
             },
         );
