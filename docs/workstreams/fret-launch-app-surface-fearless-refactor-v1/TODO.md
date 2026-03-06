@@ -6,6 +6,7 @@ Companion docs:
 
 - Design: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`
 - Export inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`
+- Config inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`
 - Milestones: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
 
 ## Setup / Inventory
@@ -29,12 +30,12 @@ Companion docs:
 
 ## Config curation
 
-- [ ] Partition `WinitRunnerConfig` conceptually into:
-  - [ ] app/window defaults
-  - [ ] render/backend tuning
-  - [ ] streaming/media tuning
-  - [ ] platform/web specifics
-- [ ] Decide which config fields should be documented as advanced-only.
+- [x] Partition `WinitRunnerConfig` conceptually into:
+  - [x] app/window defaults
+  - [x] render/backend tuning
+  - [x] streaming/media tuning
+  - [x] platform/web specifics
+- [x] Decide which config fields should be documented as advanced-only.
 - [ ] Decide whether the future direction is:
   - [ ] nested config groups
   - [ ] helper builders only
