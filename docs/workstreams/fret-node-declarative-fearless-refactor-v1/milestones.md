@@ -229,6 +229,9 @@ points rather than direct graph mutation.
   - Declarative left-button pointer-up now dispatches through explicit node-drag,
     pending-selection, and marquee release helpers, with focused tests covering branch
     cleanup and commit semantics.
+  - Declarative pointer-up / pointer-cancel event closures now dispatch through
+    explicit session helpers, with focused tests covering left-release finish, non-left ignore,
+    pan-release cleanup, and cancel-finish semantics.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -276,6 +279,8 @@ points rather than direct graph mutation.
   cleanup in the declarative path
 - left-release reducer gates for node-drag, pending-only, inactive-toggle-marquee, and no-state
   releases
+- pointer-session event gates for left-release finish, non-left ignore, pan-release
+  cleanup, and cancel-finish semantics
 - cancel reducer + pointer session helper gates for Escape-vs-pointer-cancel divergence around
   already-canceled node drags
 - keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom

@@ -244,6 +244,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed left-release reducer follow-up: node-drag release, pending-selection commit, and
     marquee release now route through explicit helpers, with focused tests covering node-drag,
     pending-only, inactive-toggle-marquee, and no-state branch cleanup/commit semantics.
+  - Landed pointer-session event follow-up: pointer-up and pointer-cancel now route
+    through explicit helpers, with focused tests covering left-release finish, non-left ignore,
+    pan-release cleanup, and cancel-finish semantics.
   - Landed cancel/effects follow-up: Escape and pointer-cancel now share a mode-aware transient
     cleanup reducer, pointer session finish effects are routed through shared helpers, and focused
     tests lock the already-canceled node-drag divergence between Escape and pointer-cancel.

@@ -1502,6 +1502,68 @@ fn finish_declarative_pointer_session_action_host<H>(
     invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
 }
 
+fn handle_declarative_pointer_up_action_host(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    up: fret_ui::action::PointerUpCx,
+    pan_button: MouseButton,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+) -> bool {
+    if up.button != pan_button {
+        if up.button != MouseButton::Left {
+            return false;
+        }
+
+        let release = complete_left_pointer_release_action_host(
+            host,
+            node_drag,
+            pending_selection,
+            marquee,
+            graph,
+            view_state,
+            controller,
+            store,
+        );
+        if !release.is_handled() {
+            return false;
+        }
+
+        finish_declarative_pointer_session_action_host(host, action_cx);
+        return true;
+    }
+
+    let _ = host.models_mut().update(drag, |state| *state = None);
+    finish_declarative_pointer_session_action_host(host, action_cx);
+    true
+}
+
+fn handle_declarative_pointer_cancel_action_host(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    _cancel: fret_ui::action::PointerCancelCx,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+) -> bool {
+    let _ = pointer_cancel_declarative_interactions_action_host(
+        host,
+        drag,
+        marquee,
+        node_drag,
+        pending_selection,
+    );
+    finish_declarative_pointer_session_action_host(host, action_cx);
+    true
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DeclarativeDiagViewPreset {
     CenteredSelectionOnDrag,
@@ -3520,32 +3582,20 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
                       up: fret_ui::action::PointerUpCx| {
-                    if up.button != pan_button {
-                        if up.button != MouseButton::Left {
-                            return false;
-                        }
-
-                        let release = complete_left_pointer_release_action_host(
-                            host,
-                            &node_drag_end,
-                            &pending_selection_end,
-                            &marquee_end,
-                            &graph_commit,
-                            &view_commit,
-                            controller_commit.as_ref(),
-                            store_commit.as_ref(),
-                        );
-                        if !release.is_handled() {
-                            return false;
-                        }
-
-                        finish_declarative_pointer_session_action_host(host, action_cx);
-                        return true;
-                    }
-
-                    let _ = host.models_mut().update(&drag_end, |st| *st = None);
-                    finish_declarative_pointer_session_action_host(host, action_cx);
-                    true
+                    handle_declarative_pointer_up_action_host(
+                        host,
+                        action_cx,
+                        up,
+                        pan_button,
+                        &drag_end,
+                        &marquee_end,
+                        &node_drag_end,
+                        &pending_selection_end,
+                        &graph_commit,
+                        &view_commit,
+                        controller_commit.as_ref(),
+                        store_commit.as_ref(),
+                    )
                 },
             );
 
@@ -3556,16 +3606,16 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let on_pointer_cancel: OnPointerCancel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
-                      _cancel: fret_ui::action::PointerCancelCx| {
-                    let _ = pointer_cancel_declarative_interactions_action_host(
+                      cancel: fret_ui::action::PointerCancelCx| {
+                    handle_declarative_pointer_cancel_action_host(
                         host,
+                        action_cx,
+                        cancel,
                         &drag_cancel,
                         &marquee_cancel,
                         &node_drag_cancel,
                         &pending_selection_cancel,
-                    );
-                    finish_declarative_pointer_session_action_host(host, action_cx);
-                    true
+                    )
                 },
             );
 
@@ -4422,16 +4472,18 @@ mod tests {
         AppWindowId, Modifiers, MouseButton, MouseButtons, Point, PointerId, PointerType, Px, Rect,
     };
     use fret_runtime::{
-        ClipboardToken, Effect, Model, ModelStore, ShareSheetToken, TickId, TimerToken,
+        ClipboardToken, DragKindId, DragSession, Effect, Model, ModelStore, ShareSheetToken,
+        TickId, TimerToken,
     };
     use fret_ui::action::UiActionHost;
 
     use super::{
         DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
-        DerivedGeometryCacheState, DragState, LeftPointerDownOutcome, LeftPointerDownSnapshot,
-        LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
-        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, PendingSelectionState,
-        PortalBoundsStore, PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
+        DerivedGeometryCacheState, DragState, Invalidation, LeftPointerDownOutcome,
+        LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
+        MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
+        NodeDragReleaseOutcome, NodeDragState, PendingSelectionState, PortalBoundsStore,
+        PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
         begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
         build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
         build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
@@ -4440,6 +4492,7 @@ mod tests {
         commit_pending_selection_action_host, complete_left_pointer_release_action_host,
         complete_node_drag_release_action_host, escape_cancel_declarative_interactions_action_host,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
+        handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
         handle_node_drag_left_pointer_release_action_host,
         handle_node_drag_pointer_move_action_host,
@@ -4469,6 +4522,15 @@ mod tests {
         next_timer_token: u64,
         next_clipboard_token: u64,
         next_share_sheet_token: u64,
+        redraw_requests: Vec<AppWindowId>,
+        notifications: Vec<fret_ui::action::ActionCx>,
+        invalidations: Vec<Invalidation>,
+        capture_pointer_count: usize,
+        release_pointer_capture_count: usize,
+        requested_focus: Vec<fret_ui::GlobalElementId>,
+        cursor_icons: Vec<fret_core::CursorIcon>,
+        prevented_defaults: Vec<fret_runtime::DefaultAction>,
+        bounds: Rect,
     }
 
     impl UiActionHost for TestActionHostImpl {
@@ -4480,7 +4542,13 @@ mod tests {
             self.effects.push(effect);
         }
 
-        fn request_redraw(&mut self, _window: AppWindowId) {}
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw_requests.push(window);
+        }
+
+        fn notify(&mut self, cx: fret_ui::action::ActionCx) {
+            self.notifications.push(cx);
+        }
 
         fn next_timer_token(&mut self) -> TimerToken {
             self.next_timer_token = self.next_timer_token.saturating_add(1);
@@ -4503,6 +4571,69 @@ mod tests {
             _action: &fret_runtime::ActionId,
             _payload: Box<dyn Any + Send + Sync>,
         ) {
+        }
+    }
+
+    impl fret_ui::action::UiFocusActionHost for TestActionHostImpl {
+        fn request_focus(&mut self, target: fret_ui::GlobalElementId) {
+            self.requested_focus.push(target);
+        }
+    }
+
+    impl fret_ui::action::UiDragActionHost for TestActionHostImpl {
+        fn begin_drag_with_kind(
+            &mut self,
+            _pointer_id: PointerId,
+            _kind: DragKindId,
+            _source_window: AppWindowId,
+            _start: Point,
+        ) {
+        }
+
+        fn begin_cross_window_drag_with_kind(
+            &mut self,
+            _pointer_id: PointerId,
+            _kind: DragKindId,
+            _source_window: AppWindowId,
+            _start: Point,
+        ) {
+        }
+
+        fn drag(&self, _pointer_id: PointerId) -> Option<&DragSession> {
+            None
+        }
+
+        fn drag_mut(&mut self, _pointer_id: PointerId) -> Option<&mut DragSession> {
+            None
+        }
+
+        fn cancel_drag(&mut self, _pointer_id: PointerId) {}
+    }
+
+    impl fret_ui::action::UiPointerActionHost for TestActionHostImpl {
+        fn bounds(&self) -> Rect {
+            self.bounds
+        }
+
+        fn capture_pointer(&mut self) {
+            self.capture_pointer_count = self.capture_pointer_count.saturating_add(1);
+        }
+
+        fn release_pointer_capture(&mut self) {
+            self.release_pointer_capture_count =
+                self.release_pointer_capture_count.saturating_add(1);
+        }
+
+        fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
+            self.cursor_icons.push(icon);
+        }
+
+        fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
+            self.prevented_defaults.push(action);
+        }
+
+        fn invalidate(&mut self, invalidation: Invalidation) {
+            self.invalidations.push(invalidation);
         }
     }
 
@@ -4544,6 +4675,50 @@ mod tests {
             hit_is_text_input: false,
             hit_is_pressable: false,
             hit_pressable_target: None,
+        }
+    }
+
+    fn test_action_cx() -> fret_ui::action::ActionCx {
+        fret_ui::action::ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(1),
+        }
+    }
+
+    fn test_pointer_up(
+        button: MouseButton,
+        position: Point,
+        modifiers: Modifiers,
+    ) -> fret_ui::action::PointerUpCx {
+        fret_ui::action::PointerUpCx {
+            pointer_id: PointerId::default(),
+            position,
+            position_local: position,
+            position_window: Some(position),
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            velocity_window: None,
+            button,
+            modifiers,
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+            down_hit_pressable_target: None,
+        }
+    }
+
+    fn test_pointer_cancel() -> fret_ui::action::PointerCancelCx {
+        fret_ui::action::PointerCancelCx {
+            pointer_id: PointerId::default(),
+            position: None,
+            position_local: None,
+            position_window: None,
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
         }
     }
 
@@ -5000,6 +5175,189 @@ mod tests {
             }
         );
         assert!(got.commit_labels.is_empty());
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_left_release_finishes_pointer_session_when_handled()
+     {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let node_a = NodeId::from_u128(9935);
+        let node_b = NodeId::from_u128(9936);
+        let mut graph_value = Graph::new(GraphId::from_u128(120));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+        let controller = NodeGraphController::new(store.clone());
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(12.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([node_b]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let trace = install_declarative_callback_trace(&mut host, &store);
+
+        assert!(handle_declarative_pointer_up_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Left,
+                Point::new(Px(12.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+        ));
+        assert_eq!(host.release_pointer_capture_count, 1);
+        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
+        assert_eq!(host.notifications, vec![action_cx]);
+        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert_eq!(
+            got.selection_changes,
+            vec![SelectionChange {
+                nodes: vec![node_b],
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }]
+        );
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_ignores_non_left_non_pan_buttons() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(121)));
+        let view_state = host.models.insert(NodeGraphViewState::default());
+
+        assert!(!handle_declarative_pointer_up_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Right,
+                Point::new(Px(0.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            None,
+            None,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_some())
+                .expect("drag readable")
+        );
+        assert_eq!(host.release_pointer_capture_count, 0);
+        assert!(host.invalidations.is_empty());
+        assert!(host.notifications.is_empty());
+        assert!(host.redraw_requests.is_empty());
+    }
+
+    #[test]
+    fn handle_declarative_pointer_up_action_host_pan_release_clears_drag_and_finishes_session() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let graph = host.models.insert(Graph::new(GraphId::from_u128(122)));
+        let view_state = host.models.insert(NodeGraphViewState::default());
+
+        assert!(handle_declarative_pointer_up_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_up(
+                MouseButton::Middle,
+                Point::new(Px(0.0), Px(0.0)),
+                Modifiers::default(),
+            ),
+            MouseButton::Middle,
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            None,
+            None,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_none())
+                .expect("drag readable")
+        );
+        assert_eq!(host.release_pointer_capture_count, 1);
+        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
+        assert_eq!(host.notifications, vec![action_cx]);
+        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+    }
+
+    #[test]
+    fn handle_declarative_pointer_cancel_action_host_finishes_session_even_without_transients() {
+        let mut host = TestActionHostImpl::default();
+        let action_cx = test_action_cx();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+
+        assert!(handle_declarative_pointer_cancel_action_host(
+            &mut host,
+            action_cx,
+            test_pointer_cancel(),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+        ));
+        assert_eq!(host.release_pointer_capture_count, 1);
+        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
+        assert_eq!(host.notifications, vec![action_cx]);
+        assert_eq!(host.redraw_requests, vec![action_cx.window]);
     }
 
     #[test]

@@ -173,6 +173,9 @@ First landing in this worktree:
 - left-button pointer-up now also dispatches through dedicated node-drag,
   pending-selection, and marquee release helpers, so release commit ordering and transient
   cleanup no longer depend on one mixed branch.
+- pointer-up / pointer-cancel event closures now also route through explicit session
+  helpers, so release/cancel finish semantics and host-side invalidate/notify/redraw effects
+  are testable outside the closure bodies.
 
 ### Slice 3 - portal and overlay closure
 
