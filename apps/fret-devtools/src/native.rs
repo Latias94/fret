@@ -223,7 +223,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         .cloned()
         .expect("DevtoolsConfig must be set before starting the app");
 
-    let panel_fractions = app.models_mut().insert(vec![0.25f32, 0.45f32, 0.30f32]);
+    let panel_fractions = app.models_mut().insert(vec![0.22f32, 0.50f32, 0.28f32]);
     let left_tab = app.models_mut().insert(Some(Arc::<str>::from("semantics")));
     let details_tab = app.models_mut().insert(Some(Arc::<str>::from("pick")));
     let sessions = app
@@ -788,8 +788,9 @@ fn left_panel(
 
     shadcn::Card::new([
         shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Left").into_element(cx),
-            shadcn::CardDescription::new("Semantics tree and WS message tail.").into_element(cx),
+            shadcn::CardTitle::new("Inspect & Events").into_element(cx),
+            shadcn::CardDescription::new("Semantics navigation and recent diagnostics events.")
+                .into_element(cx),
         ])
         .into_element(cx),
         shadcn::CardContent::new([tabs]).into_element(cx),
@@ -1180,6 +1181,7 @@ fn center_panel(
 
     let (script_summary, script_is_valid) = script_summary_line(&script_text);
     let script_steps = script_steps_len(&script_text).unwrap_or(0);
+    let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
     let status_line = {
         let stage = script_last_stage
             .as_ref()
@@ -1211,7 +1213,7 @@ fn center_panel(
         )
     };
 
-    let buttons = ui::h_row(|cx| {
+    let primary_actions = ui::h_row(|cx| {
             [
                 shadcn::Button::new("Push Script")
                     .variant(shadcn::ButtonVariant::Secondary)
@@ -1231,6 +1233,14 @@ fn center_panel(
                     .disabled(!has_session || !script_is_valid)
                     .on_click(CMD_SCRIPT_RUN_AND_PACK)
                     .into_element(cx),
+            ]
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
+
+    let library_actions = ui::h_row(|cx| {
+            [
                 shadcn::Button::new("Refresh Scripts")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
@@ -1249,10 +1259,17 @@ fn center_panel(
                     .on_click(CMD_SCRIPT_SAVE)
                     .into_element(cx),
                 consume_toggle,
-                cx.text(format!(
-                    "consume_clicks={}",
-                    if consume_clicks { "true" } else { "false" }
-                )),
+                shadcn::Badge::new(if consume_clicks {
+                    "Consume clicks on"
+                } else {
+                    "Consume clicks off"
+                })
+                .variant(if consume_clicks {
+                    shadcn::BadgeVariant::Secondary
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
             ]
         })
         .gap(fret_ui_kit::Space::N2)
@@ -1275,6 +1292,15 @@ fn center_panel(
                     .disabled(!copy_enabled)
                     .on_click(CMD_COPY_PACK_PATH)
                     .into_element(cx),
+            ]
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
+
+    let viewer_row = ui::h_row(|cx| {
+            [
+                cx.text("Viewer:"),
                 viewer_url_input,
                 shadcn::Button::new("Open viewer")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -1316,6 +1342,52 @@ fn center_panel(
         Some(p) => format!("Last pack: {p}"),
         None => "Last pack: <none>".to_string(),
     };
+    let script_status_badges = ui::h_row(|cx| {
+            [
+                shadcn::Badge::new(if has_session { "Session connected" } else { "No session" })
+                    .variant(if has_session {
+                        shadcn::BadgeVariant::Secondary
+                    } else {
+                        shadcn::BadgeVariant::Outline
+                    })
+                    .into_element(cx),
+                shadcn::Badge::new(if script_is_valid {
+                    format!("Schema v{script_schema_version} valid")
+                } else {
+                    format!("Schema v{script_schema_version} invalid")
+                })
+                .variant(if script_is_valid {
+                    shadcn::BadgeVariant::Secondary
+                } else {
+                    shadcn::BadgeVariant::Destructive
+                })
+                .into_element(cx),
+                shadcn::Badge::new(if pack_in_flight { "Pack busy" } else { "Pack idle" })
+                    .variant(if pack_in_flight {
+                        shadcn::BadgeVariant::Default
+                    } else {
+                        shadcn::BadgeVariant::Outline
+                    })
+                    .into_element(cx),
+                shadcn::Badge::new(if pack_after_run {
+                    "Run&Pack enabled"
+                } else {
+                    "Run-only mode"
+                })
+                .variant(if pack_after_run {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+                shadcn::Badge::new(format!("Library {}", scripts.len()))
+                    .variant(shadcn::BadgeVariant::Outline)
+                    .into_element(cx),
+            ]
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let mut script_rows: Vec<AnyElement> = Vec::new();
     for item in scripts.iter() {
@@ -1390,7 +1462,6 @@ fn center_panel(
     ])
     .into_element(cx);
 
-    let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
     let pointer_candidates = script_studio::collect_common_json_pointers(&script_text);
 
     let step_index_input = shadcn::Input::new(st.script_step_insert_index.clone())
@@ -1803,20 +1874,18 @@ fn center_panel(
         ])
         .into_element(cx),
         shadcn::CardContent::new([
-            buttons,
+            primary_actions,
+            library_actions,
+            script_status_badges,
             cx.text(format!("validate: {script_summary}")),
             cx.text(status_line),
             cx.text(pack_status_line),
-            cx.text(format!(
-                "pack_after_run={}",
-                if pack_after_run { "true" } else { "false" }
-            )),
             apply_row,
             pack_row,
+            viewer_row,
             cx.text(loaded_line),
             cx.text(out_dir_line),
             cx.text(pack_line),
-            cx.text(format!("Library: {} scripts", scripts.len())),
             split,
             cx.text(format!("Script text bytes={}", script_text.len())),
         ])
