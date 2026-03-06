@@ -41,6 +41,8 @@ be reviewed without re-reading the whole crate.
   - the state/controller problems to solve,
   - the target architecture.
 - A milestone plan and TODO tracker aligned to those decisions.
+- A short current-hazards section with evidence anchors for the active architectural risks.
+- A short reviewer checklist so posture regressions are easy to spot in review.
 - A minimal inventory of the current "best available" surfaces:
   - paint-only declarative surface,
   - compat-retained declarative surface,
@@ -76,6 +78,7 @@ make compatibility paths explicit instead of accidental.
 - One canonical target posture for the final declarative-first architecture.
 - One bounded description of when `compat-retained-canvas` is justified.
 - A surface plan for converging toward a single high-level declarative entrypoint.
+- A wording audit for examples and internal guides so retained demos stay explicitly scoped.
 
 ### Done criteria
 
@@ -89,6 +92,8 @@ make compatibility paths explicit instead of accidental.
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `apps/fret-examples/src/imui_node_graph_demo.rs`
+- `docs/workstreams/xyflow-gap-analysis.md`
 
 ## M2 - State boundary split
 

@@ -1,3 +1,7 @@
+//! Retained-bridge IMUI demo for `fret-node`.
+//! This example is compatibility-oriented and should not be treated as the default downstream
+//! authoring path for node-graph apps.
+//! Prefer the declarative node-graph surfaces for normal downstream guidance.
 use fret::prelude::*;
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,

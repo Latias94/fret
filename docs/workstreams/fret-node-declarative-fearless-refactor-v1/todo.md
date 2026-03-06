@@ -8,7 +8,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [x] Keep `compat-retained-canvas` out of default features.
 - [x] Keep the compatibility retained path feature-gated and explicitly named.
 - [x] Keep the default lightweight declarative demo path (`node_graph_demo`).
-- [ ] Keep the workstream docs aligned with the actual public recommendation after each milestone.
+- [x] Keep the workstream docs aligned with the actual public recommendation after each milestone.
 - [ ] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
       implementation-only diffs.
 
@@ -23,21 +23,21 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.
 - [x] Preserve the historical folder path to avoid breaking references.
-- [ ] Add one short "current hazards" section with evidence anchors for:
+- [x] Add one short "current hazards" section with evidence anchors for:
   - direct graph mutation in the declarative path,
   - overgrown `NodeGraphViewState`,
   - missing controller facade.
-- [ ] Add one short reviewer checklist to the README so a reviewer can verify the intended posture
+- [x] Add one short reviewer checklist to the README so a reviewer can verify the intended posture
       in under five minutes.
 
 ## M1 - Public posture and API closure
 
-- [ ] State explicitly in docs which path is recommended **today** for shipping editor-grade usage.
-- [ ] State explicitly in docs which path is the **target** posture after this refactor.
-- [ ] State explicitly in docs when `compat-retained-canvas` is acceptable.
-- [ ] Document that direct retained `NodeGraphCanvas` authoring is internal-only except for tests,
+- [x] State explicitly in docs which path is recommended **today** for shipping editor-grade usage.
+- [x] State explicitly in docs which path is the **target** posture after this refactor.
+- [x] State explicitly in docs when `compat-retained-canvas` is acceptable.
+- [x] Document that direct retained `NodeGraphCanvas` authoring is internal-only except for tests,
       diagnostics, or temporary compatibility harnesses.
-- [ ] Audit examples and internal guides for wording that still suggests retained authoring is the
+- [x] Audit examples and internal guides for wording that still suggests retained authoring is the
       normal downstream path.
 - [ ] Decide whether to introduce a future canonical wrapper name such as `node_graph_surface(...)`
       over the existing paint-only / compat-retained milestones.

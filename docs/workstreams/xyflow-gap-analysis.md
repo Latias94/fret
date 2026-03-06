@@ -145,8 +145,9 @@ Notes:
 Recommendation:
 
 - Track remaining work as `docs/workstreams/canvas-world-layer-v1.md` M2 (bounds + selection seams).
-- For editor-grade workflows **today**, prefer `fret-node::NodeGraphCanvas` as the interaction engine
-  and use `fret-ui-ai` workflow wrappers as chrome.
+- For editor-grade workflows **today**, prefer a declarative root surface that talks to
+  `NodeGraphController` / `NodeGraphStore`; use `node_graph_surface_compat_retained` only as a
+  temporary compatibility surface when the paint-only path is not yet sufficient.
 
 ### Gap B — ReactFlow-like input filter knobs (`noWheel` / `noPan` / `.nokey`)
 

@@ -128,6 +128,37 @@ update rather than an incidental refactor.
 - **Mixed callback responsibilities**
   - The current callback surface mixes store/headless commit signals with UI gesture lifecycle.
 
+## Current hazards
+
+These are the hazards reviewers should keep in mind even after the recent controller/store-backed
+convergence slices.
+
+### H1. Declarative commit-path regressions are still the highest-risk failure mode
+
+- The biggest regression risk is reintroducing direct `Graph` / `NodeGraphViewState` writes in
+  `paint_only` once a `NodeGraphController` / `NodeGraphStore` is available.
+- Current evidence that the preferred path is converging:
+  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`commit_graph_transaction`,
+    `update_view_state_action_host`, `update_selection_action_host`)
+  - `ecosystem/fret-node/src/ui/controller.rs`
+  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` focused controller/store-backed tests
+
+### H2. `NodeGraphViewState` still persists more than true view state
+
+- `NodeGraphViewState` still serializes `interaction`, and that shape currently mixes interaction
+  policy with runtime tuning.
+- Evidence:
+  - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionState`)
+  - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M2`)
+
+### H3. `NodeGraphController` is landed, but not yet fully closed as the teaching surface
+
+- The controller now covers the first query / transaction / viewport / selection helpers, but queue
+  ownership, richer edit commands, and callback layering are still open.
+- Evidence:
+  - `ecosystem/fret-node/src/ui/controller.rs`
+  - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M3`)
+
 ## Problems this refactor must solve
 
 This workstream treats the following as the root problems to address.
@@ -307,6 +338,31 @@ Do not add or normalize any of the following as long-term best practice:
 - editor-grade interactions that commit by mutating `Graph` directly,
 - new UI-policy defaults hidden in mechanism code,
 - tutorial/demo guidance that implies retained authoring is the normal downstream path.
+
+## Reviewer checklist
+
+A reviewer should be able to answer "yes" to all of these in under five minutes.
+
+- Is the recommended **today** posture clear: declarative root surface first, controller/store
+  integration first, retained hidden behind compatibility only when needed?
+- Is the **target** posture clear: declarative editor-grade surface with transaction-safe commits and
+  progressively more declarative node content?
+- Does the change avoid treating direct retained `NodeGraphCanvas` authoring as the default
+  downstream story?
+- If a declarative gesture commits graph or view-state data, does it route through
+  controller/store/transaction entry points instead of mutating `Graph` directly?
+- Does the change avoid pushing more interaction policy or runtime tuning into
+  `NodeGraphViewState`?
+- Do examples/docs keep retained surfaces explicitly labeled as internal, IMUI-specific, test-only,
+  or temporary compatibility?
+
+## Wording audit snapshot
+
+- `docs/workstreams/xyflow-gap-analysis.md` is aligned with this workstream's public recommendation.
+- `apps/fret-examples/src/imui_node_graph_demo.rs` remains intentionally retained-bridge specific
+  and should stay scoped as a compatibility/example surface, not the default downstream recipe.
+- No other in-tree workstream docs currently recommend direct retained `NodeGraphCanvas` authoring as
+  the normal downstream entrypoint.
 
 ## Deliverables expected from this workstream
 
