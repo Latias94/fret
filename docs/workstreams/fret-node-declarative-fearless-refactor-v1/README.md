@@ -1,345 +1,347 @@
-# Workstream: `fret-node` Declarative-First Fearless Refactor (v1)
+# Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: In progress (last updated 2026-03-02)
-Scope: `ecosystem/fret-node` (+ `ecosystem/fret-canvas` composition patterns)
+Status: Reframed and active (last updated 2026-03-06)
+Scope: `ecosystem/fret-node` with focused touch points in `ecosystem/fret-canvas`, `apps/fret-examples`, and node-graph diagnostics
+
+Historical note:
+
+- This folder keeps its original path for continuity, but its scope is now broader than the earlier
+  "paint-only declarative" slice.
+- The workstream now covers the full landing plan for `fret-node` as a **declarative-first,
+  editor-grade reference surface** for the Fret ecosystem.
 
 ## Intent
 
-Make `ecosystem/fret-node` a **declarative-first** reference implementation for “editor-grade
-canvas UI” in the ecosystem:
+Make `ecosystem/fret-node` the canonical example of how Fret should ship a complex editor surface:
 
-- keep the headless graph model portable and reusable,
-- provide a declarative UI surface that composes with `crates/fret-ui` contracts,
-- reach retained-grade performance via cache discipline and explicit invalidation,
-- avoid leaking retained authoring (`UiTree`/`Widget`) into the long-term public API.
+- **headless asset model first** (`Graph`, `GraphTransaction`, rules, profiles, diagnostics),
+- **declarative-first public authoring** for ecosystem and app code,
+- **retained semantics in the runtime** without leaking retained authoring into long-term APIs,
+- **transaction-safe editor interactions** instead of ad-hoc graph mutations,
+- **clear mechanism vs policy boundaries** so `fret-node` teaches the right layering habits.
 
-This workstream is explicitly *not* about “removing every retained line immediately”. It is about
-making the **default** and **recommended** authoring surface declarative, while leaving a narrowly
-scoped compatibility escape hatch when unavoidable (feature-gated and delete-planned).
+This workstream is not a rewrite for its own sake. It exists because `fret-node` is doing two jobs
+at once:
 
-## Progress snapshot
+1. it is a real product surface for node-graph editors, and
+2. it is one of the most important ecosystem teaching surfaces for Fret authoring patterns.
 
-This is a living snapshot of what is already in place vs what remains.
+If `fret-node` is architecturally muddy, downstream crates will copy the wrong patterns.
 
-- M0 (baseline + gates): **Present**
-  - Minimal runnable demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
-  - Diagnostics suite (paint-only): `fret-examples-node-graph-paint-only`
-- M1 (declarative surface skeleton, paint-only): **Present**
-  - Declarative paint-only surface (default demo path) with hosted caches
-  - Steady-state cache gates exist (grid/nodes/edges)
-- M2 (interaction + portals, paint-only baselines): **Partially present**
-  - Marquee/drag cancellation + portal bounds harvest + fit-view baselines are gated
-  - Remaining: policy parity (selection/marquee reducers, overlays, richer portal hosting)
-  - 2026-03-02: fixed a paint-cache coupling gap where portal layout could update during drag while
-    the canvas node replayed cached ops (reads as “drag not following”).
-    - Implementation: the paint-only `Canvas` declares interactive paint dependencies via
-      `CanvasPainter::observe_model_id(...)`.
-    - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`node_graph_surface_paint_only`)
-- M3 (defaults + compatibility): **Present**
-  - Retained is opt-in only: `fret-node/compat-retained-canvas`
-  - Default features avoid `fret-ui/unstable-retained-bridge`
+## Why this workstream exists now
 
-## How to run the paint-only gates
+`fret-node` already has strong building blocks:
 
-PowerShell (Windows-friendly):
+- a long-lived graph document model,
+- reversible edits and history,
+- typed connection planning and validation,
+- a powerful retained interaction engine,
+- a promising declarative paint-only surface.
 
-```powershell
-$env:FRET_DIAG='1'
-cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only `
-  --dir target/fret-diag-node-graph `
-  --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos
-```
+However, the overall authoring story is still not fully converged:
 
-Notes:
+- the public recommendation is split between paint-only and retained-backed paths,
+- the declarative surface is not yet the transaction-safe editor-grade path,
+- `NodeGraphViewState` currently mixes pure view state with interaction policy and runtime tuning,
+- runtime capabilities are spread across store, queues, lookups, commands, and helpers without one
+  obvious controller/instance facade,
+- some workstream content has become too implementation-local and no longer helps reviewers decide
+  what must land next.
 
-- `FRET_DIAG` is a reserved variable for `fretboard diag --launch` and should be set in the shell,
-  not passed via `--env FRET_DIAG=...`.
-- For GPU screenshots, pass `--env FRET_DIAG_GPU_SCREENSHOTS=1` and use a screenshot script (see
-  `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json`).
-- For “drag not following” reports, use the mid-drag screenshot script:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
+This document resets the workstream around the smallest set of decisions and milestones needed to
+land the right long-term shape.
 
-## Recommendation (default declarative, compat retained)
+## Locked decisions
 
-We explicitly choose a “default declarative” posture:
+These are the decision gates for this workstream. Changes that violate them should require an ADR
+update rather than an incidental refactor.
 
-- Default UI surfaces are declarative and do not require retained authoring.
-- Retained widgets may remain as an **internal** implementation for narrow hotspots behind an
-  explicit compatibility feature (opt-in), with exit criteria and a delete plan.
+1. **Public authoring posture is declarative-first.**
+   - Downstream authors should compose node-graph surfaces as elements, not as retained widgets.
+   - Retained implementation details may remain internally for a time, but must not be the taught
+     default.
 
-## Feature flags (public integration posture)
+2. **Retained remains a compatibility strategy, not the public design center.**
+   - `compat-retained-canvas` is allowed as an escape hatch.
+   - It is not the default feature posture and should stay delete-planned.
 
-- `fret-node/fret-ui`: Enables the declarative-first UI integration surface (elements + canvas paint-only).
-- `fret-node/compat-retained-canvas`: Opt-in compatibility surface for the legacy retained
-  widget/editor stack. This enables `fret-ui/unstable-retained-bridge` transitively and is
-  intentionally **not** part of `fret-node`'s default feature set.
+3. **Editor-grade graph edits must converge on transactions/store, not direct `Graph` mutation.**
+   - The authoritative editor commit path is `GraphTransaction` / `NodeGraphStore`.
+   - Declarative surfaces may hold transient drag/hover state locally, but committed edits should go
+     through store/controller entry points.
 
-## Ecosystem authoring guide (recommended)
+4. **`NodeGraphViewState` must shrink back to true view state.**
+   - Pan/zoom/selection/draw order belong there.
+   - Interaction policy, key bindings, and performance tuning must not all live in the same bucket.
 
-This workstream aims to make downstream ecosystem authors productive without touching retained APIs.
+5. **A unified controller/instance surface is required.**
+   - Apps need one ergonomic place to drive viewport actions, graph updates, lookups, and controlled
+     synchronization.
+   - The current split across store/lookups/view queue/commands is acceptable internally, but not as
+     the final teaching surface.
 
-### Recommended (declarative-first)
+6. **Mechanism vs policy boundaries stay aligned with Fret architecture.**
+   - `fret-node` may own editor-specific mechanism and contracts.
+   - Default overlay behavior, spacing defaults, recipe chrome, and design-system policy should not
+     silently harden inside mechanism code just because the node graph needs them.
 
-- Depend on `fret-node` with UI enabled, without the retained bridge:
-  - `fret-node = { version = "0.1.0", features = ["fret-ui"] }`
-- Compose the node graph surface as a normal declarative element:
-  - paint-only milestone surface: `fret_node::ui::node_graph_surface_paint_only`
-- Optional (advanced): provide UI-only geometry overrides (per-node size, edge hit slop) without
-  mutating the serialized `Graph`:
-  - implement `fret_node::ui::NodeGraphGeometryOverrides` (or use `NodeGraphGeometryOverridesMap`)
-  - pass it via `NodeGraphSurfacePaintOnlyProps.geometry_overrides`
-  - bump `revision()` when overrides change so derived geometry + hit-testing caches rebuild
-- Optional (advanced): provide paint-only per-node/per-edge styling without mutating the serialized
-  `Graph`:
-  - implement `fret_node::ui::NodeGraphPaintOverrides` (or use `NodeGraphPaintOverridesMap`)
-  - pass it via `NodeGraphSurfacePaintOnlyProps.paint_overrides`
-  - bump `revision()` when overrides change so paint-only caches can update without rebuilding
-    derived geometry
-  - Note: edge paint overrides can provide full `PaintBindingV1` (gradients/materials), because
-    the paint-only surface uses `CanvasPainter::path_paint` under the hood.
-- Keep editor state in models:
-  - graph: `Model<Graph>`
-  - view state: `Model<NodeGraphViewState>`
-  - derived caches: `Model<...>` keyed by (rev, viewport/cull, effective scale)
+## Current state snapshot
 
-### Compatibility (retained escape hatch)
+### Already strong
 
-Enable this only when you have a concrete missing declarative mechanism and an exit plan:
+- **Headless asset layer**
+  - `Graph`, stable IDs, imports, symbols, groups, sticky notes.
+  - `GraphOp`, `GraphTransaction`, `GraphHistory`.
+  - `rules`, `profile`, diagnostics, typed connection planning.
 
-- `fret-node = { version = "0.1.0", features = ["compat-retained-canvas"] }`
-- Use retained-backed entrypoints internally:
-  - declarative root hosting retained: `fret_node::ui::node_graph_surface_compat_retained`
-  - `imui` subtree adapter: `fret_node::imui::*`
+- **Retained interaction engine**
+  - `NodeGraphCanvas` remains the most complete editor-grade interaction path today.
+  - Store integration, edit/view queues, overlays, and portal host all exist around this path.
+
+- **Declarative-first direction is already visible**
+  - `node_graph_surface_paint_only` is the default lightweight declarative demo path.
+  - `node_graph_surface_compat_retained` already proves that retained can be hidden behind a
+    declarative entry surface.
+  - The retained bridge is already opt-in only.
+
+### Still unresolved
+
+- **Public posture ambiguity**
+  - There is not yet one crisp answer to "what should ecosystem authors use for a shipping,
+    editor-grade node graph today?"
+
+- **Transaction boundary ambiguity in the declarative path**
+  - The paint-only surface currently commits some interactions by mutating the graph directly.
+  - That is acceptable for exploration, but not for the long-term reference architecture.
+
+- **Overgrown view-state boundary**
+  - `NodeGraphViewState` currently bundles pure view state together with interaction configuration
+    and runtime tuning concerns.
+
+- **Ergonomic API fragmentation**
+  - Viewport helpers, lookups, commands, store subscriptions, and controlled updates do not yet read
+    like one coherent instance/controller surface.
+
+- **Mixed callback responsibilities**
+  - The current callback surface mixes store/headless commit signals with UI gesture lifecycle.
+
+## Problems this refactor must solve
+
+This workstream treats the following as the root problems to address.
+
+### P1. `fret-node` needs one recommended authoring story
+
+We need to be able to say, without caveats:
+
+- what is recommended **today** for production editor-grade usage,
+- what is the **target** authoring posture,
+- what is merely a **temporary compatibility** path,
+- what is explicitly **not** the public best practice.
+
+### P2. The declarative path must stop bypassing the transaction architecture
+
+The point of `fret-node` is not just to draw graphs; it is to model long-lived, undoable,
+diagnostic-rich graph editing. Any declarative-first editor path must preserve that value.
+
+### P3. State boundaries must match intent
+
+We need separate concepts for:
+
+- persisted viewport/selection state,
+- interaction config and key semantics,
+- runtime tuning and cache behavior,
+- ephemeral widget-local interaction session state.
+
+### P4. The API surface needs a coherent controller facade
+
+The final reference architecture should let app authors ask for one clear surface for:
+
+- viewport manipulation,
+- controlled graph replacement/synchronization,
+- common graph queries,
+- canonical edit/update entry points,
+- subscription and callback wiring.
+
+### P5. The workstream itself must stay reviewable
+
+The previous workstream captured a lot of useful implementation evidence, but parts of it became
+too granular. The updated docs should keep the important evidence and gates while focusing reviewers
+on the next architectural decisions.
+
+## Target architecture
+
+The target architecture remains aligned with ADR 0126, but with sharper boundaries.
+
+### A. Asset layer: long-lived graph document + reversible edits
+
+This remains the non-negotiable center:
+
+- `Graph`
+- `GraphOp`
+- `GraphTransaction`
+- `GraphHistory`
+- `rules`
+- `profile`
+- diagnostics
+
+This layer should stay portable, serializable, and editor-agnostic.
+
+### B. Runtime layer: editor state + controller + queries
+
+This layer should converge on:
+
+- `NodeGraphStore` as the transaction-aware state owner,
+- `NodeGraphLookups` as the canonical fast-query substrate,
+- a new thin **controller/instance facade** that exposes the ergonomic app-facing surface,
+- explicit controlled-mode helpers for full replace vs diff-driven replace.
+
+Target state split:
+
+- `NodeGraphViewState`
+  - pan
+  - zoom
+  - selected nodes/edges/groups
+  - draw order
+- `NodeGraphInteractionConfig`
+  - selection/drag/connect key policy
+  - connection mode
+  - pan/zoom activation settings
+  - editor interaction toggles
+- `NodeGraphRuntimeTuning`
+  - spatial index tuning
+  - cache pruning
+  - expensive runtime knobs
+
+Exact names may change during implementation, but the split itself is part of the workstream.
+
+### C. Surface layer: declarative-first public UI
+
+The intended public story is:
+
+- apps compose a declarative node-graph surface,
+- the surface talks to the controller/store,
+- visible node content uses portal-based composition over time,
+- overlays and editor chrome stay explicit and testable.
+
+This means the final recommended surface should look like a declarative element-first entrypoint,
+not a retained widget constructor.
+
+### D. Compatibility layer: retained internal engine, feature-gated
+
+The retained path remains acceptable only when it satisfies all of the following:
+
+- it is hidden behind declarative entrypoints where possible,
+- it remains feature-gated,
+- it does not expand the long-term public API footprint,
+- it has explicit exit criteria.
+
+### E. Policy layer: recipes stay out of mechanism by default
+
+`fret-node` may keep editor-specific mechanisms, but:
+
+- overlay dismissal policy,
+- design-system row sizing,
+- recipe spacing/padding,
+- shadcn/material chrome defaults,
+
+should still live in the proper ecosystem policy/recipe layers unless there is a clear contract case
+for keeping them local.
+
+## Recommended authoring posture
+
+This is the part downstream authors should be able to follow without reading the whole repo.
+
+### Recommended today for shipping editor-grade workflows
+
+Use a **declarative root surface**, but allow the internal engine to remain retained-backed where
+full interaction parity is still only available there.
+
+Concretely:
+
+- prefer declarative composition at the app boundary,
+- prefer store-driven integration,
+- prefer edit/view queue or controller-driven commands,
+- do not author directly against retained `NodeGraphCanvas` unless you are working inside
+  `fret-node` internals, tests, or temporary compatibility harnesses.
+
+### Recommended target posture
+
+Ship a declarative editor-grade surface whose committed edits flow through transactions/store and
+whose node content progressively moves toward portal-based declarative composition.
+
+### Temporary compatibility posture
+
+`node_graph_surface_compat_retained` is acceptable as the transition path when the fully
+declarative editor-grade surface is not yet ready.
 
 ### API red lines
 
-- Do not expose `UiTree`, `Widget`, or `fret_ui::retained_bridge::*` in downstream public APIs.
-- Prefer caches + invalidation discipline over per-frame recomputation.
+Do not add or normalize any of the following as long-term best practice:
 
-## Context (current state)
+- public constructors that require retained types,
+- editor-grade interactions that commit by mutating `Graph` directly,
+- new UI-policy defaults hidden in mechanism code,
+- tutorial/demo guidance that implies retained authoring is the normal downstream path.
 
-Today, `fret-node` is structurally “headless model + optional UI”. The UI/editor side uses a
-retained canvas widget hosted inside the declarative runtime via the retained bridge:
+## Deliverables expected from this workstream
 
-- retained subtree hosting adapter: `ecosystem/fret-node/src/imui.rs`
-- retained widget implementation: `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
-- retained bridge contract (feature-gated): `crates/fret-ui/src/retained_bridge.rs`
+This workstream is complete only when it leaves behind:
 
-In parallel, the ecosystem already has declarative canvas composition patterns in `fret-canvas/ui`
-that are closer to the intended long-term direction:
+1. **Clear documentation**
+   - one canonical authoring recommendation,
+   - one milestone plan reviewers can evaluate,
+   - one TODO list that is small enough to execute in slices.
 
-- declarative input wiring around a leaf `Canvas`: `ecosystem/fret-canvas/src/ui/canvas_surface.rs`
-- world-layer composition with `RenderTransform` + cross-frame bounds: `ecosystem/fret-canvas/src/ui/world_layer.rs`
+2. **Architectural closure**
+   - state boundaries are explicit,
+   - controller surface is explicit,
+   - compatibility retained path is clearly bounded.
 
-As a first migration step, this workstream adds a **declarative entrypoint** that can still host
-the current retained node-graph canvas as an internal subtree when needed:
+3. **Regression protection**
+   - keep the existing useful cache/portal/interaction gates,
+   - add transaction-safe declarative gates as the new behavior lands,
+   - preserve editor-grade correctness under undo/redo and controlled sync.
 
-- compat declarative surface: `ecosystem/fret-node/src/ui/declarative/mod.rs`
-- demos:
-  - declarative-first (paint-only): `apps/fret-examples/src/node_graph_demo.rs`
-  - legacy retained bridge: `apps/fret-examples/src/node_graph_legacy_demo.rs` (feature-gated)
+## What this workstream intentionally does not do
 
-## Public API sketch (ecosystem authoring surface)
+- It does **not** propose rewriting the graph model away from map-based, long-lived documents.
+- It does **not** propose splitting `fret-node` into multiple crates immediately.
+- It does **not** require deleting all retained code before declarative architecture is ready.
+- It does **not** try to solve all visual recipe/theming work in the same pass.
 
-Goal: downstream ecosystem authors should be able to adopt node graph UI without touching retained
-types (`UiTree`, `Widget`, `retained_bridge::*`) and without enabling `fret-ui/unstable-retained-bridge`.
+## Primary references
 
-Proposed public surfaces (illustrative, not locked yet):
+- Node graph contract: `docs/adr/0126-node-graph-editor-and-typed-connections.md`
+- Declarative runtime direction: `docs/adr/0028-declarative-elements-and-element-state.md`
+- Component authoring direction: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
+- Architecture overview: `docs/architecture.md`
+- Node graph roadmap: `docs/node-graph-roadmap.md`
+- XyFlow parity map: `docs/node-graph-xyflow-parity.md`
+- XYFlow gap analysis: `docs/workstreams/xyflow-gap-analysis.md`
 
-- `fret_node::ui`:
-  - `node_graph_surface(cx, NodeGraphSurfaceProps { graph, view_state, presenter, skin, ... }) -> AnyElement`
-  - `NodeGraphSurfaceProps`:
-    - headless model handles: `Model<Graph>`, `Model<ViewState>` (or equivalent)
-    - view inputs: `PanZoom2D` (model), `cull_margin`, `effective_scale_factor`
-    - domain hooks: callbacks for commands, transactions, drag payloads
-    - policy knobs: keybindings/toggles live in ecosystem/app
-  - `NodeGraphPresenter` / `NodeGraphSkin` remain the extension points for look and domain mapping.
+## Evidence anchors to preserve while refactoring
 
-Non-goals for public API:
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/changes.rs`
+- `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `tools/diag-scripts/node-graph/`
 
-- Do not expose `UiTree`, `Widget`, `NodeId` (runtime tree node ids), or retained bridge types.
-- Do not require downstream crates to register resources manually; prefer hosted caches.
+## Minimal runnable targets and gates
 
-## Goals
+Canonical runnable targets:
 
-1. **Public API becomes declarative-first**
-   - Default `fret-node` UI surfaces should be usable without `fret-ui/unstable-retained-bridge`.
-   - Public exports must not require downstream crates to implement `Widget` or call `UiTree`
-     directly.
-2. **Performance parity is achieved by design**
-   - Avoid “recompute everything every frame” by externalizing caches and keying them by stable
-     identity + revision + scale/viewport.
-   - Prefer `CanvasPainter` hosted caches and/or shared ecosystem caches (ADR 0161 direction).
-3. **Layering stays clean**
-   - No new policy gets pushed into `crates/fret-ui`.
-   - Gesture maps, tool modes, snapping, and domain transactions remain ecosystem/app-owned.
-4. **Regression artifacts exist**
-   - Add at least one focused gate per milestone (unit/integration and/or `fretboard diag` script)
-     for interaction state machines and canvas perf risks.
+- default declarative demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
+- compatibility harness: `cargo run -p fret-demo --features node-graph-demos-legacy --bin node_graph_legacy_demo`
 
-## Non-goals
+Canonical gate families to keep alive:
 
-- Redesigning the node graph file formats, schema/migrations, or deterministic persistence rules.
-- Introducing new “widget authoring primitives” as a stable extension surface.
-- Solving every advanced editor feature (Blueprint-grade styling, full accessibility closure) in v1.
-
-## Proposed target architecture (declarative-first)
-
-### A) A single declarative “surface” component
-
-Introduce a declarative surface entrypoint that owns composition, not policy:
-
-- input wiring: `PointerRegion` hooks → update `Model` state and request redraws,
-- view transforms: `RenderTransform` derived from `Model<PanZoom2D>`,
-- world paint: leaf `Canvas` paints background + edges + bulk node chrome,
-- world items: optional element subtrees for portals/interactive regions (bounded in count),
-- overlays: explicit overlay roots / anchored placement at the ecosystem layer.
-
-### B) Externalized caches and revisioned updates
-
-To match retained-grade performance without retained authoring:
-
-- keep the headless graph model as the source of truth,
-- derive “render data” into `Model<…>` caches keyed by:
-  - graph revision (or per-subsystem revision),
-  - viewport / cull window,
-  - effective scale factor (`dpi * zoom`),
-- update caches only when relevant inputs change, not on every frame.
-
-Cache best practices (checkable rules):
-
-- **Stable identity**: cache keys are stable ids (node/edge ids + style keys), not transient pointers.
-- **Revisioned invalidation**: caches observe a small set of “inputs that matter” (rev, viewport, scale).
-- **Bounded retention**: caches are bounded by entry count and/or frame retention windows (ADR 0161).
-- **Key hygiene**: avoid high-entropy keys (timestamps, random UUIDs) in paint loops.
-
-### C) Explicit resource caching policy
-
-Align caching semantics across declarative and retained implementations:
-
-- declarative `CanvasPainter` hosted caches (ADR 0141),
-- shared cache policy vocabulary for smooth-by-default bounded retention (ADR 0161),
-- ecosystem-level retained caches remain available for internal compatibility paths.
-
-### D) Compatibility: retained stays internal and feature-gated
-
-If specific hotspots cannot be made efficient declaratively in v1:
-
-- keep the retained canvas as an **internal implementation strategy** behind an explicit feature
-  (compatibility), and
-- ensure the default path and public API remain declarative-first.
-
-The compatibility surface must be:
-
-- opt-in,
-- tightly scoped,
-- delete-planned (tracked in milestones and TODOs).
-
-Compatibility hatch criteria (when retained is allowed):
-
-- A concrete missing contract is identified (what declarative cannot express efficiently today).
-- A minimal compatibility module is introduced that does not leak retained types into public APIs.
-- A gate exists that demonstrates the hotspot and protects behavior/perf.
-- Exit criteria are written up front (what needs to change to remove retained).
-
-## Contract dependencies (what we rely on)
-
-This refactor assumes the following runtime contracts remain stable and sufficient:
-
-- declarative authoring: `ElementContext` / `AnyElement` (`crates/fret-ui/src/lib.rs`)
-- leaf custom draw: `Canvas` + `CanvasPainter` (ADR 0141 direction)
-- input wiring: `PointerRegion` action hooks (`crates/fret-ui/src/action`)
-- correct world mapping: `render_transform` semantics (ADR 0082)
-- cross-frame geometry: `last_*bounds_for_element` / `LayoutQueryRegion` patterns
-  - Note: `LayoutQueryRegion` bounds do not include absolutely positioned descendants; the query
-    region itself should be the positioned box when harvesting overlay item bounds.
-
-## Red lines (when to propose new runtime contracts)
-
-If a milestone uncovers a declarative performance/ergonomics gap, do not “patch over” by exposing
-retained widgets as a stable authoring surface.
-
-Instead:
-
-1) Attempt an ecosystem-layer solution (caches, budgets, keying, composition patterns).
-2) If still blocked, write down the missing mechanism as a runtime contract proposal:
-   - what the mechanism is,
-   - which invariants it must satisfy,
-   - which authoritative upstream reference motivates it,
-   - why it cannot live in ecosystem policy.
-
-Any hard-to-change runtime mechanism requires ADR alignment before being treated as stable.
-
-## References
-
-- Canvas surfaces and layering direction: `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`
-- Canvas portals (staged): `ecosystem/fret-node/src/ui/portal.rs`
-- Declarative canvas element + hosted painter: `docs/adr/0141-declarative-canvas-element-and-painter.md`
-- Cache policy vocabulary for smooth-by-default: `docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md`
-
-## M0 quickstart (baseline repro artifacts)
-
-Run the existing node graph demo (Windows-friendly):
-
-- `cargo run -p fretboard -- dev native --bin node_graph_demo`
-
-Capture a baseline diagnostics bundle using the scripted repro:
-
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-
-Notes:
-
-- The diag script asserts `panning true` then `panning false` by inspecting the viewport semantics
-  `value` string for `test_id=node_graph.canvas`.
-- Demo targets:
-  - Declarative-first (paint-only): `cargo run -p fretboard -- dev native --bin node_graph_demo`
-  - Legacy retained bridge: `cargo run -p fretboard -- dev native --bin node_graph_legacy_demo`
-
-## M1 steady-state cache gate (paint-only baseline)
-
-Run the paint-only steady-state cache gate and capture a diagnostics bundle:
-
-Notes:
-
-- Set `FRET_DIAG=1` in your shell (do not pass it via `--env`; it is reserved for tool-launched runs).
-  - PowerShell: `$env:FRET_DIAG='1'`
-
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-
-Run the promoted paint-only suite (IDs live in `tools/diag-scripts/index.json`):
-
+- `cargo nextest run -p fret-node`
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
-Maintenance note:
-
-- The suite members are defined via a suite manifest under
-  `tools/diag-scripts/suites/fret-examples-node-graph-paint-only/suite.json`.
-- `tools/diag-scripts/index.json` is generated; after changing suite membership, run:
-  - `cargo run -p fretboard -- diag registry write`
-
-## Diagnostics shortcuts (paint-only)
-
-When running with `FRET_DIAG=1`, the paint-only surface provides a few deterministic shortcuts used
-by scripted gates:
-
-- `Ctrl+3`: bump graph revision (forces geometry cache rebuild exactly once)
-- `Ctrl+4`: normalize graph + view for node-drag gates (single visible node centered)
-- `Ctrl+5`: normalize graph + view for marquee gates (single visible node offset from center)
-- `Ctrl+7`: enable portal hosting
-- `Ctrl+8`: disable portal hosting (clears `PortalBoundsStore` so tooltip fallback paths can run)
-- `Ctrl+9`: fit view to current portal bounds (consumes `PortalBoundsStore`)
+The TODO tracker defines the new gate additions required for transaction-safe declarative parity.

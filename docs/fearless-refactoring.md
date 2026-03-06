@@ -14,6 +14,10 @@ project evolves.
 - When a breaking refactor is necessary, expect it to be tracked by a roadmap doc + supported by
   templates/demos so upgrades are “compile-guided”.
 
+Related workstream examples:
+
+- Foreground style context refactor: `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
+
 ## Stability boundaries (what is safe to depend on)
 
 ### Stable entry points (what we try to keep user-facing)
@@ -71,7 +75,7 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `ViewCx::on_action*` hooks.
+- Handle actions via `ViewCx::on_action_notify_models`, `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
 
 MVU note:
 
@@ -95,6 +99,21 @@ Prefer ecosystem layout helpers and patches:
 - `.ui().px_3().w_full().rounded(...).into_element(cx)`
 
 This limits churn when we refine token conventions or introduce new style defaults.
+
+### 4.5) Treat inherited styling as context, not as a layout fragment
+
+If a helper exists only to install inherited text/icon foreground for descendants, do not assume it
+is layout-transparent unless the contract says so explicitly.
+
+Why:
+
+- a style-looking helper that inserts a real wrapper node can silently change subtree ownership,
+- which in turn can affect fill/shrink behavior, wrapped-text width resolution, and overlay content
+  composition.
+
+For the current cleanup direction and migration plan, see:
+
+- `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
 
 ### 5) Use action hooks for interaction policy
 
@@ -122,7 +141,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`on_action*`) and action IDs
+- typed action handlers (`on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

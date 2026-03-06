@@ -203,7 +203,7 @@ impl NativeSelect {
 
     /// Binds this NativeSelect to a logical form control id (similar to HTML `id`).
     ///
-    /// When set, `Label::for_control(ControlId)` forwards focus to the select trigger, and the
+    /// When set, `Label::for_control(ControlId)` forwards activation to the select trigger, and the
     /// select uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
@@ -408,7 +408,11 @@ pub fn native_select<H: UiHost>(
         } else {
             Some(Arc::from("Native select"))
         };
-        let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
         let theme_for_trigger = theme.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
         let test_id_prefix_for_trigger = test_id_prefix.clone();
@@ -431,7 +435,7 @@ pub fn native_select<H: UiHost>(
                 let entry = ControlEntry {
                     element: trigger_id,
                     enabled: !disabled,
-                    action: ControlAction::Noop,
+                    action: ControlAction::ToggleBool(open_for_trigger.clone()),
                 };
                 let _ = cx.app.models_mut().update(&control_registry, |reg| {
                     reg.register_control(cx.window, cx.frame_id, control_id, entry);

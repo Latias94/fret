@@ -1,221 +1,243 @@
-# `fret-node` Declarative-First Fearless Refactor (v1) — Milestones
+# `fret-node` Fearless Refactor (v1) - Milestones
 
-This file tracks “what done means” for each milestone. Keep criteria objective and checkable.
+This file defines what must be true before each milestone can be considered complete. The goal is
+not to maximize activity; the goal is to reduce ambiguity and make the landing path reviewable.
 
-## Baseline scenarios and success metrics (applies to all milestones)
+## Global success criteria
 
-We evaluate progress against a small set of fixed, repeatable scenarios. Each milestone must
-either:
+Every milestone should improve one of these axes without regressing the others, or explicitly
+document the tradeoff:
 
-- improve one metric without regressing the others, or
-- document a deliberate tradeoff.
+- **Architecture clarity**
+  - public authoring posture is unambiguous,
+  - state boundaries match intent,
+  - mechanism vs policy boundaries remain aligned.
+- **Editor correctness**
+  - committed edits remain transaction-safe,
+  - controlled sync does not silently bypass history/diagnostics contracts,
+  - undo/redo semantics stay coherent.
+- **Declarative viability**
+  - declarative surfaces can host editor-grade behavior without leaking retained authoring,
+  - portal/overlay anchoring stays deterministic,
+  - transaction-safe declarative paths remain testable.
+- **Regression protection**
+  - existing useful gates remain green,
+  - new architecture claims add new evidence, not just prose.
 
-### Scenarios (stable, scriptable)
+## M0 - Decision gates and baseline inventory
 
-S1. Pan/zoom stress:
+Status target: short, reviewable, mostly-documentation closure
 
-- Hold mouse drag to pan continuously for N seconds, then zoom in/out with wheel/pinch.
-- Expectation: no pointer-capture leaks; no “stuck drag”; smooth-by-default caches avoid thrash.
+### Goal
 
-S2. Selection + marquee:
+Lock the decisions that will constrain the refactor and capture the current state in a way that can
+be reviewed without re-reading the whole crate.
 
-- Click to select, shift-select, drag marquee, move selection, cancel mid-drag (PointerCancel).
-- Expectation: state machine determinism; cancellation clears pressed/drag state.
+### Deliverables
 
-S3. Large graph viewport culling:
+- A reframed workstream README that states:
+  - the public authoring posture,
+  - the retained compatibility posture,
+  - the state/controller problems to solve,
+  - the target architecture.
+- A milestone plan and TODO tracker aligned to those decisions.
+- A minimal inventory of the current "best available" surfaces:
+  - paint-only declarative surface,
+  - compat-retained declarative surface,
+  - retained engine,
+  - store/queue/lookups/controller gap.
 
-- Load a large graph, keep viewport window fixed, and idle for N frames.
-- Expectation: expensive render-data caches do not rebuild on steady-state frames.
+### Done criteria
 
-### Metrics (observable)
+- Reviewers can answer these questions from the docs alone:
+  - What should app authors use today?
+  - What is the long-term target posture?
+  - What is still compatibility-only?
+  - What are the next architectural slices to land?
 
-- Correctness:
-  - Pointer capture lifetime is correct (capture set/cleared; cancel delivered on capture switch).
-  - No background focus/keyboard leakage when overlays are active (when applicable).
-- Perf / cache health:
-  - “Prepare” work (text/path/svg) does not thrash under pan/zoom and culling.
-  - Cache entry counts remain bounded under a fixed scenario.
-- UX smoothness:
-  - Continuous pan/zoom does not trigger “jank spikes” from avoidable recomputation.
-  - Drag preview keeps canvas chrome and portal overlays coupled (no “labels move but canvas lags”
-    due to paint-cache replay).
+### Evidence anchors
 
-Implementation note:
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md`
 
-- Prefer a `fretboard diag` scripted scenario for S1/S2, and a small perf/counter assertion for S3.
+## M1 - Public posture and API closure
 
-## M0 — Baseline + gates
+Status target: documentation + API-shape convergence
 
-Deliverables:
+### Goal
 
-- A runnable minimal demo/harness for the node graph surface (native + web if applicable).
-- A small regression gate for:
-  - pointer capture / drag cancel correctness, and/or
-  - pan/zoom mapping invariants, and/or
-  - cache thrash counters (prepares/evictions) staying within a bound for a scripted scenario.
+Remove ambiguity from the public story. `fret-node` should teach one coherent authoring posture and
+make compatibility paths explicit instead of accidental.
 
-Done criteria:
+### Deliverables
 
-- The current behavior has at least one reproducible, automated gate (test or diag script).
-- The gate is stable enough to run in CI (no human-timing dependencies).
+- One canonical recommendation for shipping editor-grade usage today.
+- One canonical target posture for the final declarative-first architecture.
+- One bounded description of when `compat-retained-canvas` is justified.
+- A surface plan for converging toward a single high-level declarative entrypoint.
 
-Evidence anchors (required):
+### Done criteria
 
-- The chosen gate file(s) and the entrypoint that runs the scenario.
-- The primary state machine code paths under test.
+- Public docs stop reading like there are two equally blessed downstream authoring models.
+- Retained constructors are no longer implied as the normal ecosystem path.
+- New examples and cookbook-style guidance prefer declarative composition by default.
 
-Suggested baseline artifacts (current v1 worktree):
+### Evidence anchors
 
-- Minimal runnable entrypoint (native):
-  - `cargo run -p fretboard -- dev native --bin node_graph_demo`
-  - (feature wiring: `apps/fretboard/src/dev.rs` auto-enables `fret-demo/node-graph-demos` for `node_graph_demo`)
-- Gate (Rust conformance):
-  - `ecosystem/fret-node/src/ui/canvas/widget/tests/escape_cancel_releases_pointer_capture_conformance.rs`
-- Repro + bundle capture (diag script):
-  - `tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json`
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
 
-Primary evidence anchors (why this is meaningful):
+## M2 - State boundary split
 
-- Panning starts + capture is requested:
-  - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (`begin_panning`)
-- Escape cancel clears gesture state and releases capture:
-  - `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs` (`handle_escape_cancel`)
-- The scripted repro asserts panning state via viewport semantics `value`:
-  - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs` (semantics `test_id=node_graph.canvas`, `value` includes `panning {bool}`)
+Status target: architectural refactor with compatibility plan
 
-## M1 — Declarative surface skeleton (paint-first)
+### Goal
 
-Goal: build the declarative composition shell that can render and pan/zoom smoothly.
+Shrink `NodeGraphViewState` back to true view state and explicitly separate interaction policy from
+runtime tuning.
 
-### M1a — Declarative entrypoint (compat retained)
+### Deliverables
 
-Goal: provide a declarative-first authoring surface immediately, while keeping the current retained
-canvas internal as a migration aid.
+- A concrete split plan for:
+  - `NodeGraphViewState` (viewport + selection + draw order),
+  - interaction configuration,
+  - runtime tuning.
+- A serialization compatibility plan for existing persisted data.
+- Store/runtime wiring updated to use the new boundaries without breaking the editor contract.
 
-Deliverables:
+### Done criteria
 
-- A declarative surface entrypoint in `fret-node` that:
-  - returns `AnyElement`,
-  - does not expose retained types in its public signature,
-  - hosts the existing retained canvas/editor internally.
-- Separate demo targets so we can iterate without forcing retained bridge on the default path.
+- Reviewers can point to one place for persisted view state, one place for interaction policy, and
+  one place for runtime tuning.
+- The resulting shapes make it harder to persist accidental performance knobs as if they were view
+  semantics.
+- Controlled sync and diagnostics still have a stable data contract.
 
-Done criteria:
+### Required regression protection
 
-- `apps/fret-examples/src/node_graph_demo.rs` runs as the declarative-first (paint-only) demo target.
-- `apps/fret-examples/src/node_graph_legacy_demo.rs` runs as the legacy retained-bridge demo target
-  (feature-gated via `node-graph-demos-legacy`).
-- Baseline interaction gates (Escape cancel / pointer capture) remain valid on the declarative demo.
+- focused `cargo nextest run -p fret-node` coverage for view-state migration and store behavior
+- at least one diag or integration gate proving the split does not regress viewport/selection flows
 
-Evidence anchors (required):
+### Evidence anchors
 
-- Declarative compat surface entry:
-  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`node_graph_surface_compat_retained`)
-- Demo wiring:
-  - `apps/fret-examples/src/node_graph_demo.rs` (paint-only surface composition)
-  - `apps/fret-examples/src/node_graph_legacy_demo.rs` (legacy driver + compat retained wiring)
+- `ecosystem/fret-node/src/io/mod.rs`
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/tests.rs`
 
-Deliverables:
+## M3 - Controller/instance facade and transaction-safe declarative commits
 
-- Declarative surface entrypoint that composes:
-  - `PointerRegion` input wiring,
-  - `RenderTransform` (world mapping),
-  - leaf `Canvas` paint pass for grid/background/edges.
-- Externalized cache model(s) for expensive render data keyed by:
-  - graph revision,
-  - viewport/cull window,
-  - effective scale factor.
+Status target: architectural + API landing milestone
 
-Done criteria:
+### Goal
 
-- Node graph can:
-  - pan/zoom smoothly,
-  - cull offscreen work,
-  - avoid per-frame rebuild of heavy render data when inputs are unchanged.
+Make the declarative path editor-grade by routing committed edits through store/controller entry
+points rather than direct graph mutation.
 
-Evidence anchors (required):
+### Deliverables
 
-- The declarative surface entry function and its props type.
-- The cache model(s) and their invalidation keys (rev/viewport/scale).
-- A gate that shows “steady-state frames do not rebuild render data”.
-  - Paint-only baseline gate (grid cache steady-state):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json`
-  - Paint-only baseline gate (nodes cache steady-state):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json`
-  - Paint-only baseline gate (edges cache steady-state):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json`
-  - Paint-only baseline gate (pan does not rebuild geometry):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json`
-  - Paint-only gate (keyboard zoom rebuilds geometry exactly once):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json`
-  - Paint-only gate (diagnostics graph bump rebuilds geometry exactly once):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json`
-  - Paint-only gate (hover + selection do not rebuild geometry caches):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json`
+- A thin `NodeGraphController` / `NodeGraphInstance` style facade (exact naming can change) that
+  unifies:
+  - viewport manipulation,
+  - common graph queries,
+  - canonical update/edit entry points,
+  - controlled synchronization helpers.
+- Declarative interaction paths that commit through controller/store/transactions.
+- A clearer separation between headless/store callbacks and UI gesture callbacks.
 
-## M2 — Interaction + portals in declarative form
+### Done criteria
 
-Goal: move interaction policy and portal UI into declarative mechanisms without retained authoring.
+- The recommended declarative editor-grade path no longer commits by mutating `Graph` directly.
+- Apps do not need to stitch together store/lookups/view queue/commands manually to get basic
+  instance-style ergonomics.
+- Undo/redo remains coherent across the declarative editor path.
 
-Deliverables:
+### Required regression protection
 
-- Selection/marquee/drag workflows implemented via declarative input wiring + model reducers.
-- “Portal” nodes (header/body) hosted as normal elements for the focused/visible subset.
-- Portal subtree bounds harvested via `LayoutQueryRegion` into a local store (frame-lagged by contract),
-  enabling future fit-view/selection unions without retained hit-testing.
-- Overlay surfaces (context menus, rename, toolbars) implemented in ecosystem overlay policy.
-- Paint-only baseline interaction gate(s) that prove selection/marquee state changes do not rebuild
-  geometry caches.
+- transaction/undo/redo tests for the new controller path
+- at least one declarative drag or marquee gate that proves commit goes through the transaction-safe
+  path
+- controlled-mode regression coverage for replace/diff behavior
 
-Done criteria:
+### Evidence anchors
 
-- Feature parity for the core editor interactions needed by downstream apps.
-- No retained bridge required for the default UI path.
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/changes.rs`
+- `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 
-Evidence anchors (required):
+## M4 - Declarative editor-grade interaction and portal closure
 
-- The declarative interaction reducers (selection/marquee/drag) and their gates.
-- The portal composition code path for visible items only.
+Status target: behavior convergence milestone
 
-Initial paint-only interaction gates (v1 worktree):
+### Goal
 
-- Marquee selection updates selection without rebuilding geometry render data:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json`
-- PointerCancel clears marquee without committing selection:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json`
-- Node drag preview does not rebuild geometry caches; commit rebuilds once:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json`
-- Node drag preview screenshot repro (canvas vs portals coupling):
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
-- Escape cancels node dragging without committing:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json`
-- PointerCancel cancels node dragging without committing:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json`
-- PointerCancel clears panning without rebuilding geometry:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json`
+Bring the declarative path much closer to the retained engine on the behaviors that matter most for
+real editors.
 
-## M3 — Remove retained dependency from defaults (compat path only)
+### Deliverables
 
-Goal: ensure the retained bridge path is no longer the default or required surface.
+- declarative selection/marquee reducers with explicit commit/cancel behavior
+- declarative node portal hosting for the visible subset
+- overlay/tooling composition that uses the right policy surfaces instead of ad-hoc local logic
+- deterministic anchoring between canvas, portals, and overlays
 
-Deliverables:
+### Done criteria
 
-- `fret-node` default features do not enable `fret-ui/unstable-retained-bridge`.
-- Any retained implementation remains available only as an explicit opt-in compatibility feature.
-- Documentation explains when (if ever) to opt into the compatibility path.
+- The declarative path is not just paint-only; it is a believable editor-grade integration path.
+- Portal-based node content and overlay anchoring no longer feel like separate experiments.
+- Existing retained behavior can be compared against declarative gates without hand-wavy criteria.
 
-Done criteria:
+### Required regression protection
 
-- A downstream “ecosystem author” can adopt `fret-node` UI surfaces without touching retained APIs.
-- Retained bridge usage is isolated, measurable, and delete-planned.
+- keep the promoted paint-only suite green
+- add at least one overlay/portal correctness gate
+- add at least one declarative interaction parity gate that is meaningful to real editor usage
 
-Compatibility hatch acceptance criteria:
+### Evidence anchors
 
-- Retained is allowed only when:
-  - a specific missing mechanism is documented (what declarative cannot express efficiently today),
-  - the retained module is behind an explicit `compat-*` feature,
-  - public API does not expose retained types,
-  - at least one gate proves the hotspot and protects behavior/perf.
-- Exit criteria must be stated up front:
-  - what contract/caching change removes the need for retained,
-  - what tests/diag scripts must remain green after removal.
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `tools/diag-scripts/node-graph/`
+
+## M5 - Compatibility retained convergence and deletion gate
+
+Status target: governance milestone, not necessarily immediate code deletion
+
+### Goal
+
+Define the conditions under which the retained compatibility path can stop growing and eventually be
+removed or permanently demoted.
+
+### Deliverables
+
+- Explicit retention policy for `compat-retained-canvas`:
+  - what it still covers,
+  - what new work must not be added there,
+  - what declarative parity conditions are required before deletion.
+- A stable gate matrix comparing compatibility retained vs declarative behavior where it matters.
+
+### Done criteria
+
+- The compatibility path has a bounded role rather than an open-ended future.
+- New editor work does not default to "just add it to retained first" without justification.
+- Reviewers can tell whether a retained-only addition is acceptable, temporary, or out of scope.
+
+### Evidence anchors
+
+- `ecosystem/fret-node/Cargo.toml`
+- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
+
+## Suggested milestone order
+
+Land in this order unless a blocking bug forces a smaller detour:
+
+1. `M0` docs and decision gates
+2. `M1` public posture closure
+3. `M2` state boundary split
+4. `M3` controller + transaction-safe declarative commits
+5. `M4` declarative interaction/portal closure
+6. `M5` retained compatibility convergence

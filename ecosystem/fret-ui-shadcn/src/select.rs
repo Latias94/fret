@@ -1,6 +1,6 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
-use crate::test_id::attach_test_id;
+use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
 };
@@ -150,6 +150,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     allow_hover_scroll_arrows: bool,
     scroll_up_icon: IconId,
     scroll_down_icon: IconId,
+    test_id_prefix: Option<Arc<str>>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     clear_initial_scroll_to_y: impl Fn() + Clone + 'static,
@@ -501,7 +502,13 @@ where
             );
             viewport_id_out.set(Some(scroll.id));
 
-            let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
+            let scroll = attach_test_id(
+                scroll,
+                match test_id_prefix.as_deref() {
+                    Some(prefix) => Arc::from(format!("{prefix}-scroll-viewport")),
+                    None => Arc::from("select-scroll-viewport"),
+                },
+            );
             let scroll = if let Some(active_element) = active_element_ref.get() {
                 scroll.attach_semantics(
                     fret_ui::element::SemanticsDecoration::default()
@@ -589,7 +596,7 @@ where
                 if let Some(btn) = scroll_button(
                     cx,
                     scroll_up_icon,
-                    "select-scroll-up-button",
+                    "scroll-up-button",
                     -1.0,
                     show_up,
                 ) {
@@ -601,7 +608,7 @@ where
                 if let Some(btn) = scroll_button(
                     cx,
                     scroll_down_icon,
-                    "select-scroll-down-button",
+                    "scroll-down-button",
                     1.0,
                     show_down,
                 ) {
@@ -1275,6 +1282,7 @@ pub struct Select {
     disabled: bool,
     mouse_policies: radix_select::SelectMousePolicies,
     control_id: Option<ControlId>,
+    test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -1319,6 +1327,7 @@ impl Select {
             disabled: false,
             mouse_policies: radix_select::SelectMousePolicies::default(),
             control_id: None,
+            test_id_prefix: None,
             trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
@@ -1506,10 +1515,15 @@ impl Select {
 
     /// Binds this Select to a logical form control id (similar to HTML `id`).
     ///
-    /// When set, `Label::for_control(ControlId)` forwards focus to the select trigger, and the
+    /// When set, `Label::for_control(ControlId)` forwards activation to the select trigger, and the
     /// select uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -1716,6 +1730,7 @@ impl Select {
             self.disabled,
             self.mouse_policies,
             self.control_id,
+            self.test_id_prefix,
             self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
@@ -1763,6 +1778,7 @@ fn select_impl<H: UiHost>(
     disabled: bool,
     mouse_policies: radix_select::SelectMousePolicies,
     control_id: Option<ControlId>,
+    test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -1831,7 +1847,12 @@ fn select_impl<H: UiHost>(
             None
         };
 
-        let trigger_test_id = trigger_test_id.clone();
+        let trigger_test_id = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
+        let test_id_prefix = test_id_prefix.clone();
         fn find_item_label_overrides(
             entries: &[SelectEntry],
             value: &str,
@@ -2076,6 +2097,7 @@ fn select_impl<H: UiHost>(
         let model_for_trigger = model.clone();
         let open_for_trigger = open.clone();
         let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let test_id_prefix_for_trigger = test_id_prefix.clone();
         let control_id_for_register = control_id.clone();
         let control_registry_for_register = control_registry.clone();
         let labelled_by_element_for_trigger = labelled_by_element;
@@ -2090,7 +2112,7 @@ fn select_impl<H: UiHost>(
                 let entry = ControlEntry {
                     element: trigger_id,
                     enabled,
-                    action: ControlAction::Noop,
+                    action: ControlAction::ToggleBool(open_for_trigger.clone()),
                 };
                 let _ = cx.app.models_mut().update(&control_registry, |reg| {
                     reg.register_control(cx.window, cx.frame_id, control_id, entry);
@@ -3339,6 +3361,7 @@ fn select_impl<H: UiHost>(
 
                         let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
                         let mouse_open_guard_for_content = mouse_open_guard_for_barrier_children.clone();
+                        let test_id_prefix_for_panel = test_id_prefix.clone();
                         let content = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
                                 let arrow_el = popper_layout_for_children.as_ref().and_then(|layout| {
                                     popper_arrow::diamond_arrow_element(
@@ -3456,6 +3479,7 @@ fn select_impl<H: UiHost>(
                                             allow_hover_scroll_arrows,
                                             scroll_up_icon,
                                             scroll_down_icon,
+                                            test_id_prefix.clone(),
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             clear_initial_scroll_to_y,
@@ -3536,6 +3560,7 @@ fn select_impl<H: UiHost>(
                                                                 });
                                                                 let mut first_valid_alignment_item_found = false;
 
+                                                                let test_id_prefix_for_items = test_id_prefix.clone();
                                                                 let mut render_row = |cx: &mut ElementContext<'_, H>,
                                                                                       row_idx: usize,
                                                                                       row: SelectRow,
@@ -3664,6 +3689,22 @@ fn select_impl<H: UiHost>(
                                                                             let value_key = item.value.clone();
                                                                             let style_for_item =
                                                                                 style_for_options.clone();
+                                                                            let derived_item_test_id = item
+                                                                                .test_id
+                                                                                .clone()
+                                                                                .or_else(|| {
+                                                                                    test_id_prefix_for_items
+                                                                                        .as_ref()
+                                                                                        .map(|prefix| {
+                                                                                            Arc::<str>::from(format!(
+                                                                                                "{prefix}-item-{}",
+                                                                                                test_id_slug(
+                                                                                                    item.value
+                                                                                                        .as_ref()
+                                                                                                )
+                                                                                            ))
+                                                                                        })
+                                                                                });
 
                                                                             out.push(cx.keyed(value_key, move |cx| {
                                                                                 cx.pressable_with_id(
@@ -3680,7 +3721,7 @@ fn select_impl<H: UiHost>(
                                                                                     a11y: PressableA11y {
                                                                                         role: Some(SemanticsRole::ListBoxOption),
                                                                                         label: Some(item.label.clone()),
-                                                                                        test_id: item.test_id.clone(),
+                                                                                        test_id: derived_item_test_id.clone(),
                                                                                         selected: is_selected,
                                                                                         ..Default::default()
                                                                                     }
@@ -4360,6 +4401,9 @@ fn select_impl<H: UiHost>(
                                                 a11y: PressableA11y {
                                                     role: Some(SemanticsRole::ListBox),
                                                     active_descendant,
+                                                    test_id: test_id_prefix_for_panel
+                                                        .as_ref()
+                                                        .map(|prefix| Arc::<str>::from(format!("{prefix}-listbox"))),
                                                     labelled_by_element: Some(trigger_id.0),
                                                     ..Default::default()
                                                 },
@@ -4656,11 +4700,15 @@ fn select_impl<H: UiHost>(
                                 value_node
                             };
                         let chevron = cx.opacity(trigger_chevron_opacity, |cx| {
-                                vec![decl_icon::icon_with(
-                                    cx,
-                                    trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
-                                    Some(trigger_chevron_size),
-                                    Some(ColorRef::Color(fg_muted)),
+                                vec![attach_test_id_suffix(
+                                    decl_icon::icon_with(
+                                        cx,
+                                        trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
+                                        Some(trigger_chevron_size),
+                                        Some(ColorRef::Color(fg_muted)),
+                                    ),
+                                    test_id_prefix_for_trigger.as_ref(),
+                                    "icon",
                                 )]
                             });
 
@@ -5171,6 +5219,76 @@ mod tests {
                 .any(|n| n.test_id.as_deref() == Some("select.item.banana")),
             "expected nested v4 entries to reach listbox items"
         );
+    }
+
+    #[test]
+    fn select_test_id_prefix_stamps_listbox_items_and_scroll_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        for _ in 0..3 {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "select-test-id-prefix",
+                |cx| {
+                    vec![
+                        Select::new(model.clone(), open.clone())
+                            .test_id_prefix("sel")
+                            .items([
+                                SelectItem::new("apple", "Apple"),
+                                SelectItem::new("banana", "Banana"),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snapshot
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+
+        assert!(ids.iter().copied().any(|id| id == "sel-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "sel-item-apple"));
+        assert!(ids.iter().copied().any(|id| id == "sel-scroll-viewport"));
     }
 
     #[test]

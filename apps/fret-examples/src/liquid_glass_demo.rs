@@ -20,7 +20,6 @@ use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_render::RendererCapabilities;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
-use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
@@ -442,98 +441,52 @@ fn install_custom_effects(app: &mut App, effects: &mut dyn fret_core::CustomEffe
 }
 
 impl LiquidGlassState {
-    fn reset(host: &mut dyn UiActionHost, st: &LiquidGlassState) {
-        let _ = host.models_mut().update(&st.show_fake, |v| *v = true);
-        let _ = host.models_mut().update(&st.show_warp, |v| *v = true);
-        let _ = host.models_mut().update(&st.show_warp_v2, |v| *v = false);
-        let _ = host.models_mut().update(&st.show_custom_v2, |v| *v = false);
-        let _ = host.models_mut().update(&st.show_custom_v3, |v| *v = false);
-        let _ = host.models_mut().update(&st.custom_v3_pair, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_source_group, |v| *v = false);
-        let _ = host.models_mut().update(&st.show_inspector, |v| *v = false);
-        let _ = host.models_mut().update(&st.animate, |v| *v = true);
-        let _ = host
-            .models_mut()
-            .update(&st.phase_speed, |v| *v = vec![0.65]);
-        let _ = host
-            .models_mut()
-            .update(&st.warp_strength_px, |v| *v = vec![10.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.warp_scale_px, |v| *v = vec![72.0]);
-        let _ = host.models_mut().update(&st.warp_phase, |v| *v = vec![0.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.warp_chroma_px, |v| *v = vec![2.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.lens_radius_px, |v| *v = vec![20.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_edge_falloff_px, |v| *v = vec![18.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_rim_strength, |v| *v = vec![0.65]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_shadow_strength, |v| *v = vec![0.55]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_grain_strength, |v| *v = vec![0.06]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_grain_scale, |v| *v = vec![1.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_dispersion, |v| *v = vec![0.55]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.blur_radius_px, |v| *v = vec![16.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.blur_downsample, |v| *v = vec![2.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.saturation, |v| *v = vec![1.10]);
-        let _ = host
-            .models_mut()
-            .update(&st.brightness, |v| *v = vec![1.02]);
-        let _ = host.models_mut().update(&st.contrast, |v| *v = vec![1.02]);
-        let _ = host.models_mut().update(&st.use_backdrop, |v| *v = true);
-        let _ = host.models_mut().update(&st.use_dither, |v| *v = true);
+    fn reset(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
+        let _ = models.update(&st.show_fake, |v| *v = true);
+        let _ = models.update(&st.show_warp, |v| *v = true);
+        let _ = models.update(&st.show_warp_v2, |v| *v = false);
+        let _ = models.update(&st.show_custom_v2, |v| *v = false);
+        let _ = models.update(&st.show_custom_v3, |v| *v = false);
+        let _ = models.update(&st.custom_v3_pair, |v| *v = false);
+        let _ = models.update(&st.custom_v3_source_group, |v| *v = false);
+        let _ = models.update(&st.show_inspector, |v| *v = false);
+        let _ = models.update(&st.animate, |v| *v = true);
+        let _ = models.update(&st.phase_speed, |v| *v = vec![0.65]);
+        let _ = models.update(&st.warp_strength_px, |v| *v = vec![10.0]);
+        let _ = models.update(&st.warp_scale_px, |v| *v = vec![72.0]);
+        let _ = models.update(&st.warp_phase, |v| *v = vec![0.0]);
+        let _ = models.update(&st.warp_chroma_px, |v| *v = vec![2.0]);
+        let _ = models.update(&st.lens_radius_px, |v| *v = vec![20.0]);
+        let _ = models.update(&st.custom_edge_falloff_px, |v| *v = vec![18.0]);
+        let _ = models.update(&st.custom_rim_strength, |v| *v = vec![0.65]);
+        let _ = models.update(&st.custom_shadow_strength, |v| *v = vec![0.55]);
+        let _ = models.update(&st.custom_grain_strength, |v| *v = vec![0.06]);
+        let _ = models.update(&st.custom_grain_scale, |v| *v = vec![1.0]);
+        let _ = models.update(&st.custom_v3_dispersion, |v| *v = vec![0.55]);
+        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
+        let _ = models.update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
+        let _ = models.update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
+        let _ = models.update(&st.blur_radius_px, |v| *v = vec![16.0]);
+        let _ = models.update(&st.blur_downsample, |v| *v = vec![2.0]);
+        let _ = models.update(&st.saturation, |v| *v = vec![1.10]);
+        let _ = models.update(&st.brightness, |v| *v = vec![1.02]);
+        let _ = models.update(&st.contrast, |v| *v = vec![1.02]);
+        let _ = models.update(&st.use_backdrop, |v| *v = true);
+        let _ = models.update(&st.use_dither, |v| *v = true);
     }
 
-    fn apply_custom_v3_bevel_preset(host: &mut dyn UiActionHost, st: &LiquidGlassState) {
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
+    fn apply_custom_v3_bevel_preset(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
+        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
+        let _ = models.update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
+        let _ = models.update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
     }
 
-    fn disable_custom_v3_bevel(host: &mut dyn UiActionHost, st: &LiquidGlassState) {
-        let _ = host
-            .models_mut()
-            .update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
+    fn disable_custom_v3_bevel(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
+        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
     }
 
-    fn toggle_inspector(host: &mut dyn UiActionHost, st: &LiquidGlassState) {
-        let _ = host.models_mut().update(&st.show_inspector, |v| *v = !*v);
+    fn toggle_inspector(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
+        let _ = models.update(&st.show_inspector, |v| *v = !*v);
     }
 }
 
@@ -601,31 +554,31 @@ impl View for LiquidGlassView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let st = self.st.clone();
-            move |host, _acx| {
-                LiquidGlassState::reset(host, &st);
+            move |models| {
+                LiquidGlassState::reset(models, &st);
                 true
             }
         });
-        cx.on_action_notify::<act::ApplyCustomV3BevelPreset>({
+        cx.on_action_notify_models::<act::ApplyCustomV3BevelPreset>({
             let st = self.st.clone();
-            move |host, _acx| {
-                LiquidGlassState::apply_custom_v3_bevel_preset(host, &st);
+            move |models| {
+                LiquidGlassState::apply_custom_v3_bevel_preset(models, &st);
                 true
             }
         });
-        cx.on_action_notify::<act::DisableCustomV3Bevel>({
+        cx.on_action_notify_models::<act::DisableCustomV3Bevel>({
             let st = self.st.clone();
-            move |host, _acx| {
-                LiquidGlassState::disable_custom_v3_bevel(host, &st);
+            move |models| {
+                LiquidGlassState::disable_custom_v3_bevel(models, &st);
                 true
             }
         });
-        cx.on_action_notify::<act::ToggleInspector>({
+        cx.on_action_notify_models::<act::ToggleInspector>({
             let st = self.st.clone();
-            move |host, _acx| {
-                LiquidGlassState::toggle_inspector(host, &st);
+            move |models| {
+                LiquidGlassState::toggle_inspector(models, &st);
                 true
             }
         });

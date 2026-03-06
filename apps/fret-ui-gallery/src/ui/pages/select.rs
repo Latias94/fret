@@ -44,7 +44,7 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .test_id_prefix("ui-gallery-select-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control` + `Select::control_id` to forward focus on label click.")
+                .description("Use `FieldLabel::for_control` + `Select::control_id` so label clicks route to the trigger and open the popup.")
                 .test_id_prefix("ui-gallery-select-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Diag Surface", diag_surface)

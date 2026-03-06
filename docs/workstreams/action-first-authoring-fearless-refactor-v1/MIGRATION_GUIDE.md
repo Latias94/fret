@@ -132,9 +132,10 @@ Migration steps:
    - view-local state slots for simple demos.
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
-3) Replace `update(...)` with `cx.on_action(...)` handlers.
-   - Tip: for most state-mutating handlers, prefer `cx.on_action_notify::<A>(...)` to request a
-     redraw + notify automatically when `handled=true`.
+3) Replace `update(...)` with `cx.on_action...` handlers.
+   - Tip: for most state-mutating handlers, start with `cx.on_action_notify_models::<A>(|models| ...)`.
+   - Use `cx.on_action_notify::<A>(...)` only for advanced host-only cases where the built-in
+     model/transient shorthands do not fit.
 4) Replace manual “force refresh” hacks with:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
@@ -159,6 +160,15 @@ entrypoints and treat the rest as convenience aliases:
 Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
 `on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
 shorthand, not as the first thing new users need to memorize.
+
+### Helper visibility policy (docs/templates)
+
+- Default onboarding material should teach only the three entrypoints above.
+- Keep raw `on_action` / `on_action_notify`, the single-model aliases, payload hooks, and
+  redraw-oriented `on_activate_request_redraw*` helpers in advanced/reference material unless the
+  example truly needs them.
+- A helper should graduate into first-contact docs/templates only after it solves repeated noise
+  across multiple real demos/templates, not a single local call site.
 
 - For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
 
@@ -198,6 +208,11 @@ Choosing the helper:
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
 - Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
   custom effects) where the built-in shorthands do not fit.
+  - Current intentional cookbook cases fall into four host-side categories:
+    - `toast_basics`: imperative host integration (`Sonner` toast dispatch needs `UiActionHost` + window).
+    - `router_basics` back/forward: router command availability sync on the host path.
+    - `async_inbox_basics::Start`: background dispatcher/inbox scheduling plus wake integration.
+    - `undo_basics::Undo` / `Redo`: history traversal plus an explicit RAF effect.
 - Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
   replacement for typed action handlers.
 
@@ -207,13 +222,15 @@ Side effects that need `App` access (v1 note):
 - View action handlers (`cx.on_action*`) run on a restricted host (`UiActionHost`) by design, so they
   should avoid direct `App`-only calls.
 
-Recommended v1 pattern (schedule in handler, execute in `render()`):
+Recommended v1 patterns:
 
-- Preferred: use transient events (one-shot flags) to schedule work for the next render pass:
+- For event-like App effects, prefer transient events (one-shot flags) to schedule work for the next render pass:
   - In the action handler: record a transient event (see `ViewCx::on_action_notify_transient`).
   - In `render()`: consume the transient flag (see `ViewCx::take_transient_on_action_root`) and
     apply the `App`-scoped effect.
-- If you need payload/data (not just a boolean flag), use a small “pending effect” model value
+- If the App-only effect is a pure projection of model state, keep the action as a normal model
+  transaction and synchronize the effect idempotently in `render()` from that state.
+- If you need payload/data (not just a boolean flag), use a small `pending effect` model value
   instead.
 
 Example:
@@ -221,6 +238,7 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+- `apps/fret-examples/src/async_playground_demo.rs` (theme mirrors `Model<bool>`; `render()` applies the theme when the value changes).
 
 ### Current authoring review notes
 

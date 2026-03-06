@@ -7,7 +7,7 @@
     "target_hints": [
       "Navigates to the Select page.",
       "Scrolls the Label Association example into view.",
-      "Clicks the FieldLabel and verifies focus moves to the Select trigger."
+      "Clicks the FieldLabel and verifies the Select popup opens."
     ]
   },
   "steps": [
@@ -15,11 +15,6 @@
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
       "timeout_frames": 600
     },
     { "type": "press_key", "key": "escape" },
@@ -36,16 +31,12 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
       "timeout_frames": 600
     },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-select" },
-      "delta_y": -240.0,
-      "padding_px": 24.0,
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-select" } },
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
-
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-content" } },
@@ -53,7 +44,7 @@
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-select-label-content" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
@@ -74,14 +65,7 @@
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-select-label-label" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 1 },
-    { "type": "press_key", "key": "enter" },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-item-blueberry" } },
       "timeout_frames": 240
     },
 

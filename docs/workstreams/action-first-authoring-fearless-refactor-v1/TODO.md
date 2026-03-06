@@ -1,7 +1,7 @@
 ﻿# Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 Related:
 
@@ -233,6 +233,9 @@ ID format:
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+      - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+      - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+      - `apps/fret-cookbook/examples/router_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
@@ -324,10 +327,19 @@ This phase is intentionally last.
 - [ ] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
-  - Status (as of 2026-03-06): templates are updated; docs alignment is in progress.
+  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`, `docs/fearless-refactoring.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, the migration guide, scaffold templates, and the ui-gallery command teaching page align on the narrowed default entrypoints; keep future narrative pages in sync as examples migrate.
   - Evidence:
+    - `README.md`
     - `docs/README.md`
+    - `docs/first-hour.md`
+    - `docs/examples/README.md`
+    - `docs/examples/todo-app-golden-path.md`
+    - `docs/fearless-refactoring.md`
+    - `docs/crate-usage-guide.md`
+    - `docs/ui-ergonomics-and-interop.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
+    - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
   - Migration inventory:
@@ -389,6 +401,9 @@ practical steps:
       - Done: `apps/fret-cookbook`, `apps/fret-examples`
       - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
+        - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
+        - Teaching-surface gate now covers ui-gallery pages/snippets for bare `cx.on_action*` regressions: `tools/gate_no_on_action_in_teaching_surfaces.py`
+        - Advanced helper exceptions are now locked by allowlist: `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`
         - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
@@ -433,6 +448,12 @@ practical steps:
     - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
     - prefer template/doc guidance first for transient/App-effect patterns,
     - re-evaluate only after one more round of template/demo authoring feedback.
+- Helper visibility policy snapshot (as of 2026-03-06):
+  - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
+  - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
+  - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
+  - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
+  - `fret-examples` are now on the zero-exception path for advanced `cx.on_action_notify::<...>` teaching cases; `async_playground_demo::ToggleTheme` moved back to `on_action_notify_models` with render-time theme synchronization.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

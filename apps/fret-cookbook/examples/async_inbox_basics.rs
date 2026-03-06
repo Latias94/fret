@@ -304,26 +304,29 @@ impl View for AsyncInboxBasicsView {
             String::clear,
         );
 
-        cx.on_action_notify::<act::Cancel>({
+        cx.on_action_notify_models::<act::Cancel>({
             let task = self.st.task.clone();
             let running = self.st.running.clone();
             let status = self.st.status.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&task, |slot| {
-                    if let Some(task) = slot.take() {
-                        task.cancel();
-                    }
-                });
+            move |models| {
+                let task_updated = models
+                    .update(&task, |slot| {
+                        if let Some(task) = slot.take() {
+                            task.cancel();
+                        }
+                    })
+                    .is_ok();
+                let running_updated = models.update(&running, |v| *v = false).is_ok();
+                let status_updated = models
+                    .update(&status, |v| *v = Arc::<str>::from("Cancelling?"))
+                    .is_ok();
 
-                let _ = host.models_mut().update(&running, |v| *v = false);
-                let _ = host
-                    .models_mut()
-                    .update(&status, |v| *v = Arc::<str>::from("Cancelling…"));
-
-                true
+                task_updated && running_updated && status_updated
             }
         });
 
+        // `Start` stays on the advanced helper because it combines model writes with
+        // host-side background scheduling (`spawn_background` + dispatcher wake).
         cx.on_action_notify::<act::Start>({
             let dispatcher = self.st.dispatcher.clone();
             let current_job = self.st.current_job.clone();

@@ -99,14 +99,14 @@ impl View for IconsAndAssetsBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        cx.on_action_notify::<act::BumpReload>({
+        cx.on_action_notify_models::<act::BumpReload>({
             let bumps_model = self.assets_reload_bumps.clone();
-            move |host, action_cx| {
-                let _ = host.models_mut().update(&bumps_model, |v| {
-                    *v = v.wrapping_add(1);
-                });
-                host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
-                true
+            move |models| {
+                models
+                    .update(&bumps_model, |v| {
+                        *v = v.wrapping_add(1);
+                    })
+                    .is_ok()
             }
         });
 
@@ -192,7 +192,7 @@ impl View for IconsAndAssetsBasicsView {
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx| {
+            shadcn::CardContent::new([ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                 let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                 let preload = cx
                     .app

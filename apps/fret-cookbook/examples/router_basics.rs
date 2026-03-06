@@ -118,6 +118,8 @@ impl View for RouterBasicsView {
         let intents_weak = intents_model.downgrade();
         let intents_weak_for_clear = intents_weak.clone();
 
+        // Back/forward stay on the advanced host-aware helper because navigation also
+        // publishes router command availability on the host path (`set_router_command_availability`).
         let navigate_history_action = {
             let intents_weak = intents_weak.clone();
             let router_model = router_model.clone();
@@ -176,14 +178,13 @@ impl View for RouterBasicsView {
         cx.on_action_notify::<act::RouterForward>(navigate_history_action(
             NavigationAction::Forward,
         ));
-        cx.on_action_notify::<act::ClearIntents>({
+        cx.on_action_notify_models::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
-            move |host, _acx| {
+            move |models| {
                 let Some(intents) = intents.upgrade() else {
                     return true;
                 };
-                let _ = host.models_mut().update(&intents, |v| v.clear());
-                true
+                models.update(&intents, |v| v.clear()).is_ok()
             }
         });
 
