@@ -5,6 +5,7 @@ use crate::ui::snippets::tooltip as snippets;
 
 pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo_tooltip = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let long_content_tooltip = snippets::long_content::render(cx);
     let focus_row = snippets::keyboard_focus::render(cx);
     let side_row = snippets::sides::render(cx);
@@ -15,6 +16,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let notes = doc_layout::notes(
         cx,
         [
+            "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(trigger, content)` is the recipe-level composition entry point.",
             "Wrap related tooltips in one TooltipProvider to get consistent delay-group behavior.",
             "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
             "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
@@ -24,11 +26,17 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 
     let page = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Tooltip docs order for quick visual lookup."),
+        Some(
+            "Preview follows shadcn Tooltip docs order: Demo, Usage, then Fret-specific parity checks for layout, focus, sides, richer content, disabled triggers, and RTL.",
+        ),
         vec![
             DocSection::new("Demo", demo_tooltip)
                 .description("Basic tooltip with an arrow and a short content label.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Tooltip.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Long Content", long_content_tooltip)
                 .description(
                     "Longer tooltip content should wrap at the max width boundary without collapsing to a narrow column.",
