@@ -163,6 +163,9 @@ points rather than direct graph mutation.
     without reaching into store lookups directly.
   - The controller now also covers the first bounds-aware viewport helpers:
     `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
+  - Retained glue now starts consuming controller-owned viewport transport instead of teaching raw
+    queue mutation first: `NodeGraphCanvas::with_controller`, `NodeGraphMiniMapOverlay::with_controller`,
+    and the gallery workflow snippet controls now route viewport actions through the controller.
   - Those helpers now have a real store fallback when no `view_queue` exists, and still route
     through queued `SetViewport` requests when a queue is present.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on

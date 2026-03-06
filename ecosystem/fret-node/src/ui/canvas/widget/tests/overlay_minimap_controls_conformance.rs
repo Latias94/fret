@@ -18,9 +18,9 @@ use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
 use crate::ui::{
-    NodeGraphControlsBindings, NodeGraphControlsCommandBinding, NodeGraphControlsOverlay,
-    NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
+    NodeGraphController, NodeGraphControlsBindings, NodeGraphControlsCommandBinding,
+    NodeGraphControlsOverlay, NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+    NodeGraphMiniMapOverlay, NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};
@@ -817,6 +817,111 @@ fn minimap_supports_view_queue_navigation_binding_for_b_layer_wiring() {
         .expect("set viewport request");
 
     assert!((got.0.x - expected_pan_x).abs() <= 1.0e-4);
+}
+
+#[test]
+fn minimap_supports_controller_navigation_binding_without_teaching_raw_queue() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let style = test_style();
+    let minimap = minimap_rect(bounds(), &style);
+
+    let underlay_downs = Arc::new(AtomicUsize::new(0));
+    let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
+
+    let graph_value = Graph::new(GraphId::new());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
+    let queue = host.models.insert(NodeGraphViewQueue::default());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+    let controller = NodeGraphController::new(store).with_view_queue(queue.clone());
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let mut snap = NodeGraphInternalsSnapshot::default();
+    snap.transform.bounds_size = bounds().size;
+    internals.update(snap);
+
+    let minimap_widget =
+        NodeGraphMiniMapOverlay::new(underlay, graph, view.clone(), internals, style)
+            .with_controller(controller);
+    let minimap_node = ui.create_node_retained(minimap_widget);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, minimap_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(minimap_node));
+    assert_eq!(ui.focus(), Some(minimap_node));
+
+    let start = Point::new(
+        Px(minimap.origin.x.0 + 0.5 * minimap.size.width.0),
+        Px(minimap.origin.y.0 + 0.5 * minimap.size.height.0),
+    );
+    let moved = Point::new(Px(start.x.0 + 10.0), Px(start.y.0));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: moved,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let pan_x = view
+        .read_ref(&host, |s| s.pan.x)
+        .ok()
+        .expect("view state pan");
+    assert_eq!(pan_x, 0.0);
+
+    let pending = queue
+        .read_ref(&host, |q| q.pending.clone())
+        .ok()
+        .expect("queue");
+    assert!(
+        pending
+            .iter()
+            .any(|req| matches!(req, NodeGraphViewRequest::SetViewport { .. })),
+        "expected controller-backed minimap navigation to enqueue a viewport request"
+    );
 }
 
 #[test]

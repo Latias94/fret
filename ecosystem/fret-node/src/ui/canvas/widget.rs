@@ -67,9 +67,10 @@ use crate::ui::presenter::{
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
-    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef, NodeGraphViewQueue,
+    NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphFitViewOptions, NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot,
+    NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef,
+    NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -834,6 +835,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     /// specific node set).
     pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
         self.view_queue = Some(queue);
+        self.view_queue_key = None;
+        self
+    }
+
+    /// Attaches controller-owned store / viewport transport wiring.
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.store = Some(controller.store());
+        self.store_rev = None;
+        self.view_queue = controller.view_queue();
         self.view_queue_key = None;
         self
     }

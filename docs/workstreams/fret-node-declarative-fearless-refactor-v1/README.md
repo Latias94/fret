@@ -167,8 +167,9 @@ convergence slices.
 ### H3. `NodeGraphController` is landed, but not yet fully closed as the teaching surface
 
 - The controller now covers the first query / transaction / viewport / selection helpers, including
-  XyFlow-style node/handle connection lookups, but queue ownership, richer edit commands, and
-  callback layering are still open.
+  XyFlow-style node/handle connection lookups; retained canvas / minimap glue can also bind through
+  the controller now, while raw queue ownership, richer edit commands, and callback layering are
+  still open.
 - Evidence:
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M3`)

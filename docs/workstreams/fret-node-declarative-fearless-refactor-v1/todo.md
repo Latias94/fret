@@ -104,6 +104,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       first bounds-aware helper set.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
+  - Progress: retained canvas / minimap composition can now bind through `NodeGraphController`, so
+    new app/UI glue no longer needs to teach raw queue mutation first.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
       composition seams.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
