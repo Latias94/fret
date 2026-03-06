@@ -92,11 +92,13 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
 - `crates/fret-framework/src/lib.rs`
 - `crates/fret-launch/README.md`
+- `tools/gate_fret_builder_only_surface.py`
 
 **Gates**
 
 - `cargo nextest run -p fret -p fret-launch -p fret-framework`
 - `python tools/check_layering.py`
+- `python tools/gate_fret_builder_only_surface.py`
 
 ## M5 鈥?Optional follow-up: web/high-level symmetry
 

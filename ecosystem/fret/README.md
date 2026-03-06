@@ -99,6 +99,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - App authors (default recommendation): `fret::App::new(...).window(...).ui(...)?`
 - App authors with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - View runtime authors: `fret::App::new(...).window(...).view::<V>()?`
+- View runtime authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
 

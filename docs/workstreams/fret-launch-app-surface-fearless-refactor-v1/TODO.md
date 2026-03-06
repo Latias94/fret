@@ -64,6 +64,7 @@ Companion docs:
 - [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths while keeping public `build_driver()` helpers opaque (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`, `category_line_demo`, `stairs_demo`, `stems_demo`, `tags_demo`, `plot3d_demo`, `date_picker_demo`, `datatable_demo`, `form_demo`, `simple_todo_demo`, `plot_stress_demo`, `canvas_datagrid_stress_demo`, `sonner_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `ime_smoke_demo`, `docking_demo`, `container_queries_docking_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, `node_graph_legacy_demo`).
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
+- [x] Add a focused guardrail so `fret` crate-root helper regressions and README drift are caught early.
 
 ## Validation gates
 
@@ -71,6 +72,7 @@ Companion docs:
 - [x] `cargo nextest run -p fret-framework`
 - [x] `cargo nextest run -p fret`
 - [x] `python tools/check_layering.py`
+- [x] `python tools/gate_fret_builder_only_surface.py`
 
 ## Rollout notes
 

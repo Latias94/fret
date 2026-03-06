@@ -74,6 +74,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Fret surface policy (builder-only crate root)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_builder_only_surface.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no verbose models_mut action handlers)" `
   "python" `
   @(

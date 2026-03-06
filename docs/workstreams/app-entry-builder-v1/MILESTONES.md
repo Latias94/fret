@@ -68,10 +68,12 @@
 - `ui_with_hooks(...)` keeps driver configuration on the builder path.
 - `view_with_hooks::<V>(...)` does the same for the view runtime path.
 - Advanced users can keep using `UiAppBuilder` and `UiAppDriver` seams without dropping down early.
+- A focused guardrail now keeps the crate-root story builder-only and locks README onboarding to the
+  same entry model.
 
 **What remains**
 
-- Add stronger compile/doc regression coverage for the new hook-preserving builder paths.
+- Keep compile/doc regression coverage current if more builder conveniences land.
 - Keep docs/examples consistent about when to stay on `fret` versus when to drop down.
 - Decide whether more builder conveniences should become first-class.
 
@@ -79,6 +81,7 @@
 
 - `ecosystem/fret/src/app_entry.rs`
 - `ecosystem/fret/README.md`
+- `tools/gate_fret_builder_only_surface.py`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## M4 ? Optional closure entry
