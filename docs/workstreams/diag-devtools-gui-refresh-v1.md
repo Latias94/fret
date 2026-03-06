@@ -282,3 +282,114 @@ This refresh is successful when:
 - regression browsing is summary-first and evidence-oriented,
 - no new GUI-only diagnostics model is introduced,
 - the product surface looks deliberate enough to dogfood daily.
+
+## Local diag UI boundary
+
+The current refresh should introduce only a **local** `diag ui` layer inside `apps/fret-devtools`.
+
+This means:
+
+- allow thin view helpers such as section cards, status strips, and inspector sections,
+- keep them private to the DevTools app until at least two diagnostics surfaces need the same pattern,
+- avoid creating a new cross-crate diagnostics component library during this refresh,
+- prefer naming that reflects workflow roles rather than pretending these helpers are general-purpose widgets.
+
+### Why keep it local first
+
+- the current information architecture is still settling,
+- the app is a product surface first and a reusable component source second,
+- extracting too early would freeze the wrong abstractions,
+- the correct reuse target should be proven by DevTools plus at least one other diagnostics consumer.
+
+### Extraction rule
+
+A helper may move beyond `apps/fret-devtools` only when all of the following are true:
+
+- the pattern appears in at least two diagnostics surfaces,
+- the inputs/outputs are stable and not tied to one screen's wording,
+- the helper does not encode diagnostics policy or schema interpretation,
+- the extracted API is smaller than the duplicated call sites it replaces.
+
+### Current candidate helpers
+
+- section card shell,
+- compact status strip,
+- inspector section with title, description, and scrollable body.
+
+This keeps the current work fearless: we reduce duplication and improve coherence now, without prematurely inventing a diagnostics UI framework.
+
+## Implemented slices (2026-03-06)
+
+The following refresh slices are now landed in `apps/fret-devtools`.
+
+### Top-level shell refresh
+
+Delivered:
+
+- a stronger top-level workspace shell for transport, session, and capture actions,
+- a compact footer status strip for session/pack/summarize/regression state,
+- clearer primary pane naming aligned with maintainer workflows.
+
+Current effect:
+
+- the app reads more like a diagnostics workspace and less like an internal console,
+- first-open orientation is improved before reading any raw payload.
+
+### Script Studio workflow compression
+
+Delivered:
+
+- a workflow-oriented top summary split into `Workflow Controls` and `Outputs & Bundles`,
+- clearer `Script Source` / `Editor` / `Helpers` pane roles,
+- reduced status-text sprawl in favor of grouped actions and compact summaries.
+
+Current effect:
+
+- script authoring now scans as one workflow,
+- evidence handoff sits closer to the run flow.
+
+### Regression inspector refresh
+
+Delivered:
+
+- `Selected Summary` now behaves more like an inspector with layered sections,
+- evidence actions stay above raw selected-summary payloads,
+- aggregate debug payloads are demoted and split into dashboard/index/summary debug sections,
+- failing summary rows now expose lane/failure/item badges for faster scanning.
+
+Current effect:
+
+- the regression tab is now closer to `summary -> action -> raw debug`,
+- maintainers can move from a failing list item to concrete evidence with less visual noise.
+
+## Current local helper set
+
+The refresh currently uses only thin local helpers inside `apps/fret-devtools`:
+
+- `diag_card` for repeatable task/workspace cards,
+- `diag_section` for inspector/debug subsections.
+
+This is intentionally enough to reduce duplication without promoting a new diagnostics UI layer yet.
+
+## Evidence snapshots
+
+Recent local screenshots captured during the refresh include:
+
+- `target/devtools-gui-shot-refresh.png`
+- `target/devtools-gui-shot-regression-inspector.png`
+- `target/devtools-gui-shot-failing-summaries.png`
+
+These are informal dogfood snapshots, not screenshot-golden tests.
+
+## Recommended next slice
+
+The next highest-value slice is a final polish pass on the regression overview/header area.
+
+Recommended focus:
+
+- tighten the `Regression Workspace` summary strip,
+- make aggregate counters and primary actions feel more intentional,
+- reduce the visual weight of any remaining raw text previews,
+- decide whether a lightweight recent-evidence/history surface is still necessary.
+
+That slice should remain additive and stay within `apps/fret-devtools` unless another diagnostics consumer proves the same helper surface is reusable.

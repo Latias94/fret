@@ -582,6 +582,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
 
     let header = header_bar(cx, theme.clone(), st);
     let body = resizable_body(cx, theme.clone(), st);
+    let footer = footer_bar(cx, theme.clone(), st);
+
+    let body_slot = cx.container(
+        fret_ui_kit::declarative::style::container_props(
+            &theme,
+            fret_ui_kit::ChromeRefinement::default(),
+            fret_ui_kit::LayoutRefinement::default()
+                .w_full()
+                .flex_1()
+                .min_h_0(),
+        ),
+        |_cx| [body],
+    );
+
+    let shell = ui::v_stack(|_cx| [header, body_slot, footer])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+        .into_element(cx);
 
     let wrap = fret_ui_kit::declarative::style::container_props(
         &theme,
@@ -593,12 +611,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
     );
 
-    vec![cx.container(wrap, |_cx| [header, body])].into()
+    vec![cx.container(wrap, |_cx| [shell])].into()
 }
 
 fn header_bar(
     cx: &mut ElementContext<'_, App>,
-    theme: fret_ui::ThemeSnapshot,
+    _theme: fret_ui::ThemeSnapshot,
     st: &State,
 ) -> AnyElement {
     let ws_url_with_token = format!(
@@ -606,126 +624,322 @@ fn header_bar(
         st.cfg.ws_url.as_ref(),
         st.cfg.token.as_ref()
     );
-    let title = cx.text("Fret DevTools (WS)");
-    let subtitle = cx.text(format!(
-        "url={}  token={}  port={}",
-        ws_url_with_token, st.cfg.token, st.cfg.ws_port
+    let has_session = cx
+        .app
+        .models()
+        .read(&st.selected_session_id, |v| v.is_some())
+        .unwrap_or(false);
+    let selected_session = cx
+        .app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+    let session_count = cx
+        .app
+        .models()
+        .read(&st.sessions, |sessions| sessions.len())
+        .unwrap_or(0);
+    let session_items = cx
+        .app
+        .models()
+        .read(&st.sessions, |sessions| {
+            sessions
+                .iter()
+                .map(|s| {
+                    let label = if s.client_version.trim().is_empty() {
+                        format!("{} ({})", s.session_id, s.client_kind)
+                    } else {
+                        format!("{} ({} {})", s.session_id, s.client_kind, s.client_version)
+                    };
+                    shadcn::SelectItem::new(s.session_id.clone(), label)
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let session_select = shadcn::Select::new(
+        st.selected_session_id.clone(),
+        st.selected_session_open.clone(),
+    )
+    .value(shadcn::SelectValue::new().placeholder("Session"))
+    .items(session_items)
+    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(240.0)))
+    .into_element(cx);
+
+    let transport_label = match st.cfg.transport {
+        DiagTransportKind::WebSocket => "WebSocket",
+        DiagTransportKind::FileSystem => "Filesystem",
+    };
+    let session_status_label = selected_session
+        .as_deref()
+        .map(|value| format!("Session {value}"))
+        .unwrap_or_else(|| "No session selected".to_string());
+    let shell_badges = ui::h_row(|cx| {
+        [
+            shadcn::Badge::new(transport_label)
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+            shadcn::Badge::new(format!("{} sessions", session_count))
+                .variant(if session_count > 0 {
+                    shadcn::BadgeVariant::Secondary
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+            shadcn::Badge::new(session_status_label)
+                .variant(if has_session {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .into_element(cx);
+
+    let endpoint_line = cx.text(format!("Endpoint: {ws_url_with_token}"));
+    let workspace_line = cx.text(format!(
+        "Workspace root: {} | token: {} | port: {}",
+        st.cfg.fs_out_dir, st.cfg.token, st.cfg.ws_port
     ));
 
-    let actions = ui::h_row(|cx: &mut ElementContext<'_, App>| {
-            let has_session = cx
-                .app
-                .models()
-                .read(&st.selected_session_id, |v| v.is_some())
-                .unwrap_or(false);
+    let connection_actions = ui::h_row(|cx| {
+        [
+            session_select,
+            shadcn::Button::new("Copy WS URL")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_COPY_WS_URL)
+                .into_element(cx),
+            shadcn::Button::new("Copy Token")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_COPY_TOKEN)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
-            let session_items = cx
-                .app
-                .models()
-                .read(&st.sessions, |sessions| {
-                    sessions
-                        .iter()
-                        .map(|s| {
-                            let label = if s.client_version.trim().is_empty() {
-                                format!("{} ({})", s.session_id, s.client_kind)
-                            } else {
-                                format!("{} ({} {})", s.session_id, s.client_kind, s.client_version)
-                            };
-                            shadcn::SelectItem::new(s.session_id.clone(), label)
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
+    let quick_actions = ui::h_row(|cx| {
+        [
+            shadcn::Button::new("Inspect On")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session)
+                .on_click(CMD_INSPECT_ENABLE)
+                .into_element(cx),
+            shadcn::Button::new("Inspect Off")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session)
+                .on_click(CMD_INSPECT_DISABLE)
+                .into_element(cx),
+            shadcn::Button::new("Pick")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session)
+                .on_click(CMD_PICK_ARM)
+                .into_element(cx),
+            shadcn::Button::new("Dump Bundle")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session)
+                .on_click(CMD_BUNDLE_DUMP)
+                .into_element(cx),
+            shadcn::Button::new("Screenshot")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session)
+                .on_click(CMD_SCREENSHOT_REQUEST)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
- 	            let session_select = shadcn::Select::new(
- 	                st.selected_session_id.clone(),
- 	                st.selected_session_open.clone(),
- 	            )
- 	            .value(shadcn::SelectValue::new().placeholder("Session"))
- 	            .items(session_items)
- 	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
- 	            .into_element(cx);
+    shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Diagnostics Workspace").into_element(cx),
+            shadcn::CardDescription::new(
+                "Top-level shell for sessions, transport controls, and capture actions.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([
+            shell_badges,
+            endpoint_line,
+            workspace_line,
+            connection_actions,
+            quick_actions,
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx)
+}
 
-            let left = ui::h_row(|_cx| [title, subtitle])
-                .gap(fret_ui_kit::Space::N2)
-                .items_center()
-                .into_element(cx);
+fn footer_bar(
+    cx: &mut ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
+    let has_session = cx
+        .app
+        .models()
+        .read(&st.selected_session_id, |v| v.is_some())
+        .unwrap_or(false);
+    let pack_in_flight = cx
+        .app
+        .models()
+        .read(&st.pack_in_flight, |v| *v)
+        .unwrap_or(false);
+    let summarize_in_flight = cx
+        .app
+        .models()
+        .read(&st.summarize_in_flight, |v| *v)
+        .unwrap_or(false);
+    let regression_loaded = cx
+        .app
+        .models()
+        .read(&st.regression_loaded_dir, |v| v.is_some())
+        .unwrap_or(false);
+    let scripts_count = cx
+        .app
+        .models()
+        .read(&st.script_library, |v| v.len())
+        .unwrap_or(0);
 
-            let right = ui::h_row(|cx| {
-                [
-                    session_select,
-                    shadcn::Button::new("Copy WS URL")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CMD_COPY_WS_URL)
-                        .into_element(cx),
-                    shadcn::Button::new("Copy Token")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CMD_COPY_TOKEN)
-                        .into_element(cx),
-                    shadcn::Button::new("Inspect On")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_INSPECT_ENABLE)
-                        .into_element(cx),
-                    shadcn::Button::new("Inspect Off")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_INSPECT_DISABLE)
-                        .into_element(cx),
-                    shadcn::Button::new("Pick")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_PICK_ARM)
-                        .into_element(cx),
-                    shadcn::Button::new("Dump Bundle")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_BUNDLE_DUMP)
-                        .into_element(cx),
-                    shadcn::Button::new("Screenshot")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_SCREENSHOT_REQUEST)
-                        .into_element(cx),
-                ]
+    let status_badges = ui::h_row(|cx| {
+        [
+            shadcn::Badge::new(if has_session {
+                "Session ready"
+            } else {
+                "Session idle"
             })
-            .gap(fret_ui_kit::Space::N2)
-            .items_center()
-            .into_element(cx);
-
-            [left, right]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .items_center()
-        .justify_between()
-        .into_element(cx);
-
-    let bg = theme.color_token("muted");
-    let chrome = fret_ui_kit::ChromeRefinement::default()
-        .bg(fret_ui_kit::ColorRef::Color(bg))
-        .px(fret_ui_kit::Space::N3)
-        .py(fret_ui_kit::Space::N2)
-        .border_1()
-        .border_color(fret_ui_kit::ColorRef::Color(theme.color_token("border")));
+            .variant(if has_session {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if pack_in_flight {
+                "Pack busy"
+            } else {
+                "Pack idle"
+            })
+            .variant(if pack_in_flight {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if summarize_in_flight {
+                "Summarize busy"
+            } else {
+                "Summarize idle"
+            })
+            .variant(if summarize_in_flight {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if regression_loaded {
+                "Regression loaded"
+            } else {
+                "Regression unloaded"
+            })
+            .variant(if regression_loaded {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(format!("scripts {}", scripts_count))
+                .variant(shadcn::BadgeVariant::Outline)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     cx.container(
         fret_ui_kit::declarative::style::container_props(
             &theme,
-            chrome,
+            fret_ui_kit::ChromeRefinement::default()
+                .bg(fret_ui_kit::ColorRef::Color(
+                    theme.color_token("muted"),
+                ))
+                .px(fret_ui_kit::Space::N3)
+                .py(fret_ui_kit::Space::N2)
+                .border_1()
+                .border_color(fret_ui_kit::ColorRef::Color(
+                    theme.color_token("border"),
+                )),
             fret_ui_kit::LayoutRefinement::default().w_full(),
         ),
-        |_cx| [actions],
+        |_cx| [status_badges],
     )
 }
 
+fn diag_card(
+    cx: &mut ElementContext<'_, App>,
+    title: impl Into<String>,
+    description: impl Into<String>,
+    content: Vec<AnyElement>,
+) -> AnyElement {
+    shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new(title.into()).into_element(cx),
+            shadcn::CardDescription::new(description.into()).into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(content).into_element(cx),
+    ])
+    .into_element(cx)
+}
+
+fn diag_section(
+    cx: &mut ElementContext<'_, App>,
+    title: impl Into<String>,
+    description: impl Into<String>,
+    content: Vec<AnyElement>,
+) -> AnyElement {
+    let theme = cx.theme_snapshot();
+    let block = ui::v_stack(|cx| {
+        [
+            cx.text(title.into()),
+            cx.text(description.into()),
+            ui::v_stack(|_cx| content)
+                .gap(fret_ui_kit::Space::N2)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    cx.container(
+        fret_ui_kit::declarative::style::container_props(
+            &theme,
+            fret_ui_kit::ChromeRefinement::default()
+                .bg(fret_ui_kit::ColorRef::Color(theme.color_token("muted")))
+                .border_1()
+                .border_color(fret_ui_kit::ColorRef::Color(theme.color_token("border")))
+                .px(fret_ui_kit::Space::N3)
+                .py(fret_ui_kit::Space::N3),
+            fret_ui_kit::LayoutRefinement::default().w_full(),
+        ),
+        |_cx| [block],
+    )
+}
 fn resizable_body(
     cx: &mut ElementContext<'_, App>,
     theme: fret_ui::ThemeSnapshot,
@@ -788,8 +1002,8 @@ fn left_panel(
 
     shadcn::Card::new([
         shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Inspect & Events").into_element(cx),
-            shadcn::CardDescription::new("Semantics navigation and recent diagnostics events.")
+            shadcn::CardTitle::new("Inspect Workspace").into_element(cx),
+            shadcn::CardDescription::new("Semantics navigation, live selection, and recent diagnostics events.")
                 .into_element(cx),
         ])
         .into_element(cx),
@@ -941,7 +1155,7 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                     };
 
                     let toggle: AnyElement = if row.has_children {
-                        let glyph = if row.is_expanded { "▾" } else { "▸" };
+                        let glyph = if row.is_expanded { "v" } else { ">" };
                         if has_search {
                             cx.text(glyph.to_string())
                         } else {
@@ -1320,7 +1534,7 @@ fn center_panel(
         let step = script_last_step_index
             .map(|s| s.to_string())
             .unwrap_or_else(|| "-".to_string());
-        format!("Run status: {stage} • step {step}/{script_steps}")
+        format!("Run status: {stage} | step {step}/{script_steps}")
     };
     let reason_summary_line = script_last_reason
         .as_deref()
@@ -1328,54 +1542,62 @@ fn center_panel(
         .unwrap_or_else(|| "Reason: -".to_string());
     let pack_summary_line = match last_pack_path.as_deref() {
         Some(path) => format!("Pack output: {path}"),
-        None => format!("Pack output: <none> • {pack_status_line}"),
+        None => format!("Pack output: <none> | {pack_status_line}"),
     };
     let script_status_badges = ui::h_row(|cx| {
-            [
-                shadcn::Badge::new(if has_session { "Session connected" } else { "No session" })
-                    .variant(if has_session {
-                        shadcn::BadgeVariant::Secondary
-                    } else {
-                        shadcn::BadgeVariant::Outline
-                    })
-                    .into_element(cx),
-                shadcn::Badge::new(if script_is_valid {
-                    format!("Schema v{script_schema_version} valid")
-                } else {
-                    format!("Schema v{script_schema_version} invalid")
-                })
-                .variant(if script_is_valid {
-                    shadcn::BadgeVariant::Secondary
-                } else {
-                    shadcn::BadgeVariant::Destructive
-                })
+        [
+            shadcn::Badge::new(if has_session {
+                "Session connected"
+            } else {
+                "No session"
+            })
+            .variant(if has_session {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if script_is_valid {
+                format!("Schema v{script_schema_version} valid")
+            } else {
+                format!("Schema v{script_schema_version} invalid")
+            })
+            .variant(if script_is_valid {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Destructive
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if pack_in_flight {
+                "Pack busy"
+            } else {
+                "Pack idle"
+            })
+            .variant(if pack_in_flight {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(if pack_after_run {
+                "Run&Pack enabled"
+            } else {
+                "Run-only mode"
+            })
+            .variant(if pack_after_run {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(format!("Library {}", scripts.len()))
+                .variant(shadcn::BadgeVariant::Outline)
                 .into_element(cx),
-                shadcn::Badge::new(if pack_in_flight { "Pack busy" } else { "Pack idle" })
-                    .variant(if pack_in_flight {
-                        shadcn::BadgeVariant::Default
-                    } else {
-                        shadcn::BadgeVariant::Outline
-                    })
-                    .into_element(cx),
-                shadcn::Badge::new(if pack_after_run {
-                    "Run&Pack enabled"
-                } else {
-                    "Run-only mode"
-                })
-                .variant(if pack_after_run {
-                    shadcn::BadgeVariant::Default
-                } else {
-                    shadcn::BadgeVariant::Outline
-                })
-                .into_element(cx),
-                shadcn::Badge::new(format!("Library {}", scripts.len()))
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let mut script_rows: Vec<AnyElement> = Vec::new();
     for item in scripts.iter() {
@@ -1817,38 +2039,67 @@ fn center_panel(
         ])
         .into_element(cx);
 
-    let scripts_sidebar = ui::v_stack(|cx| {
-        [
-            cx.text("Script Library"),
-            cx.text(format!("Workspace + local scripts: {}", scripts.len())),
-            scripts_list,
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx);
+    let validate_summary = cx.text(format!("Validate: {script_summary}"));
+    let run_summary = cx.text(run_summary_line);
+    let reason_summary = cx.text(reason_summary_line);
+    let loaded_summary = cx.text(loaded_summary_line);
+    let out_dir_summary = cx.text(out_dir_line);
+    let pack_summary = cx.text(pack_summary_line);
 
-    let editor_workspace = ui::v_stack(|cx| {
-        [
-            cx.text("Script Editor"),
-            cx.text(format!("Script text bytes={}", script_text.len())),
-            textarea,
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+    let workflow_controls = diag_card(
+        cx,
+        "Workflow Controls",
+        "Select a script, validate it, and decide whether the next run also produces evidence.",
+        vec![
+            primary_actions,
+            library_actions,
+            script_status_badges,
+            validate_summary,
+            run_summary,
+            reason_summary,
+        ],
+    );
 
-    let helper_workspace = ui::v_stack(|cx| {
-        [
-            cx.text("Helpers"),
-            cx.text("Insert steps, patch selectors, and build predicates."),
-            helpers_tabs,
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx);
+    let workflow_outputs = diag_card(
+        cx,
+        "Outputs & Bundles",
+        "Apply captured picks, package the latest bundle, and hand off to the offline viewer.",
+        vec![
+            apply_row,
+            pack_row,
+            viewer_row,
+            loaded_summary,
+            out_dir_summary,
+            pack_summary,
+        ],
+    );
+
+    let workflow_summary = ui::h_row(|_cx| [workflow_controls, workflow_outputs])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx);
+
+    let scripts_sidebar = diag_card(
+        cx,
+        "Script Source",
+        format!("Workspace tools and local scripts available: {}", scripts.len()),
+        vec![scripts_list],
+    );
+
+    let editor_workspace = diag_card(
+        cx,
+        "Editor",
+        format!("Current script payload size: {} bytes", script_text.len()),
+        vec![textarea],
+    );
+
+    let helper_workspace = diag_card(
+        cx,
+        "Helpers",
+        "Build reusable steps, selectors, and predicates without leaving the editor flow.",
+        vec![helpers_tabs],
+    );
 
     let split = ui::h_row(|cx| {
         [
@@ -1857,7 +2108,7 @@ fn center_panel(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(Px(240.0))
+                        .w_px(Px(224.0))
                         .h_full(),
                 ),
                 |_cx| [scripts_sidebar],
@@ -1875,7 +2126,7 @@ fn center_panel(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(Px(320.0))
+                        .w_px(Px(304.0))
                         .h_full(),
                 ),
                 |_cx| [helper_workspace],
@@ -1890,26 +2141,13 @@ fn center_panel(
     shadcn::Card::new([
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Script Studio").into_element(cx),
-            shadcn::CardDescription::new("Browse, fork, edit, and run diagnostics scripts.")
-                .into_element(cx),
+            shadcn::CardDescription::new(
+                "A compact workflow for selecting scripts, editing payloads, and packaging evidence.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new([
-            primary_actions,
-            library_actions,
-            script_status_badges,
-            cx.text(format!("Validate: {script_summary}")),
-            cx.text(run_summary_line),
-            cx.text(reason_summary_line),
-            apply_row,
-            pack_row,
-            viewer_row,
-            cx.text(loaded_summary_line),
-            cx.text(out_dir_line),
-            cx.text(pack_summary_line),
-            split,
-        ])
-        .into_element(cx),
+        shadcn::CardContent::new([workflow_summary, split]).into_element(cx),
     ])
     .into_element(cx)
 }
@@ -1971,15 +2209,12 @@ fn right_panel(
         ])
         .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Latest").into_element(cx),
-            shadcn::CardDescription::new("Latest pick/script/bundle/regression payloads.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([tabs]).into_element(cx),
-    ])
-    .into_element(cx)
+    diag_card(
+        cx,
+        "Evidence & Results",
+        "Latest inspect, script, bundle, screenshot, and regression payloads.",
+        vec![tabs],
+    )
 }
 
 fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -2081,7 +2316,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "No aggregate dashboard loaded yet. Use Refresh or Summarize against the current artifacts root.".to_string()
     };
 
-    let aggregate_content = {
+    let _aggregate_content = {
         let mut parts: Vec<String> = Vec::new();
         if let Some(dir) = loaded_dir.as_deref() {
             parts.push(format!("loaded_dir: {dir}"));
@@ -2129,10 +2364,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 .as_deref()
                 .is_some_and(|selected| selected == resolved_summary_path_str);
             let title = row.path.clone();
-            let meta = format!(
-                "lane={} • failures={} • items={}",
-                row.lane, row.failures, row.items_total
-            );
+            let lane_label = format!("lane {}", row.lane);
+            let failures_label = format!("failures {}", row.failures);
+            let items_label = format!("items {}", row.items_total);
+            let resolved_path_label = format!("Resolved path: {}", resolved_summary_path_str);
             let selected_summary_path_model = st.regression_selected_summary_path.clone();
             let selected_summary_json_model = st.regression_selected_summary_json.clone();
             let selected_bundle_dirs_model = st.regression_selected_bundle_dirs.clone();
@@ -2185,45 +2420,56 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 host.push_effect(Effect::ClipboardSetText { text: copy_path.clone() });
                 host.request_redraw(action_cx.window);
             });
+            let title_text = cx.text(title);
+            let resolved_path_text = cx.text(resolved_path_label);
+            let badges = ui::h_row(|cx| {
+                [
+                    shadcn::Badge::new(if is_selected { "Selected" } else { "Failing" })
+                        .variant(if is_selected {
+                            shadcn::BadgeVariant::Secondary
+                        } else {
+                            shadcn::BadgeVariant::Destructive
+                        })
+                        .into_element(cx),
+                    shadcn::Badge::new(lane_label)
+                        .variant(shadcn::BadgeVariant::Outline)
+                        .into_element(cx),
+                    shadcn::Badge::new(failures_label)
+                        .variant(shadcn::BadgeVariant::Destructive)
+                        .into_element(cx),
+                    shadcn::Badge::new(items_label)
+                        .variant(shadcn::BadgeVariant::Outline)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .into_element(cx);
+            let actions = ui::h_row(|cx| {
+                [
+                    shadcn::Button::new(if is_selected { "Opened" } else { "Open details" })
+                        .variant(if is_selected {
+                            shadcn::ButtonVariant::Secondary
+                        } else {
+                            shadcn::ButtonVariant::Ghost
+                        })
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_select)
+                        .into_element(cx),
+                    shadcn::Button::new("Copy path")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_copy)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .into_element(cx);
             rows.push(
                 shadcn::Card::new([
-                    shadcn::CardContent::new([
-                        cx.text(title),
-                        cx.text(meta),
-                        ui::h_row(|cx| {
-                            [
-                                shadcn::Badge::new(if is_selected { "Selected" } else { "Failing" })
-                                    .variant(if is_selected {
-                                        shadcn::BadgeVariant::Secondary
-                                    } else {
-                                        shadcn::BadgeVariant::Destructive
-                                    })
-                                    .into_element(cx),
-                                shadcn::Button::new(if is_selected {
-                                    "Opened"
-                                } else {
-                                    "Open details"
-                                })
-                                .variant(if is_selected {
-                                    shadcn::ButtonVariant::Secondary
-                                } else {
-                                    shadcn::ButtonVariant::Ghost
-                                })
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_activate(on_select)
-                                .into_element(cx),
-                                shadcn::Button::new("Copy path")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .size(shadcn::ButtonSize::Sm)
-                                    .on_activate(on_copy)
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(fret_ui_kit::Space::N2)
-                        .items_center()
+                    shadcn::CardContent::new([badges, title_text, resolved_path_text, actions])
                         .into_element(cx),
-                    ])
-                    .into_element(cx),
                 ])
                 .into_element(cx),
             );
@@ -2458,43 +2704,58 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             status_row,
             top_actions,
             cx.text(loaded_dir_line),
-            text_blob_sized(cx, aggregate_preview, Px(120.0)),
+            text_blob_sized(cx, aggregate_preview.clone(), Px(120.0)),
         ])
         .into_element(cx),
     ])
     .into_element(cx);
 
-    let left_card = shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Failing Summaries").into_element(cx),
-            shadcn::CardDescription::new(
-                "Select one failing summary to open its evidence-focused drill-down.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([failing_list]).into_element(cx),
-    ])
-    .into_element(cx);
+    let left_card = diag_card(
+        cx,
+        "Failing Summaries",
+        "Select one failing summary to open its evidence-focused drill-down.",
+        vec![failing_list],
+    );
 
-    let right_card = shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Selected Summary").into_element(cx),
-            shadcn::CardDescription::new(
-                "Evidence actions stay close to the currently selected failing summary.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([
-            selected_summary_badges,
-            cx.text(selected_summary_overview),
-            selected_actions,
-            text_blob_sized(cx, selected_detail_content, Px(280.0)),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let selected_summary_overview_text = cx.text(selected_summary_overview);
+    let selected_bundle_dirs_blob = text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
+    let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
+    let selected_overview_section = diag_section(
+        cx,
+        "Selection Overview",
+        "Keep the current failure state visible before diving into raw JSON.",
+        vec![selected_summary_badges, selected_summary_overview_text],
+    );
+    let selected_actions_section = diag_section(
+        cx,
+        "Evidence Actions",
+        "Copy paths or pack the currently selected failing evidence without leaving this inspector.",
+        vec![selected_actions],
+    );
+    let selected_bundle_dirs_section = diag_section(
+        cx,
+        "Bundle Directories",
+        "These are the concrete artifact roots attached to the selected failing summary.",
+        vec![selected_bundle_dirs_blob],
+    );
+    let selected_raw_summary_section = diag_section(
+        cx,
+        "Raw Selected Summary",
+        "Raw summary payload remains available for debugging, but below overview and actions.",
+        vec![selected_raw_summary_blob],
+    );
+
+    let right_card = diag_card(
+        cx,
+        "Selected Summary",
+        "Evidence actions and raw summary payload stay close to the current failing selection.",
+        vec![
+            selected_overview_section,
+            selected_actions_section,
+            selected_bundle_dirs_section,
+            selected_raw_summary_section,
+        ],
+    );
 
     let split = ui::h_row(|cx| {
         [
@@ -2502,7 +2763,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 fret_ui_kit::declarative::style::container_props(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
-                    fret_ui_kit::LayoutRefinement::default().w_px(Px(380.0)).h_full(),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(372.0)).h_full(),
                 ),
                 |_cx| [left_card],
             ),
@@ -2521,21 +2782,37 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     .items_start()
     .into_element(cx);
 
-    let raw_payloads = shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Raw Aggregate Payloads").into_element(cx),
-            shadcn::CardDescription::new(
-                "Keep raw dashboard/index/summary payloads available for debugging, but secondary to the main workflow.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([
-            text_blob_sized(cx, aggregate_content, Px(220.0)),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let dashboard_debug_blob = text_blob_sized(cx, aggregate_preview.clone(), Px(96.0));
+    let index_debug_blob = text_blob_sized(cx, index_json.clone(), Px(140.0));
+    let summary_debug_blob = text_blob_sized(cx, summary_json.clone(), Px(140.0));
+    let dashboard_debug_section = diag_section(
+        cx,
+        "Dashboard Preview",
+        "Human-readable aggregate output for quick debugging and copy/paste.",
+        vec![dashboard_debug_blob],
+    );
+    let index_debug_section = diag_section(
+        cx,
+        "regression.index.json",
+        "Campaign index payload backing the aggregate workspace.",
+        vec![index_debug_blob],
+    );
+    let summary_debug_section = diag_section(
+        cx,
+        "regression.summary.json",
+        "Latest aggregate summary payload emitted by summarize/dashboard flows.",
+        vec![summary_debug_blob],
+    );
+    let raw_payloads = diag_card(
+        cx,
+        "Aggregate Debug Payloads",
+        "Keep dashboard and raw aggregate payloads available for debugging, but clearly below the main regression workflow.",
+        vec![
+            dashboard_debug_section,
+            index_debug_section,
+            summary_debug_section,
+        ],
+    );
 
     ui::v_stack(|_cx| [overview_card, split, raw_payloads])
         .gap(fret_ui_kit::Space::N2)
@@ -4457,3 +4734,5 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+
