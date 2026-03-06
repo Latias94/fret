@@ -13,8 +13,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -240,6 +240,15 @@ impl AlertDialog {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This is an ergonomic bridge between Fret's closure-root authoring model and the nested part
+    /// mental model used by shadcn/Radix/Base UI. It intentionally stays in the recipe layer: the
+    /// lower-level mechanism still routes through [`AlertDialog::into_element_parts`].
+    pub fn compose(self) -> AlertDialogComposition {
+        AlertDialogComposition::new(self)
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
@@ -476,6 +485,79 @@ impl AlertDialog {
             let content_element = content_element_for_trigger.get().or(prev_content_element);
             radix_alert_dialog::apply_alert_dialog_trigger_a11y(trigger, is_open, content_element)
         })
+    }
+}
+
+/// Recipe-level builder for composing an alert dialog from shadcn-style parts.
+///
+/// Unlike upstream React children composition, this builder stores already-authored Fret elements
+/// and lowers them into the existing closure-based entry point at the end. That keeps the
+/// mechanism surface unchanged while giving call sites a more composable authoring style.
+pub struct AlertDialogComposition {
+    dialog: AlertDialog,
+    trigger: Option<AlertDialogTrigger>,
+    portal: AlertDialogPortal,
+    overlay: AlertDialogOverlay,
+    content: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for AlertDialogComposition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogComposition")
+            .field("dialog", &self.dialog)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl AlertDialogComposition {
+    pub fn new(dialog: AlertDialog) -> Self {
+        Self {
+            dialog,
+            trigger: None,
+            portal: AlertDialogPortal::new(),
+            overlay: AlertDialogOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: AlertDialogTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: AlertDialogPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: AlertDialogOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("AlertDialog::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("AlertDialog::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        self.dialog
+            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
     }
 }
 
@@ -1127,18 +1209,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
