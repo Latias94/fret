@@ -802,6 +802,38 @@ fn commit_node_drag_transaction(
         .is_ok()
 }
 
+fn update_view_state_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    f: impl FnOnce(&mut NodeGraphViewState),
+) -> bool {
+    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
+        return false;
+    };
+    f(&mut next_view_state);
+
+    if let Some(controller) = controller {
+        return controller
+            .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
+            .is_ok();
+    }
+
+    if let Some(store) = store {
+        let controller = NodeGraphController::new(store.clone());
+        return controller
+            .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
+            .is_ok();
+    }
+
+    host.models_mut()
+        .update(view_state, |state| {
+            *state = next_view_state;
+        })
+        .is_ok()
+}
+
 fn hit_test_node_at_point(
     view: PanZoom2D,
     bounds: Rect,
@@ -1813,6 +1845,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let graph_debug = graph.clone();
             let view_zoom_kb = view_state.clone();
             let view_escape = view_state.clone();
+            let controller_zoom_kb = controller.clone();
+            let store_zoom_kb = store.clone();
             let portal_bounds_for_fit = portal_bounds_store.clone();
             let portal_debug_for_keys = portal_debug_flags.clone();
             let diag_keys_enabled = diag_keys_enabled;
@@ -1923,7 +1957,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             }
                         });
 
-                        let _ = host.models_mut().update(&view_zoom_kb, |s| {
+                        let _ = update_view_state_action_host(
+                            host,
+                            &view_zoom_kb,
+                            controller_zoom_kb.as_ref(),
+                            store_zoom_kb.as_ref(),
+                            |s| {
                             s.pan.x = 380.0;
                             s.pan.y = 290.0;
                             s.zoom = 1.0;
@@ -1933,7 +1972,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
                             s.selected_groups.clear();
-                        });
+                            },
+                        );
 
                         host.request_redraw(action_cx.window);
                         return true;
@@ -1970,7 +2010,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             }
                         });
 
-                        let _ = host.models_mut().update(&view_zoom_kb, |s| {
+                        let _ = update_view_state_action_host(
+                            host,
+                            &view_zoom_kb,
+                            controller_zoom_kb.as_ref(),
+                            store_zoom_kb.as_ref(),
+                            |s| {
                             // Shift pan.x so the node no longer covers the canvas center.
                             s.pan.x = 540.0;
                             s.pan.y = 290.0;
@@ -1982,7 +2027,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
                             s.selected_groups.clear();
-                        });
+                            },
+                        );
 
                         host.request_redraw(action_cx.window);
                         return true;
@@ -2106,15 +2152,24 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         _ => return false,
                     };
 
-                    let _ = host.models_mut().update(&view_zoom_kb, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let new_zoom = if reset {
-                            1.0
-                        } else {
-                            (zoom * factor).clamp(min_zoom, max_zoom)
-                        };
-                        state.zoom = new_zoom;
-                    });
+                    let updated = update_view_state_action_host(
+                        host,
+                        &view_zoom_kb,
+                        controller_zoom_kb.as_ref(),
+                        store_zoom_kb.as_ref(),
+                        |state| {
+                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+                            let new_zoom = if reset {
+                                1.0
+                            } else {
+                                (zoom * factor).clamp(min_zoom, max_zoom)
+                            };
+                            state.zoom = new_zoom;
+                        },
+                    );
+                    if !updated {
+                        return false;
+                    }
 
                     host.request_redraw(action_cx.window);
                     true
@@ -2319,6 +2374,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             );
 
             let view_pan = view_state.clone();
+            let controller_pan = controller.clone();
+            let store_pan = store.clone();
             let drag_move = drag.clone();
             let marquee_move = marquee_drag.clone();
             let node_drag_move = node_drag.clone();
@@ -2588,9 +2645,18 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         return false;
                     }
 
-                    let _ = host.models_mut().update(&view_pan, |state| {
-                        apply_pan_by_screen_delta(state, dx, dy);
-                    });
+                    let updated = update_view_state_action_host(
+                        host,
+                        &view_pan,
+                        controller_pan.as_ref(),
+                        store_pan.as_ref(),
+                        |state| {
+                            apply_pan_by_screen_delta(state, dx, dy);
+                        },
+                    );
+                    if !updated {
+                        return false;
+                    }
 
                     drag.last_pos = mv.position;
                     let _ = host.models_mut().update(&drag_move, |st| {
@@ -2725,6 +2791,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             );
 
             let view_zoom = view_state.clone();
+            let controller_wheel = controller.clone();
+            let store_wheel = store.clone();
             let grid_cache_bounds = grid_cache.clone();
             let on_wheel: OnWheel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -2749,18 +2817,27 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             st.bounds = bounds;
                         }
                     });
-                    let _ = host.models_mut().update(&view_zoom, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                        apply_zoom_about_screen_point(
-                            state,
-                            bounds,
-                            wheel.position,
-                            new_zoom,
-                            min_zoom,
-                            max_zoom,
-                        );
-                    });
+                    let updated = update_view_state_action_host(
+                        host,
+                        &view_zoom,
+                        controller_wheel.as_ref(),
+                        store_wheel.as_ref(),
+                        |state| {
+                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+                            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
+                            apply_zoom_about_screen_point(
+                                state,
+                                bounds,
+                                wheel.position,
+                                new_zoom,
+                                min_zoom,
+                                max_zoom,
+                            );
+                        },
+                    );
+                    if !updated {
+                        return false;
+                    }
 
                     host.invalidate(Invalidation::Layout);
                     host.notify(action_cx);
@@ -2770,6 +2847,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             );
 
             let view_pinch = view_state.clone();
+            let controller_pinch = controller.clone();
+            let store_pinch = store.clone();
             let grid_cache_bounds = grid_cache.clone();
             let on_pinch: OnPinchGesture = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -2789,19 +2868,28 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             st.bounds = bounds;
                         }
                     });
-                    let _ = host.models_mut().update(&view_pinch, |state| {
-                        let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                        let factor = (1.0 + delta).max(1.0e-6);
-                        let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                        apply_zoom_about_screen_point(
-                            state,
-                            bounds,
-                            pinch.position,
-                            new_zoom,
-                            min_zoom,
-                            max_zoom,
-                        );
-                    });
+                    let updated = update_view_state_action_host(
+                        host,
+                        &view_pinch,
+                        controller_pinch.as_ref(),
+                        store_pinch.as_ref(),
+                        |state| {
+                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
+                            let factor = (1.0 + delta).max(1.0e-6);
+                            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
+                            apply_zoom_about_screen_point(
+                                state,
+                                bounds,
+                                pinch.position,
+                                new_zoom,
+                                min_zoom,
+                                max_zoom,
+                            );
+                        },
+                    );
+                    if !updated {
+                        return false;
+                    }
 
                     host.invalidate(Invalidation::Layout);
                     host.notify(action_cx);

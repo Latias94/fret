@@ -148,6 +148,9 @@ points rather than direct graph mutation.
     `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
   - Those helpers now have a real store fallback when no `view_queue` exists, and still route
     through queued `SetViewport` requests when a queue is present.
+  - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
+    controller/store-backed view-state replacement instead of only mutating the external
+    `NodeGraphViewState` model.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
     surface so the recommended demo path exercises the transaction-safe commit architecture.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more

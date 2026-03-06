@@ -79,6 +79,12 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - `fit_view_nodes_in_bounds` / `fit_view_nodes_in_bounds_with_options`
   - store fallback when no `view_queue` exists, while still routing through queued `SetViewport`
     requests when a queue is present
+- [x] Start routing declarative viewport interactions through controller/store-backed view-state
+      replacement when a controller/store exists:
+  - keyboard zoom
+  - wheel zoom / pinch zoom
+  - drag-pan viewport updates
+  - diagnostics viewport normalization hotkeys
 - [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
       first bounds-aware helper set.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes

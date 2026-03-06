@@ -148,6 +148,54 @@ impl NodeGraphController {
         self.replace_view_state_in_models(host.models_mut(), view_state)
     }
 
+    pub fn replace_view_state_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_view_state_in_models(host.models_mut(), view_state)
+    }
+
+    pub fn sync_view_state_model_from_store<H: UiHost>(
+        &self,
+        host: &mut H,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> bool {
+        self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state)
+    }
+
+    pub fn sync_view_state_model_from_store_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> bool {
+        self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state)
+    }
+
+    pub fn replace_view_state_and_sync_model<H: UiHost>(
+        &self,
+        host: &mut H,
+        view_state_model: &Model<NodeGraphViewState>,
+        next_view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_view_state_in_models(host.models_mut(), next_view_state)?;
+        let _ =
+            self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state_model);
+        Ok(())
+    }
+
+    pub fn replace_view_state_and_sync_model_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        view_state_model: &Model<NodeGraphViewState>,
+        next_view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_view_state_in_models(host.models_mut(), next_view_state)?;
+        let _ =
+            self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state_model);
+        Ok(())
+    }
+
     pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) -> bool {
         self.set_viewport_with_options(host, pan, zoom, NodeGraphSetViewportOptions::default())
     }
@@ -378,6 +426,23 @@ impl NodeGraphController {
         graph_synced && view_synced
     }
 
+    fn sync_view_state_model_from_store_in_models(
+        &self,
+        models: &mut ModelStore,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> bool {
+        let Ok(next_view_state) = models.read(&self.store, |store| store.view_state().clone())
+        else {
+            return false;
+        };
+
+        models
+            .update(view_state, |state| {
+                *state = next_view_state;
+            })
+            .is_ok()
+    }
+
     fn replace_graph_in_models(
         &self,
         models: &mut ModelStore,
@@ -559,6 +624,33 @@ mod tests {
     impl CommandsHost for TestUiHostImpl {
         fn commands(&self) -> &CommandRegistry {
             &self.commands
+        }
+    }
+
+    impl fret_ui::action::UiActionHost for TestUiHostImpl {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn request_redraw(&mut self, _window: AppWindowId) {}
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            ShareSheetToken(self.next_share_sheet_token)
         }
     }
 
@@ -811,6 +903,35 @@ mod tests {
             .expect("store node position");
         assert_eq!(graph_pos, to);
         assert_eq!(store_pos, to);
+    }
+
+    #[test]
+    fn controller_replace_view_state_and_sync_model_action_host_updates_bound_view_model() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
+        let view = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+        let mut next_view = NodeGraphViewState::default();
+        next_view.pan = CanvasPoint { x: 12.0, y: 34.0 };
+        next_view.zoom = 1.5;
+
+        controller
+            .replace_view_state_and_sync_model_action_host(&mut host, &view, next_view.clone())
+            .expect("replace view-state through controller");
+
+        let model_view = view.read_ref(&host, |state| state.clone()).ok().unwrap();
+        let store_view = store
+            .read_ref(&host, |store| store.view_state().clone())
+            .ok()
+            .unwrap();
+        assert_eq!(model_view.pan, next_view.pan);
+        assert_eq!(model_view.zoom, next_view.zoom);
+        assert_eq!(store_view.pan, next_view.pan);
+        assert_eq!(store_view.zoom, next_view.zoom);
     }
 
     #[test]

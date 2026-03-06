@@ -173,6 +173,8 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - it now includes the first bounds-aware viewport helpers (`set_center_in_bounds*`,
   `fit_view_nodes_in_bounds*`) so paint-only / fallback hosts can drive viewport state without
   requiring a retained widget queue,
+- declarative keyboard/wheel/pinch/pan viewport updates have started converging on the same
+  controller/store-backed view-state path when a controller/store is present,
 - it can sync external graph/view models from store after commits,
 - the default declarative demo now uses it.
 
