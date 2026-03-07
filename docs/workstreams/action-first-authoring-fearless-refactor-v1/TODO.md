@@ -325,6 +325,8 @@ ID format:
     - `apps/fret-cookbook/examples/theme_switching_basics.rs`
     - `apps/fret-cookbook/examples/simple_todo.rs`
     - `apps/fret-cookbook/examples/drag_basics.rs`
+    - `apps/fret-cookbook/examples/effects_layer_basics.rs`
+    - `apps/fret-cookbook/examples/text_input_basics.rs`
 
 ---
 

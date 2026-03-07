@@ -156,41 +156,48 @@ impl View for TextInputBasicsView {
         });
 
         let buttons = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Default)
-                    .action(act::Submit)
-                    .into_element(cx),
+                    .action(act::Submit),
                 shadcn::Button::new("Clear")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .action(act::Clear)
-                    .into_element(cx),
+                    .action(act::Clear),
             ]
         })
         .gap(Space::N2)
         .into_element(cx);
 
-        let stats = ui::h_flex(|_cx| [len_badge, submitted_badge])
+        let stats = ui::h_flex(|cx| ui::children![cx; len_badge, submitted_badge])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Text input basics").into_element(cx),
-                shadcn::CardDescription::new(
-                    "A minimal Input example (Enter = submit, Escape = clear) with numeric semantics gates.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([
-                ui::v_flex(|_cx| [input, buttons, stats])
-                    .gap(Space::N3)
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Text input basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A minimal Input example (Enter = submit, Escape = clear) with numeric semantics gates.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::v_flex(|cx| ui::children![cx; input, buttons, stats])
+                            .gap(Space::N3)
+                            .into_element(cx),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
         .max_w(Px(560.0))
