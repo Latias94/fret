@@ -137,6 +137,89 @@ struct CampaignItemRunResult {
     error: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct CampaignSuiteInvocation {
+    kind: CampaignItemKind,
+    item_id: String,
+    out_dir: PathBuf,
+    regression_summary_path: PathBuf,
+    suite_ctx: diag_suite::SuiteCmdContext,
+}
+
+fn build_campaign_suite_invocation(
+    index: usize,
+    kind: CampaignItemKind,
+    value: &str,
+    results_root: &Path,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignSuiteInvocation, String> {
+    let (label, item_id, rest, suite_script_inputs) = match kind {
+        CampaignItemKind::Suite => (
+            "suite",
+            value.to_string(),
+            vec![value.to_string()],
+            ctx.suite_script_inputs.clone(),
+        ),
+        CampaignItemKind::Script => (
+            "script",
+            value.to_string(),
+            Vec::new(),
+            vec![value.to_string()],
+        ),
+    };
+
+    let out_dir = results_root.join(format!("{:02}-{}", index + 1, zip_safe_component(value)));
+    std::fs::create_dir_all(&out_dir).map_err(|e| {
+        format!(
+            "failed to create {} output dir {}: {}",
+            label,
+            out_dir.display(),
+            e
+        )
+    })?;
+
+    let regression_summary_path =
+        out_dir.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let suite_ctx = diag_suite::SuiteCmdContext {
+        pack_after_run: ctx.pack_after_run,
+        rest,
+        suite_script_inputs,
+        suite_prewarm_scripts: ctx.suite_prewarm_scripts.clone(),
+        suite_prelude_scripts: ctx.suite_prelude_scripts.clone(),
+        suite_prelude_each_run: ctx.suite_prelude_each_run,
+        workspace_root: ctx.workspace_root.clone(),
+        resolved_paths: ResolvedScriptPaths::for_out_dir(&ctx.workspace_root, &out_dir),
+        devtools_ws_url: ctx.devtools_ws_url.clone(),
+        devtools_token: ctx.devtools_token.clone(),
+        devtools_session_id: ctx.devtools_session_id.clone(),
+        timeout_ms: ctx.timeout_ms,
+        poll_ms: ctx.poll_ms,
+        stats_top: ctx.stats_top,
+        stats_json: ctx.stats_json,
+        warmup_frames: ctx.warmup_frames,
+        max_test_ids: ctx.max_test_ids,
+        lint_all_test_ids_bounds: ctx.lint_all_test_ids_bounds,
+        lint_eps_px: ctx.lint_eps_px,
+        suite_lint: ctx.suite_lint,
+        pack_include_screenshots: ctx.pack_include_screenshots,
+        reuse_launch: ctx.reuse_launch,
+        launch: ctx.launch.clone(),
+        launch_env: ctx.launch_env.clone(),
+        launch_high_priority: ctx.launch_high_priority,
+        launch_write_bundle_json: ctx.launch_write_bundle_json,
+        keep_open: ctx.keep_open,
+        checks: ctx.checks.clone(),
+    };
+
+    Ok(CampaignSuiteInvocation {
+        kind,
+        item_id,
+        out_dir,
+        regression_summary_path,
+        suite_ctx,
+    })
+}
+
 pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
     let CampaignCmdContext {
         pack_after_run,
@@ -959,54 +1042,20 @@ fn run_campaign_suite_item(
     suite_results_root: &Path,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignItemRunResult, String> {
-    let suite_dir =
-        suite_results_root.join(format!("{:02}-{}", index + 1, zip_safe_component(suite_id)));
-    std::fs::create_dir_all(&suite_dir).map_err(|e| {
-        format!(
-            "failed to create suite output dir {}: {}",
-            suite_dir.display(),
-            e
-        )
-    })?;
-
-    let regression_summary_path =
-        suite_dir.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
-    let result = diag_suite::cmd_suite(diag_suite::SuiteCmdContext {
-        pack_after_run: ctx.pack_after_run,
-        rest: vec![suite_id.to_string()],
-        suite_script_inputs: ctx.suite_script_inputs.clone(),
-        suite_prewarm_scripts: ctx.suite_prewarm_scripts.clone(),
-        suite_prelude_scripts: ctx.suite_prelude_scripts.clone(),
-        suite_prelude_each_run: ctx.suite_prelude_each_run,
-        workspace_root: ctx.workspace_root.clone(),
-        resolved_paths: ResolvedScriptPaths::for_out_dir(&ctx.workspace_root, &suite_dir),
-        devtools_ws_url: ctx.devtools_ws_url.clone(),
-        devtools_token: ctx.devtools_token.clone(),
-        devtools_session_id: ctx.devtools_session_id.clone(),
-        timeout_ms: ctx.timeout_ms,
-        poll_ms: ctx.poll_ms,
-        stats_top: ctx.stats_top,
-        stats_json: ctx.stats_json,
-        warmup_frames: ctx.warmup_frames,
-        max_test_ids: ctx.max_test_ids,
-        lint_all_test_ids_bounds: ctx.lint_all_test_ids_bounds,
-        lint_eps_px: ctx.lint_eps_px,
-        suite_lint: ctx.suite_lint,
-        pack_include_screenshots: ctx.pack_include_screenshots,
-        reuse_launch: ctx.reuse_launch,
-        launch: ctx.launch.clone(),
-        launch_env: ctx.launch_env.clone(),
-        launch_high_priority: ctx.launch_high_priority,
-        launch_write_bundle_json: ctx.launch_write_bundle_json,
-        keep_open: ctx.keep_open,
-        checks: ctx.checks.clone(),
-    });
+    let invocation = build_campaign_suite_invocation(
+        index,
+        CampaignItemKind::Suite,
+        suite_id,
+        suite_results_root,
+        ctx,
+    )?;
+    let result = diag_suite::cmd_suite(invocation.suite_ctx);
 
     Ok(CampaignItemRunResult {
-        kind: CampaignItemKind::Suite,
-        item_id: suite_id.to_string(),
-        out_dir: suite_dir,
-        regression_summary_path,
+        kind: invocation.kind,
+        item_id: invocation.item_id,
+        out_dir: invocation.out_dir,
+        regression_summary_path: invocation.regression_summary_path,
         ok: result.is_ok(),
         error: result.err(),
     })
@@ -1018,57 +1067,20 @@ fn run_campaign_script_item(
     script_results_root: &Path,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignItemRunResult, String> {
-    let script_dir = script_results_root.join(format!(
-        "{:02}-{}",
-        index + 1,
-        zip_safe_component(script_path)
-    ));
-    std::fs::create_dir_all(&script_dir).map_err(|e| {
-        format!(
-            "failed to create script output dir {}: {}",
-            script_dir.display(),
-            e
-        )
-    })?;
-
-    let regression_summary_path =
-        script_dir.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
-    let result = diag_suite::cmd_suite(diag_suite::SuiteCmdContext {
-        pack_after_run: ctx.pack_after_run,
-        rest: Vec::new(),
-        suite_script_inputs: vec![script_path.to_string()],
-        suite_prewarm_scripts: ctx.suite_prewarm_scripts.clone(),
-        suite_prelude_scripts: ctx.suite_prelude_scripts.clone(),
-        suite_prelude_each_run: ctx.suite_prelude_each_run,
-        workspace_root: ctx.workspace_root.clone(),
-        resolved_paths: ResolvedScriptPaths::for_out_dir(&ctx.workspace_root, &script_dir),
-        devtools_ws_url: ctx.devtools_ws_url.clone(),
-        devtools_token: ctx.devtools_token.clone(),
-        devtools_session_id: ctx.devtools_session_id.clone(),
-        timeout_ms: ctx.timeout_ms,
-        poll_ms: ctx.poll_ms,
-        stats_top: ctx.stats_top,
-        stats_json: ctx.stats_json,
-        warmup_frames: ctx.warmup_frames,
-        max_test_ids: ctx.max_test_ids,
-        lint_all_test_ids_bounds: ctx.lint_all_test_ids_bounds,
-        lint_eps_px: ctx.lint_eps_px,
-        suite_lint: ctx.suite_lint,
-        pack_include_screenshots: ctx.pack_include_screenshots,
-        reuse_launch: ctx.reuse_launch,
-        launch: ctx.launch.clone(),
-        launch_env: ctx.launch_env.clone(),
-        launch_high_priority: ctx.launch_high_priority,
-        launch_write_bundle_json: ctx.launch_write_bundle_json,
-        keep_open: ctx.keep_open,
-        checks: ctx.checks.clone(),
-    });
+    let invocation = build_campaign_suite_invocation(
+        index,
+        CampaignItemKind::Script,
+        script_path,
+        script_results_root,
+        ctx,
+    )?;
+    let result = diag_suite::cmd_suite(invocation.suite_ctx);
 
     Ok(CampaignItemRunResult {
-        kind: CampaignItemKind::Script,
-        item_id: script_path.to_string(),
-        out_dir: script_dir,
-        regression_summary_path,
+        kind: invocation.kind,
+        item_id: invocation.item_id,
+        out_dir: invocation.out_dir,
+        regression_summary_path: invocation.regression_summary_path,
         ok: result.is_ok(),
         error: result.err(),
     })
@@ -1901,6 +1913,85 @@ mod tests {
             "target/fret-diag/campaigns/ui-gallery-smoke/1234"
         );
         assert!(options.include_passed);
+    }
+
+    #[test]
+    fn build_campaign_suite_invocation_maps_suite_and_script_items() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-campaign-invocation-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        let ctx = CampaignRunContext {
+            pack_after_run: false,
+            suite_script_inputs: vec!["shared-input.json".to_string()],
+            suite_prewarm_scripts: vec![PathBuf::from("prewarm.json")],
+            suite_prelude_scripts: vec![PathBuf::from("prelude.json")],
+            suite_prelude_each_run: true,
+            workspace_root: root.clone(),
+            resolved_out_dir: root.join("campaign-run"),
+            devtools_ws_url: None,
+            devtools_token: None,
+            devtools_session_id: None,
+            timeout_ms: 1000,
+            poll_ms: 5,
+            stats_top: 20,
+            stats_json: false,
+            warmup_frames: 4,
+            max_test_ids: 100,
+            lint_all_test_ids_bounds: false,
+            lint_eps_px: 0.5,
+            suite_lint: false,
+            pack_include_screenshots: false,
+            reuse_launch: false,
+            launch: None,
+            launch_env: vec![("BASE".to_string(), "1".to_string())],
+            launch_high_priority: false,
+            launch_write_bundle_json: false,
+            keep_open: false,
+            checks: diag_suite::SuiteChecks::default(),
+        };
+
+        let suite_invocation = build_campaign_suite_invocation(
+            0,
+            CampaignItemKind::Suite,
+            "ui-gallery-smoke",
+            &root.join("suites"),
+            &ctx,
+        )
+        .unwrap();
+        assert_eq!(suite_invocation.kind, CampaignItemKind::Suite);
+        assert_eq!(suite_invocation.item_id, "ui-gallery-smoke");
+        assert_eq!(
+            suite_invocation.suite_ctx.rest,
+            vec!["ui-gallery-smoke".to_string()]
+        );
+        assert_eq!(
+            suite_invocation.suite_ctx.suite_script_inputs,
+            vec!["shared-input.json".to_string()]
+        );
+
+        let script_invocation = build_campaign_suite_invocation(
+            1,
+            CampaignItemKind::Script,
+            "tools/diag-scripts/demo.json",
+            &root.join("scripts"),
+            &ctx,
+        )
+        .unwrap();
+        assert_eq!(script_invocation.kind, CampaignItemKind::Script);
+        assert!(script_invocation.suite_ctx.rest.is_empty());
+        assert_eq!(
+            script_invocation.suite_ctx.suite_script_inputs,
+            vec!["tools/diag-scripts/demo.json".to_string()]
+        );
+        assert_eq!(
+            script_invocation.suite_ctx.launch_env,
+            vec![("BASE".to_string(), "1".to_string())]
+        );
     }
 
     #[test]

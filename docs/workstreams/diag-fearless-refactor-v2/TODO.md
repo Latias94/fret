@@ -34,6 +34,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] check planning/execution,
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
+    - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.

@@ -131,6 +131,9 @@ Recent progress since this note was drafted:
 - `diag_suite` also now routes suite input expansion, reuse-process env-default merging, and
   prewarm/prelude normalization through `ResolvedSuiteRunInputs`, turning a large inline block into
   a named seam that future `diag_campaign` work can reuse or mirror intentionally.
+- `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
+  shared invocation builder, so suite items and script items no longer maintain parallel handoff
+  structs inline.
 
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
@@ -165,7 +168,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 ## Recommended next implementation sequence
 
 1. write the canonical artifact/evidence contract update,
-2. continue with `diag_campaign` item expansion/context extraction or move to check planning/execution,
+2. continue from the new `diag_campaign` invocation builder into item expansion/context extraction or move to check planning/execution,
 3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 
