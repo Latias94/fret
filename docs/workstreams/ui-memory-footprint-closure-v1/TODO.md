@@ -199,7 +199,20 @@
   - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-apple-vm-metal-active-samebackend.md`.
   - Base artifacts: `target/diag/apple-vm-metal-active-samebackend-20260307-r1/`
   - Result: all four captures produce full bundles, but `metal-io-surface-access` and `metal-command-buffer-frame-assignment` still show `0` app-pid matches and remain dominated by WindowServer / GPU helpers. Visible surface/object-label volume stays in the same rough band between control and Fret, so this path still does not expose an obvious Fret-only compositor-surface explosion behind the active plateau.
-- [ ] Turn the same-backend active Apple path into a stronger attribution tool: either launch-mode `Game Memory` on the strong active rows, or add joins/parsers around `present-surface-id` / compositor stores / `Metal Resource Events`.
+- [x] Run the first launch-mode active `Game Memory` same-backend pilot (local 2026-03-07) on control continuous redraw plus Fret `rerender-only` full.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-apple-game-memory-active-samebackend-pilot.md`.
+  - Base artifacts: `target/diag/apple-game-memory-active-samebackend-20260307-r1/`
+  - Result: both traces are structurally complete, but launch-mode `Game Memory` still reports `metal-current-allocated-size = 0 rows`, `metal-resource-allocations = 0 rows`, and `metal-io-surface-access.pid_filter_match_count = 0` for the active app rows we care about. This path is therefore not yet better than the earlier startup-inclusive attach evidence.
+- [x] Turn the same-backend active Apple path into a stronger attribution tool: add a `Metal Resource Events` same-backend paired capture and summarize the app-visible active ledger before expanding the matrix further.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-apple-metal-resource-events-active-samebackend.md`.
+  - Base artifacts: `target/diag/apple-metal-resource-events-active-samebackend-20260307-r1/`
+  - Result: this is the first active Apple path on this machine that exposes stable app-owned `metal-current-allocated-size` / `metal-resource-allocations` / `metal-residency-set-resource-event` rows for both the same-backend control and Fret. Control lands near `~9–10 MiB` current allocated size, while all three Fret active full rows plateau at `42.45 MiB`, which closes about `+33 MiB` of live app-owned Metal delta but still leaves a substantial residual outside the app-visible ledger.
+- [x] Expand the `Metal Resource Events` active matrix around the floor rather than brute-forcing more noisy Apple templates.
+  - Added `present-only` full and `present-only` empty on the same path.
+  - Result: the full-scene live Metal plateau (`42.45 MiB`) already exists in pure `present-only`, while `present-only empty` still lands at `38.33 MiB`. So the active floor is already present before real rerender/layout, and visible hello-world content adds only about `4.12 MiB` at this layer.
+- [ ] Use the new `Metal Resource Events` evidence to attack the two remaining unknowns directly.
+  - Promote the current label-level lead into a real attribution pass: `metal-resource-allocations.labels_head` is already dominated by `"(wgpu internal) Staging  ( 128.00 KiB ,  Shared )"` even in `present-only`, so confirm that with label/backtrace clustering before changing runtime code.
+  - Keep chasing the residual `~60–75 MiB` outside `metal-current-allocated-size` with another Apple-side category path rather than adding more redundant mode rows.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.
   - Continuous control is a good stress case here: `target/diag/wgpu-control-pid-audit-continuous-20260306-r2/summary.json` still collapsed into a partial `Trace1.run`-only bundle, while the same config in `target/diag/wgpu-control-pid-audit-continuous-20260306-r3/summary.json` produced a full bundle.
