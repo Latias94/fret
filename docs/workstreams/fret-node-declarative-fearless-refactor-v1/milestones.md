@@ -446,6 +446,9 @@ real editors.
 - Keyboard context-menu navigation and typeahead now also have a named private seam,
   `canvas/widget/context_menu/key_navigation.rs`, so enabled-item stepping and typeahead fallback
   rules no longer stay embedded in `context_menu/input.rs`.
+- Group bring-to-front / send-to-back command reducers now also have a named private seam,
+  `canvas/widget/group_draw_order.rs`, so selected-group ordering and missing-group merge rules no
+  longer stay duplicated inside `command_open.rs`.
 
 ### Deliverables
 
@@ -481,6 +484,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert/insert.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`

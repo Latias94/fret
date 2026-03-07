@@ -48,19 +48,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
         self.update_view_state(cx.app, |s| {
-            let mut selected_in_order: Vec<crate::core::GroupId> = Vec::new();
-            for id in &s.group_draw_order {
-                if groups.contains(id) {
-                    selected_in_order.push(*id);
-                }
-            }
-            for id in &groups {
-                if !selected_in_order.contains(id) {
-                    selected_in_order.push(*id);
-                }
-            }
-            s.group_draw_order.retain(|id| !groups.contains(id));
-            s.group_draw_order.extend(selected_in_order);
+            group_draw_order::bring_selected_groups_to_front_in_view_state(s, &groups);
         });
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);
@@ -79,21 +67,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
         self.update_view_state(cx.app, |s| {
-            let mut selected_in_order: Vec<crate::core::GroupId> = Vec::new();
-            for id in &s.group_draw_order {
-                if groups.contains(id) {
-                    selected_in_order.push(*id);
-                }
-            }
-            for id in &groups {
-                if !selected_in_order.contains(id) {
-                    selected_in_order.push(*id);
-                }
-            }
-            s.group_draw_order.retain(|id| !groups.contains(id));
-            let mut next = selected_in_order;
-            next.extend_from_slice(&s.group_draw_order);
-            s.group_draw_order = next;
+            group_draw_order::send_selected_groups_to_back_in_view_state(s, &groups);
         });
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);

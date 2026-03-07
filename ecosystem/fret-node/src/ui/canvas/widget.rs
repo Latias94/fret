@@ -117,6 +117,7 @@ mod focus;
 mod focus_nav;
 mod graph_construction;
 mod group_drag;
+mod group_draw_order;
 mod group_resize;
 mod hit_test;
 use hit_test::{HitTestCtx, HitTestScratch};
