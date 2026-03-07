@@ -145,6 +145,27 @@ pub(crate) fn looks_like_diag_session_root(dir: &Path) -> bool {
         || dir.join("exit.touch").is_file()
 }
 
+pub(crate) fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<PathBuf> {
+    let mut cur = Some(start);
+    let mut first_found: Option<PathBuf> = None;
+    for _ in 0..10 {
+        let Some(dir) = cur else { break };
+        let direct = dir.join("script.result.json");
+        if direct.is_file() {
+            if first_found.is_none() {
+                first_found = Some(direct.clone());
+            }
+            if let Some(result) = try_read_script_result_v1(&direct)
+                && result.evidence.is_some()
+            {
+                return Some(direct);
+            }
+        }
+        cur = dir.parent();
+    }
+    first_found
+}
+
 pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(
     path: &Path,
 ) -> Result<PathBuf, String> {
@@ -169,6 +190,49 @@ pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(
 pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(path: &Path) -> PathBuf {
     resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(path)
         .unwrap_or_else(|_| path.to_path_buf())
+}
+
+pub(crate) fn resolve_script_result_json_path_or_latest(
+    src: Option<&Path>,
+    workspace_root: &Path,
+    out_dir: &Path,
+) -> Result<PathBuf, String> {
+    let Some(src) = src else {
+        let bundle_path =
+            super::args::resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
+        let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+        return find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+            format!(
+                "failed to locate script.result.json near latest bundle: {}",
+                bundle_path.display()
+            )
+        });
+    };
+
+    let start = if src.is_dir() {
+        let direct = src.join("script.result.json");
+        if direct.is_file() {
+            src.to_path_buf()
+        } else {
+            resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(src)
+        }
+    } else if src.is_file()
+        && src
+            .file_name()
+            .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
+    {
+        src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
+    } else {
+        src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
+    };
+
+    find_nearest_script_result_json_preferring_evidence(&start).ok_or_else(|| {
+        format!(
+            "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+            src.display()
+        )
+    })
 }
 
 pub(crate) fn resolve_bundle_input_or_latest(

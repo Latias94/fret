@@ -315,32 +315,6 @@ pub(crate) fn cmd_query(
     }
 }
 
-fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<PathBuf> {
-    let mut cur = Some(start);
-    let mut first_found: Option<PathBuf> = None;
-    for _ in 0..10 {
-        let Some(dir) = cur else { break };
-        let direct = dir.join("script.result.json");
-        if direct.is_file() {
-            if first_found.is_none() {
-                first_found = Some(direct.clone());
-            }
-            if let Some(result) = read_script_result_typed(&direct)
-                && result.evidence.is_some()
-            {
-                return Some(direct);
-            }
-        }
-        cur = dir.parent();
-    }
-    first_found
-}
-
-fn read_script_result_typed(path: &Path) -> Option<fret_diag_protocol::UiScriptResultV1> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes).ok()
-}
-
 fn read_bundle_artifact_json(path: &Path) -> Result<serde_json::Value, String> {
     let bytes = std::fs::read(path).map_err(|e| {
         format!(
@@ -866,75 +840,16 @@ fn cmd_query_overlay_placement_trace(
         ));
     }
 
-    let script_result_path = if let Some(src) = positionals.first() {
-        let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-        if src.is_dir() {
-            let direct = src.join("script.result.json");
-            if direct.is_file() {
-                find_nearest_script_result_json_preferring_evidence(&src).ok_or_else(|| {
-                    format!(
-                        "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                        src.display()
-                    )
-                })?
-            } else {
-                let resolved =
-                    resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(&src);
-                let start = if resolved.is_dir() {
-                    resolved.as_path()
-                } else {
-                    resolved.parent().unwrap_or_else(|| resolved.as_path())
-                };
-                find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                    format!(
-                        "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                        src.display()
-                    )
-                })?
-            }
-        } else if src.is_file()
-            && src
-                .file_name()
-                .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
-        {
-            let start = src.parent().unwrap_or_else(|| Path::new("."));
-            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                format!(
-                    "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                    src.display()
-                )
-            })?
-        } else {
-            let resolved =
-                resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(&src);
-            let start = if resolved.is_dir() {
-                resolved.as_path()
-            } else {
-                resolved.parent().unwrap_or_else(|| resolved.as_path())
-            };
-            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                format!(
-                    "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                    src.display()
-                )
-            })?
-        }
-    } else {
-        let bundle_path = resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
-        let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-        find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-            format!(
-                "failed to locate script.result.json near latest bundle: {}",
-                bundle_path.display()
-            )
-        })?
-    };
+    let src_path = positionals
+        .first()
+        .map(|src| crate::resolve_path(workspace_root, PathBuf::from(src)));
+    let script_result_path = resolve::resolve_script_result_json_path_or_latest(
+        src_path.as_deref(),
+        workspace_root,
+        out_dir,
+    )?;
 
-    let result = read_script_result_typed(&script_result_path).ok_or_else(|| {
+    let result = resolve::try_read_script_result_v1(&script_result_path).ok_or_else(|| {
         format!(
             "script.result.json is missing or invalid (expected UiScriptResultV1 JSON)\n  path: {}",
             script_result_path.display()

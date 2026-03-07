@@ -244,6 +244,8 @@ Recommended PR slices:
      - `diag stats` (single-bundle + diff)
      - `diag slice` (step-index early resolution path)
      - selected `diag query` subcommands that require a bundle artifact
+   - second landing: shared `script.result.json` resolution (preferring evidence-bearing parents) now lives in `crates/fret-diag/src/commands/resolve.rs` and is reused by:
+     - `diag query overlay-placement-trace`
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
