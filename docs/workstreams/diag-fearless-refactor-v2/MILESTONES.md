@@ -32,6 +32,16 @@ Deliverables:
 - A short list of next seam extractions with rationale and risk.
 - A phased implementation roadmap (`IMPLEMENTATION_ROADMAP.md`).
 
+Progress update:
+
+- `diag_suite` has now landed four consecutive seam slices around post-run check orchestration:
+  - core default check planning,
+  - editor/markdown/text default check planning,
+  - explicit-or-policy post-run trigger planning,
+  - retained-vlist script override planning.
+- The next remaining high-ROI seam in this area is suite summary/failure emit factoring rather than
+  more check-policy growth in `cmd_suite`.
+
 Exit criteria:
 
 - Follow-up implementation PRs can be scoped as small seam migrations, not broad rewrites.

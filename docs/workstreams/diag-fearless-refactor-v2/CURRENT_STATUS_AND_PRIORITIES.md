@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs`
+- `crates/fret-diag/src/diag_suite.rs` (next target inside this file is summary/failure emit factoring after the recent default-check and trigger extractions)
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/diag_run.rs`
 - `crates/fret-diag/src/commands/artifacts.rs`
@@ -140,6 +140,15 @@ Recent progress since this note was drafted:
 - `diag_suite` also now routes suite input expansion, reuse-process env-default merging, and
   prewarm/prelude normalization through `ResolvedSuiteRunInputs`, turning a large inline block into
   a named seam that future `diag_campaign` work can reuse or mirror intentionally.
+- `diag_suite` now also builds core default post-run checks through a dedicated helper, so viewport,
+  vlist, retained-host, view-cache, and gc-liveness defaults no longer sprawl across the main
+  command body.
+- `diag_suite` now also builds editor/markdown/text default post-run checks through dedicated
+  helper + merge seams, which keeps policy-heavy boolean gate assembly out of `cmd_suite` and makes
+  future text/IME audit work easier to land without reopening one orchestration blob.
+- `diag_suite` now also routes explicit-or-policy post-run trigger decisions through a named helper,
+  and retained-vlist script-specific overrides now flow through `SuiteScriptOverrideChecks`, so the
+  trigger predicate and post-run application share one per-script override vocabulary.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.

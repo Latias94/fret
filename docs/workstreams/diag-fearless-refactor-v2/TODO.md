@@ -32,6 +32,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] run planning/context,
   - [x] artifact resolution/materialization,
   - [ ] check planning/execution,
+    - first landing: `diag_suite` now extracts suite core default post-run checks into a dedicated helper, shrinking the main orchestration body around viewport/vlist/view-cache/retained defaults
+    - second landing: `diag_suite` now extracts editor/markdown/text default post-run checks plus merge wiring into dedicated helpers, keeping policy-heavy boolean gate assembly out of `cmd_suite`
+    - third landing: `diag_suite` now extracts the explicit-or-policy post-run trigger predicate into a dedicated helper, so trigger growth no longer expands inline beside bundle wait/doctor stages
+    - fourth landing: `diag_suite` now extracts retained-vlist script override filtering into `SuiteScriptOverrideChecks`, so trigger planning and post-run application share the same per-script override seam
+    - next focus: summary/failure emit helpers for suite success vs lint/failure result writing
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff
