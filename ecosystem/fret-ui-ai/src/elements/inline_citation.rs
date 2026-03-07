@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle, TextWrap,
-};
+use fret_core::{FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
@@ -34,22 +32,6 @@ fn hostname_for_url(url: &str) -> Option<&str> {
     (!host.is_empty()).then_some(host)
 }
 
-fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style.slant = TextSlant::Normal;
-    style
-}
-
-fn text_xs_style(theme: &Theme, weight: FontWeight, slant: TextSlant) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style.slant = slant;
-    style
-}
-
 fn inline_citation_source_body<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -59,7 +41,12 @@ fn inline_citation_source_body<H: UiHost>(
     let title_text = cx.text_props(TextProps {
         layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
         text: source.title.clone(),
-        style: Some(text_sm_style(theme, FontWeight::MEDIUM)),
+        style: Some(typography::preset_text_style_with_overrides(
+            theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::MEDIUM),
+            Some(TextSlant::Normal),
+        )),
         color: Some(theme.color_token("foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
@@ -83,7 +70,12 @@ fn inline_citation_source_body<H: UiHost>(
                     LayoutRefinement::default().w_full().min_w_0(),
                 ),
                 text: url.clone(),
-                style: Some(text_xs_style(theme, FontWeight::NORMAL, TextSlant::Normal)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                    Some(FontWeight::NORMAL),
+                    Some(TextSlant::Normal),
+                )),
                 color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::Grapheme,
                 overflow: TextOverflow::Ellipsis,
@@ -114,7 +106,12 @@ fn inline_citation_source_body<H: UiHost>(
         (Some(url), None) => Some(cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
             text: url,
-            style: Some(text_xs_style(theme, FontWeight::NORMAL, TextSlant::Normal)),
+            style: Some(typography::preset_text_style_with_overrides(
+                theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Normal),
+            )),
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Ellipsis,
@@ -125,8 +122,12 @@ fn inline_citation_source_body<H: UiHost>(
     };
 
     let quote = source.excerpt.clone().map(|excerpt| {
-        let mut style = text_sm_style(theme, FontWeight::NORMAL);
-        style.slant = TextSlant::Italic;
+        let style = typography::preset_text_style_with_overrides(
+            theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            Some(TextSlant::Italic),
+        );
 
         let quote_text = cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
@@ -552,7 +553,12 @@ impl InlineCitation {
                 let index_text = cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text: Arc::<str>::from(format!("{current}/{total}")),
-                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                    style: Some(typography::preset_text_style_with_overrides(
+                        &theme,
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                        Some(FontWeight::NORMAL),
+                        Some(TextSlant::Normal),
+                    )),
                     color: Some(
                         theme
                             .color_by_key("muted-foreground")
@@ -592,7 +598,12 @@ impl InlineCitation {
                 let index_text = cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text: Arc::<str>::from(format!("{current}/{total}")),
-                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
+                    style: Some(typography::preset_text_style_with_overrides(
+                        &theme,
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                        Some(FontWeight::NORMAL),
+                        Some(TextSlant::Normal),
+                    )),
                     color: Some(
                         theme
                             .color_by_key("muted-foreground")
@@ -788,5 +799,63 @@ mod tests {
         assert_eq!(quote.overflow, TextOverflow::Clip);
         assert_eq!(quote.layout.size.width, Length::Fill);
         assert_eq!(quote.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn inline_citation_source_body_uses_shared_typography_presets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title = "Alpha source";
+        let url = "https://example.com/source-1";
+        let excerpt = "Quoted excerpt";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "citation-style",
+            |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                inline_citation_source_body(
+                    cx,
+                    &theme,
+                    SourceItem::new("source-1", title).url(url).excerpt(excerpt),
+                    None,
+                )
+            },
+        );
+
+        let theme = Theme::global(&app).clone();
+        let title_text = find_text_by_content(&el, title).expect("inline citation title text");
+        let url_text = find_text_by_content(&el, url).expect("inline citation url text");
+        let quote_text = find_text_by_content(&el, excerpt).expect("inline citation quote text");
+
+        assert_eq!(
+            title_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                Some(TextSlant::Normal),
+            ))
+        );
+        assert_eq!(
+            url_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Normal),
+            ))
+        );
+        assert_eq!(
+            quote_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Italic),
+            ))
+        );
     }
 }

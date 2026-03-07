@@ -1,5 +1,5 @@
 use fret_core::{
-    Color, FontId, FontWeight, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle,
+    Color, FontId, FontWeight, Px, TextLineHeightPolicy, TextSlant, TextStrutStyle, TextStyle,
     TextStyleRefinement, TextVerticalPlacement,
 };
 use fret_ui::element::AnyElement;
@@ -221,6 +221,22 @@ pub fn text_area_control_text_style_scaled(
 /// commitment (see ADR 0066).
 pub fn control_text_style(theme: &impl ThemeTokenRead, size: UiTextSize) -> TextStyle {
     control_text_style_with_family(theme, size, UiTextFamily::Ui)
+}
+
+pub fn preset_text_style_with_overrides(
+    theme: &impl ThemeTokenRead,
+    preset: TypographyPreset,
+    weight: Option<FontWeight>,
+    slant: Option<TextSlant>,
+) -> TextStyle {
+    let mut style = preset.resolve(theme);
+    if let Some(weight) = weight {
+        style.weight = weight;
+    }
+    if let Some(slant) = slant {
+        style.slant = slant;
+    }
+    style
 }
 
 /// Returns a control-text style intended for UI components (stable line box).
@@ -657,6 +673,26 @@ mod tests {
         assert_eq!(
             refinement.vertical_placement,
             Some(TextVerticalPlacement::BoundsAsLineBox)
+        );
+    }
+
+    #[test]
+    fn preset_text_style_with_overrides_updates_weight_and_slant() {
+        let app = fret_app::App::default();
+        let theme = fret_ui::Theme::global(&app).clone();
+        let preset = TypographyPreset::control_ui(UiTextSize::Sm);
+        let mut expected = preset.resolve(&theme);
+        expected.weight = FontWeight::MEDIUM;
+        expected.slant = TextSlant::Italic;
+
+        assert_eq!(
+            preset_text_style_with_overrides(
+                &theme,
+                preset,
+                Some(FontWeight::MEDIUM),
+                Some(TextSlant::Italic),
+            ),
+            expected
         );
     }
 
