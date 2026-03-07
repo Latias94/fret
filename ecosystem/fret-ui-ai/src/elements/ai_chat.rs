@@ -40,7 +40,6 @@ impl Default for AiChatState {
 ///
 /// Effects (clipboard/file IO/network) remain app-owned; this component only emits intents via
 /// action hooks (`OnActivate`).
-#[derive(Clone)]
 pub struct AiChat {
     messages: Model<Arc<[AiMessage]>>,
     prompt: Model<String>,

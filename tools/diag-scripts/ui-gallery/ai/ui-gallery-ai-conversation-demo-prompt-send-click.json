@@ -1,17 +1,14 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI gallery: AI conversation demo scroll-to-bottom button behavior",
-    "tags": ["ui-gallery", "ai-elements", "conversation", "scroll"],
+    "name": "UI gallery: AI conversation demo prompt send click works when fully visible",
+    "tags": ["ui-gallery", "ai-elements", "conversation", "prompt-input"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
       "Navigates to the AI Elements Conversation demo page.",
-      "Preseeds a long transcript through a diag-only environment default to avoid prompt input flake.",
-      "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
-    ],
-    "env_defaults": {
-      "FRET_UI_GALLERY_AI_CONVERSATION_SEED_MESSAGES": "12"
-    }
+      "Scrolls the send button itself fully into view before clicking it.",
+      "Verifies clicking send appends one message to the conversation."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -46,7 +43,7 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
       "timeout_frames": 600
     },
     {
@@ -55,46 +52,53 @@
         "kind": "semantics_numeric_approx_eq",
         "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
         "field": "value",
-        "value": 12.0,
+        "value": 0.0,
         "eps": 0.01
       },
-      "timeout_frames": 600
+      "timeout_frames": 240
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" },
-      "delta_y": -120.0,
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" },
+      "delta_y": 220.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
-      "padding_px": 16.0,
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
-      "timeout_frames": 240
-    },
-
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" } },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" }, "delta_y": 720.0 },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" }, "delta_y": 720.0 },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+      "padding_px": 24.0,
       "timeout_frames": 600
     },
 
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
-    { "type": "wait_frames", "n": 6 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "Click send should append exactly one message.",
+      "clear_before_type": true
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" },
+      "delta_y": 120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
       "timeout_frames": 600
     },
 
-    { "type": "capture_bundle", "label": "ui-gallery-ai-conversation-demo-scroll-button" }
+    { "type": "capture_bundle", "label": "ui-gallery-ai-conversation-demo-prompt-send-click" }
   ]
 }

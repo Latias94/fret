@@ -2363,7 +2363,7 @@
       ],
       "target_hints": [
         "Navigates to the AI Elements Conversation demo page.",
-        "Sends a long message to ensure the transcript can scroll.",
+        "Preseeds a long transcript through a diag-only environment default to avoid prompt input flake.",
         "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
       ]
     },

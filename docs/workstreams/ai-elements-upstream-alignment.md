@@ -58,7 +58,7 @@ Legend:
 
 | Upstream file | Fret owner | Rust module | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Parts-first transcript + default shell (`AiChat`). UI Gallery pages: `ai_chat_demo`, `ai_transcript_torture`, `ai_conversation_demo`. |
+| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Compound `Conversation` + `ConversationContent` + overlay parts now mirror the official docs composition more closely, while `AiChat` remains the convenience shell. UI Gallery pages: `ai_chat_demo`, `ai_transcript_torture`, `ai_conversation_demo`. Gates: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-scroll-button.json`, `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-prompt-send-click.json`. |
 | `message.tsx` | `fret-ui-ai` | `message*.rs`, `message_response.rs` | Ported (prototype) | Split into message wrapper, toolbar/actions, and response rendering. UI Gallery pages: `ai_message_demo`, `ai_message_branch_demo`, `ai_chat_demo`. |
 | `prompt-input.tsx` | `fret-ui-ai` | `prompt_input.rs` | Ported (prototype) | Effects remain app-owned; interaction gated via diag. |
 | `tool.tsx` | `fret-ui-ai` | `tool.rs`, `tool_call_block.rs` | Ported (prototype) | Collapsible tool call blocks + status outcomes. |
@@ -71,7 +71,7 @@ Legend:
 | `attachments.tsx` | `fret-ui-ai` | `attachments.rs` | Ported (prototype) | Chips grid; add/remove intents are app-owned. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `chain_of_thought.rs` | Ported (prototype) | Step-list disclosure surface. |
 | `checkpoint.tsx` | `fret-ui-ai` | `checkpoint.rs` | Ported (prototype) | Basic alignment. |
-| `confirmation.tsx` | `fret-ui-ai` | `confirmation.rs` | Ported (prototype) | Approve/deny policy surface. |
+| `confirmation.tsx` | `fret-ui-ai` | `confirmation.rs` | Ported (prototype) | Approve/deny policy surface. Direct compound-children composition and UI Gallery docs page now mirror the official examples. |
 | `context.tsx` | `fret-ui-ai` | `context.rs` | Ported (prototype) | Context usage hovercard (percent + progress + compact counts). |
 | `plan.tsx` | `fret-ui-ai` | `plan.rs` | Ported (prototype) | Plan item list outcomes. |
 | `shimmer.tsx` | `fret-ui-ai` | `shimmer.rs` | Ported (prototype) | Animated shimmer text surface. |

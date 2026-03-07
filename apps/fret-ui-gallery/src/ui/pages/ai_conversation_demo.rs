@@ -11,7 +11,9 @@ pub(super) fn preview_ai_conversation_demo(
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
-        Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
+        Some(
+            "Docs-aligned AI Elements Conversation composition: root scroll container + content slot + overlay parts.",
+        ),
         vec![
             DocSection::new("Conversation", demo)
                 .test_id_prefix("ui-gallery-ai-conversation-demo")
