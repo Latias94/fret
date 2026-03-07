@@ -455,6 +455,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `focus_nav.rs` now routes edge / node / port traversal through the private
     `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
     node focus no longer stay embedded in the port-hint / activation file.
+  - Progress: `focus_nav.rs` now also routes focused-port validity refresh, canvas-center lookup,
+    and focused-port activation through the private `canvas/widget/focus_nav_ports.rs` seam, so
+    connect-preview simulation and click-connect activation no longer stay embedded in the thin
+    focus-nav router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

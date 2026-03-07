@@ -116,6 +116,7 @@ mod event_router;
 mod event_timer;
 mod focus;
 mod focus_nav;
+mod focus_nav_ports;
 mod focus_nav_traversal;
 mod graph_construction;
 mod group_drag;

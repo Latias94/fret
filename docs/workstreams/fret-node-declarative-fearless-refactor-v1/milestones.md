@@ -520,6 +520,10 @@ real editors.
 - `focus_nav.rs` now also routes edge / node / port traversal through the private
   `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
   node focus no longer stay embedded in the port-hint / activation file.
+- `focus_nav.rs` now also routes focused-port validity refresh, canvas-center lookup, and
+  focused-port activation through the private `canvas/widget/focus_nav_ports.rs` seam, so
+  connect-preview simulation and click-connect activation no longer stay embedded in the thin
+  focus-nav router.
 
 ### Deliverables
 
@@ -572,6 +576,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
