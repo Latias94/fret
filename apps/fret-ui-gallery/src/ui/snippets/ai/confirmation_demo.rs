@@ -7,10 +7,9 @@ use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_kit::{Items, LayoutRefinement, Space};
+use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -120,25 +119,24 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 .unwrap_or_else(|| theme.color_token("primary"));
             let destructive = theme.color_token("destructive");
 
+            let request = ui::h_row(|cx| {
+                vec![
+                    cx.text("This tool wants to delete the file"),
+                    shadcn::typography::inline_code(cx, "/tmp/example.txt"),
+                    cx.text(". Do you approve this action?"),
+                ]
+            })
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx);
+
             ui_ai::Confirmation::new(state_now)
                 .approval(approval)
                 .test_id("ui-ai-confirmation-root")
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .children([
                     ui_ai::ConfirmationTitle::new([
-                        ui_ai::ConfirmationRequest::new([
-                            cx.text(
-                                "This tool wants to execute a query on the production database:",
-                            ),
-                            ui::v_flex(|cx| {
-                                vec![decl_text::text_code_wrap(
-                                    cx,
-                                    "SELECT * FROM users WHERE role = 'admin'",
-                                )]
-                            })
-                            .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
+                        ui_ai::ConfirmationRequest::new([request]).into_element(cx),
                         ui_ai::ConfirmationAccepted::new([
                             decl_icon::icon_with(
                                 cx,
@@ -184,7 +182,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             confirmation,
         ]
     })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .layout(LayoutRefinement::default().w_full().min_w_0().max_w(fret_core::Px(672.0)))
     .gap(Space::N4)
     .into_element(cx)
 }
