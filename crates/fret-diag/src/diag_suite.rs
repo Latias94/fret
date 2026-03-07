@@ -434,6 +434,105 @@ fn build_suite_script_result_row(
     })
 }
 
+fn write_suite_tooling_failure_result(
+    script_result_path: &Path,
+    reason_code: &str,
+    reason: &str,
+    note: Option<String>,
+) {
+    write_tooling_failure_script_result(
+        script_result_path,
+        reason_code,
+        reason,
+        "tooling_error",
+        note,
+    );
+}
+
+fn record_suite_tooling_failure(
+    script_result_path: &Path,
+    rows: &mut Vec<serde_json::Value>,
+    script: Option<&str>,
+    reason_code: &'static str,
+    reason: &str,
+    note: Option<String>,
+) {
+    write_suite_tooling_failure_result(script_result_path, reason_code, reason, note);
+    rows.push(build_suite_tooling_error_row(
+        script,
+        reason_code,
+        Some(reason_code),
+        reason,
+    ));
+}
+
+fn record_suite_tooling_failure_and_return(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &mut Vec<serde_json::Value>,
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    script_result_path: &Path,
+    script: Option<&str>,
+    reason_code: &'static str,
+    reason: &str,
+    note: Option<String>,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+    message: &'static str,
+) -> String {
+    record_suite_tooling_failure(script_result_path, rows, script, reason_code, reason, note);
+    finalize_suite_failure_and_return(
+        child,
+        stop_demo,
+        resolved_exit_path,
+        poll_ms,
+        summary_ctx,
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        status,
+        error_reason_code,
+        failure_kind,
+        message,
+    )
+}
+
+fn record_suite_tooling_failure_and_emit(
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &mut Vec<serde_json::Value>,
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    script_result_path: &Path,
+    script: Option<&str>,
+    reason_code: &'static str,
+    reason: &str,
+    note: Option<String>,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+    message: &'static str,
+) -> String {
+    record_suite_tooling_failure(script_result_path, rows, script, reason_code, reason, note);
+    summary_ctx.emit(
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        status,
+        error_reason_code,
+        failure_kind,
+    );
+    message.to_string()
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -1999,29 +2098,22 @@ hint: list suites via `fretboard diag list suites`"
         ) {
             Ok(v) => Some(v),
             Err(err) => {
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.connect.failed",
-                    &err,
-                    "tooling_error",
-                    Some("connect_devtools_ws_tooling".to_string()),
-                );
-                suite_rows.push(build_suite_tooling_error_row(
-                    None,
-                    "tooling.connect.failed",
-                    Some("tooling.connect.failed"),
-                    &err,
-                ));
-                summary_ctx.emit(
+                return Err(record_suite_tooling_failure_and_emit(
+                    &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
+                    &resolved_script_result_path,
+                    None,
+                    "tooling.connect.failed",
+                    &err,
+                    Some("connect_devtools_ws_tooling".to_string()),
                     "error",
                     Some("tooling.connect.failed"),
                     None,
-                );
-                return Err("suite setup failed (see suite.summary.json)".to_string());
+                    "suite setup failed (see suite.summary.json)",
+                ));
             }
         }
     } else {
@@ -2046,29 +2138,22 @@ hint: list suites via `fretboard diag list suites`"
         ) {
             Ok(v) => v,
             Err(err) => {
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.launch.failed",
-                    &err,
-                    "tooling_error",
-                    Some("maybe_launch_demo".to_string()),
-                );
-                suite_rows.push(build_suite_tooling_error_row(
-                    None,
-                    "tooling.launch.failed",
-                    Some("tooling.launch.failed"),
-                    &err,
-                ));
-                summary_ctx.emit(
+                return Err(record_suite_tooling_failure_and_emit(
+                    &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
+                    &resolved_script_result_path,
+                    None,
+                    "tooling.launch.failed",
+                    &err,
+                    Some("maybe_launch_demo".to_string()),
                     "error",
                     Some("tooling.launch.failed"),
                     None,
-                );
-                return Err("suite setup failed (see suite.summary.json)".to_string());
+                    "suite setup failed (see suite.summary.json)",
+                ));
             }
         }
     } else {
@@ -2085,20 +2170,7 @@ hint: list suites via `fretboard diag list suites`"
         ) {
             Ok(v) => Some(v),
             Err(err) => {
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.connect.failed",
-                    &err,
-                    "tooling_error",
-                    Some("connect_filesystem_tooling".to_string()),
-                );
-                suite_rows.push(build_suite_tooling_error_row(
-                    None,
-                    "tooling.connect.failed",
-                    Some("tooling.connect.failed"),
-                    &err,
-                ));
-                return Err(finalize_suite_failure_and_return(
+                return Err(record_suite_tooling_failure_and_return(
                     &mut child,
                     !keep_open,
                     &resolved_exit_path,
@@ -2106,8 +2178,13 @@ hint: list suites via `fretboard diag list suites`"
                     &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
+                    &resolved_script_result_path,
+                    None,
+                    "tooling.connect.failed",
+                    &err,
+                    Some("connect_filesystem_tooling".to_string()),
                     "error",
                     Some("tooling.connect.failed"),
                     None,
@@ -2142,20 +2219,7 @@ hint: list suites via `fretboard diag list suites`"
             ) {
                 Ok(v) => v,
                 Err(err) => {
-                    write_tooling_failure_script_result(
-                        &resolved_script_result_path,
-                        "tooling.launch.failed",
-                        &err,
-                        "tooling_error",
-                        Some(script_key.clone()),
-                    );
-                    suite_rows.push(build_suite_tooling_error_row(
-                        Some(script_key.as_str()),
-                        "tooling.launch.failed",
-                        Some("tooling.launch.failed"),
-                        &err,
-                    ));
-                    return Err(finalize_suite_failure_and_return(
+                    return Err(record_suite_tooling_failure_and_return(
                         &mut child,
                         !keep_open,
                         &resolved_exit_path,
@@ -2163,8 +2227,13 @@ hint: list suites via `fretboard diag list suites`"
                         &summary_ctx,
                         &suite_stage_counts,
                         &suite_reason_code_counts,
-                        &suite_rows,
+                        &mut suite_rows,
                         &suite_evidence_agg,
+                        &resolved_script_result_path,
+                        Some(script_key.as_str()),
+                        "tooling.launch.failed",
+                        &err,
+                        Some(script_key.clone()),
                         "error",
                         Some("tooling.launch.failed"),
                         None,
@@ -2193,11 +2262,10 @@ hint: list suites via `fretboard diag list suites`"
                     poll_ms,
                 )
                 .inspect_err(|err| {
-                    write_tooling_failure_script_result(
+                    write_suite_tooling_failure_result(
                         &resolved_script_result_path,
                         "tooling.connect.failed",
                         err,
-                        "tooling_error",
                         Some(script_key.clone()),
                     );
                 })?;
