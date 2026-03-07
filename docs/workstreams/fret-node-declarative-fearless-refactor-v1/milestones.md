@@ -461,6 +461,9 @@ real editors.
 - Right-click group/edge target hit testing now also routes through the private
   `canvas/widget/context_menu/target_hit.rs` seam, so `right_click.rs` no longer owns the raw
   group-header/group-resize/edge hit-test traversal inline.
+- Command-open UI orchestration now also routes through the private
+  `canvas/widget/command_ui.rs` seam, so transient dismissal, invoked-at fallback, and common
+  paint invalidation no longer stay repeated across `command_open.rs` entrypoints.
 
 ### Deliverables
 
@@ -497,6 +500,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/item_builders.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

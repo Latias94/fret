@@ -94,6 +94,7 @@ mod command_move;
 mod command_open;
 mod command_router;
 mod command_selection;
+mod command_ui;
 mod command_view;
 mod commit;
 mod commit_legacy;

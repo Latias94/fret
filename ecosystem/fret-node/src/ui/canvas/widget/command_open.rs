@@ -1,3 +1,4 @@
+use super::command_ui::finish_command_paint;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -23,17 +24,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             })
             .unwrap_or_default();
         self.open_insert_node_picker(cx.app, at);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_create_group<H: UiHost>(&mut self, cx: &mut CommandCx<'_, H>) -> bool {
         let at = self.interaction.last_canvas_pos.unwrap_or_default();
         self.create_group_at(cx.app, cx.window, at);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_group_bring_to_front<H: UiHost>(
@@ -41,8 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        self.interaction.context_menu = None;
-        self.interaction.searcher = None;
+        self.dismiss_command_transients();
         let groups = snapshot.selected_groups.clone();
         if groups.is_empty() {
             return true;
@@ -50,9 +46,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.update_view_state(cx.app, |s| {
             group_draw_order::bring_selected_groups_to_front_in_view_state(s, &groups);
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_group_send_to_back<H: UiHost>(
@@ -60,8 +54,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        self.interaction.context_menu = None;
-        self.interaction.searcher = None;
+        self.dismiss_command_transients();
         let groups = snapshot.selected_groups.clone();
         if groups.is_empty() {
             return true;
@@ -69,9 +62,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.update_view_state(cx.app, |s| {
             group_draw_order::send_selected_groups_to_back_in_view_state(s, &groups);
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_group_rename<H: UiHost>(
@@ -79,8 +70,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        self.interaction.context_menu = None;
-        self.interaction.searcher = None;
+        self.dismiss_command_transients();
         let Some(overlays) = self.overlays.clone() else {
             self.show_toast(
                 cx.app,
@@ -93,19 +83,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let Some(group) = snapshot.selected_groups.last().copied() else {
             return true;
         };
-        let invoked_at = self
-            .interaction
-            .last_pos
-            .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+        let invoked_at = self.command_invoked_at();
         let _ = overlays.update(cx.app, |s, _cx| {
             s.group_rename = Some(GroupRenameOverlay {
                 group,
                 invoked_at_window: invoked_at,
             });
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_open_split_edge_insert_node<H: UiHost>(
@@ -117,14 +102,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
         let edge = snapshot.selected_edges[0];
-        let invoked_at = self
-            .interaction
-            .last_pos
-            .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+        let invoked_at = self.command_invoked_at();
         self.open_edge_insert_node_picker(cx.app, cx.window, edge, invoked_at);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_insert_reroute<H: UiHost>(
@@ -136,16 +116,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
         let edge_id = snapshot.selected_edges[0];
-        let invoked_at = self
-            .interaction
-            .last_pos
-            .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+        let invoked_at = self.command_invoked_at();
         let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
         self.execute_split_edge_reroute_outcome(cx.app, cx.window, Some("Insert Reroute"), outcome);
 
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 
     pub(super) fn cmd_open_conversion_picker<H: UiHost>(
@@ -166,7 +141,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let invoked_at = Point::new(Px(ctx0.at.x), Px(ctx0.at.y));
 
-        self.interaction.context_menu = None;
+        self.dismiss_command_context_menu();
         self.interaction.searcher = Some(build_searcher_state(
             self,
             invoked_at,
@@ -182,8 +157,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             SearcherRowsMode::Flat,
         ));
 
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        finish_command_paint(cx)
     }
 }

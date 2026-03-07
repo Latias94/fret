@@ -396,6 +396,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: right-click group/edge target hit testing now routes through the private
     `canvas/widget/context_menu/target_hit.rs` seam, so `right_click.rs` no longer owns the raw
     group-header/group-resize/edge hit-test traversal inline.
+  - Progress: command-open UI orchestration now routes through the private
+    `canvas/widget/command_ui.rs` seam, so transient dismissal, invoked-at fallback, and common
+    paint invalidation no longer stay repeated across `command_open.rs` entrypoints.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
