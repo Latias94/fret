@@ -359,6 +359,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     candidate preview/plan helpers, so edge-insert direct actions and insert-node drag preview/drop
     reuse one candidate-aware split planner and one rejection-toast fallback instead of re-deriving
     reroute positions and `plan_split_edge_candidate` branches in each entrypoint.
+  - Progress: connection picker activation now routes through the private
+    `canvas/widget/context_menu/connection_execution.rs` seam, so connection-insert and conversion
+    picker actions share planner/result helpers plus suspended-wire resume policy instead of keeping
+    large inline outcome enums and drag-resume wiring inside `context_menu/activate.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

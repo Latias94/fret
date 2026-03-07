@@ -51,72 +51,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
                 let mode = self.sync_view_state(cx.app).interaction.connection_mode;
-                enum Outcome {
-                    Apply(Vec<GraphOp>, Option<GraphNodeId>, Option<PortId>),
-                    Reject(DiagnosticSeverity, Arc<str>),
-                    Ignore,
-                }
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-                let (outcome, toast) = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            let insert_ops = Self::plan_insert_candidate_ops_with_graph(
-                                presenter, graph, &candidate, *at,
-                            );
-                            let insert_ops = match insert_ops {
-                                Ok(ops) => ops,
-                                Err(msg) => {
-                                    return (Outcome::Reject(DiagnosticSeverity::Info, msg), None);
-                                }
-                            };
-                            let planned = workflow::plan_wire_drop_insert(
-                                presenter, graph, *from, mode, insert_ops,
-                            );
-                            let toast = planned.toast.clone();
-                            (
-                                Outcome::Apply(
-                                    planned.ops,
-                                    planned.created_node,
-                                    planned.continue_from,
-                                ),
-                                toast,
-                            )
-                        })
-                        .ok()
-                        .unwrap_or((Outcome::Ignore, None))
-                };
-                match outcome {
-                    Outcome::Apply(ops, created_node, continue_from) => {
-                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
-                        if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                            self.select_inserted_node(cx.app, created_node);
-                            if let Some((sev, msg)) = toast {
-                                self.show_toast(cx.app, cx.window, sev, msg);
-                            }
-                            if let Some(port) = continue_from {
-                                self.interaction.suspended_wire_drag = None;
-                                self.start_sticky_wire_drag_from_port(cx, port, resume_pos);
-                            } else {
-                                self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                            }
-                        } else {
-                            self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                        }
-                    }
-                    Outcome::Reject(sev, msg) => {
-                        self.show_toast(cx.app, cx.window, sev, msg);
-                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
-                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                    }
-                    Outcome::Ignore => {
-                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
-                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                    }
-                }
+                let plan = self
+                    .plan_connection_insert_menu_candidate(cx.app, *from, *at, mode, &candidate);
+                self.apply_connection_insert_menu_plan(cx, *from, invoked_at, plan);
             }
             (
                 ContextMenuTarget::Edge(edge_id),
@@ -174,64 +115,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 ContextMenuTarget::ConnectionConvertPicker { from, to, at },
                 NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
-                enum Outcome {
-                    Apply(Vec<GraphOp>),
-                    Reject(DiagnosticSeverity, Arc<str>),
-                    Ignore,
-                }
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-                let zoom = self.cached_zoom;
-                let style = self.style.clone();
-                let outcome = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            let template = match &candidate.template {
-                                Some(t) => t,
-                                None => {
-                                    return Outcome::Reject(
-                                        DiagnosticSeverity::Error,
-                                        Arc::<str>::from(
-                                            "conversion candidate is missing template",
-                                        ),
-                                    );
-                                }
-                            };
-                            let plan = conversion::plan_insert_conversion(
-                                presenter, graph, &style, zoom, *from, *to, *at, template,
-                            );
-                            match plan.decision {
-                                ConnectDecision::Accept => Outcome::Apply(plan.ops),
-                                ConnectDecision::Reject => {
-                                    Self::toast_from_diagnostics(&plan.diagnostics)
-                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                        .unwrap_or(Outcome::Ignore)
-                                }
-                            }
-                        })
-                        .ok()
-                        .unwrap_or(Outcome::Ignore)
-                };
-                match outcome {
-                    Outcome::Apply(ops) => {
-                        let node_id = Self::first_added_node_id(&ops);
-                        self.apply_ops(cx.app, cx.window, ops);
-                        self.interaction.suspended_wire_drag = None;
-                        self.select_inserted_node(cx.app, node_id);
-                    }
-                    Outcome::Reject(sev, msg) => {
-                        self.show_toast(cx.app, cx.window, sev, msg);
-                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
-                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                    }
-                    Outcome::Ignore => {
-                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
-                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
-                    }
-                }
+                let plan = self
+                    .plan_connection_conversion_menu_candidate(cx.app, *from, *to, *at, &candidate);
+                self.apply_connection_conversion_menu_plan(cx, *from, invoked_at, plan);
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::Custom(action_id)) => {
                 let ops = {

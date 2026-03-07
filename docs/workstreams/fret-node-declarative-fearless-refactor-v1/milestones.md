@@ -424,6 +424,10 @@ real editors.
   `canvas/widget/insert_execution.rs`, so edge-insert direct actions plus insert-node drag preview
   and drop flows reuse one candidate-aware split planner and one rejection-toast fallback instead of
   re-deriving reroute positions and `plan_split_edge_candidate` branches per entrypoint.
+- Connection picker activation now also has a named private seam,
+  `canvas/widget/context_menu/connection_execution.rs`, so connection-insert and conversion picker
+  actions share planner/result helpers plus suspended-wire resume policy instead of keeping large
+  inline outcome enums and drag-resume wiring embedded in `context_menu/activate.rs`.
 
 ### Deliverables
 
@@ -453,6 +457,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_candidates.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/split_edge_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`
