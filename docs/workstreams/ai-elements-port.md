@@ -192,6 +192,7 @@ effects/policy app-owned and to fit Fret’s action-hook model. If upstream beha
 this section as part of the “Version stamp” bump.
 
 - `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
+- `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus` (`commit.tsx`): Fret now exposes `children(...)` hooks for the three upstream custom-content slots, so the UI Gallery page can mirror the official docs composition model.
 - `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
 - `StackTrace` compound parts are composed via closure-based `into_element_with_children(...)` instead of eager child collection so inherited provider state is established before parts resolve context.
 - `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.

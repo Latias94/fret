@@ -43,6 +43,29 @@ fn muted_fg(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
+fn inline_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut iter = children.into_iter();
+    match (iter.next(), iter.next()) {
+        (None, _) => cx.text(""),
+        (Some(first), None) => first,
+        (Some(first), Some(second)) => {
+            let mut row_children = Vec::with_capacity(2 + iter.len());
+            row_children.push(first);
+            row_children.push(second);
+            row_children.extend(iter);
+
+            ui::h_row(move |_cx| row_children)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default())
+                .into_element(cx)
+        }
+    }
+}
+
 fn status_color(theme: &Theme, status: CommitFileStatusKind) -> Color {
     let key = match status {
         CommitFileStatusKind::Added => "color.commit.file.added",
@@ -434,25 +457,39 @@ impl CommitMetadata {
 }
 
 /// Separator token aligned with AI Elements `CommitSeparator`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitSeparator {
     text: Arc<str>,
+    children: Vec<AnyElement>,
 }
 
 impl Default for CommitSeparator {
     fn default() -> Self {
         Self {
             text: Arc::<str>::from("•"),
+            children: Vec::new(),
         }
     }
 }
 
 impl CommitSeparator {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
+        }
+
         let theme = Theme::global(&*cx.app).clone();
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
@@ -541,17 +578,30 @@ impl CommitAuthorAvatar {
 }
 
 /// Relative timestamp aligned with AI Elements `CommitTimestamp`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitTimestamp {
     date: SystemTime,
+    children: Vec<AnyElement>,
 }
 
 impl CommitTimestamp {
     pub fn new(date: SystemTime) -> Self {
-        Self { date }
+        Self {
+            date,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
+        }
+
         let theme = Theme::global(&*cx.app).clone();
         let text = relative_days_label(self.date);
         cx.text_props(TextProps {
@@ -970,17 +1020,30 @@ pub enum CommitFileStatusKind {
 }
 
 /// Status label aligned with AI Elements `CommitFileStatus`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFileStatus {
     status: CommitFileStatusKind,
+    children: Vec<AnyElement>,
 }
 
 impl CommitFileStatus {
     pub fn new(status: CommitFileStatusKind) -> Self {
-        Self { status }
+        Self {
+            status,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        if !self.children.is_empty() {
+            return inline_children(cx, self.children);
+        }
+
         let theme = Theme::global(&*cx.app).clone();
 
         let label: Arc<str> = match self.status {
