@@ -299,6 +299,7 @@ ID format:
     - `apps/fret-cookbook/examples/router_basics.rs`
     - `apps/fret-cookbook/examples/undo_basics.rs`
     - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fret-cookbook/examples/virtual_list_basics.rs`
 
 ---
 
