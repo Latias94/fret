@@ -39,9 +39,9 @@ Each TODO is labeled:
   - Evidence: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs`
   - Evidence: `ecosystem/fret-ui-ai/src/elements/conversation.rs`
   - Gate: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs` (`ai_chat_reuses_conversation_without_nested_scroll_area`)
-- [~] AIEL-MVP0-audit-014 Run the next passive-text cleanup batch for `fret-ui-ai` (`task`, `persona`, voice-family surfaces).
-  - Done in the first slices: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, now use the shared preset helper.
-  - Remaining goal: replace local `text_*` helpers with shared typography helpers and remove duplicated style code across the voice-family surfaces.
+- [x] AIEL-MVP0-audit-014 Run the next passive-text cleanup batch for `fret-ui-ai` (`task`, `persona`, voice-family surfaces).
+  - Done in slices: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, then `audio_player` + `mic_selector` + `voice_selector` + `transcription`; the tracked family batch now uses the shared preset helper.
+  - Follow-up note: remaining AI-side text-infra work is down to isolated outliers such as `chain_of_thought`, not another family-wide migration pass.
 
 - [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
 - [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.

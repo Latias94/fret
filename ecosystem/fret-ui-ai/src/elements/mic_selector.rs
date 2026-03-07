@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextAlign, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, Px, TextAlign, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -95,18 +95,6 @@ fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
             });
             model
         })
-}
-
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        font: FontId::default(),
-        size: theme.metric_required("component.text.sm_px"),
-        weight,
-        slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
-        letter_spacing_em: None,
-        ..Default::default()
-    })
 }
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -582,7 +570,12 @@ impl MicSelectorValue {
                 cx.text_props(TextProps {
                     layout: Default::default(),
                     text: id,
-                    style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                    style: Some(typography::preset_text_style_with_overrides(
+                        &theme,
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                        Some(FontWeight::NORMAL),
+                        None,
+                    )),
                     color: None,
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Ellipsis,
@@ -594,7 +587,12 @@ impl MicSelectorValue {
             cx.text_props(TextProps {
                 layout: Default::default(),
                 text: self.placeholder.clone(),
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(muted_fg(&theme)),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
@@ -638,7 +636,12 @@ impl MicSelectorLabel {
             let name_el = cx.text_props(TextProps {
                 layout: Default::default(),
                 text: Arc::from(name),
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: None,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
@@ -649,7 +652,12 @@ impl MicSelectorLabel {
             let id_el = cx.text_props(TextProps {
                 layout: Default::default(),
                 text: Arc::from(format!(" ({device_id})")),
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(muted_fg(&theme)),
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
@@ -668,7 +676,12 @@ impl MicSelectorLabel {
         cx.text_props(TextProps {
             layout: Default::default(),
             text: self.device.label,
-            style: Some(text_sm(&theme, FontWeight::NORMAL)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: None,
             wrap: TextWrap::None,
             overflow: fret_core::TextOverflow::Ellipsis,
@@ -996,7 +1009,28 @@ impl MicSelectorList {
 
 #[cfg(test)]
 mod tests {
-    use super::split_device_label;
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, needle)),
+        }
+    }
 
     #[test]
     fn split_device_label_parses_trailing_hex_id() {
@@ -1011,5 +1045,53 @@ mod tests {
         assert_eq!(split_device_label("Loopback"), None);
         assert_eq!(split_device_label("Mic (123:abcd)"), None);
         assert_eq!(split_device_label("Mic (1234:abcg)"), None);
+    }
+
+    #[test]
+    fn mic_selector_surfaces_use_shared_sm_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let device = MicSelectorDevice::new("usb-mic", "Podcast Mic (1234:abcd)");
+        let controller = MicSelectorController {
+            devices: std::sync::Arc::from([device.clone()]),
+            value: app.models_mut().insert(None),
+            open: app.models_mut().insert(false),
+            query: app.models_mut().insert(String::new()),
+            on_value_change: None,
+        };
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.with_state(MicSelectorProviderState::default, |st| {
+                    st.controller = Some(controller.clone());
+                    st.anchor_width = Some(Px(240.0));
+                });
+                ui::v_stack(|cx| {
+                    vec![
+                        MicSelectorValue::new()
+                            .placeholder("Pick a mic")
+                            .into_element(cx),
+                        MicSelectorLabel::new(device.clone()).into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let expected = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+
+        let placeholder = find_text_by_content(&element, "Pick a mic").expect("placeholder text");
+        assert_eq!(placeholder.style, expected.clone());
+
+        let name = find_text_by_content(&element, "Podcast Mic").expect("device name text");
+        assert_eq!(name.style, expected.clone());
+
+        let device_id = find_text_by_content(&element, " (1234:abcd)").expect("device id text");
+        assert_eq!(device_id.style, expected);
     }
 }

@@ -136,8 +136,8 @@ Audit snapshot after the current in-tree pass:
 - [~] TSC-cleanup-042 Stop introducing new passive-text components that manually rebuild the same description/body text style contract.
   - Guardrail now lives in `ecosystem/fret-ui-kit/src/typography.rs`; broader adoption still depends on migrating more passive-text surfaces.
   - `fret-ui-ai` surfaces already migrated / guarded enough to treat as reference examples: `confirmation`, `conversation_empty_state`, `artifact`, `queue`, `schema_display`, `terminal`, `package_info`, `environment_variables`, `plan`, `reasoning`, `chain_of_thought`.
-  - Follow-up slices now done: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, all moved to the shared preset helper.
-  - Remaining `fret-ui-ai` cleanup batch (still local-helper heavy): `audio_player`, `mic_selector`, `voice_selector`, `transcription`.
+  - Follow-up slices now done: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, then `audio_player` + `mic_selector` + `voice_selector` + `transcription`, all moved to the shared preset helper.
+  - `fret-ui-ai` no longer has a family-wide local-helper migration batch; the remaining AI-side outlier is `chain_of_thought`, alongside intentional authoring seams such as `TranscriptionSegment::text_style(...)`.
 - [ ] TSC-cleanup-043 Remove temporary compatibility shims once migrated surfaces are covered by tests.
 
 ## G. Docs / alignment

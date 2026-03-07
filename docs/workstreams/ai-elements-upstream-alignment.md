@@ -169,7 +169,7 @@ The upstream docs inventory is now fully represented in `fret-ui-ai` and in the 
 | `Confirmation` | Docs-aligned compound examples exist in `confirmation_demo.rs`, `confirmation_request.rs`, `confirmation_accepted.rs`, and `confirmation_rejected.rs`. | Migrated to inherited description typography and covered by regression tests. | No immediate migration work beyond routine token cleanup. |
 | `SourcesBlock` / `InlineCitation` | Upstream docs page and Gallery demos exist (`sources_demo.rs`, `inline_citation_demo.rs`). | Leaf typography now uses the shared preset helper (`typography::preset_text_style_with_overrides`), but source-link / anchor behavior items are still open. | Finish source open-url / stable anchor contracts and keep the component-specific text helper cleanup moving into the remaining AI families. |
 | `Agent` / `Sandbox` | Docs pages and Gallery demos exist (`agent_demo.rs`, `sandbox_demo.rs`). | Core labels now use the shared preset helper; no remaining local text helper wrappers in these two surfaces. | Keep parity work focused on behavior/tokens and use them as the next reference examples in the passive-text cleanup sweep. |
-| Voice surfaces (`AudioPlayer`, `MicSelector`, `VoiceSelector`, `Transcription`) | Docs pages and Gallery demos exist. | Still use local `text_sm` / `text_xs` helpers; this is the largest remaining AI-family text-style migration cluster. | Batch-migrate to shared typography helpers, then close the remaining token cleanup TODOs for voice UI. |
+| Voice surfaces (`AudioPlayer`, `MicSelector`, `VoiceSelector`, `Transcription`) | Docs pages and Gallery demos exist. | Core labels / metadata now use the shared preset helper; no remaining local text helper wrappers in this tracked voice-family batch. | Keep closure work focused on token polish and preview/selection behavior seams, not on another family-wide text-helper rewrite. |
 | `Task` / `Persona` | Docs pages and Gallery demos exist (`task_demo.rs`, `persona_demo.rs` plus persona variants). | Core label/file typography now uses the shared preset helper; no remaining local text helper wrappers in these two surfaces. | Keep parity work focused on children/default-copy and token polish; treat them as the next docs-aligned slot/compound reference examples. |
 | `Artifact`, `Queue`, `Reasoning`, `Plan`, `EnvironmentVariables`, `PackageInfo`, `SchemaDisplay`, `Terminal`, `ConversationEmptyState`, `ChainOfThought` | Docs pages and Gallery demos exist. | Already migrated or guarded by inherited-typography regression tests / shared helper usage. | Keep parity polish focused on behavior/tokens, not on text-style infrastructure rewrites. |
 
@@ -177,8 +177,8 @@ The upstream docs inventory is now fully represented in `fret-ui-ai` and in the 
 
 - The repo already has an alignment-document trail: `ai-elements-upstream-alignment`,
   `ai-elements-port-todo`, `ai-elements-port-milestones`, and the text-style cascade workstream.
-- The next efficient migration batch is **not** another container/overlay refactor. It is now the
-  remaining **local text-helper cleanup batch** in the voice-family surfaces.
+- The tracked AI-family local text-helper cleanup batch is now complete. The remaining closure work
+  shifts back to behavior/token polish plus isolated outliers such as `chain_of_thought`.
 - `Conversation` and `Confirmation` should now be treated as reference examples for the desired
   direction: compound children APIs + inherited typography + focused regression gates.
 
