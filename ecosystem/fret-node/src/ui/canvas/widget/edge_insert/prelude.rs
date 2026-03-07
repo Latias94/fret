@@ -12,7 +12,6 @@ pub(super) use crate::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
 };
 
-pub(super) use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRowKind};
-pub(super) use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
+pub(super) use crate::ui::canvas::state::ContextMenuTarget;
 
 pub(super) use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};

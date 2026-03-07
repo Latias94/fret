@@ -404,6 +404,10 @@ real editors.
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
   the owning overlay widgets.
+- Canvas menu/searcher session policy now also has a named private seam,
+  `canvas/widget/menu_session.rs`, and `SearcherState` now records explicit `SearcherRowsMode`
+  policy so flat-vs-catalog presentation is no longer inferred indirectly from
+  `ContextMenuTarget` variants when opening or rebuilding overlay state.
 
 ### Deliverables
 
@@ -428,6 +432,8 @@ real editors.
 
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/screen_space_placement.rs`
+- `ecosystem/fret-node/src/ui/canvas/state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`

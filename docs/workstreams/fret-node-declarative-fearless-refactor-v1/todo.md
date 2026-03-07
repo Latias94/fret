@@ -339,6 +339,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/screen_space_placement.rs` seam, so toolbars, panel placement, blackboard, rename,
     controls, and minimap all reuse the same clamp / anchor math instead of keeping subtly
     duplicated per-widget geometry branches.
+  - Progress: canvas menu/searcher host-state construction now routes through the private
+    `canvas/widget/menu_session.rs` seam, and `SearcherState` now carries explicit
+    `SearcherRowsMode` policy instead of inferring flat-vs-catalog row building from
+    `ContextMenuTarget` branches.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

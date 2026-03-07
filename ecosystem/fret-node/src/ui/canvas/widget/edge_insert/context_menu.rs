@@ -37,16 +37,13 @@ pub(in super::super) fn open_edge_insert_context_menu<H: UiHost, M: NodeGraphCan
     }
 
     let snapshot = canvas.sync_view_state(cx.app);
-    let origin = canvas.clamp_context_menu_origin(invoked_at, items.len(), cx.bounds, &snapshot);
-    let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-    canvas.interaction.context_menu = Some(ContextMenuState {
-        origin,
+    canvas.interaction.context_menu = Some(super::super::build_context_menu_state(
+        canvas,
         invoked_at,
-        target: ContextMenuTarget::EdgeInsertNodePicker(edge),
+        cx.bounds,
+        &snapshot,
+        ContextMenuTarget::EdgeInsertNodePicker(edge),
         items,
-        candidates: menu_candidates,
-        hovered_item: None,
-        active_item,
-        typeahead: String::new(),
-    });
+        menu_candidates,
+    ));
 }

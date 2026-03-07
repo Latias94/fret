@@ -22,18 +22,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     pub(super) fn rebuild_searcher_rows(searcher: &mut SearcherState) {
-        let rows = match &searcher.target {
-            ContextMenuTarget::ConnectionConvertPicker { .. } => {
-                crate::ui::canvas::searcher::build_rows_flat(&searcher.candidates, &searcher.query)
-            }
-            _ => crate::ui::canvas::searcher::build_rows(
-                &searcher.candidates,
-                &searcher.query,
-                &searcher.recent_kinds,
-            ),
-        };
-
-        searcher.rows = rows;
+        searcher.rows = build_searcher_rows(
+            &searcher.candidates,
+            &searcher.query,
+            &searcher.recent_kinds,
+            searcher.rows_mode,
+        );
         searcher.scroll = searcher.scroll.min(
             searcher
                 .rows
@@ -124,32 +118,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let rows = crate::ui::canvas::searcher::build_rows(
-            &menu_candidates,
-            "",
-            &self.interaction.recent_kinds,
-        );
-        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
-        let origin =
-            self.clamp_searcher_origin(Point::new(Px(at.x), Px(at.y)), visible, bounds, &snapshot);
-        let active_row = rows
-            .iter()
-            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
-            .unwrap_or(0);
+        let invoked_at = Point::new(Px(at.x), Px(at.y));
 
         self.interaction.context_menu = None;
-        self.interaction.searcher = Some(SearcherState {
-            origin,
-            invoked_at: Point::new(Px(at.x), Px(at.y)),
-            target: ContextMenuTarget::BackgroundInsertNodePicker { at },
-            query: String::new(),
-            candidates: menu_candidates,
-            recent_kinds: self.interaction.recent_kinds.clone(),
-            rows,
-            hovered_row: None,
-            active_row,
-            scroll: 0,
-        });
+        self.interaction.searcher = Some(build_searcher_state(
+            self,
+            invoked_at,
+            bounds,
+            &snapshot,
+            ContextMenuTarget::BackgroundInsertNodePicker { at },
+            menu_candidates,
+            self.interaction.recent_kinds.clone(),
+            SearcherRowsMode::Catalog,
+        ));
     }
 
     pub(super) fn open_connection_insert_node_picker<H: UiHost>(
@@ -180,32 +161,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let rows = crate::ui::canvas::searcher::build_rows(
-            &menu_candidates,
-            "",
-            &self.interaction.recent_kinds,
-        );
-        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
-        let origin =
-            self.clamp_searcher_origin(Point::new(Px(at.x), Px(at.y)), visible, bounds, &snapshot);
-        let active_row = rows
-            .iter()
-            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
-            .unwrap_or(0);
+        let invoked_at = Point::new(Px(at.x), Px(at.y));
 
         self.interaction.context_menu = None;
-        self.interaction.searcher = Some(SearcherState {
-            origin,
-            invoked_at: Point::new(Px(at.x), Px(at.y)),
-            target: ContextMenuTarget::ConnectionInsertNodePicker { from, at },
-            query: String::new(),
-            candidates: menu_candidates,
-            recent_kinds: self.interaction.recent_kinds.clone(),
-            rows,
-            hovered_row: None,
-            active_row,
-            scroll: 0,
-        });
+        self.interaction.searcher = Some(build_searcher_state(
+            self,
+            invoked_at,
+            bounds,
+            &snapshot,
+            ContextMenuTarget::ConnectionInsertNodePicker { from, at },
+            menu_candidates,
+            self.interaction.recent_kinds.clone(),
+            SearcherRowsMode::Catalog,
+        ));
     }
 
     pub(super) fn open_edge_insert_node_picker<H: UiHost>(

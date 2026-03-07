@@ -12,7 +12,9 @@ use super::prelude::NodeGraphCanvas;
 use super::prelude::overlay_hit;
 use super::{TestUiHostImpl, insert_graph_view};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
-use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
+use crate::ui::canvas::state::{
+    ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -149,6 +151,7 @@ fn hit_searcher_row_respects_scroll_and_header_region() {
             from: PortId::new(),
             at: crate::core::CanvasPoint::default(),
         },
+        rows_mode: SearcherRowsMode::Catalog,
         query: String::new(),
         candidates: vec![InsertNodeCandidate {
             kind: NodeKindKey::new("test.kind"),
@@ -203,6 +206,77 @@ fn hit_searcher_row_respects_scroll_and_header_region() {
     assert_eq!(
         overlay_hit::hit_searcher_row(&style, &searcher, below, zoom),
         None
+    );
+}
+
+#[test]
+fn build_searcher_rows_respects_explicit_rows_mode() {
+    let candidates = vec![
+        InsertNodeCandidate {
+            kind: NodeKindKey::new("math.add"),
+            label: Arc::<str>::from("Math/Add"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        },
+        InsertNodeCandidate {
+            kind: NodeKindKey::new("math.mul"),
+            label: Arc::<str>::from("Math/Mul"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        },
+    ];
+    let recent_kinds = vec![NodeKindKey::new("math.add")];
+
+    let catalog_rows = super::super::menu_session::build_searcher_rows(
+        &candidates,
+        "",
+        &recent_kinds,
+        SearcherRowsMode::Catalog,
+    );
+    let flat_rows = super::super::menu_session::build_searcher_rows(
+        &candidates,
+        "",
+        &recent_kinds,
+        SearcherRowsMode::Flat,
+    );
+
+    assert!(matches!(
+        catalog_rows.first().map(|row| &row.kind),
+        Some(SearcherRowKind::Header)
+    ));
+    assert!(
+        flat_rows
+            .iter()
+            .all(|row| matches!(row.kind, SearcherRowKind::Candidate { .. }))
+    );
+    assert_eq!(flat_rows.len(), candidates.len());
+}
+
+#[test]
+fn first_enabled_context_menu_item_skips_disabled_entries() {
+    let items = vec![
+        NodeGraphContextMenuItem {
+            label: Arc::<str>::from("A"),
+            enabled: false,
+            action: NodeGraphContextMenuAction::Custom(1),
+        },
+        NodeGraphContextMenuItem {
+            label: Arc::<str>::from("B"),
+            enabled: false,
+            action: NodeGraphContextMenuAction::Custom(2),
+        },
+        NodeGraphContextMenuItem {
+            label: Arc::<str>::from("C"),
+            enabled: true,
+            action: NodeGraphContextMenuAction::Custom(3),
+        },
+    ];
+
+    assert_eq!(
+        super::super::menu_session::first_enabled_context_menu_item(&items),
+        2
     );
 }
 

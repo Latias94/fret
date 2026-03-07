@@ -125,6 +125,7 @@ mod insert_node_drag;
 mod interaction_policy;
 mod left_click;
 mod marquee;
+mod menu_session;
 mod move_ops;
 mod node_drag;
 mod node_layout;
@@ -169,6 +170,7 @@ mod wire_drag_helpers;
 mod wire_math;
 
 use edge_path_ctx::EdgePathContext;
+use menu_session::{build_context_menu_state, build_searcher_rows, build_searcher_state};
 use overlay_hit::{
     context_menu_rect_at, context_menu_size_at_zoom, hit_context_menu_item, hit_searcher_row,
     searcher_rect_at, searcher_size_at_zoom, searcher_visible_rows,
@@ -195,8 +197,8 @@ use super::spatial::CanvasSpatialDerived;
 use super::state::{
     ContextMenuState, ContextMenuTarget, DerivedBaseKey, DragPreviewCache, DragPreviewKind,
     GeometryCache, GeometryCacheKey, InteractionState, InternalsCacheKey, InternalsViewKey,
-    MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste, SearcherState,
-    SpatialIndexCacheKey, ToastState, ViewSnapshot, WireDrag, WireDragKind,
+    MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste, SearcherRowsMode,
+    SearcherState, SpatialIndexCacheKey, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 

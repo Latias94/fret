@@ -12,8 +12,11 @@ use crate::ui::commands::{
 };
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, ViewSnapshot};
+use super::{
+    HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    build_context_menu_state,
+};
+use crate::ui::canvas::state::{ContextMenuTarget, ViewSnapshot};
 
 pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -91,18 +94,15 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
             },
         ];
 
-        let origin = canvas.clamp_context_menu_origin(position, items.len(), cx.bounds, snapshot);
-        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-        canvas.interaction.context_menu = Some(ContextMenuState {
-            origin,
-            invoked_at: position,
-            target: ContextMenuTarget::Group(group_id),
+        canvas.interaction.context_menu = Some(build_context_menu_state(
+            canvas,
+            position,
+            cx.bounds,
+            snapshot,
+            ContextMenuTarget::Group(group_id),
             items,
-            candidates: Vec::new(),
-            hovered_item: None,
-            active_item,
-            typeahead: String::new(),
-        });
+            Vec::new(),
+        ));
         canvas.interaction.hover_edge = None;
         cx.request_focus(cx.node);
 
@@ -178,18 +178,15 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
             },
         ];
 
-        let origin = canvas.clamp_context_menu_origin(position, items.len(), cx.bounds, snapshot);
-        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-        canvas.interaction.context_menu = Some(ContextMenuState {
-            origin,
-            invoked_at: position,
-            target: ContextMenuTarget::Background,
+        canvas.interaction.context_menu = Some(build_context_menu_state(
+            canvas,
+            position,
+            cx.bounds,
+            snapshot,
+            ContextMenuTarget::Background,
             items,
-            candidates: Vec::new(),
-            hovered_item: None,
-            active_item,
-            typeahead: String::new(),
-        });
+            Vec::new(),
+        ));
         cx.request_focus(cx.node);
         cx.stop_propagation();
         cx.request_redraw();
@@ -232,18 +229,15 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
             .unwrap_or_default()
     };
 
-    let origin = canvas.clamp_context_menu_origin(position, items.len(), cx.bounds, snapshot);
-    let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-    canvas.interaction.context_menu = Some(ContextMenuState {
-        origin,
-        invoked_at: position,
-        target: ContextMenuTarget::Edge(edge),
+    canvas.interaction.context_menu = Some(build_context_menu_state(
+        canvas,
+        position,
+        cx.bounds,
+        snapshot,
+        ContextMenuTarget::Edge(edge),
         items,
-        candidates: Vec::new(),
-        hovered_item: None,
-        active_item,
-        typeahead: String::new(),
-    });
+        Vec::new(),
+    ));
     canvas.interaction.hover_edge = None;
     cx.request_focus(cx.node);
 

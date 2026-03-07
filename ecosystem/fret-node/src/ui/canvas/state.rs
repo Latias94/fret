@@ -262,11 +262,18 @@ pub(crate) struct ViewportMoveDebounceState {
     pub(crate) timer: TimerToken,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SearcherRowsMode {
+    Catalog,
+    Flat,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct SearcherState {
     pub(crate) origin: Point,
     pub(crate) invoked_at: Point,
     pub(crate) target: ContextMenuTarget,
+    pub(crate) rows_mode: SearcherRowsMode,
     pub(crate) query: String,
     pub(crate) candidates: Vec<InsertNodeCandidate>,
     pub(crate) recent_kinds: Vec<NodeKindKey>,

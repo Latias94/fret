@@ -5,7 +5,9 @@ use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem}
 
 use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
-use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
+use crate::ui::canvas::state::{
+    ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
+};
 
 #[test]
 fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {
@@ -41,6 +43,7 @@ fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {
             from: a_out,
             at: CanvasPoint::default(),
         },
+        rows_mode: SearcherRowsMode::Catalog,
         query: String::new(),
         candidates: Vec::new(),
         recent_kinds: Vec::new(),
@@ -100,6 +103,7 @@ fn overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_i
             from: a_out,
             at: CanvasPoint::default(),
         },
+        rows_mode: SearcherRowsMode::Catalog,
         query: String::new(),
         candidates: Vec::new(),
         recent_kinds: Vec::new(),

@@ -229,35 +229,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         };
 
-        let rows = crate::ui::canvas::searcher::build_rows_flat(&ctx0.candidates, "");
-        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let origin = self.clamp_searcher_origin(
-            Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
-            visible,
-            bounds,
-            snapshot,
-        );
-        let active_row =
-            Self::searcher_first_selectable_row(&rows).min(rows.len().saturating_sub(1));
+        let invoked_at = Point::new(Px(ctx0.at.x), Px(ctx0.at.y));
 
         self.interaction.context_menu = None;
-        self.interaction.searcher = Some(SearcherState {
-            origin,
-            invoked_at: Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
-            target: ContextMenuTarget::ConnectionConvertPicker {
+        self.interaction.searcher = Some(build_searcher_state(
+            self,
+            invoked_at,
+            bounds,
+            snapshot,
+            ContextMenuTarget::ConnectionConvertPicker {
                 from: ctx0.from,
                 to: ctx0.to,
                 at: ctx0.at,
             },
-            query: String::new(),
-            candidates: ctx0.candidates,
-            recent_kinds: self.interaction.recent_kinds.clone(),
-            rows,
-            hovered_row: None,
-            active_row,
-            scroll: 0,
-        });
+            ctx0.candidates,
+            self.interaction.recent_kinds.clone(),
+            SearcherRowsMode::Flat,
+        ));
 
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);
