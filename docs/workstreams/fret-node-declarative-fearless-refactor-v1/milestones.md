@@ -529,6 +529,10 @@ real editors.
   `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
   release synthesis and move arbitration no longer stay embedded in one retained pointer-move
   router.
+- `event_pointer_wheel.rs` now also routes wheel zoom / pan and pinch viewport motion
+  through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so viewport-motion
+  cancellation, wheel pan math, and pinch zoom math no longer stay embedded in the retained
+  wheel router.
 
 ### Deliverables
 
@@ -585,6 +589,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

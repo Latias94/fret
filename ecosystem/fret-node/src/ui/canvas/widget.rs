@@ -127,6 +127,7 @@ mod pointer_down_double_click;
 mod pointer_down_gesture_start;
 mod pointer_move_dispatch;
 mod pointer_move_release;
+mod pointer_wheel_viewport;
 use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_candidates;

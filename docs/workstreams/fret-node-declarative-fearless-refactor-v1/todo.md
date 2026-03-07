@@ -464,6 +464,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
     release synthesis and move arbitration no longer stay embedded in one retained pointer-move
     router.
+  - Progress: `event_pointer_wheel.rs` now routes wheel zoom / pan and pinch viewport
+    motion through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so
+    viewport-motion cancellation, wheel pan math, and pinch zoom math no longer stay
+    embedded in the retained wheel router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
