@@ -1325,27 +1325,44 @@ fn apply_suite_editor_text_default_post_run_checks(
         defaults.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct SuiteScriptOverrideChecks {
+    retained_vlist_reconcile_no_notify_min: Option<u64>,
+    retained_vlist_attach_detach_max: Option<u64>,
+    retained_vlist_keep_alive_reuse_min: Option<u64>,
+    retained_vlist_keep_alive_budget: Option<(u64, u64)>,
+    vlist_window_shifts_non_retained_max: Option<u64>,
+}
+
+fn resolve_suite_script_override_checks(
+    src: &Path,
+    checks: &SuiteChecks,
+) -> SuiteScriptOverrideChecks {
+    SuiteScriptOverrideChecks {
+        retained_vlist_reconcile_no_notify_min: checks
+            .check_retained_vlist_reconcile_no_notify_min
+            .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src)),
+        retained_vlist_attach_detach_max: checks
+            .check_retained_vlist_attach_detach_max
+            .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src)),
+        retained_vlist_keep_alive_reuse_min: checks
+            .check_retained_vlist_keep_alive_reuse_min
+            .filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src)
+            }),
+        retained_vlist_keep_alive_budget: checks.check_retained_vlist_keep_alive_budget.filter(
+            |_| diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src),
+        ),
+        vlist_window_shifts_non_retained_max: checks
+            .check_vlist_window_shifts_non_retained_max
+            .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src)),
+    }
+}
+
 fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &SuiteChecks) -> bool {
     let wants_registered_post_run_checks =
         crate::registry::checks::CheckRegistry::builtin().wants_post_run_checks(checks);
-    let retained_vlist_gate_for_script = checks
-        .check_retained_vlist_reconcile_no_notify_min
-        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
-    let retained_vlist_attach_detach_max_for_script = checks
-        .check_retained_vlist_attach_detach_max
-        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
-    let retained_vlist_keep_alive_reuse_min_for_script = checks
-        .check_retained_vlist_keep_alive_reuse_min
-        .filter(|_| {
-            diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src)
-        });
-    let retained_vlist_keep_alive_budget_for_script =
-        checks.check_retained_vlist_keep_alive_budget.filter(|_| {
-            diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src)
-        });
-    let vlist_window_shifts_non_retained_max_for_script = checks
-        .check_vlist_window_shifts_non_retained_max
-        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
+    let script_override_checks = resolve_suite_script_override_checks(src, checks);
 
     wants_registered_post_run_checks
         || checks.check_stale_paint_test_id.is_some()
@@ -1411,11 +1428,11 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
         || checks.check_viewport_input_min.is_some()
         || checks.check_dock_drag_min.is_some()
         || checks.check_viewport_capture_min.is_some()
-        || retained_vlist_gate_for_script.is_some()
-        || retained_vlist_attach_detach_max_for_script.is_some()
-        || retained_vlist_keep_alive_reuse_min_for_script.is_some()
-        || retained_vlist_keep_alive_budget_for_script.is_some()
-        || vlist_window_shifts_non_retained_max_for_script.is_some()
+        || script_override_checks.retained_vlist_reconcile_no_notify_min.is_some()
+        || script_override_checks.retained_vlist_attach_detach_max.is_some()
+        || script_override_checks.retained_vlist_keep_alive_reuse_min.is_some()
+        || script_override_checks.retained_vlist_keep_alive_budget.is_some()
+        || script_override_checks.vlist_window_shifts_non_retained_max.is_some()
         || diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(src)
         || diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(src)
         || diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(src)
@@ -1538,10 +1555,10 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
         check_prepaint_actions_min: _,
-        check_retained_vlist_attach_detach_max,
-        check_retained_vlist_keep_alive_budget,
-        check_retained_vlist_keep_alive_reuse_min,
-        check_retained_vlist_reconcile_no_notify_min,
+        check_retained_vlist_attach_detach_max: _,
+        check_retained_vlist_keep_alive_budget: _,
+        check_retained_vlist_keep_alive_reuse_min: _,
+        check_retained_vlist_reconcile_no_notify_min: _,
         check_semantics_changed_repainted: _,
         check_stale_paint_eps: _,
         check_stale_paint_test_id: _,
@@ -1613,7 +1630,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_vlist_window_shifts_escape_max: _,
         check_vlist_window_shifts_explainable: _,
         check_vlist_window_shifts_have_prepaint_actions: _,
-        check_vlist_window_shifts_non_retained_max,
+        check_vlist_window_shifts_non_retained_max: _,
         check_vlist_window_shifts_prefetch_max: _,
         check_wheel_events_max_per_frame: _,
         check_wheel_scroll_hit_changes_test_id: _,
@@ -2418,26 +2435,8 @@ hint: list suites via `fretboard diag list suites`"
             }
         }
 
-        let retained_vlist_gate_for_script =
-            check_retained_vlist_reconcile_no_notify_min.filter(|_| {
-                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
-            });
-        let retained_vlist_attach_detach_max_for_script = check_retained_vlist_attach_detach_max
-            .filter(|_| {
-                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
-            });
-        let retained_vlist_keep_alive_reuse_min_for_script =
-            check_retained_vlist_keep_alive_reuse_min.filter(|_| {
-                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
-            });
-        let retained_vlist_keep_alive_budget_for_script = check_retained_vlist_keep_alive_budget
-            .filter(|_| {
-                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
-            });
-        let vlist_window_shifts_non_retained_max_for_script =
-            check_vlist_window_shifts_non_retained_max.filter(|_| {
-                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
-            });
+        let script_override_checks =
+            resolve_suite_script_override_checks(&src, &checks_for_post_run_template);
         let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
             &src,
             &checks_for_post_run_template,
@@ -2552,9 +2551,9 @@ hint: list suites via `fretboard diag list suites`"
                 suite_core_default_checks.check_vlist_window_shifts_explainable;
             checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
                 suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
-            checks_for_post_run.check_vlist_window_shifts_non_retained_max =
-                vlist_window_shifts_non_retained_max_for_script
-                    .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
+            checks_for_post_run.check_vlist_window_shifts_non_retained_max = script_override_checks
+                .vlist_window_shifts_non_retained_max
+                .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
             checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
                 .check_vlist_window_shifts_prefetch_max
                 .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
@@ -2597,17 +2596,18 @@ hint: list suites via `fretboard diag list suites`"
                 .or(suite_core_default_checks.check_viewport_capture_min);
 
             checks_for_post_run.check_retained_vlist_reconcile_no_notify_min =
-                retained_vlist_gate_for_script
+                script_override_checks
+                    .retained_vlist_reconcile_no_notify_min
                     .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
-            checks_for_post_run.check_retained_vlist_attach_detach_max =
-                retained_vlist_attach_detach_max_for_script
-                    .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
-            checks_for_post_run.check_retained_vlist_keep_alive_reuse_min =
-                retained_vlist_keep_alive_reuse_min_for_script
-                    .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
-            checks_for_post_run.check_retained_vlist_keep_alive_budget =
-                retained_vlist_keep_alive_budget_for_script
-                    .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
+            checks_for_post_run.check_retained_vlist_attach_detach_max = script_override_checks
+                .retained_vlist_attach_detach_max
+                .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
+            checks_for_post_run.check_retained_vlist_keep_alive_reuse_min = script_override_checks
+                .retained_vlist_keep_alive_reuse_min
+                .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
+            checks_for_post_run.check_retained_vlist_keep_alive_budget = script_override_checks
+                .retained_vlist_keep_alive_budget
+                .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
 
             apply_post_run_checks(
                 &bundle_path,
@@ -2767,6 +2767,43 @@ mod tests {
         );
 
         assert!(!defaults.check_ui_gallery_web_ime_bridge_enabled);
+    }
+
+    #[test]
+    fn resolve_suite_script_override_checks_filters_to_retained_scripts() {
+        let mut checks = SuiteChecks::default();
+        checks.check_retained_vlist_reconcile_no_notify_min = Some(7);
+        checks.check_retained_vlist_attach_detach_max = Some(9);
+        checks.check_retained_vlist_keep_alive_reuse_min = Some(11);
+        checks.check_retained_vlist_keep_alive_budget = Some((13, 1));
+        checks.check_vlist_window_shifts_non_retained_max = Some(15);
+
+        let overrides = resolve_suite_script_override_checks(
+            std::path::Path::new("components-gallery-table-window-boundary-bounce.json"),
+            &checks,
+        );
+
+        assert_eq!(overrides.retained_vlist_reconcile_no_notify_min, Some(7));
+        assert_eq!(overrides.retained_vlist_attach_detach_max, Some(9));
+        assert_eq!(overrides.retained_vlist_keep_alive_reuse_min, Some(11));
+        assert_eq!(overrides.retained_vlist_keep_alive_budget, Some((13, 1)));
+        assert_eq!(overrides.vlist_window_shifts_non_retained_max, Some(15));
+    }
+
+    #[test]
+    fn resolve_suite_script_override_checks_skips_non_retained_scripts() {
+        let mut checks = SuiteChecks::default();
+        checks.check_retained_vlist_reconcile_no_notify_min = Some(7);
+        checks.check_retained_vlist_keep_alive_reuse_min = Some(11);
+        checks.check_retained_vlist_keep_alive_budget = Some((13, 1));
+        checks.check_vlist_window_shifts_non_retained_max = Some(15);
+
+        let overrides = resolve_suite_script_override_checks(
+            std::path::Path::new("ui-gallery-overlay-torture.json"),
+            &checks,
+        );
+
+        assert_eq!(overrides, SuiteScriptOverrideChecks::default());
     }
 
     #[test]
