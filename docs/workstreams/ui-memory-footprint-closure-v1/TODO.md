@@ -213,9 +213,13 @@
 - [x] Use the new `Metal Resource Events` evidence to turn the staging lead into a real attribution pass.
   - `metal-resource-allocations.labels_head` is indeed dominated by `"(wgpu internal) Staging  ( 128.00 KiB ,  Shared )"` even in `present-only`.
   - The new backtrace clustering now points that staging churn primarily at `fret_render_wgpu::renderer::render_scene::execute` and `UniformResources::write_viewport_uniforms_into`, with `GlyphAtlas::flush_uploads` only as a smaller full-scene add-on.
-- [ ] Turn the clustered staging lead into bounded runtime experiments before changing broader architecture.
-  - Test whether the `present-only` floor drops when viewport/uniform staging reuse improves, because that path is now one of the clearest steady contributors.
-  - Separate text/glyph uploads from the core render/present floor, since `GlyphAtlas::flush_uploads` looks secondary rather than primary here.
+- [x] Turn the clustered staging lead into a bounded runtime experiment before changing broader architecture.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-present-uniform-dedupe-release.md`.
+  - Experiment: `FRET_RENDER_WGPU_SKIP_REDUNDANT_UNIFORM_UPLOADS=1` skips redundant viewport/clip/mask/render-space `queue.write_buffer()` uploads.
+  - Result: `Metal Resource Events` for `present-only empty` drops from thousands of post-attach app-owned rows to header-only zero-row stores, but steady `physical` / `graphics_total` / internal `metal_current_allocated_size` stay effectively unchanged. So this path is churn, not the main steady residency floor.
+- [ ] Shift the next bounded runtime experiment away from repeated upload churn and toward live-residency suspects.
+  - Keep text/glyph uploads as a secondary branch; current evidence says `GlyphAtlas::flush_uploads` is additive but not primary.
+  - Prioritize experiments that can reduce already-live resources or surface/drawable residency rather than just suppressing post-attach upload events.
 - [ ] Keep chasing the residual `~60–75 MiB` outside `metal-current-allocated-size` with another Apple-side category path rather than adding more redundant mode rows.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.

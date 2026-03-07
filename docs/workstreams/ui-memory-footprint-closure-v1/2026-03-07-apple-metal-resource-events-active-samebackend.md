@@ -221,6 +221,8 @@ hello-world text content itself.
 This should still be treated as a follow-up optimization lead rather than a closed steady-state
 attribution, but it is now a much sharper lead than before.
 
+A follow-up bounded runtime experiment on release head now sharpens this even further: `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-present-uniform-dedupe-release.md` shows that deduping redundant viewport/clip/mask/render-space uploads can collapse the post-attach `Metal Resource Events` row stream to zero-row header-only stores on `present-only empty`, yet the steady memory floor barely moves. So the staging lead is real, but it explains **churn**, not the main steady residency bucket.
+
 ### 6. Residency-set rows do show more committed drawable-like texture volume in Fret, but still not enough to explain the full graphics gap
 
 `metal-residency-set-resource-event` reports:
