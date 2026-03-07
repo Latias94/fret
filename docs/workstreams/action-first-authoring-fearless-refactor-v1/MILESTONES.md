@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 Related:
 
@@ -10,13 +10,13 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-06)
+## Current status snapshot (as of 2026-03-07)
 
 This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
 teaching surfaces, and gates line up.
 
 - **M0**: Met (workstream docs + ADRs exist; indices are updated).
-- **M1**: In progress (typed unit actions exist; continue converging keymap/palette/menu/pointer triggers on the same dispatch pipeline).
+- **M1**: Met (typed unit actions exist; keymap/palette/menu/pointer triggers converge on the same dispatch pipeline, with diagnostics traces explaining availability/dispatch outcomes).
 - **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
 - **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
@@ -27,7 +27,7 @@ teaching surfaces, and gates line up.
   pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
   ergonomics work rather than unfinished migration closure.
 
-Evidence anchors (verified in-tree as of 2026-03-06):
+Evidence anchors (verified in-tree as of 2026-03-07):
 
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
@@ -36,6 +36,8 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `ecosystem/fret-ui-shadcn/src/layout.rs` (`container_vstack_build(...)` / `container_hstack_build(...)` / `container_hstack_centered_build(...)` keep older shadcn layout helpers on the same late-landing child pipeline)
 - `ecosystem/fret-ui-shadcn/src/table.rs` (`Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` extend the same late-landing child pipeline into the table composite stack)
 - `ecosystem/fret-ui-shadcn/src/table.rs` (`TableCell::build(child)` is the first single-child late-landing sample layered onto the same authoring surface)
+- `ecosystem/fret-ui-shadcn/src/dialog.rs` (`DialogTrigger::build(...)` and `Dialog::compose().content_with(...)` keep trigger/content authoring on the late-landing pipeline while supporting `DialogClose::from_scope()` in deferred content)
+- `ecosystem/fret-ui-shadcn/src/sheet.rs` (`SheetTrigger::build(...)` and `Sheet::compose().content_with(...)` keep trigger/content authoring on the late-landing pipeline while supporting `SheetClose::from_scope()` in deferred content)
 - `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs` (gallery snippet now demonstrates the `TableCell::build(ui::text(...))` shape instead of forcing early child landing)
 - `ecosystem/fret-genui-shadcn/src/resolver/data.rs` (GenUI data-table rendering now uses the table builder-first path instead of pre-collecting header/body row vectors)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions and now late-land their todo-card trees via `Card::build(...)`)

@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
@@ -175,6 +175,29 @@ surface from the post-v1 density goals:
   `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
+
+### Overlay composition note (Dialog/Sheet)
+
+When composing shadcn overlays via `.compose()`, prefer `.content_with(|cx| ...)` when the content
+needs to resolve scope-only affordances such as `DialogClose::from_scope()` / `SheetClose::from_scope()`.
+
+This keeps authoring on the late-landing pipeline while allowing the close affordance to resolve
+its `open` model from the active overlay scope.
+
+Example:
+
+```rust,ignore
+use fret_ui_shadcn as shadcn;
+
+shadcn::Dialog::new(open.clone())
+    .compose()
+    .trigger(shadcn::DialogTrigger::build(shadcn::Button::new("Open")))
+    .content_with(|cx| {
+        let close = shadcn::DialogClose::from_scope().into_element(cx);
+        shadcn::DialogContent::new(vec![close]).into_element(cx)
+    })
+    .into_element(cx);
+```
 
 ### Helper visibility policy (docs/templates)
 
