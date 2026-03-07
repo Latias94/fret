@@ -316,6 +316,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: derived geometry cache keys now include presenter revision, and the declarative
     geometry build path uses `MeasuredNodeGraphPresenter` when measured geometry is present, so
     measured node-size updates invalidate geometry/index caches deterministically.
+  - Progress: portal bounds + measured-geometry publish helpers now live under the private
+    `paint_only/portal_measurement.rs` seam, so the main declarative surface stays focused on
+    orchestration instead of re-embedding `LayoutQueryRegion`/store sync details inline.
 - [x] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
   - `NodeGraphPortalHost::with_controller` now prefers
     `NodeGraphController::submit_transaction_and_sync_models`.
@@ -339,6 +342,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: declarative hover anchoring now also has a motion gate proving drag-adjusted hover
     rects update `hover_anchor_store`, and a portal-vs-hover precedence gate proving dragged portal
     bounds still win over stale hover anchors when the hovered node moves.
+  - Progress: hover anchor state/tooltip anchor helpers now live under the private
+    `paint_only/hover_anchor.rs` seam, reducing how much motion-anchoring policy stays in the main
+    surface file while keeping the same focused gates.
 
 ## M5 - Compatibility retained convergence
 

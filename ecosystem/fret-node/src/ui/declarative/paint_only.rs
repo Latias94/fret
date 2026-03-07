@@ -28,13 +28,12 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, graph_diff, normalize_transaction};
-use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived, node_ports, node_size_default_px};
+use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     view_from_state,
 };
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
-use crate::ui::measured::{MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryBatch};
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
@@ -43,11 +42,19 @@ use crate::ui::{
     NodeGraphSurfaceBinding,
 };
 
+#[path = "paint_only/hover_anchor.rs"]
+mod hover_anchor;
 #[path = "paint_only/pointer_move.rs"]
 mod pointer_move;
 #[path = "paint_only/pointer_session.rs"]
 mod pointer_session;
+#[path = "paint_only/portal_measurement.rs"]
+mod portal_measurement;
 
+use self::hover_anchor::{
+    HoverAnchorStore, HoverTooltipAnchorSource, resolve_hover_tooltip_anchor,
+    sync_hover_anchor_store_in_models,
+};
 use self::pointer_move::{
     MarqueePointerMoveOutcome, handle_marquee_pointer_move_action_host,
     handle_node_drag_pointer_move_action_host, update_hovered_node_pointer_move_action_host,
@@ -56,6 +63,11 @@ use self::pointer_session::{
     escape_cancel_declarative_interactions_action_host,
     handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
     invalidate_notify_and_redraw_pointer_action_host, notify_and_redraw_action_host,
+};
+use self::portal_measurement::{
+    PortalBoundsStore, PortalMeasuredGeometryFlushOutcome, PortalMeasuredGeometryState,
+    flush_portal_measured_geometry_state, record_portal_measured_node_size_in_state,
+    sync_portal_canvas_bounds_in_models,
 };
 
 #[cfg(test)]
@@ -69,98 +81,11 @@ use self::pointer_session::{
     pointer_cancel_declarative_interactions_action_host,
 };
 
-#[derive(Debug, Default, Clone)]
-struct PortalBoundsStore {
-    /// Last-known bounds for portal node subtrees, mapped into canvas space under the current view.
-    nodes_canvas_bounds: std::collections::BTreeMap<crate::core::NodeId, Rect>,
-    /// Counter for diagnostics gates (fit-to-portals triggered).
-    fit_to_portals_count: u64,
-    /// Diagnostics-only: when true, a Ctrl+9 fit-to-portals request is armed and will be applied
-    /// once portal bounds arrive via `LayoutQueryRegion` (frame-lagged by contract).
-    pending_fit_to_portals: bool,
-}
-
-#[derive(Debug, Default, Clone)]
-struct PortalMeasuredGeometryState {
-    /// Frame-local pending subtree measurements harvested from `LayoutQueryRegion`.
-    pending_node_sizes_px: std::collections::BTreeMap<crate::core::NodeId, (f32, f32)>,
-    /// Nodes previously published into the shared measured-geometry store.
-    published_nodes: Vec<crate::core::NodeId>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-struct PortalMeasuredGeometryFlushOutcome {
-    state_changed: bool,
-    store_changed: bool,
-}
-
 #[derive(Debug, Default, Clone, Copy)]
 struct PortalDebugFlags {
     /// Diagnostics-only: when true, disable portal hosting and clear `PortalBoundsStore` so overlay
     /// consumers can exercise their fallback paths.
     disable_portals: bool,
-}
-
-#[derive(Debug, Default, Clone)]
-struct HoverAnchorStore {
-    /// Last-known hovered node id (paint-only).
-    hovered_id: Option<crate::core::NodeId>,
-    /// Best-effort hovered node bounds in canvas space.
-    ///
-    /// This is independent of portal hosting caps so hover-driven overlays remain stable even when
-    /// portals are throttled.
-    hovered_canvas_bounds: Option<Rect>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HoverTooltipAnchorSource {
-    PortalBoundsStore,
-    HoverAnchorStore,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct HoverTooltipAnchor {
-    origin_screen: Point,
-    width_screen: Px,
-    source: HoverTooltipAnchorSource,
-}
-
-fn resolve_hover_tooltip_anchor(
-    bounds: Rect,
-    view: PanZoom2D,
-    portals_disabled: bool,
-    portal_canvas_bounds: Option<Rect>,
-    hover_anchor_canvas_bounds: Option<Rect>,
-) -> Option<HoverTooltipAnchor> {
-    if !bounds.size.width.0.is_finite()
-        || !bounds.size.height.0.is_finite()
-        || bounds.size.width.0 <= 0.0
-        || bounds.size.height.0 <= 0.0
-    {
-        return None;
-    }
-
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let candidate = if !portals_disabled {
-        portal_canvas_bounds.map(|rect| (rect, HoverTooltipAnchorSource::PortalBoundsStore))
-    } else {
-        None
-    }
-    .or_else(|| {
-        hover_anchor_canvas_bounds.map(|rect| (rect, HoverTooltipAnchorSource::HoverAnchorStore))
-    })?;
-
-    let (canvas_bounds, source) = candidate;
-    let width_screen = Px((canvas_bounds.size.width.0 * zoom).max(0.0));
-    if !width_screen.0.is_finite() || width_screen.0 <= 0.0 {
-        return None;
-    }
-
-    Some(HoverTooltipAnchor {
-        origin_screen: view.canvas_to_screen(bounds, canvas_bounds.origin),
-        width_screen,
-        source,
-    })
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -998,128 +923,6 @@ fn collect_portal_label_infos_for_visible_subset(
     infos
 }
 
-fn sync_portal_canvas_bounds_in_models(
-    models: &mut fret_runtime::ModelStore,
-    portal_bounds_store: &Model<PortalBoundsStore>,
-    node_id: crate::core::NodeId,
-    canvas_bounds: Rect,
-) -> bool {
-    let should_update = models
-        .read(portal_bounds_store, |st| {
-            let Some(prev) = st.nodes_canvas_bounds.get(&node_id) else {
-                return true;
-            };
-            !rect_approx_eq(*prev, canvas_bounds, 0.25)
-        })
-        .unwrap_or(true);
-
-    if !should_update {
-        return false;
-    }
-
-    let _ = models.update(portal_bounds_store, |st| {
-        st.nodes_canvas_bounds.insert(node_id, canvas_bounds);
-    });
-    true
-}
-
-fn record_portal_measured_node_size_in_state(
-    models: &mut fret_runtime::ModelStore,
-    state: &Model<PortalMeasuredGeometryState>,
-    node_id: crate::core::NodeId,
-    size_px: (f32, f32),
-) -> bool {
-    if !size_px.0.is_finite() || !size_px.1.is_finite() || size_px.0 <= 0.0 || size_px.1 <= 0.0 {
-        return false;
-    }
-
-    let should_update = models
-        .read(state, |st| {
-            let Some(prev) = st.pending_node_sizes_px.get(&node_id) else {
-                return true;
-            };
-            (prev.0 - size_px.0).abs() > MEASURED_GEOMETRY_EPSILON_PX
-                || (prev.1 - size_px.1).abs() > MEASURED_GEOMETRY_EPSILON_PX
-        })
-        .unwrap_or(true);
-    if !should_update {
-        return false;
-    }
-
-    let _ = models.update(state, |st| {
-        st.pending_node_sizes_px.insert(node_id, size_px);
-    });
-    true
-}
-
-fn flush_portal_measured_geometry_state(
-    graph: &Graph,
-    style: &NodeGraphStyle,
-    measured_geometry: &MeasuredGeometryStore,
-    state: &mut PortalMeasuredGeometryState,
-) -> PortalMeasuredGeometryFlushOutcome {
-    let pending_before = state.pending_node_sizes_px.len();
-    let published_before = state.published_nodes.clone();
-    let graph_nodes: std::collections::BTreeSet<crate::core::NodeId> =
-        graph.nodes.keys().copied().collect();
-
-    let mut publish: Vec<(crate::core::NodeId, (f32, f32))> = Vec::new();
-    for (node_id, measured_px) in state.pending_node_sizes_px.iter() {
-        let Some(node) = graph.nodes.get(node_id) else {
-            continue;
-        };
-        if node.size.is_some() {
-            continue;
-        }
-
-        let (inputs, outputs) = node_ports(graph, *node_id);
-        let min = node_size_default_px(inputs.len(), outputs.len(), style);
-        let prev_px = measured_geometry.node_size_px(*node_id).unwrap_or(min);
-        publish.push((
-            *node_id,
-            (
-                measured_px.0.max(min.0).max(prev_px.0),
-                measured_px.1.max(min.1).max(prev_px.1),
-            ),
-        ));
-    }
-
-    let remove_nodes: Vec<crate::core::NodeId> = published_before
-        .iter()
-        .copied()
-        .filter(|id| !graph_nodes.contains(id))
-        .collect();
-
-    let store_changed = measured_geometry
-        .apply_batch_if_changed(
-            MeasuredGeometryBatch {
-                node_sizes_px: publish.clone(),
-                port_anchors_px: Vec::new(),
-                remove_nodes,
-                remove_ports: Vec::new(),
-            },
-            Default::default(),
-        )
-        .is_some();
-
-    let mut next_published = published_before;
-    for (node_id, _) in &publish {
-        if !next_published.contains(node_id) {
-            next_published.push(*node_id);
-        }
-    }
-    next_published.retain(|id| graph_nodes.contains(id));
-
-    state.pending_node_sizes_px.clear();
-    let state_changed = pending_before > 0 || next_published != state.published_nodes;
-    state.published_nodes = next_published;
-
-    PortalMeasuredGeometryFlushOutcome {
-        state_changed,
-        store_changed,
-    }
-}
-
 fn rect_contains_point(rect: Rect, p: Point) -> bool {
     let x0 = rect.origin.x.0;
     let y0 = rect.origin.y.0;
@@ -1218,73 +1021,6 @@ fn node_drag_commit_delta(view: PanZoom2D, drag: &NodeDragState) -> Option<(f32,
 
 fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
     drag.nodes_sorted.binary_search(&id).is_ok()
-}
-
-fn hovered_canvas_anchor_rect_for_surface(
-    hovered_id: crate::core::NodeId,
-    draws: Option<&[NodeRectDraw]>,
-    view: PanZoom2D,
-    node_drag: Option<&NodeDragState>,
-) -> Option<Rect> {
-    let draw = draws?.iter().find(|draw| draw.id == hovered_id)?;
-    let mut rect = draw.rect;
-    let drag_active = node_drag.is_some_and(NodeDragState::is_active);
-    if drag_active && node_drag.is_some_and(|drag| node_drag_contains(drag, hovered_id)) {
-        let drag = node_drag.expect("checked active node drag");
-        let (ddx, ddy) = node_drag_delta_canvas(view, drag);
-        rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
-    }
-    Some(rect)
-}
-
-fn sync_hover_anchor_store_in_models(
-    models: &mut fret_runtime::ModelStore,
-    hover_anchor_store: &Model<HoverAnchorStore>,
-    hovered_id: Option<crate::core::NodeId>,
-    draws: Option<&[NodeRectDraw]>,
-    view: PanZoom2D,
-    node_drag: Option<&NodeDragState>,
-) -> bool {
-    if let Some(hovered_id) = hovered_id {
-        let Some(rect) = hovered_canvas_anchor_rect_for_surface(hovered_id, draws, view, node_drag)
-        else {
-            return false;
-        };
-
-        let should_update = models
-            .read(hover_anchor_store, |st| {
-                if st.hovered_id != Some(hovered_id) {
-                    return true;
-                }
-                let Some(prev) = st.hovered_canvas_bounds else {
-                    return true;
-                };
-                !rect_approx_eq(prev, rect, 0.25)
-            })
-            .unwrap_or(true);
-        if !should_update {
-            return false;
-        }
-
-        let _ = models.update(hover_anchor_store, |st| {
-            st.hovered_id = Some(hovered_id);
-            st.hovered_canvas_bounds = Some(rect);
-        });
-        return true;
-    }
-
-    let should_clear = models
-        .read(hover_anchor_store, |st| st.hovered_id.is_some())
-        .unwrap_or(false);
-    if !should_clear {
-        return false;
-    }
-
-    let _ = models.update(hover_anchor_store, |st| {
-        st.hovered_id = None;
-        st.hovered_canvas_bounds = None;
-    });
-    true
 }
 
 fn build_node_drag_transaction(
@@ -4178,6 +3914,8 @@ mod tests {
     };
     use fret_ui::action::UiActionHost;
 
+    use super::hover_anchor::hovered_canvas_anchor_rect_for_surface;
+
     use super::{
         AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
         DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
@@ -4201,10 +3939,10 @@ mod tests {
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
         handle_node_drag_left_pointer_release_action_host,
         handle_node_drag_pointer_move_action_host,
-        handle_pending_selection_left_pointer_release_action_host,
-        hovered_canvas_anchor_rect_for_surface, node_drag_commit_delta, nodes_cache_key,
-        pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
-        record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
+        handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
+        nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
+        pointer_crossed_threshold, record_portal_measured_node_size_in_state,
+        resolve_hover_tooltip_anchor, stable_hash_u64,
         sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
         sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
         view_from_state,

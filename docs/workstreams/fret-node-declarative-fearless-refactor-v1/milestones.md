@@ -391,6 +391,10 @@ real editors.
 - Declarative motion anchoring now has explicit gates on both sides of the portal/overlay seam:
   dragged hovered nodes update `hover_anchor_store` using drag-adjusted rects, and tooltip anchor
   resolution still prefers dragged portal bounds over stale hover anchors when both are available.
+- Declarative portal/hover seams now have dedicated private modules,
+  `paint_only/portal_measurement.rs` and `paint_only/hover_anchor.rs`, so the main paint-only
+  surface file keeps orchestration responsibility while these contracts stay reviewable in named
+  seams.
 
 ### Deliverables
 
