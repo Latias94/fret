@@ -56,8 +56,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::
     cx.observe_model(&st.graph, Invalidation::Paint);
     cx.observe_model(&st.view, Invalidation::Paint);
 
-    let mut props = NodeGraphSurfacePaintOnlyProps::new(st.graph.clone(), st.view.clone());
-    props.controller = Some(st.controller.clone());
+    let mut props = NodeGraphSurfacePaintOnlyProps::new(
+        st.graph.clone(),
+        st.view.clone(),
+        st.controller.clone(),
+    );
     props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
     props.paint_overrides = st.paint_overrides.clone();
     node_graph_surface_paint_only(cx, props).into()

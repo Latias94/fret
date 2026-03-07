@@ -18,8 +18,7 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
     pending_selection: &Model<Option<PendingSelectionState>>,
     hovered: &Model<Option<crate::core::NodeId>>,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     mv: fret_ui::action::PointerMoveCx,
 ) -> Option<NodeDragPointerMoveOutcome> {
     let node_drag_value = host
@@ -66,7 +65,6 @@ pub(super) fn handle_node_drag_pointer_move_action_host(
                 host,
                 view_state,
                 controller,
-                store,
                 pending_selection_value,
             );
             let _ = host

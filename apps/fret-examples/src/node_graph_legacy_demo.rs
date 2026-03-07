@@ -2547,9 +2547,12 @@ fn render(
                         )
                     }
                     NodeGraphDemoDeclarativeMode::PaintOnly => {
+                        let controller =
+                            fret_node::ui::NodeGraphController::new(models.store.clone());
                         let props = NodeGraphSurfacePaintOnlyProps::new(
                             models.graph.clone(),
                             models.view.clone(),
+                            controller,
                         );
                         fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
                     }

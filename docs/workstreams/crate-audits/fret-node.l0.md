@@ -33,7 +33,8 @@ Evidence anchors:
   - `headless`: explicitly builds without `fret-ui`
   - `compat-retained-canvas`: retained-bridge-backed UI surfaces (delete-planned escape hatch)
 - “Accidental” exports to consider removing (L0 hypothesis):
-  - `NodeGraphSurfacePaintOnlyProps` currently allows both `controller: Option<NodeGraphController>` and `store: Option<Model<NodeGraphStore>>`; this risks creating two “almost-canonical” integration patterns instead of one.
+  - (Resolved) `NodeGraphSurfacePaintOnlyProps` is now controller-first only:
+    `controller: NodeGraphController` is required and the `store` fallback is removed.
 
 Evidence anchors:
 
@@ -112,7 +113,7 @@ Evidence anchors:
 2. Continue shrinking `paint_only.rs` by responsibility-based submodules:
    - keep pointer session reducers, pointer move, keydown, and portal hosting in separate files under `ui/declarative/paint_only/` — gate: existing `nextest` coverage for the declarative module.
 3. Collapse `NodeGraphSurfacePaintOnlyProps` to one canonical runtime binding input:
-   - either controller-first only, or a single enum that makes the choice explicit (avoid `controller + store` ambiguity) — gate: `cargo nextest run -p fret-node`.
+   - (Done) controller-first only (avoid `controller + store` ambiguity) — gate: `cargo nextest run -p fret-node`.
 4. Add at least one diagnostics-driven gate for portal/overlay anchoring:
    - capture a minimal scripted scenario to lock the cross-frame bounds/portal throttling behavior — gate: `fretboard diag` (plus existing unit tests).
 

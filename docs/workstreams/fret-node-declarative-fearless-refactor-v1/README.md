@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-03-06)
+Status: Reframed and active (last updated 2026-03-07)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -118,8 +118,9 @@ update rather than an incidental refactor.
 
 - **Transaction boundary ambiguity in the declarative path**
   - The first M3 slice is now landed: the paint-only node-drag commit builds a
-    `GraphTransaction` and prefers `NodeGraphStore::dispatch_transaction(...)` when a store is
-    present.
+    `GraphTransaction` and dispatches through `NodeGraphController` (store-backed).
+  - `NodeGraphSurfacePaintOnlyProps.controller` is now required; the no-controller fallback path is
+    intentionally removed so the demo surface teaches the controller-first contract.
   - Broader declarative commit coverage is still unresolved: this pattern must extend to the rest of
     committed edit flows and converge behind a clearer controller/instance surface.
 

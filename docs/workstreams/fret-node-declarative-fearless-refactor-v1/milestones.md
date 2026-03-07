@@ -157,12 +157,14 @@ Status target: architectural + API landing milestone
 Make the declarative path editor-grade by routing committed edits through store/controller entry
 points rather than direct graph mutation.
 
-### Progress note (2026-03-06)
+### Progress note (2026-03-07)
 
 - First landing slices are complete:
   - `node_graph_surface_paint_only` node-drag commit now builds a `GraphTransaction`.
-  - When a controller/store exists, the declarative path dispatches through `NodeGraphStore` and
-    syncs graph / view models back from store.
+  - `NodeGraphSurfacePaintOnlyProps` is now controller-first: `controller: NodeGraphController` is
+    required and the store/no-controller fallback path is removed.
+  - The declarative path now dispatches committed edits through `NodeGraphController` and syncs
+    graph / view models back from store.
   - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
     facade over store + optional view queue.
   - The controller now also exposes XyFlow-style connection queries via

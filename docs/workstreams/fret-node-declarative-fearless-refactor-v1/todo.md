@@ -191,13 +191,10 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Land the first declarative transaction-safe commit slice:
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` node-drag commit now builds a
     `GraphTransaction` instead of mutating `Graph` in place.
-  - When `NodeGraphSurfacePaintOnlyProps.controller` is present, the commit now prefers the
-    controller facade, which in turn dispatches through `NodeGraphStore` and syncs graph/view
+  - The commit now dispatches through `NodeGraphController` (store-backed) and syncs graph/view
     models back from store.
-  - `NodeGraphSurfacePaintOnlyProps.store` remains as a compatibility fallback for callers that have
-    not adopted the controller surface yet.
-  - When no store/controller is present, the declarative path still applies the transaction as a
-    transaction, rather than doing ad-hoc position mutation.
+  - `NodeGraphSurfacePaintOnlyProps.controller` is now required (controller-first).
+    `NodeGraphSurfacePaintOnlyProps.store` and the no-controller fallback path are removed.
 - [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphStore` so the default
       declarative demo path exercises the transaction-safe architecture.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.
@@ -327,7 +324,6 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 

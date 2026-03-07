@@ -27,8 +27,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction, graph_diff, normalize_transaction};
-use crate::runtime::store::NodeGraphStore;
+use crate::ops::{GraphOp, GraphTransaction, graph_diff, normalize_transaction};
 use crate::ui::NodeGraphController;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
@@ -116,8 +115,7 @@ impl Default for NodeGraphWheelZoomConfig {
 pub struct NodeGraphSurfacePaintOnlyProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
-    pub controller: Option<NodeGraphController>,
-    pub store: Option<Model<NodeGraphStore>>,
+    pub controller: NodeGraphController,
 
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
@@ -155,7 +153,11 @@ pub struct NodeGraphSurfacePaintOnlyProps {
 }
 
 impl NodeGraphSurfacePaintOnlyProps {
-    pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+    pub fn new(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        controller: NodeGraphController,
+    ) -> Self {
         let mut pointer_region = PointerRegionProps::default();
         pointer_region.layout.size.width = Length::Fill;
         pointer_region.layout.size.height = Length::Fill;
@@ -163,8 +165,7 @@ impl NodeGraphSurfacePaintOnlyProps {
         Self {
             graph,
             view_state,
-            controller: None,
-            store: None,
+            controller,
             pointer_region,
             canvas: CanvasProps::default(),
             geometry_overrides: None,
@@ -866,38 +867,15 @@ fn commit_graph_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     tx: &GraphTransaction,
 ) -> bool {
     if tx.is_empty() {
         return true;
     }
 
-    if let Some(controller) = controller {
-        return controller
-            .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
-            .is_ok();
-    }
-
-    if let Some(store) = store {
-        let controller = NodeGraphController::new(store.clone());
-        return controller
-            .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
-            .is_ok();
-    }
-
-    let Ok(mut scratch) = host.models_mut().read(graph, |g| g.clone()) else {
-        return false;
-    };
-    if apply_transaction(&mut scratch, tx).is_err() {
-        return false;
-    }
-
-    host.models_mut()
-        .update(graph, |g| {
-            *g = scratch;
-        })
+    controller
+        .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
         .is_ok()
 }
 
@@ -905,11 +883,10 @@ fn commit_node_drag_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     tx: &GraphTransaction,
 ) -> bool {
-    commit_graph_transaction(host, graph, view_state, controller, store, tx)
+    commit_graph_transaction(host, graph, view_state, controller, tx)
 }
 
 fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphTransaction {
@@ -965,8 +942,7 @@ fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> GraphTransact
 fn update_view_state_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
     let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
@@ -974,31 +950,15 @@ fn update_view_state_action_host(
     };
     f(&mut next_view_state);
 
-    if let Some(controller) = controller {
-        return controller
-            .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
-            .is_ok();
-    }
-
-    if let Some(store) = store {
-        let controller = NodeGraphController::new(store.clone());
-        return controller
-            .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
-            .is_ok();
-    }
-
-    host.models_mut()
-        .update(view_state, |state| {
-            *state = next_view_state;
-        })
+    controller
+        .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
         .is_ok()
 }
 
 fn update_view_state_ui_host<H: UiHost>(
     host: &mut H,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     f: impl FnOnce(&mut NodeGraphViewState),
 ) -> bool {
     let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
@@ -1006,31 +966,15 @@ fn update_view_state_ui_host<H: UiHost>(
     };
     f(&mut next_view_state);
 
-    if let Some(controller) = controller {
-        return controller
-            .replace_view_state_and_sync_model(host, view_state, next_view_state)
-            .is_ok();
-    }
-
-    if let Some(store) = store {
-        let controller = NodeGraphController::new(store.clone());
-        return controller
-            .replace_view_state_and_sync_model(host, view_state, next_view_state)
-            .is_ok();
-    }
-
-    host.models_mut()
-        .update(view_state, |state| {
-            *state = next_view_state;
-        })
+    controller
+        .replace_view_state_and_sync_model(host, view_state, next_view_state)
         .is_ok()
 }
 
 fn update_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     f: impl FnOnce(
         &mut Vec<crate::core::NodeId>,
         &mut Vec<crate::core::EdgeId>,
@@ -1049,37 +993,14 @@ fn update_selection_action_host(
         &mut selected_groups,
     );
 
-    if let Some(controller) = controller {
-        return controller
-            .set_selection_and_sync_view_model_action_host(
-                host,
-                view_state,
-                selected_nodes,
-                selected_edges,
-                selected_groups,
-            )
-            .is_ok();
-    }
-
-    if let Some(store) = store {
-        let controller = NodeGraphController::new(store.clone());
-        return controller
-            .set_selection_and_sync_view_model_action_host(
-                host,
-                view_state,
-                selected_nodes,
-                selected_edges,
-                selected_groups,
-            )
-            .is_ok();
-    }
-
-    host.models_mut()
-        .update(view_state, |state| {
-            state.selected_nodes = selected_nodes;
-            state.selected_edges = selected_edges;
-            state.selected_groups = selected_groups;
-        })
+    controller
+        .set_selection_and_sync_view_model_action_host(
+            host,
+            view_state,
+            selected_nodes,
+            selected_edges,
+            selected_groups,
+        )
         .is_ok()
 }
 
@@ -1155,8 +1076,7 @@ fn build_click_selection_preview_nodes(
 fn commit_pending_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     pending: &PendingSelectionState,
 ) -> bool {
     let nodes = pending.nodes.clone();
@@ -1166,7 +1086,6 @@ fn commit_pending_selection_action_host(
         host,
         view_state,
         controller,
-        store,
         move |selected_nodes, selected_edges, selected_groups| {
             selected_nodes.clear();
             selected_nodes.extend(nodes.iter().copied());
@@ -1183,8 +1102,7 @@ fn commit_pending_selection_action_host(
 fn commit_marquee_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     marquee: &MarqueeDragState,
 ) -> bool {
     let pending = PendingSelectionState {
@@ -1192,7 +1110,7 @@ fn commit_marquee_selection_action_host(
         clear_edges: !marquee.toggle,
         clear_groups: !marquee.toggle,
     };
-    commit_pending_selection_action_host(host, view_state, controller, store, &pending)
+    commit_pending_selection_action_host(host, view_state, controller, &pending)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1273,13 +1191,12 @@ fn commit_diag_graph_transaction_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     build_tx: fn(&Graph) -> GraphTransaction,
 ) -> bool {
     let tx = host.models_mut().read(graph, build_tx).ok();
     if let Some(tx) = tx.as_ref() {
-        let _ = commit_graph_transaction(host, graph, view_state, controller, store, tx);
+        let _ = commit_graph_transaction(host, graph, view_state, controller, tx);
     }
     true
 }
@@ -1287,11 +1204,10 @@ fn commit_diag_graph_transaction_action_host(
 fn apply_declarative_diag_view_preset_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     preset: DeclarativeDiagViewPreset,
 ) -> bool {
-    update_view_state_action_host(host, view_state, controller, store, |state| {
+    update_view_state_action_host(host, view_state, controller, |state| {
         match preset {
             DeclarativeDiagViewPreset::CenteredSelectionOnDrag => {
                 state.pan.x = 380.0;
@@ -1375,8 +1291,7 @@ fn handle_declarative_diag_key_action_host(
     action: DeclarativeDiagKeyAction,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     portal_bounds_store: &Model<PortalBoundsStore>,
     portal_debug_flags: &Model<PortalDebugFlags>,
     diag_paint_overrides: &Arc<NodeGraphPaintOverridesMap>,
@@ -1388,7 +1303,6 @@ fn handle_declarative_diag_key_action_host(
             graph,
             view_state,
             controller,
-            store,
             build_diag_nudge_visible_node_transaction,
         ),
         DeclarativeDiagKeyAction::NormalizeVisibleNodeCentered => {
@@ -1397,14 +1311,12 @@ fn handle_declarative_diag_key_action_host(
                 graph,
                 view_state,
                 controller,
-                store,
                 build_diag_normalize_visible_node_transaction,
             );
             let _ = apply_declarative_diag_view_preset_action_host(
                 host,
                 view_state,
                 controller,
-                store,
                 DeclarativeDiagViewPreset::CenteredSelectionOnDrag,
             );
             true
@@ -1415,14 +1327,12 @@ fn handle_declarative_diag_key_action_host(
                 graph,
                 view_state,
                 controller,
-                store,
                 build_diag_normalize_visible_node_transaction,
             );
             let _ = apply_declarative_diag_view_preset_action_host(
                 host,
                 view_state,
                 controller,
-                store,
                 DeclarativeDiagViewPreset::OffsetPartialMarquee,
             );
             true
@@ -1462,13 +1372,12 @@ fn handle_declarative_keyboard_zoom_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     action: DeclarativeKeyboardZoomAction,
     view_state: &Model<NodeGraphViewState>,
-    controller: Option<&NodeGraphController>,
-    store: Option<&Model<NodeGraphStore>>,
+    controller: &NodeGraphController,
     min_zoom: f32,
     max_zoom: f32,
 ) -> bool {
     const KB_ZOOM_STEP_MUL: f32 = 1.1;
-    update_view_state_action_host(host, view_state, controller, store, |state| {
+    update_view_state_action_host(host, view_state, controller, |state| {
         let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
         state.zoom = match action {
             DeclarativeKeyboardZoomAction::ZoomIn => {
@@ -2220,7 +2129,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         graph,
         view_state,
         controller,
-        store,
         pointer_region,
         canvas,
         geometry_overrides,
@@ -2712,8 +2620,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let pending_selection_escape = pending_selection.clone();
             let graph_debug = graph.clone();
             let view_zoom_kb = view_state.clone();
-             let controller_zoom_kb = controller.clone();
-            let store_zoom_kb = store.clone();
+            let controller_zoom_kb = controller.clone();
             let portal_bounds_for_fit = portal_bounds_store.clone();
             let portal_debug_for_keys = portal_debug_flags.clone();
             let diag_keys_enabled = diag_keys_enabled;
@@ -2753,8 +2660,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             action,
                             &graph_debug,
                             &view_zoom_kb,
-                            controller_zoom_kb.as_ref(),
-                            store_zoom_kb.as_ref(),
+                            &controller_zoom_kb,
                             &portal_bounds_for_fit,
                             &portal_debug_for_keys,
                             &diag_paint_overrides_for_keys,
@@ -2773,8 +2679,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         host,
                         action,
                         &view_zoom_kb,
-                        controller_zoom_kb.as_ref(),
-                        store_zoom_kb.as_ref(),
+                        &controller_zoom_kb,
                         min_zoom,
                         max_zoom,
                     );
@@ -2787,8 +2692,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             cx.key_on_key_down_capture_for(element, on_key_down_capture);
 
             let view_pan_down = view_state.clone();
-            let _controller_pan_down = controller.clone();
-            let _store_pan_down = store.clone();
             let drag_start = drag.clone();
             let marquee_start = marquee_drag.clone();
             let node_drag_start = node_drag.clone();
@@ -2857,7 +2760,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
             let view_pan = view_state.clone();
             let controller_pan = controller.clone();
-            let store_pan = store.clone();
             let drag_move = drag.clone();
             let marquee_move = marquee_drag.clone();
             let node_drag_move = node_drag.clone();
@@ -2885,8 +2787,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             &pending_selection_move,
                             &hovered_for_hover,
                             &view_pan,
-                            controller_pan.as_ref(),
-                            store_pan.as_ref(),
+                            &controller_pan,
                             mv,
                         ) {
                             if outcome.capture_pointer {
@@ -2947,8 +2848,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     let updated = update_view_state_action_host(
                         host,
                         &view_pan,
-                        controller_pan.as_ref(),
-                        store_pan.as_ref(),
+                        &controller_pan,
                         |state| {
                             apply_pan_by_screen_delta(state, dx, dy);
                         },
@@ -2977,7 +2877,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let graph_commit = graph.clone();
             let view_commit = view_state.clone();
             let controller_commit = controller.clone();
-            let store_commit = store.clone();
             let on_pointer_up: OnPointerUp = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
@@ -2993,8 +2892,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         &pending_selection_end,
                         &graph_commit,
                         &view_commit,
-                        controller_commit.as_ref(),
-                        store_commit.as_ref(),
+                        &controller_commit,
                     )
                 },
             );
@@ -3021,7 +2919,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
             let view_zoom = view_state.clone();
             let controller_wheel = controller.clone();
-            let store_wheel = store.clone();
             let grid_cache_bounds = grid_cache.clone();
             let on_wheel: OnWheel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -3049,8 +2946,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     let updated = update_view_state_action_host(
                         host,
                         &view_zoom,
-                        controller_wheel.as_ref(),
-                        store_wheel.as_ref(),
+                        &controller_wheel,
                         |state| {
                             let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
                             let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
@@ -3075,7 +2971,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
             let view_pinch = view_state.clone();
             let controller_pinch = controller.clone();
-            let store_pinch = store.clone();
             let grid_cache_bounds = grid_cache.clone();
             let on_pinch: OnPinchGesture = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -3098,8 +2993,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     let updated = update_view_state_action_host(
                         host,
                         &view_pinch,
-                        controller_pinch.as_ref(),
-                        store_pinch.as_ref(),
+                        &controller_pinch,
                         |state| {
                             let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
                             let factor = (1.0 + delta).max(1.0e-6);
@@ -3759,8 +3653,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let applied = update_view_state_ui_host(
                             cx.app,
                             &view_state,
-                            controller.as_ref(),
-                            store.as_ref(),
+                            &controller,
                             |state| {
                                 let _ = apply_fit_view_to_canvas_rect(
                                     state, bounds, target, 24.0, min_zoom, max_zoom,
@@ -3901,7 +3794,9 @@ mod tests {
         update_hovered_node_pointer_move_action_host,
     };
     use crate::core::{
-        CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
+        CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group,
+        GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+        PortKind,
     };
     use crate::io::NodeGraphViewState;
     use crate::ops::GraphOp;
@@ -4320,8 +4215,7 @@ mod tests {
             &mut host,
             &graph,
             &view_state,
-            Some(&controller),
-            Some(&store),
+            &controller,
             &tx,
         ));
 
@@ -4409,8 +4303,7 @@ mod tests {
             &mut host,
             &graph,
             &view_state,
-            Some(&controller),
-            Some(&store),
+            &controller,
             &tx,
         ));
 
@@ -4565,8 +4458,7 @@ mod tests {
         assert!(commit_pending_selection_action_host(
             &mut fixture.host,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
             &pending,
         ));
 
@@ -4606,8 +4498,7 @@ mod tests {
         assert!(commit_marquee_selection_action_host(
             &mut fixture.host,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
             &marquee,
         ));
 
@@ -4662,8 +4553,7 @@ mod tests {
             &pending,
             &fixture.graph,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
         ));
         assert_pointer_session_finished(&fixture.host, action_cx);
         assert_single_selection_change(&trace, vec![node_b]);
@@ -4681,7 +4571,13 @@ mod tests {
         let node_drag = host.models.insert(None::<NodeDragState>);
         let pending = host.models.insert(None::<PendingSelectionState>);
         let graph = host.models.insert(Graph::new(GraphId::from_u128(121)));
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(121)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
 
         assert!(!handle_declarative_pointer_up_action_host(
             &mut host,
@@ -4698,8 +4594,7 @@ mod tests {
             &pending,
             &graph,
             &view_state,
-            None,
-            None,
+            &controller,
         ));
         assert!(
             host.models
@@ -4724,7 +4619,13 @@ mod tests {
         let node_drag = host.models.insert(None::<NodeDragState>);
         let pending = host.models.insert(None::<PendingSelectionState>);
         let graph = host.models.insert(Graph::new(GraphId::from_u128(122)));
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(122)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
 
         assert!(handle_declarative_pointer_up_action_host(
             &mut host,
@@ -4741,8 +4642,7 @@ mod tests {
             &pending,
             &graph,
             &view_state,
-            None,
-            None,
+            &controller,
         ));
         assert!(
             host.models
@@ -4806,8 +4706,7 @@ mod tests {
             &marquee,
             &fixture.graph,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
         );
 
         assert_eq!(
@@ -4861,8 +4760,7 @@ mod tests {
             &marquee,
             &fixture.graph,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
         );
 
         assert_eq!(
@@ -4887,7 +4785,13 @@ mod tests {
     fn complete_left_pointer_release_action_host_none_when_no_left_release_state_exists() {
         let mut host = TestActionHostImpl::default();
         let graph = host.models.insert(Graph::new(GraphId::from_u128(12)));
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(12)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
         let node_drag = host.models.insert(None::<NodeDragState>);
         let marquee = host.models.insert(None::<MarqueeDragState>);
         let pending = host.models.insert(None::<PendingSelectionState>);
@@ -4899,8 +4803,7 @@ mod tests {
             &marquee,
             &graph,
             &view_state,
-            None,
-            None,
+            &controller,
         );
 
         assert_eq!(outcome, LeftPointerReleaseOutcome::None);
@@ -4941,8 +4844,7 @@ mod tests {
             &pending,
             &fixture.graph,
             &fixture.view_state,
-            Some(&fixture.controller),
-            Some(&fixture.store),
+            &fixture.controller,
         );
 
         assert_eq!(
@@ -4976,10 +4878,22 @@ mod tests {
         let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9947);
         let node_b = NodeId::from_u128(9948);
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9947));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let pending = host.models.insert(Some(PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: true,
@@ -4990,8 +4904,7 @@ mod tests {
             &mut host,
             &pending,
             &view_state,
-            None,
-            None,
+            &controller,
         );
 
         assert_eq!(
@@ -5018,10 +4931,16 @@ mod tests {
         let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9949);
         let node_b = NodeId::from_u128(9950);
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9949)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
         let marquee = host.models.insert(Some(MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(4.0), Px(4.0)),
@@ -5041,8 +4960,7 @@ mod tests {
             &marquee,
             &pending,
             &view_state,
-            None,
-            None,
+            &controller,
         );
 
         assert_eq!(
@@ -5109,8 +5027,7 @@ mod tests {
             &mut host,
             &graph,
             &view_state,
-            Some(&controller),
-            Some(&store),
+            &controller,
             &node_drag,
             Some(&pending),
         );
@@ -5375,13 +5292,27 @@ mod tests {
     fn handle_node_drag_pointer_move_action_host_activation_commits_pending_selection_and_requests_capture()
      {
         let mut host = TestActionHostImpl::default();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             interaction: crate::io::NodeGraphInteractionConfig {
                 node_drag_threshold: 4.0,
                 ..Default::default()
             },
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9973));
+        graph_value.nodes.insert(
+            NodeId::from_u128(9974),
+            test_node(CanvasPoint { x: 0.0, y: 0.0 }),
+        );
+        graph_value.nodes.insert(
+            NodeId::from_u128(9975),
+            test_node(CanvasPoint { x: 40.0, y: 20.0 }),
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let node_drag = host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -5410,8 +5341,7 @@ mod tests {
             &pending,
             &hovered,
             &view_state,
-            None,
-            None,
+            &controller,
             mv,
         );
 
@@ -5450,7 +5380,13 @@ mod tests {
     #[test]
     fn handle_node_drag_pointer_move_action_host_canceled_session_clears_hover_without_redraw() {
         let mut host = TestActionHostImpl::default();
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9976)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
         let node_drag = host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -5475,8 +5411,7 @@ mod tests {
             &pending,
             &hovered,
             &view_state,
-            None,
-            None,
+            &controller,
             mv,
         );
 
@@ -5678,19 +5613,24 @@ mod tests {
     #[test]
     fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_selection() {
         let mut host = TestActionHostImpl::default();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             zoom: 2.5,
             selected_nodes: vec![NodeId::from_u128(9964)],
             selected_edges: vec![EdgeId::new()],
             selected_groups: vec![GroupId::new()],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9964)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
 
         assert!(apply_declarative_diag_view_preset_action_host(
             &mut host,
             &view_state,
-            None,
-            None,
+            &controller,
             DeclarativeDiagViewPreset::OffsetPartialMarquee,
         ));
         host.models
@@ -5714,7 +5654,13 @@ mod tests {
     fn handle_declarative_diag_key_action_host_disable_portals_clears_pending_fit_and_bounds() {
         let mut host = TestActionHostImpl::default();
         let graph = host.models.insert(Graph::default());
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9965)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
         let mut portal_bounds_state = PortalBoundsStore::default();
         portal_bounds_state.pending_fit_to_portals = true;
         portal_bounds_state.nodes_canvas_bounds.insert(
@@ -5734,8 +5680,7 @@ mod tests {
             DeclarativeDiagKeyAction::DisablePortals,
             &graph,
             &view_state,
-            None,
-            None,
+            &controller,
             &portal_bounds,
             &portal_debug,
             &diag_paint_overrides,
@@ -5757,17 +5702,22 @@ mod tests {
     #[test]
     fn handle_declarative_keyboard_zoom_action_host_reset_normalizes_zoom() {
         let mut host = TestActionHostImpl::default();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             zoom: 2.5,
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9966)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
 
         assert!(handle_declarative_keyboard_zoom_action_host(
             &mut host,
             DeclarativeKeyboardZoomAction::Reset,
             &view_state,
-            None,
-            None,
+            &controller,
             0.1,
             8.0,
         ));
@@ -5796,7 +5746,13 @@ mod tests {
             },
         );
         let graph = host.models.insert(graph_value);
-        let view_state = host.models.insert(NodeGraphViewState::default());
+        let view_value = NodeGraphViewState::default();
+        let view_state = host.models.insert(view_value.clone());
+        let store = host.models.insert(NodeGraphStore::new(
+            Graph::new(GraphId::from_u128(9967)),
+            view_value,
+        ));
+        let controller = NodeGraphController::new(store);
         let portal_bounds = host.models.insert(PortalBoundsStore::default());
         let portal_debug = host.models.insert(PortalDebugFlags::default());
         let diag_paint_overrides_enabled = host.models.insert(false);
@@ -5807,8 +5763,7 @@ mod tests {
             DeclarativeDiagKeyAction::TogglePaintOverrides,
             &graph,
             &view_state,
-            None,
-            None,
+            &controller,
             &portal_bounds,
             &portal_debug,
             &diag_paint_overrides,
@@ -5951,12 +5906,81 @@ mod tests {
         let node_b = NodeId::from_u128(9602);
         let edge = EdgeId::new();
         let group = GroupId::new();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node_a],
             selected_edges: vec![edge],
             selected_groups: vec![group],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9601));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let pending = PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
@@ -5966,8 +5990,7 @@ mod tests {
         assert!(commit_pending_selection_action_host(
             &mut host,
             &view_state,
-            None,
-            None,
+            &controller,
             &pending,
         ));
 
@@ -5990,14 +6013,84 @@ mod tests {
     fn commit_pending_selection_action_host_can_clear_all_selection_kinds() {
         let mut host = TestActionHostImpl::default();
         let node = NodeId::from_u128(9701);
+        let other = NodeId::from_u128(9702);
         let edge = EdgeId::new();
         let group = GroupId::new();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node],
             selected_edges: vec![edge],
             selected_groups: vec![group],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9701));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_value.ports = vec![from_port];
+        let mut other_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        other_value.ports = vec![to_port];
+        graph_value.nodes.insert(node, node_value);
+        graph_value.nodes.insert(other, other_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: other,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let pending = PendingSelectionState {
             nodes: Arc::from([]),
             clear_edges: true,
@@ -6007,8 +6100,7 @@ mod tests {
         assert!(commit_pending_selection_action_host(
             &mut host,
             &view_state,
-            None,
-            None,
+            &controller,
             &pending,
         ));
 
@@ -6141,12 +6233,81 @@ mod tests {
         let node_b = NodeId::from_u128(9202);
         let edge = EdgeId::new();
         let group = GroupId::new();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node_a],
             selected_edges: vec![edge],
             selected_groups: vec![group],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9201));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let marquee = MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -6159,8 +6320,7 @@ mod tests {
         assert!(commit_marquee_selection_action_host(
             &mut host,
             &view_state,
-            None,
-            None,
+            &controller,
             &marquee,
         ));
 
@@ -6186,12 +6346,81 @@ mod tests {
         let node_b = NodeId::from_u128(9302);
         let edge = EdgeId::new();
         let group = GroupId::new();
-        let view_state = host.models.insert(NodeGraphViewState {
+        let view_value = NodeGraphViewState {
             selected_nodes: vec![node_a],
             selected_edges: vec![edge],
             selected_groups: vec![group],
             ..Default::default()
-        });
+        };
+        let view_state = host.models.insert(view_value.clone());
+        let mut graph_value = Graph::new(GraphId::from_u128(9301));
+        let from_port = PortId::new();
+        let to_port = PortId::new();
+        let mut node_a_value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        node_a_value.ports = vec![from_port];
+        let mut node_b_value = test_node(CanvasPoint { x: 40.0, y: 20.0 });
+        node_b_value.ports = vec![to_port];
+        graph_value.nodes.insert(node_a, node_a_value);
+        graph_value.nodes.insert(node_b, node_b_value);
+        graph_value.ports.insert(
+            from_port,
+            Port {
+                node: node_a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.ports.insert(
+            to_port,
+            Port {
+                node: node_b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: from_port,
+                to: to_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph_value.groups.insert(
+            group,
+            Group {
+                title: "test group".into(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 1.0,
+                        height: 1.0,
+                    },
+                },
+                color: None,
+            },
+        );
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, view_value));
+        let controller = NodeGraphController::new(store);
         let marquee = MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -6204,8 +6433,7 @@ mod tests {
         assert!(commit_marquee_selection_action_host(
             &mut host,
             &view_state,
-            None,
-            None,
+            &controller,
             &marquee,
         ));
 
