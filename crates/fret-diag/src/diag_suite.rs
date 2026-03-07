@@ -860,6 +860,251 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     })
 }
 
+fn build_suite_core_default_post_run_checks(
+    src: &Path,
+    suite_profile: SuiteRunProfile,
+    builtin_suite: Option<BuiltinSuite>,
+    user_checks: &SuiteChecks,
+    is_gc_liveness_script: bool,
+) -> SuiteChecks {
+    let mut defaults = SuiteChecks::default();
+
+    let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
+        if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
+            diag_policy::docking_arbitration_script_default_gates(src)
+        } else {
+            (None, None, None)
+        };
+    let vlist_window_boundary_suite = suite_profile.vlist_window_boundary_suite();
+    let vlist_window_boundary_retained_suite =
+        suite_profile.ui_gallery_vlist_window_boundary_retained_suite;
+    let components_gallery_suite = suite_profile.components_gallery_suite();
+    let pan_zoom_suite = suite_profile.pan_zoom_suite();
+    let ai_transcript_suite = suite_profile.ai_transcript_suite();
+    let suite_ai_transcript_stale_paint_test_id =
+        ai_transcript_suite.then_some("ui-gallery-ai-transcript-row-0");
+    let suite_stale_paint_test_id = vlist_window_boundary_suite
+        .then_some("ui-gallery-virtual-list-root")
+        .or(suite_ai_transcript_stale_paint_test_id)
+        .filter(|_| user_checks.check_stale_paint_test_id.is_none());
+    let suite_wheel_scroll_hit_changes_test_id =
+        diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(src)
+            .or_else(|| suite_profile.components_gallery_root_test_id())
+            .filter(|_| user_checks.check_wheel_scroll_hit_changes_test_id.is_none());
+    let suite_view_cache_reuse_min = (vlist_window_boundary_suite || pan_zoom_suite)
+        .then_some(1u64)
+        .or_else(|| ai_transcript_suite.then_some(10u64))
+        .filter(|_| user_checks.check_view_cache_reuse_min.is_none());
+    let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
+        .then_some(1u64)
+        .filter(|_| user_checks.check_view_cache_reuse_min.is_none());
+    let suite_view_cache_reuse_stable_min = ai_transcript_suite
+        .then_some(10u64)
+        .filter(|_| user_checks.check_view_cache_reuse_stable_min.is_none());
+    let suite_default_pixels_changed_test_id =
+        suite_profile.default_pixels_changed_test_id().filter(|_| {
+            user_checks.check_pixels_changed_test_id.is_none()
+                && user_checks.check_pixels_unchanged_test_id.is_none()
+        });
+    let suite_pixels_changed_test_id = diag_policy::ui_gallery_script_pixels_changed_test_id(src)
+        .filter(|_| {
+            user_checks.check_pixels_changed_test_id.is_none()
+                && user_checks.check_pixels_unchanged_test_id.is_none()
+        });
+    let suite_vlist_visible_range_refreshes_min =
+        vlist_window_boundary_suite.then_some(1u64).filter(|_| {
+            user_checks
+                .check_vlist_visible_range_refreshes_min
+                .is_none()
+        });
+    let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
+        .then_some(if vlist_window_boundary_retained_suite {
+            50u64
+        } else {
+            20u64
+        })
+        .filter(|_| {
+            user_checks
+                .check_vlist_visible_range_refreshes_max
+                .is_none()
+        });
+    let suite_vlist_window_shifts_explainable =
+        vlist_window_boundary_suite && !user_checks.check_vlist_window_shifts_explainable;
+    let suite_prepaint_actions_min = vlist_window_boundary_suite
+        .then_some(1u64)
+        .filter(|_| user_checks.check_prepaint_actions_min.is_none());
+    let suite_hover_layout_max = ai_transcript_suite
+        .then_some(0u32)
+        .filter(|_| user_checks.check_hover_layout_max.is_none());
+    let suite_chart_sampling_window_shifts_min = suite_profile
+        .ui_gallery_chart_torture_suite
+        .then_some(1u64)
+        .filter(|_| user_checks.check_chart_sampling_window_shifts_min.is_none());
+    let suite_node_graph_cull_window_shifts_min = suite_profile
+        .ui_gallery_node_graph_cull_window_shifts_suite
+        .then_some(1u64)
+        .or_else(|| {
+            suite_profile
+                .ui_gallery_node_graph_cull_suite
+                .then_some(0u64)
+        })
+        .filter(|_| {
+            user_checks
+                .check_node_graph_cull_window_shifts_min
+                .is_none()
+        });
+    let suite_node_graph_cull_window_shifts_max = suite_profile
+        .ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+        .then_some(0u64)
+        .filter(|_| {
+            user_checks
+                .check_node_graph_cull_window_shifts_max
+                .is_none()
+        });
+    let suite_vlist_window_shifts_have_prepaint_actions =
+        vlist_window_boundary_suite && !user_checks.check_vlist_window_shifts_have_prepaint_actions;
+    let suite_vlist_window_shifts_prefetch_max =
+        if suite_profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+            Some(0u64)
+        } else if vlist_window_boundary_suite {
+            Some(if vlist_window_boundary_retained_suite {
+                100u64
+            } else {
+                12u64
+            })
+        } else {
+            None
+        }
+        .filter(|_| user_checks.check_vlist_window_shifts_prefetch_max.is_none());
+    let suite_vlist_window_shifts_escape_max =
+        if suite_profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+            Some(0u64)
+        } else if vlist_window_boundary_suite {
+            Some(if vlist_window_boundary_retained_suite {
+                6u64
+            } else {
+                4u64
+            })
+        } else {
+            None
+        }
+        .filter(|_| user_checks.check_vlist_window_shifts_escape_max.is_none());
+    let script_requires_retained_vlist_reconcile_gate =
+        diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src);
+    let suite_vlist_window_shifts_non_retained_max =
+        if suite_profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+            Some(0u64)
+        } else if script_requires_retained_vlist_reconcile_gate {
+            Some(0u64)
+        } else {
+            None
+        }
+        .filter(|_| {
+            user_checks
+                .check_vlist_window_shifts_non_retained_max
+                .is_none()
+        });
+    let suite_vlist_policy_key_stable = components_gallery_suite
+        && script_requires_retained_vlist_reconcile_gate
+        && !user_checks.check_vlist_policy_key_stable;
+    let suite_windowed_rows_offset_changes_min =
+        diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(src)
+            .then_some(1u64)
+            .filter(|_| user_checks.check_windowed_rows_offset_changes_min.is_none());
+    let suite_windowed_rows_visible_start_changes_repainted =
+        diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(src)
+            && !user_checks.check_windowed_rows_visible_start_changes_repainted;
+    let script_requires_retained_vlist_keep_alive_reuse_gate =
+        diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src);
+    let retained_vlist_suite =
+        components_gallery_suite || ai_transcript_suite || vlist_window_boundary_retained_suite;
+    let suite_retained_vlist_reconcile_no_notify_min = (retained_vlist_suite
+        && script_requires_retained_vlist_reconcile_gate)
+        .then_some(1u64)
+        .filter(|_| {
+            user_checks
+                .check_retained_vlist_reconcile_no_notify_min
+                .is_none()
+        });
+    let suite_retained_vlist_attach_detach_max = (retained_vlist_suite
+        && script_requires_retained_vlist_reconcile_gate)
+        .then_some(if vlist_window_boundary_retained_suite {
+            64u64
+        } else {
+            256u64
+        })
+        .filter(|_| user_checks.check_retained_vlist_attach_detach_max.is_none());
+    let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
+        && script_requires_retained_vlist_keep_alive_reuse_gate)
+        || vlist_window_boundary_retained_suite)
+        .then_some(if vlist_window_boundary_retained_suite {
+            5u64
+        } else {
+            1u64
+        })
+        .filter(|_| {
+            user_checks
+                .check_retained_vlist_keep_alive_reuse_min
+                .is_none()
+        });
+    let suite_retained_vlist_keep_alive_budget = ((components_gallery_suite
+        && script_requires_retained_vlist_keep_alive_reuse_gate)
+        || vlist_window_boundary_retained_suite)
+        .then_some((1u64, 0u64))
+        .filter(|_| user_checks.check_retained_vlist_keep_alive_budget.is_none());
+
+    defaults.check_viewport_input_min = suite_viewport_input_min;
+    defaults.check_dock_drag_min = suite_dock_drag_min;
+    defaults.check_viewport_capture_min = suite_viewport_capture_min;
+    defaults.check_wheel_scroll_test_id =
+        suite_profile.wheel_scroll_test_id().map(|s| s.to_string());
+    defaults.check_wheel_events_max_per_frame =
+        diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(src)
+            .then_some(1u64)
+            .filter(|_| user_checks.check_wheel_events_max_per_frame.is_none());
+    defaults.check_stale_paint_test_id = suite_stale_paint_test_id
+        .or_else(|| suite_profile.components_gallery_root_test_id())
+        .map(|s| s.to_string());
+    defaults.check_wheel_scroll_hit_changes_test_id =
+        suite_wheel_scroll_hit_changes_test_id.map(|s| s.to_string());
+    defaults.check_view_cache_reuse_min =
+        suite_view_cache_reuse_min.or(suite_components_gallery_view_cache_reuse_min);
+    defaults.check_view_cache_reuse_stable_min = suite_view_cache_reuse_stable_min;
+    defaults.check_layout_fast_path_min = components_gallery_suite
+        .then_some(1u64)
+        .filter(|_| user_checks.check_layout_fast_path_min.is_none());
+    defaults.check_pixels_changed_test_id = suite_pixels_changed_test_id
+        .or(suite_default_pixels_changed_test_id)
+        .map(|s| s.to_string());
+    defaults.check_vlist_visible_range_refreshes_min = suite_vlist_visible_range_refreshes_min;
+    defaults.check_vlist_visible_range_refreshes_max = suite_vlist_visible_range_refreshes_max;
+    defaults.check_vlist_window_shifts_explainable = suite_vlist_window_shifts_explainable;
+    defaults.check_prepaint_actions_min = suite_prepaint_actions_min;
+    defaults.check_hover_layout_max = suite_hover_layout_max;
+    defaults.check_chart_sampling_window_shifts_min = suite_chart_sampling_window_shifts_min;
+    defaults.check_node_graph_cull_window_shifts_min = suite_node_graph_cull_window_shifts_min;
+    defaults.check_node_graph_cull_window_shifts_max = suite_node_graph_cull_window_shifts_max;
+    defaults.check_vlist_window_shifts_have_prepaint_actions =
+        suite_vlist_window_shifts_have_prepaint_actions;
+    defaults.check_vlist_window_shifts_prefetch_max = suite_vlist_window_shifts_prefetch_max;
+    defaults.check_vlist_window_shifts_escape_max = suite_vlist_window_shifts_escape_max;
+    defaults.check_vlist_window_shifts_non_retained_max =
+        suite_vlist_window_shifts_non_retained_max;
+    defaults.check_vlist_policy_key_stable = suite_vlist_policy_key_stable;
+    defaults.check_windowed_rows_offset_changes_min = suite_windowed_rows_offset_changes_min;
+    defaults.check_windowed_rows_visible_start_changes_repainted =
+        suite_windowed_rows_visible_start_changes_repainted;
+    defaults.check_retained_vlist_reconcile_no_notify_min =
+        suite_retained_vlist_reconcile_no_notify_min;
+    defaults.check_retained_vlist_attach_detach_max = suite_retained_vlist_attach_detach_max;
+    defaults.check_retained_vlist_keep_alive_reuse_min = suite_retained_vlist_keep_alive_reuse_min;
+    defaults.check_retained_vlist_keep_alive_budget = suite_retained_vlist_keep_alive_budget;
+    defaults.check_gc_sweep_liveness =
+        builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
+
+    defaults
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
@@ -1013,11 +1258,11 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_vlist_policy_key_stable,
         check_vlist_visible_range_refreshes_max,
         check_vlist_visible_range_refreshes_min,
-        check_vlist_window_shifts_escape_max,
+        check_vlist_window_shifts_escape_max: _,
         check_vlist_window_shifts_explainable,
-        check_vlist_window_shifts_have_prepaint_actions,
+        check_vlist_window_shifts_have_prepaint_actions: _,
         check_vlist_window_shifts_non_retained_max,
-        check_vlist_window_shifts_prefetch_max,
+        check_vlist_window_shifts_prefetch_max: _,
         check_wheel_events_max_per_frame,
         check_wheel_scroll_hit_changes_test_id,
         check_wheel_scroll_test_id,
@@ -1982,148 +2227,13 @@ hint: list suites via `fretboard diag list suites`"
                 run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
             }
 
-            let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
-                if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
-                    diag_policy::docking_arbitration_script_default_gates(&src)
-                } else {
-                    (None, None, None)
-                };
-            let vlist_window_boundary_suite = suite_profile.vlist_window_boundary_suite();
-            let vlist_window_boundary_retained_suite =
-                suite_profile.ui_gallery_vlist_window_boundary_retained_suite;
-            let components_gallery_suite = suite_profile.components_gallery_suite();
-            let pan_zoom_suite = suite_profile.pan_zoom_suite();
-            let ai_transcript_suite = suite_profile.ai_transcript_suite();
-            let suite_wheel_scroll_test_id = suite_profile
-                .wheel_scroll_test_id()
-                .filter(|_| check_wheel_scroll_test_id.is_none());
-            let suite_wheel_events_max_per_frame =
-                diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(&src)
-                    .then_some(1u64)
-                    .filter(|_| check_wheel_events_max_per_frame.is_none());
-            let suite_components_gallery_stale_paint_test_id = suite_profile
-                .components_gallery_root_test_id()
-                .filter(|_| check_stale_paint_test_id.is_none());
-            let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
-                .then_some("ui-gallery-ai-transcript-row-0")
-                .filter(|_| check_stale_paint_test_id.is_none());
-            let suite_wheel_scroll_hit_changes_test_id =
-                diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(&src)
-                    .or_else(|| suite_profile.components_gallery_root_test_id())
-                    .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
-            let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
-                .then_some(1u64)
-                .filter(|_| check_view_cache_reuse_min.is_none());
-            let suite_layout_fast_path_min = components_gallery_suite
-                .then_some(1u64)
-                .filter(|_| check_layout_fast_path_min.is_none());
-            let suite_stale_paint_test_id = vlist_window_boundary_suite
-                .then_some("ui-gallery-virtual-list-root")
-                .or(suite_ai_transcript_stale_paint_test_id)
-                .filter(|_| check_stale_paint_test_id.is_none());
-            let suite_view_cache_reuse_min = (vlist_window_boundary_suite || pan_zoom_suite)
-                .then_some(1u64)
-                .or_else(|| ai_transcript_suite.then_some(10u64))
-                .filter(|_| check_view_cache_reuse_min.is_none());
-            let suite_view_cache_reuse_stable_min = ai_transcript_suite
-                .then_some(10u64)
-                .filter(|_| check_view_cache_reuse_stable_min.is_none());
-            let suite_default_pixels_changed_test_id =
-                suite_profile.default_pixels_changed_test_id().filter(|_| {
-                    check_pixels_changed_test_id.is_none()
-                        && check_pixels_unchanged_test_id.is_none()
-                });
-            let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
-                .then_some(1u64)
-                .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
-            let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
-                // Default budget:
-                // - Non-retained path: keep this relatively tight so we catch churn
-                //   regressions early while still allowing prefetch shifts.
-                // - Retained-host path: allow a looser cap since reconcile can legitimately
-                //   refresh more often (and we have additional retained-only gates).
-                .then_some(if vlist_window_boundary_retained_suite {
-                    50u64
-                } else {
-                    20u64
-                })
-                .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
-            let suite_vlist_window_shifts_explainable =
-                vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
-            let suite_prepaint_actions_min = vlist_window_boundary_suite
-                .then_some(1u64)
-                .filter(|_| check_prepaint_actions_min.is_none());
-            let suite_hover_layout_max = ai_transcript_suite
-                .then_some(0u32)
-                .filter(|_| check_hover_layout_max.is_none());
-            let suite_chart_sampling_window_shifts_min = suite_profile
-                .ui_gallery_chart_torture_suite
-                .then_some(1u64)
-                .filter(|_| check_chart_sampling_window_shifts_min.is_none());
-            let suite_node_graph_cull_window_shifts_min = suite_profile
-                .ui_gallery_node_graph_cull_window_shifts_suite
-                .then_some(1u64)
-                .or_else(|| {
-                    suite_profile
-                        .ui_gallery_node_graph_cull_suite
-                        .then_some(0u64)
-                })
-                .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
-            let suite_node_graph_cull_window_shifts_max = suite_profile
-                .ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
-                .then_some(0u64)
-                .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
-            let suite_vlist_window_shifts_have_prepaint_actions =
-                vlist_window_boundary_suite && !check_vlist_window_shifts_have_prepaint_actions;
-            let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
-                .then_some(if vlist_window_boundary_retained_suite {
-                    100u64
-                } else {
-                    12u64
-                })
-                .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
-            let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
-                .then_some(if vlist_window_boundary_retained_suite {
-                    6u64
-                } else {
-                    4u64
-                })
-                .filter(|_| check_vlist_window_shifts_escape_max.is_none());
-            let script_requires_retained_vlist_reconcile_gate =
-                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
-                    || vlist_window_boundary_retained_suite;
-            let suite_vlist_window_shifts_non_retained_max =
-                script_requires_retained_vlist_reconcile_gate
-                    .then_some(0u64)
-                    .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_non_retained_max = suite_profile
-                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                .then_some(0u64)
-                .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_prefetch_max = suite_profile
-                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                .then_some(0u64)
-                .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_escape_max = suite_profile
-                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                .then_some(0u64)
-                .filter(|_| check_vlist_window_shifts_escape_max.is_none());
-            let suite_vlist_policy_key_stable = components_gallery_suite
-                && script_requires_retained_vlist_reconcile_gate
-                && !check_vlist_policy_key_stable;
-            let suite_windowed_rows_offset_changes_min =
-                diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
-                    .then_some(1u64)
-                    .filter(|_| check_windowed_rows_offset_changes_min.is_none());
-            let suite_windowed_rows_visible_start_changes_repainted =
-                diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(
-                    &src,
-                ) && !check_windowed_rows_visible_start_changes_repainted;
-            let suite_pixels_changed_test_id =
-                diag_policy::ui_gallery_script_pixels_changed_test_id(&src).filter(|_| {
-                    check_pixels_changed_test_id.is_none()
-                        && check_pixels_unchanged_test_id.is_none()
-                });
+            let suite_core_default_checks = build_suite_core_default_post_run_checks(
+                &src,
+                suite_profile,
+                builtin_suite,
+                &checks_for_post_run_template,
+                is_gc_liveness_script,
+            );
             let suite_ui_gallery_code_editor_torture_marker_present =
                 diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(
                     &src,
@@ -2290,39 +2400,6 @@ hint: list suites via `fretboard diag list suites`"
                 diag_policy::ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
                     &src,
                 ) && !check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-            let script_requires_retained_vlist_keep_alive_reuse_gate =
-                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-            let retained_vlist_suite = components_gallery_suite
-                || ai_transcript_suite
-                || vlist_window_boundary_retained_suite;
-            let suite_retained_vlist_reconcile_no_notify_min = (retained_vlist_suite
-                && script_requires_retained_vlist_reconcile_gate)
-                .then_some(1u64)
-                .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-            let suite_retained_vlist_attach_detach_max = (retained_vlist_suite
-                && script_requires_retained_vlist_reconcile_gate)
-                .then_some(if vlist_window_boundary_retained_suite {
-                    64u64
-                } else {
-                    256u64
-                })
-                .filter(|_| check_retained_vlist_attach_detach_max.is_none());
-            let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
-                && script_requires_retained_vlist_keep_alive_reuse_gate)
-                || vlist_window_boundary_retained_suite)
-                .then_some(if vlist_window_boundary_retained_suite {
-                    5u64
-                } else {
-                    1u64
-                })
-                .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
-            let suite_retained_vlist_keep_alive_budget = ((components_gallery_suite
-                && script_requires_retained_vlist_keep_alive_reuse_gate)
-                || vlist_window_boundary_retained_suite)
-                .then_some((1u64, 0u64))
-                .filter(|_| check_retained_vlist_keep_alive_budget.is_none());
-            let suite_gc_sweep_liveness =
-                builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
 
             let mut notify_hotspot_file_max_for_script = check_notify_hotspot_file_max.clone();
             if notify_hotspot_file_max_for_script.is_empty()
@@ -2340,14 +2417,13 @@ hint: list suites via `fretboard diag list suites`"
             let mut checks_for_post_run = checks_for_post_run_template.clone();
 
             if checks_for_post_run.check_stale_paint_test_id.is_none() {
-                checks_for_post_run.check_stale_paint_test_id = suite_stale_paint_test_id
-                    .or(suite_components_gallery_stale_paint_test_id)
-                    .map(|s| s.to_string());
+                checks_for_post_run.check_stale_paint_test_id =
+                    suite_core_default_checks.check_stale_paint_test_id.clone();
             }
             if checks_for_post_run.check_pixels_changed_test_id.is_none() {
-                checks_for_post_run.check_pixels_changed_test_id = suite_pixels_changed_test_id
-                    .or(suite_default_pixels_changed_test_id)
-                    .map(|s| s.to_string());
+                checks_for_post_run.check_pixels_changed_test_id = suite_core_default_checks
+                    .check_pixels_changed_test_id
+                    .clone();
             }
 
             checks_for_post_run.check_ui_gallery_code_editor_torture_marker_present |=
@@ -2483,99 +2559,100 @@ hint: list suites via `fretboard diag list suites`"
 
             checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
                 .check_wheel_events_max_per_frame
-                .or(suite_wheel_events_max_per_frame);
+                .or(suite_core_default_checks.check_wheel_events_max_per_frame);
             if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
                 checks_for_post_run.check_wheel_scroll_test_id =
-                    suite_wheel_scroll_test_id.map(|s| s.to_string());
+                    suite_core_default_checks.check_wheel_scroll_test_id.clone();
             }
             if checks_for_post_run
                 .check_wheel_scroll_hit_changes_test_id
                 .is_none()
             {
                 checks_for_post_run.check_wheel_scroll_hit_changes_test_id =
-                    suite_wheel_scroll_hit_changes_test_id.map(|s| s.to_string());
+                    suite_core_default_checks
+                        .check_wheel_scroll_hit_changes_test_id
+                        .clone();
             }
 
             checks_for_post_run.check_prepaint_actions_min = checks_for_post_run
                 .check_prepaint_actions_min
-                .or(suite_prepaint_actions_min);
+                .or(suite_core_default_checks.check_prepaint_actions_min);
             checks_for_post_run.check_chart_sampling_window_shifts_min = checks_for_post_run
                 .check_chart_sampling_window_shifts_min
-                .or(suite_chart_sampling_window_shifts_min);
+                .or(suite_core_default_checks.check_chart_sampling_window_shifts_min);
             checks_for_post_run.check_node_graph_cull_window_shifts_min = checks_for_post_run
                 .check_node_graph_cull_window_shifts_min
-                .or(suite_node_graph_cull_window_shifts_min);
+                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_min);
             checks_for_post_run.check_node_graph_cull_window_shifts_max = checks_for_post_run
                 .check_node_graph_cull_window_shifts_max
-                .or(suite_node_graph_cull_window_shifts_max);
+                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_max);
             checks_for_post_run.check_vlist_visible_range_refreshes_min = checks_for_post_run
                 .check_vlist_visible_range_refreshes_min
-                .or(suite_vlist_visible_range_refreshes_min);
+                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_min);
             checks_for_post_run.check_vlist_visible_range_refreshes_max = checks_for_post_run
                 .check_vlist_visible_range_refreshes_max
-                .or(suite_vlist_visible_range_refreshes_max);
+                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_max);
 
             checks_for_post_run.check_vlist_window_shifts_explainable |=
-                suite_vlist_window_shifts_explainable;
+                suite_core_default_checks.check_vlist_window_shifts_explainable;
             checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
-                suite_vlist_window_shifts_have_prepaint_actions;
+                suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
             checks_for_post_run.check_vlist_window_shifts_non_retained_max =
                 vlist_window_shifts_non_retained_max_for_script
-                    .or(suite_vlist_window_shifts_non_retained_max)
-                    .or(suite_vlist_small_scroll_window_shifts_non_retained_max);
+                    .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
             checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
                 .check_vlist_window_shifts_prefetch_max
-                .or(suite_vlist_window_shifts_prefetch_max)
-                .or(suite_vlist_small_scroll_window_shifts_prefetch_max);
+                .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
             checks_for_post_run.check_vlist_window_shifts_escape_max = checks_for_post_run
                 .check_vlist_window_shifts_escape_max
-                .or(suite_vlist_window_shifts_escape_max)
-                .or(suite_vlist_small_scroll_window_shifts_escape_max);
-            checks_for_post_run.check_vlist_policy_key_stable |= suite_vlist_policy_key_stable;
+                .or(suite_core_default_checks.check_vlist_window_shifts_escape_max);
+            checks_for_post_run.check_vlist_policy_key_stable |=
+                suite_core_default_checks.check_vlist_policy_key_stable;
 
             checks_for_post_run.check_windowed_rows_offset_changes_min = checks_for_post_run
                 .check_windowed_rows_offset_changes_min
-                .or(suite_windowed_rows_offset_changes_min);
+                .or(suite_core_default_checks.check_windowed_rows_offset_changes_min);
             checks_for_post_run.check_windowed_rows_visible_start_changes_repainted |=
-                suite_windowed_rows_visible_start_changes_repainted;
+                suite_core_default_checks.check_windowed_rows_visible_start_changes_repainted;
             checks_for_post_run.check_layout_fast_path_min = checks_for_post_run
                 .check_layout_fast_path_min
-                .or(suite_layout_fast_path_min);
+                .or(suite_core_default_checks.check_layout_fast_path_min);
             checks_for_post_run.check_hover_layout_max = checks_for_post_run
                 .check_hover_layout_max
-                .or(suite_hover_layout_max);
-            checks_for_post_run.check_gc_sweep_liveness |= suite_gc_sweep_liveness;
+                .or(suite_core_default_checks.check_hover_layout_max);
+            checks_for_post_run.check_gc_sweep_liveness |=
+                suite_core_default_checks.check_gc_sweep_liveness;
 
             checks_for_post_run.check_notify_hotspot_file_max = notify_hotspot_file_max_for_script;
             checks_for_post_run.check_view_cache_reuse_stable_min = checks_for_post_run
                 .check_view_cache_reuse_stable_min
-                .or(suite_view_cache_reuse_stable_min);
+                .or(suite_core_default_checks.check_view_cache_reuse_stable_min);
             checks_for_post_run.check_view_cache_reuse_min = checks_for_post_run
                 .check_view_cache_reuse_min
-                .or(suite_view_cache_reuse_min)
-                .or(suite_components_gallery_view_cache_reuse_min);
+                .or(suite_core_default_checks.check_view_cache_reuse_min);
 
             checks_for_post_run.check_viewport_input_min = checks_for_post_run
                 .check_viewport_input_min
-                .or(suite_viewport_input_min);
+                .or(suite_core_default_checks.check_viewport_input_min);
             checks_for_post_run.check_dock_drag_min = checks_for_post_run
                 .check_dock_drag_min
-                .or(suite_dock_drag_min);
+                .or(suite_core_default_checks.check_dock_drag_min);
             checks_for_post_run.check_viewport_capture_min = checks_for_post_run
                 .check_viewport_capture_min
-                .or(suite_viewport_capture_min);
+                .or(suite_core_default_checks.check_viewport_capture_min);
 
             checks_for_post_run.check_retained_vlist_reconcile_no_notify_min =
-                retained_vlist_gate_for_script.or(suite_retained_vlist_reconcile_no_notify_min);
+                retained_vlist_gate_for_script
+                    .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
             checks_for_post_run.check_retained_vlist_attach_detach_max =
                 retained_vlist_attach_detach_max_for_script
-                    .or(suite_retained_vlist_attach_detach_max);
+                    .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
             checks_for_post_run.check_retained_vlist_keep_alive_reuse_min =
                 retained_vlist_keep_alive_reuse_min_for_script
-                    .or(suite_retained_vlist_keep_alive_reuse_min);
+                    .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
             checks_for_post_run.check_retained_vlist_keep_alive_budget =
                 retained_vlist_keep_alive_budget_for_script
-                    .or(suite_retained_vlist_keep_alive_budget);
+                    .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
 
             apply_post_run_checks(
                 &bundle_path,
@@ -2670,6 +2747,44 @@ mod tests {
             components_profile.components_gallery_root_test_id(),
             Some("components-gallery-table-root")
         );
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_sets_small_scroll_vlist_defaults() {
+        let profile = SuiteRunProfile::from_suite_args(&[
+            "ui-gallery-vlist-no-window-shifts-small-scroll".to_string(),
+        ]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("ui-gallery-vlist-no-window-shifts-small-scroll.json"),
+            profile,
+            Some(BuiltinSuite::UiGallery),
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(
+            defaults.check_wheel_scroll_test_id.as_deref(),
+            Some("ui-gallery-virtual-list-row-0-label")
+        );
+        assert_eq!(defaults.check_vlist_window_shifts_non_retained_max, Some(0));
+        assert_eq!(defaults.check_vlist_window_shifts_prefetch_max, Some(0));
+        assert_eq!(defaults.check_vlist_window_shifts_escape_max, Some(0));
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_skips_pixels_changed_when_unchanged_gate_exists() {
+        let mut user_checks = SuiteChecks::default();
+        user_checks.check_pixels_unchanged_test_id = Some("custom-static-root".to_string());
+
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"),
+            SuiteRunProfile::default(),
+            Some(BuiltinSuite::UiGalleryCodeEditor),
+            &user_checks,
+            false,
+        );
+
+        assert!(defaults.check_pixels_changed_test_id.is_none());
     }
 
     #[test]
