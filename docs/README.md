@@ -41,6 +41,7 @@ Unless a document says otherwise:
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
+- Text style cascade fearless refactor (GPUI-style subtree text refinement for passive text): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`
 - Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
 - Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`

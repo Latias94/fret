@@ -1,0 +1,99 @@
+# Text Style Cascade (Fearless Refactor v1) — TODO
+
+Status legend:
+
+- `[ ]` not started
+- `[~]` in progress / partially aligned
+- `[x]` landed
+- `[!]` blocked by a larger mechanism decision
+
+## A. Audit / contract closure
+
+- [x] TSC-audit-001 Confirm that this is a hard contract and deserves an ADR.
+  - Outcome: yes; see ADR 0314.
+- [x] TSC-audit-002 Audit GPUI/Zed's subtree text refinement model.
+  - Evidence:
+    - `repo-ref/zed/crates/gpui/src/style.rs`
+    - `repo-ref/zed/crates/gpui/src/styled.rs`
+    - `repo-ref/zed/crates/gpui/src/window.rs`
+    - `repo-ref/zed/crates/gpui/src/elements/text.rs`
+- [x] TSC-audit-003 Record the current Fret baseline.
+  - Evidence:
+    - `crates/fret-ui/src/element.rs`
+    - `crates/fret-ui/src/text/props.rs`
+    - `ecosystem/fret-ui-kit/src/declarative/current_color.rs`
+- [ ] TSC-audit-004 Audit all passive text leaves that currently bypass subtree-local defaults.
+- [ ] TSC-audit-005 Decide whether align/wrap/overflow belong in v1 cascade or remain leaf-owned.
+
+## B. Mechanism design (`crates/fret-core` / `crates/fret-ui`)
+
+- [x] TSC-mech-010 Add `TextStyleRefinement` to the portable text contract.
+- [x] TSC-mech-011 Define `TextStyle + TextStyleRefinement` merge/refine semantics.
+- [x] TSC-mech-012 Add inherited text-style runtime propagation in `crates/fret-ui`.
+- [x] TSC-mech-013 Teach passive text leaves to resolve `explicit > inherited > theme default`.
+- [x] TSC-mech-014 Ensure inherited text style participates in text measure/cache keys.
+- [x] TSC-mech-015 Keep the initial consumer set narrow:
+  - `Text`
+  - `StyledText`
+  - `SelectableText`
+- [x] TSC-mech-016 Leave `TextInput`, `TextArea`, editor/code surfaces unchanged in v1.
+
+## C. Ecosystem authoring (`fret-ui-kit`)
+
+- [ ] TSC-kit-020 Add subtree text-style helpers.
+  - Candidate shape:
+    - `scope_text_style(...)`
+    - `scope_text_style_children(...)`
+    - `inherited_text_style(...)`
+- [ ] TSC-kit-021 Add a preset-to-refinement bridge for stable semantic typography.
+- [ ] TSC-kit-022 Align the helper story with `ui-typography-presets-v1`.
+- [ ] TSC-kit-023 Document the “one boring path” for subtree-local passive text defaults.
+- [ ] TSC-kit-024 Decide whether the description family should expose a shared composable `children` API now that subtree refinement exists.
+
+## D. Component enhancement / migration matrix
+
+| Area | Surface | File | Current pattern | Target after cascade | Why migrate | Priority | Status | Gate / evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| shadcn / feedback | `AlertDescription` | `ecosystem/fret-ui-shadcn/src/alert.rs` | Scoped inherited foreground + inherited text refinement (including `new_children`) | Landed on subtree refinement; nested passive text stays unpatched | Canonical baseline for description/body copy | P0 | `[x]` | `alert_description_children_scope_inherited_text_style` |
+| shadcn / overlay | `DialogDescription` | `ecosystem/fret-ui-shadcn/src/dialog.rs` | Scoped inherited foreground + inherited text refinement on the returned part root | Landed on subtree refinement without leaf overrides | Repeated description logic; high reuse pattern | P0 | `[x]` | `dialog_description_scopes_inherited_text_style` |
+| shadcn / overlay | `SheetDescription` | `ecosystem/fret-ui-shadcn/src/sheet.rs` | Scoped inherited foreground + inherited text refinement on the returned part root | Landed on subtree refinement without leaf overrides | Same pattern as dialog; easy drift source | P0 | `[x]` | `sheet_description_scopes_inherited_text_style` |
+| shadcn / overlay | `PopoverDescription` | `ecosystem/fret-ui-shadcn/src/popover.rs` | Scoped inherited foreground + inherited text refinement on the returned part root | Landed on subtree refinement without leaf overrides | Keeps description policy consistent across overlay family | P1 | `[x]` | `popover_description_scopes_inherited_text_style` |
+| shadcn / content | `CardDescription` | `ecosystem/fret-ui-shadcn/src/card.rs` | Scoped inherited foreground + inherited text refinement on the returned part root | Landed on subtree refinement without leaf overrides | Common docs/UI surface; currently duplicated | P1 | `[x]` | `card_description_scopes_inherited_text_style` |
+| shadcn / forms | `FieldDescription` | `ecosystem/fret-ui-shadcn/src/field.rs` | Scoped inherited foreground + inherited text refinement; field description detection also understands inherited styles | Landed on subtree refinement without leaf overrides | High-value form surface; many call sites | P0 | `[x]` | `field_description_scopes_inherited_text_style` |
+| AI / approvals | `ConfirmationTitle` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Inherited text-style scope + muted foreground | Landed on the inherited text-style mechanism; no descendant patching | Direct compound-children pressure point; first migration proves the runtime path | P0 | `[x]` | `confirmation_title_scopes_alert_description_typography_without_patching_nested_plain_text` |
+| AI / artifacts | `ArtifactDescription` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Component-owned typography | Prefer subtree-local description/body refinement where applicable | Likely to benefit from shared description policy | P2 | `[ ]` | Audit needed |
+| AI / package info | `PackageInfoDescription` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Component-owned typography | Use inherited passive text defaults for repeated descriptive copy | Reduces bespoke text setup | P2 | `[ ]` | Audit needed |
+| AI / queue | `QueueItemDescription` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Component-owned typography | Use inherited passive text defaults under queue item chrome | Repeated muted/supporting copy pattern | P2 | `[ ]` | Audit needed |
+| AI / schema | `SchemaDisplayDescription` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Component-owned typography | Use subtree-local defaults for schema helper text | Keeps AI docs-like surfaces consistent | P2 | `[ ]` | Audit needed |
+| kit / foundation | `Label` + passive text helpers | `ecosystem/fret-ui-kit/src/primitives/label.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs` | Leaf-owned text style assembly | Provide authoring helpers that compose with inherited refinements instead of bypassing them | Foundation surface must not fight the cascade | P0 | `[ ]` | Add unit tests for refinement precedence |
+
+## E. Gates
+
+- [x] TSC-gates-030 Add a `crates/fret-ui` test proving inherited text style affects passive text measurement.
+- [x] TSC-gates-031 Add a precedence test proving explicit leaf style wins over inherited refinement.
+- [x] TSC-gates-032 Add a guard proving `TextInput` / `TextArea` are unaffected in v1.
+- [x] TSC-gates-033 Add shadcn description-family regression gates.
+- [x] TSC-gates-034 Add at least one AI/direct-children regression gate after mechanism migration.
+
+## F. Cleanup / de-duplication
+
+- [x] TSC-cleanup-040 Remove component-local recursive descendant patching once inherited text style lands.
+  - First candidate: `ecosystem/fret-ui-ai/src/elements/confirmation.rs`
+- [x] TSC-cleanup-041 Consolidate repeated description typography metric lookup logic across shadcn surfaces.
+  - Initial family:
+    - `alert`
+    - `dialog`
+    - `sheet`
+    - `popover`
+    - `card`
+    - `field`
+- [~] TSC-cleanup-042 Stop introducing new passive-text components that manually rebuild the same description/body text style contract.
+  - Guardrail landed for the existing description family via `ecosystem/fret-ui-shadcn/src/typography_scope.rs`; broader adoption still depends on `fret-ui-kit` helpers.
+- [ ] TSC-cleanup-043 Remove temporary compatibility shims once migrated surfaces are covered by tests.
+
+## G. Docs / alignment
+
+- [x] TSC-docs-050 Add ADR 0314.
+- [x] TSC-docs-051 Add this workstream doc set.
+- [x] TSC-docs-052 Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` as implementation progresses.
+- [ ] TSC-docs-053 Update user-facing authoring guidance after the helper surface lands.

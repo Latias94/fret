@@ -139,6 +139,7 @@ impl ElementHostWidget {
             return;
         };
         let inherited_foreground = record.inherited_foreground;
+        let inherited_text_style = record.inherited_text_style;
         let instance = record.instance;
 
         with_scoped_foreground(cx, inherited_foreground, |cx| match instance {
@@ -557,7 +558,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = props.resolved_text_style(theme);
+                let style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
@@ -789,7 +791,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = props.resolved_text_style(theme);
+                let style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
@@ -1035,7 +1038,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = props.resolved_text_style(theme);
+                let style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color

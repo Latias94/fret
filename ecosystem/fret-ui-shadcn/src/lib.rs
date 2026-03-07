@@ -113,6 +113,8 @@ pub mod typography;
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
 
+mod typography_scope;
+
 mod surface_slot;
 mod test_id;
 mod theme_variants;

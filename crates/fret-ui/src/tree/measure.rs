@@ -41,4 +41,6 @@ pub(super) struct MeasureStackKey {
     pub(super) avail_w: (u8, u32),
     pub(super) avail_h: (u8, u32),
     pub(super) scale_bits: u32,
+    pub(super) text_style_present: bool,
+    pub(super) text_style_fingerprint: u64,
 }

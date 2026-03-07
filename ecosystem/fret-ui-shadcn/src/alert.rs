@@ -6,6 +6,8 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+
+use crate::typography_scope::scope_description;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
 };
@@ -350,30 +352,22 @@ impl AlertDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let px = theme
-            .metric_by_key("component.alert.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.alert.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => ui::text(text)
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_weight(FontWeight::NORMAL)
-                .wrap(TextWrap::Word)
-                .into_element(cx)
-                .inherit_foreground(fg),
-            AlertDescriptionContent::Children(children) => ui::v_flex(move |_cx| children)
-                .gap(Space::N1)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full())
-                .into_element(cx)
-                .inherit_foreground(fg),
+            AlertDescriptionContent::Text(text) => scope_description(
+                ui::raw_text(text).wrap(TextWrap::Word).into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
+            AlertDescriptionContent::Children(children) => scope_description(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
         }
     }
 }
@@ -400,6 +394,50 @@ mod tests {
         el.children
             .iter()
             .find_map(find_first_inherited_foreground_node)
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
+    #[test]
+    fn alert_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDescription::new_children([cx.text("Nested body")]).into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Nested body").expect("expected nested text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested alert description child to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&crate::typography_scope::description_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(crate::typography_scope::muted_foreground(&theme))
+        );
     }
 
     #[test]

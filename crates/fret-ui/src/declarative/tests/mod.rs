@@ -204,5 +204,6 @@ mod layout_queries;
 mod selection_indices;
 mod semantics;
 mod text_cache;
+mod text_style_inheritance;
 mod view_cache;
 mod virtual_list;

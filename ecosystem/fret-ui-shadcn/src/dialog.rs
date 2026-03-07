@@ -29,6 +29,7 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use crate::typography_scope::scope_description;
 
 #[derive(Debug, Default)]
 struct DialogOpenProviderState {
@@ -1314,28 +1315,15 @@ impl DialogDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
-        let px = theme
-            .metric_by_key("component.dialog.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.dialog.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-        let description = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx);
+        let description = scope_description(
+            ui::raw_text(self.text)
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .into_element(cx),
+            &theme,
+            "component.dialog.description",
+        );
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -1460,19 +1448,55 @@ mod tests {
         assert_eq!(completed, Some(true));
     }
 
-    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
         match &el.kind {
-            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => {
-                return Some(props);
-            }
-            _ => {}
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
         }
-        for child in &el.children {
-            if let Some(found) = find_text(child, needle) {
-                return Some(found);
-            }
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        let node = find_text_element(el, needle)?;
+        match &node.kind {
+            fret_ui::element::ElementKind::Text(props) => Some(props),
+            _ => None,
         }
-        None
+    }
+
+    #[test]
+    fn dialog_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected DialogDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&crate::typography_scope::description_refinement(
+                &theme,
+                "component.dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(crate::typography_scope::muted_foreground(&theme))
+        );
     }
 
     #[test]

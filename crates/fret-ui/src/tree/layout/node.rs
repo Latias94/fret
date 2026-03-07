@@ -344,12 +344,19 @@ impl<H: UiHost> UiTree<H> {
     ) -> Size {
         let avail_w = available_space_key(constraints.available.width);
         let avail_h = available_space_key(constraints.available.height);
+        let inherited_text_style_fingerprint = self.window.and_then(|window| {
+            crate::declarative::frame::inherited_text_style_for_node(app, window, node)
+                .as_ref()
+                .map(crate::text_props::text_style_refinement_fingerprint)
+        });
         let cache_key = NodeMeasureCacheKey {
             known_w_bits: constraints.known.width.map(|px| px.0.to_bits()),
             known_h_bits: constraints.known.height.map(|px| px.0.to_bits()),
             avail_w,
             avail_h,
             scale_bits: scale_factor.to_bits(),
+            text_style_present: inherited_text_style_fingerprint.is_some(),
+            text_style_fingerprint: inherited_text_style_fingerprint.unwrap_or(0),
         };
 
         let key = MeasureStackKey {
@@ -359,6 +366,8 @@ impl<H: UiHost> UiTree<H> {
             avail_w,
             avail_h,
             scale_bits: cache_key.scale_bits,
+            text_style_present: cache_key.text_style_present,
+            text_style_fingerprint: cache_key.text_style_fingerprint,
         };
 
         if let Some(size) = self.measure_cache_this_frame.get(&key) {

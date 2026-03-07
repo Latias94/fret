@@ -13,6 +13,7 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use crate::test_id::attach_test_id;
+use crate::typography_scope::scope_description;
 
 const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action";
 const CARD_FOOTER_MARKER_PREFIX: &str = "fret-ui-shadcn.card-footer";
@@ -677,6 +678,39 @@ mod tests {
         .test_id("not-a-card-action");
 
         assert!(!is_card_action_marker(&el));
+    }
+
+    #[test]
+    fn card_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected CardDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&crate::typography_scope::description_refinement(
+                &theme,
+                "component.card.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(crate::typography_scope::muted_foreground(&theme))
+        );
     }
 
     #[test]
@@ -1815,27 +1849,15 @@ impl CardDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app);
-            let fg = theme.color_token("muted-foreground");
-            let px = theme
-                .metric_by_key("component.card.description_px")
-                .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_token("font.size"));
-            let line_height = theme
-                .metric_by_key("component.card.description_line_height")
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            (fg, px, line_height)
-        };
+        let theme = Theme::global(&*cx.app).snapshot();
 
-        ui::text(self.text)
-            .w_full()
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .wrap(TextWrap::Word)
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        scope_description(
+            ui::raw_text(self.text)
+                .w_full()
+                .wrap(TextWrap::Word)
+                .into_element(cx),
+            &theme,
+            "component.card.description",
+        )
     }
 }

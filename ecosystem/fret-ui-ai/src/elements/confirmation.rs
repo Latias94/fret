@@ -2,10 +2,8 @@
 
 use std::sync::Arc;
 
-use fret_core::{TextLineHeightPolicy, TextStyle};
-use fret_ui::element::{
-    AnyElement, ElementKind, InteractivityGateProps, LayoutStyle, SemanticsDecoration,
-};
+use fret_core::{TextLineHeightPolicy, TextStyleRefinement};
+use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui::{Theme, ThemeSnapshot};
 use fret_ui_kit::ui;
@@ -75,7 +73,7 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
-fn alert_description_text_style(theme: &ThemeSnapshot) -> TextStyle {
+fn alert_description_text_style(theme: &ThemeSnapshot) -> TextStyleRefinement {
     let px = theme
         .metric_by_key("component.alert.description_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -85,36 +83,11 @@ fn alert_description_text_style(theme: &ThemeSnapshot) -> TextStyle {
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    TextStyle {
-        size: px,
+    TextStyleRefinement {
+        size: Some(px),
         line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+        line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
         ..Default::default()
-    }
-}
-
-fn patch_text_style_recursive(element: &mut AnyElement, style: &TextStyle) {
-    match &mut element.kind {
-        ElementKind::Text(props) => {
-            if props.style.is_none() {
-                props.style = Some(style.clone());
-            }
-        }
-        ElementKind::StyledText(props) => {
-            if props.style.is_none() {
-                props.style = Some(style.clone());
-            }
-        }
-        ElementKind::SelectableText(props) => {
-            if props.style.is_none() {
-                props.style = Some(style.clone());
-            }
-        }
-        _ => {}
-    }
-
-    for child in &mut element.children {
-        patch_text_style_recursive(child, style);
     }
 }
 
@@ -373,11 +346,9 @@ impl ConfirmationTitle {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let description_style = alert_description_text_style(&theme);
-        let mut children = self.children;
-        for child in &mut children {
-            patch_text_style_recursive(child, &description_style);
-        }
-        let el = cx.foreground_scope(fg, move |_cx| children);
+        let el = cx
+            .foreground_scope(fg, move |_cx| self.children)
+            .inherit_text_style(description_style);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -769,6 +740,22 @@ mod tests {
         )
     }
 
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
+    }
+
     #[test]
     fn confirmation_keeps_alert_role_when_stamping_test_id() {
         let window = AppWindowId::default();
@@ -901,22 +888,6 @@ mod tests {
                     })
             });
 
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
-
         assert!(has_test_id(&element, "accepted"));
         assert!(!has_test_id(&element, "request"));
         assert!(!has_test_id(&element, "rejected"));
@@ -952,22 +923,6 @@ mod tests {
                     ])
                     .into_element(cx)
             });
-
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
 
         assert!(has_test_id(&element, "request"));
         assert!(has_test_id(&element, "actions"));
@@ -1005,22 +960,6 @@ mod tests {
                     .into_element(cx)
             });
 
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
-
         assert!(has_test_id(&element, "accepted"));
         assert!(!has_test_id(&element, "request"));
         assert!(!has_test_id(&element, "rejected"));
@@ -1040,7 +979,7 @@ mod tests {
     }
 
     #[test]
-    fn confirmation_title_applies_alert_description_typography_to_nested_plain_text() {
+    fn confirmation_title_scopes_alert_description_typography_without_patching_nested_plain_text() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -1053,10 +992,15 @@ mod tests {
             });
 
         let text = find_text(&element, "Ask").expect("expected nested text node");
-        let style = text
-            .style
+        assert!(
+            text.style.is_none(),
+            "expected nested passive text to inherit typography at runtime instead of being patched"
+        );
+
+        let style = element
+            .inherited_text_style
             .as_ref()
-            .expect("expected alert description typography on nested text");
+            .expect("expected confirmation title root to carry inherited text style");
 
         let theme = Theme::global(&app).snapshot();
         let expected_px = theme
@@ -1068,11 +1012,11 @@ mod tests {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        assert_eq!(style.size, expected_px);
+        assert_eq!(style.size, Some(expected_px));
         assert_eq!(style.line_height, Some(expected_line_height));
         assert_eq!(
             style.line_height_policy,
-            TextLineHeightPolicy::FixedFromStyle
+            Some(TextLineHeightPolicy::FixedFromStyle)
         );
     }
 }

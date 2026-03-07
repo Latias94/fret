@@ -54,6 +54,7 @@ impl<H: UiHost> UiTree<H> {
             scale_factor,
             theme_revision,
             crate::tree::paint_style::PaintStyleState::default(),
+            None,
             child_transform,
         );
 

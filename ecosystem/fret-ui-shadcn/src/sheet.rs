@@ -24,6 +24,7 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use crate::typography_scope::scope_description;
 
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
@@ -1372,28 +1373,15 @@ impl SheetDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
-        let px = theme
-            .metric_by_key("component.sheet.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.sheet.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx)
+        scope_description(
+            ui::raw_text(self.text)
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .into_element(cx),
+            &theme,
+            "component.sheet.description",
+        )
     }
 }
 
@@ -1433,6 +1421,39 @@ mod tests {
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
             assert!(out[0].inherited_foreground.is_some());
         });
+    }
+
+    #[test]
+    fn sheet_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            SheetDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected SheetDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&crate::typography_scope::description_refinement(
+                &theme,
+                "component.sheet.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(crate::typography_scope::muted_foreground(&theme))
+        );
     }
 
     #[test]
