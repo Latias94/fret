@@ -103,7 +103,7 @@ Exit criteria:
 
 Status note:
 
-- The shadcn description family and `ConfirmationTitle` now use the shared `fret-ui-kit` typography helpers; broader adoption is the main remaining gap.
+- The shadcn description family and `ConfirmationTitle` now use the shared `fret-ui-kit` typography helpers; `TSC-kit-024` is now decided as a selective component-layer `children` API, with `AlertDescription`, `CardDescription`, and `DialogDescription` as the first adopters.
 - Visual-text recipes that need late-bound resolved typography (currently `Shimmer`) are tracked separately in `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/`.
 
 ## Milestone 5 — Cleanup and adoption guardrails

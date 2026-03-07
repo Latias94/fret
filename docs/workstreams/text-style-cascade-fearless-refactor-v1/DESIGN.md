@@ -185,6 +185,39 @@ The repo should converge on one boring path:
 
 This keeps semantic naming (`description`, `control_ui_sm`, `muted_body`) out of `crates/fret-ui`.
 
+### Description-family `children` API policy
+
+Decision:
+
+- Do **not** add a new runtime/text-mechanism surface for composable description content.
+- Treat composable description bodies as a **component/recipe-layer API** problem.
+- Use subtree-local description scoping (`scope_description_text*`) as the single shared implementation path.
+
+Rationale:
+
+1. The mechanism gap is already closed by `TextStyleRefinement` + inherited foreground/text-style scope.
+2. A description component that accepts nested children is still just “an element subtree with description semantics/tokens”, not a new text primitive.
+3. Different families want different wrapper layout policy (`w_full`, gaps, alignment, modal description registration), so a one-size-fits-all runtime API would overfit and leak policy downward.
+
+Policy rule:
+
+- Add `new_children(...)` / `into_element_with_children(...)` only when one of these is true:
+  - upstream shadcn/Radix examples commonly use nested content,
+  - in-tree product usage needs inline code/links/multiple passive text leaves,
+  - the component already has a provider/context pattern that naturally constructs descendants lazily.
+- Otherwise keep the public surface text-first and rely on `scope_description_text*` internally.
+
+First selected adopters:
+
+- `AlertDescription` (already landed)
+- `CardDescription`
+- `DialogDescription`
+
+Deferred surfaces:
+
+- `SheetDescription`, `PopoverDescription`, `AlertDialogDescription`, `EmptyDescription`
+- `FieldDescription` stays text-first until there is concrete demand, because it also carries form-description registration concerns.
+
 ### Landed authoring surface
 
 The repo should now prefer one boring authoring path:

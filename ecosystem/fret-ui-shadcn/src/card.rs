@@ -680,6 +680,19 @@ mod tests {
         assert!(!is_card_action_marker(&el));
     }
 
+    fn find_text<'a>(
+        element: &'a AnyElement,
+        needle: &str,
+    ) -> Option<&'a fret_ui::element::TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text(child, needle)),
+        }
+    }
+
     #[test]
     fn card_description_scopes_inherited_text_style() {
         let window = AppWindowId::default();
@@ -698,6 +711,37 @@ mod tests {
         };
         assert!(props.style.is_none());
         assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.card.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
+    #[test]
+    fn card_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardDescription::new_children([cx.text("Nested description")]).into_element(cx)
+        });
+
+        let nested = find_text(&element, "Nested description").expect("expected nested text child");
+        assert!(nested.style.is_none());
+        assert!(nested.color.is_none());
 
         let theme = fret_ui::Theme::global(&app).snapshot();
         assert_eq!(
@@ -1837,27 +1881,52 @@ impl CardTitle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardDescription {
-    text: Arc<str>,
+    content: CardDescriptionContent,
+}
+
+#[derive(Debug)]
+enum CardDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl CardDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: CardDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: CardDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        scope_description_text(
-            ui::raw_text(self.text)
-                .w_full()
-                .wrap(TextWrap::Word)
-                .into_element(cx),
-            &theme,
-            "component.card.description",
-        )
+        match self.content {
+            CardDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .w_full()
+                    .wrap(TextWrap::Word)
+                    .into_element(cx),
+                &theme,
+                "component.card.description",
+            ),
+            CardDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.card.description",
+            ),
+        }
     }
 }
