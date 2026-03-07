@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    AttributedText, FontId, FontWeight, SemanticsRole, TextAlign, TextOverflow, TextSpan,
-    TextStyle, TextWrap,
-};
+use fret_core::{AttributedText, SemanticsRole, TextAlign, TextOverflow, TextSpan, TextWrap};
 use fret_ui::element::{
     AnyElement, Length, PointerRegionProps, SelectableTextProps, SemanticsProps, SizeStyle,
     TextInkOverflow, TextProps,
@@ -11,7 +8,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::control_registry::{ControlAction, ControlId, LabelEntry, control_registry_model};
-use crate::typography::{self, TextIntent};
+use crate::declarative::text::label_text_refinement;
+use crate::typography;
 
 #[derive(Debug, Clone)]
 pub struct Label {
@@ -62,49 +60,37 @@ impl Label {
 #[track_caller]
 pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
-    let (fg, px, line_height) = {
+    let (fg, refinement, line_height) = {
         let theme = Theme::global(&*cx.app);
 
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
-        let px = theme
-            .metric_by_key("component.label.text_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.label.line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let (refinement, line_height) = label_text_refinement(theme);
 
-        (fg, px, line_height)
+        (fg, refinement, line_height)
     };
 
-    cx.text_props(TextProps {
-        layout: fret_ui::element::LayoutStyle {
-            size: SizeStyle {
-                height: Length::Px(line_height),
+    typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: fret_ui::element::LayoutStyle {
+                size: SizeStyle {
+                    height: Length::Px(line_height),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::with_intent(
-            TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(line_height),
-                ..Default::default()
-            },
-            TextIntent::Control,
-        )),
-        color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+            text,
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        fg,
+    )
 }
 
 #[track_caller]
@@ -275,53 +261,41 @@ pub fn selectable_label<H: UiHost>(
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     let text: Arc<str> = text.into();
-    let (fg, px, line_height) = {
+    let (fg, refinement, line_height) = {
         let theme = Theme::global(&*cx.app);
 
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
-        let px = theme
-            .metric_by_key("component.label.text_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.label.line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let (refinement, line_height) = label_text_refinement(theme);
 
-        (fg, px, line_height)
+        (fg, refinement, line_height)
     };
 
     let spans: Arc<[TextSpan]> = Arc::from([TextSpan::new(text.len())]);
     let rich = AttributedText::new(Arc::clone(&text), spans);
 
-    cx.selectable_text_props(SelectableTextProps {
-        layout: fret_ui::element::LayoutStyle {
-            size: SizeStyle {
-                height: Length::Px(line_height),
+    typography::scope_text_style_with_color(
+        cx.selectable_text_props(SelectableTextProps {
+            layout: fret_ui::element::LayoutStyle {
+                size: SizeStyle {
+                    height: Length::Px(line_height),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        rich,
-        style: Some(typography::with_intent(
-            TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(line_height),
-                ..Default::default()
-            },
-            TextIntent::Control,
-        )),
-        color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-        interactive_spans: Arc::from([]),
-    })
+            rich,
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+            interactive_spans: Arc::from([]),
+        }),
+        refinement,
+        fg,
+    )
 }
 
 #[cfg(test)]
@@ -332,19 +306,47 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::ElementKind;
     use fret_ui::elements;
+    use fret_ui::{Theme, ThemeConfig};
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Label Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 13.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.label.text_px".to_string(), 13.0),
+                    ("component.label.line_height".to_string(), 18.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "foreground".to_string(),
+                    "#112233".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+        app
+    }
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        )
+    }
 
     #[test]
     fn label_defaults_match_shadcn_expectations() {
         let window = AppWindowId::default();
-        let mut app = App::new();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(240.0), Px(120.0)),
-        );
+        let mut app = test_app();
+        let bounds = test_bounds();
 
         let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             label(cx, "Email")
         });
+        let theme = Theme::global(&app);
+        let (expected_refinement, line_height) = label_text_refinement(&theme);
 
         let ElementKind::Text(props) = &el.kind else {
             panic!("expected label(...) to build a Text element");
@@ -352,19 +354,61 @@ mod tests {
 
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.layout.size.height, Length::Px(line_height));
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            el.inherited_foreground,
+            Some(theme.color_token("foreground"))
+        );
+        assert_eq!(el.inherited_text_style, Some(expected_refinement));
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(fret_core::FontId::ui())
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(fret_core::FontWeight::MEDIUM)
+        );
+    }
 
-        let style = props.style.as_ref().expect("label text style");
-        assert_eq!(style.weight, FontWeight::MEDIUM);
+    #[test]
+    fn selectable_label_scopes_inherited_refinement_without_leaf_style() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            selectable_label(cx, "Order #42")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::SelectableText(props) = &el.kind else {
+            panic!("expected selectable_label(...) to build a SelectableText element");
+        };
+
+        assert_eq!(props.layout.size.height, Length::Px(Px(18.0)));
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            el.inherited_foreground,
+            Some(theme.color_token("foreground"))
+        );
+        assert_eq!(
+            el.inherited_text_style,
+            Some(label_text_refinement(&theme).0)
+        );
     }
 
     #[test]
     fn label_for_control_registers_in_control_registry() {
         let window = AppWindowId::default();
-        let mut app = App::new();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(240.0), Px(120.0)),
-        );
+        let mut app = test_app();
+        let bounds = test_bounds();
 
         let control_id = ControlId::from("email");
         let mut reg_model: Option<
@@ -378,8 +422,8 @@ mod tests {
                 .into_element(cx)
         });
 
-        let ElementKind::Pressable(_props) = &el.kind else {
-            panic!("expected Label::for_control(...) to build a Pressable");
+        let ElementKind::Semantics(_props) = &el.kind else {
+            panic!("expected Label::for_control(...) to build a Semantics root");
         };
 
         let reg_model = reg_model.expect("control registry model");

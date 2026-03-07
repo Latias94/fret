@@ -196,6 +196,10 @@ The repo should now prefer one boring authoring path:
 4. If a component already has a `TypographyPreset`, bridge it through
    `fret_ui_kit::typography::preset_text_refinement(...)` rather than re-encoding the same policy
    as ad hoc `TextStyleRefinement` literals.
+5. Foundation passive-text helpers should prefer composable refinements (for example
+   `fret_ui_kit::typography::composable_refinement_from_style(...)`) so they keep semantic
+   size/line-height intent while leaving default-equivalent family/emphasis fields unset for parent
+   scopes to contribute.
 
 This is the preferred ecosystem path until/unless a richer subtree text authoring DSL is needed.
 

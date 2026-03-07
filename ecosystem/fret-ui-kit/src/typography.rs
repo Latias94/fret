@@ -425,6 +425,30 @@ pub fn refinement_from_style(style: &TextStyle) -> TextStyleRefinement {
     }
 }
 
+/// Builds a refinement intended for composition with parent subtree defaults.
+///
+/// Unlike [`refinement_from_style`], this keeps semantic size / line-height fields while leaving
+/// default-equivalent emphasis and family fields unset so parent scopes can still contribute.
+pub fn composable_refinement_from_style(style: &TextStyle) -> TextStyleRefinement {
+    let default = TextStyle::default();
+
+    TextStyleRefinement {
+        font: (style.font != default.font).then(|| style.font.clone()),
+        size: Some(style.size),
+        weight: (style.weight != default.weight).then_some(style.weight),
+        slant: (style.slant != default.slant).then_some(style.slant),
+        line_height: style.line_height,
+        line_height_em: style.line_height_em,
+        line_height_policy: (style.line_height_policy != default.line_height_policy)
+            .then_some(style.line_height_policy),
+        letter_spacing_em: style.letter_spacing_em,
+        vertical_placement: (style.vertical_placement != default.vertical_placement)
+            .then_some(style.vertical_placement),
+        leading_distribution: (style.leading_distribution != default.leading_distribution)
+            .then_some(style.leading_distribution),
+    }
+}
+
 pub fn preset_text_refinement(
     theme: &impl ThemeTokenRead,
     preset: TypographyPreset,
@@ -536,6 +560,33 @@ mod tests {
         assert_eq!(
             preset_text_refinement(&theme, preset),
             refinement_from_style(&style)
+        );
+    }
+
+    #[test]
+    fn composable_refinement_keeps_size_but_omits_default_emphasis() {
+        let style = TextStyle {
+            font: FontId::ui(),
+            size: Px(13.0),
+            line_height: Some(Px(18.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            vertical_placement: TextVerticalPlacement::BoundsAsLineBox,
+            ..Default::default()
+        };
+
+        let refinement = composable_refinement_from_style(&style);
+        assert_eq!(refinement.font, None);
+        assert_eq!(refinement.size, Some(Px(13.0)));
+        assert_eq!(refinement.weight, None);
+        assert_eq!(refinement.slant, None);
+        assert_eq!(refinement.line_height, Some(Px(18.0)));
+        assert_eq!(
+            refinement.line_height_policy,
+            Some(TextLineHeightPolicy::FixedFromStyle)
+        );
+        assert_eq!(
+            refinement.vertical_placement,
+            Some(TextVerticalPlacement::BoundsAsLineBox)
         );
     }
 
