@@ -163,6 +163,7 @@ mod searcher;
 mod searcher_activation;
 mod searcher_input;
 mod searcher_logic;
+mod searcher_pointer;
 mod searcher_ui;
 mod selection;
 mod split_edge_execution;

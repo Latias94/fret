@@ -409,6 +409,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: searcher keyboard navigation and query mutation now route through the private
     `canvas/widget/searcher_input.rs` seam, so active-row stepping, Enter activation handoff, and
     query-edit rebuild triggers no longer stay embedded in `searcher.rs`.
+  - Progress: searcher pointer hover feedback and wheel scroll state now route through the
+    private `canvas/widget/searcher_pointer.rs` seam, so hovered-row sync, hover-driven active-row
+    promotion, and wheel scroll clamping no longer stay embedded in `searcher.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

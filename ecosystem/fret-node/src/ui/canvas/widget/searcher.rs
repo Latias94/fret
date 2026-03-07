@@ -119,22 +119,11 @@ pub(super) fn handle_searcher_pointer_move<H: UiHost, M: NodeGraphCanvasMiddlewa
     position: Point,
     zoom: f32,
 ) -> bool {
-    let Some(searcher) = canvas.interaction.searcher.as_mut() else {
+    if canvas.interaction.searcher.is_none() {
         return false;
-    };
+    }
 
-    let new_hover = super::hit_searcher_row(&canvas.style, searcher, position, zoom);
-    if searcher.hovered_row != new_hover {
-        searcher.hovered_row = new_hover;
-        if let Some(ix) = new_hover
-            && searcher
-                .rows
-                .get(ix)
-                .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
-        {
-            searcher.active_row = ix;
-            NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-        }
+    if canvas.update_searcher_hover_from_position(position, zoom) {
         invalidate_searcher_paint(cx);
     }
     true
@@ -147,28 +136,14 @@ pub(super) fn handle_searcher_wheel<H: UiHost, M: NodeGraphCanvasMiddleware>(
     modifiers: Modifiers,
     _zoom: f32,
 ) -> bool {
-    if modifiers.ctrl || modifiers.meta {
+    if canvas.interaction.searcher.is_none() {
         return false;
     }
 
-    let Some(searcher) = canvas.interaction.searcher.as_mut() else {
-        return false;
-    };
-
-    let n = searcher.rows.len();
-    if n == 0 {
+    if canvas.scroll_searcher_from_wheel(delta, modifiers) {
+        invalidate_searcher_paint(cx);
         return true;
     }
 
-    let visible = super::SEARCHER_MAX_VISIBLE_ROWS.min(n);
-    let max_scroll = n.saturating_sub(visible);
-    if delta.y.0 > 0.0 {
-        searcher.scroll = searcher.scroll.saturating_sub(1);
-    } else if delta.y.0 < 0.0 {
-        searcher.scroll = (searcher.scroll + 1).min(max_scroll);
-    }
-
-    NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-    invalidate_searcher_paint(cx);
-    true
+    !modifiers.ctrl && !modifiers.meta
 }

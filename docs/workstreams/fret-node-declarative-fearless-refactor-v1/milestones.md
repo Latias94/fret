@@ -474,6 +474,9 @@ real editors.
 - Searcher keyboard navigation and query mutation now also route through the private
   `canvas/widget/searcher_input.rs` seam, so active-row stepping, Enter activation handoff, and
   query-edit rebuild triggers no longer stay embedded in `searcher.rs`.
+- Searcher pointer hover feedback and wheel scroll state now also route through the private
+  `canvas/widget/searcher_pointer.rs` seam, so hovered-row sync, hover-driven active-row
+  promotion, and wheel scroll clamping no longer stay embedded in `searcher.rs`.
 
 ### Deliverables
 
@@ -514,6 +517,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
