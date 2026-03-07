@@ -426,8 +426,8 @@ real editors.
   re-deriving reroute positions and `plan_split_edge_candidate` branches per entrypoint.
 - Connection picker activation now also has a named private seam,
   `canvas/widget/context_menu/connection_execution.rs`, so connection-insert and conversion picker
-  actions share planner/result helpers plus suspended-wire resume policy instead of keeping large
-  inline outcome enums and drag-resume wiring embedded in `context_menu/activate.rs`.
+  actions now share picker activation, planner/result helpers, and suspended-wire resume policy
+  instead of keeping that orchestration embedded in `context_menu/activate.rs`.
 - Group target selection and edge-target context actions now also have named private seams,
   `canvas/widget/context_menu/{target_selection,edge_execution}.rs`, so group selection sync and
   edge action execution no longer stay duplicated between right-click setup and activation dispatch
@@ -519,7 +519,6 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
-
 
 
 

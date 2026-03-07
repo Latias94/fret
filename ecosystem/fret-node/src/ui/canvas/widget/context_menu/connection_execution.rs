@@ -15,6 +15,31 @@ pub(super) enum ConnectionConversionMenuPlan {
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn activate_connection_insert_picker_action<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        from: PortId,
+        at: CanvasPoint,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool {
+        match action {
+            NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix) => {
+                let mode = self.sync_view_state(cx.app).interaction.connection_mode;
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                    return true;
+                };
+                self.record_recent_kind(&candidate.kind);
+                let plan =
+                    self.plan_connection_insert_menu_candidate(cx.app, from, at, mode, &candidate);
+                self.apply_connection_insert_menu_plan(cx, from, invoked_at, plan);
+                true
+            }
+            _ => false,
+        }
+    }
+
     pub(super) fn plan_connection_insert_menu_candidate_with_graph(
         presenter: &mut dyn NodeGraphPresenter,
         graph: &Graph,
@@ -170,6 +195,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             })
             .ok()
             .unwrap_or(ConnectionConversionMenuPlan::Ignore)
+    }
+
+    pub(super) fn activate_connection_conversion_picker_action<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        from: PortId,
+        to: PortId,
+        at: CanvasPoint,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool {
+        match action {
+            NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix) => {
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                    return true;
+                };
+                self.record_recent_kind(&candidate.kind);
+                let plan = self
+                    .plan_connection_conversion_menu_candidate(cx.app, from, to, at, &candidate);
+                self.apply_connection_conversion_menu_plan(cx, from, invoked_at, plan);
+                true
+            }
+            _ => false,
+        }
     }
 
     pub(super) fn apply_connection_conversion_menu_plan<H: UiHost>(

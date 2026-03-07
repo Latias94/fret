@@ -21,18 +21,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     return;
                 }
             }
-            (
-                ContextMenuTarget::ConnectionInsertNodePicker { from, at },
-                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
-            ) => {
-                let mode = self.sync_view_state(cx.app).interaction.connection_mode;
-                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+            (ContextMenuTarget::ConnectionInsertNodePicker { from, at }, action) => {
+                if self.activate_connection_insert_picker_action(
+                    cx,
+                    *from,
+                    *at,
+                    invoked_at,
+                    action,
+                    menu_candidates,
+                ) {
                     return;
-                };
-                self.record_recent_kind(&candidate.kind);
-                let plan = self
-                    .plan_connection_insert_menu_candidate(cx.app, *from, *at, mode, &candidate);
-                self.apply_connection_insert_menu_plan(cx, *from, invoked_at, plan);
+                }
             }
             (ContextMenuTarget::Edge(edge_id), action) => {
                 if self.activate_edge_context_action(cx, *edge_id, invoked_at, action) {
@@ -48,17 +47,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 };
                 edge_insert::insert_node_on_edge(self, cx, *edge_id, invoked_at, candidate);
             }
-            (
-                ContextMenuTarget::ConnectionConvertPicker { from, to, at },
-                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
-            ) => {
-                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+            (ContextMenuTarget::ConnectionConvertPicker { from, to, at }, action) => {
+                if self.activate_connection_conversion_picker_action(
+                    cx,
+                    *from,
+                    *to,
+                    *at,
+                    invoked_at,
+                    action,
+                    menu_candidates,
+                ) {
                     return;
-                };
-                self.record_recent_kind(&candidate.kind);
-                let plan = self
-                    .plan_connection_conversion_menu_candidate(cx.app, *from, *to, *at, &candidate);
-                self.apply_connection_conversion_menu_plan(cx, *from, invoked_at, plan);
+                }
             }
             _ => {}
         }

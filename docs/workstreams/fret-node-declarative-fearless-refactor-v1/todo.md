@@ -361,8 +361,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     reroute positions and `plan_split_edge_candidate` branches in each entrypoint.
   - Progress: connection picker activation now routes through the private
     `canvas/widget/context_menu/connection_execution.rs` seam, so connection-insert and conversion
-    picker actions share planner/result helpers plus suspended-wire resume policy instead of keeping
-    large inline outcome enums and drag-resume wiring inside `context_menu/activate.rs`.
+    picker actions now share picker activation, planner/result helpers, and suspended-wire resume
+    policy instead of keeping that orchestration inline in `context_menu/activate.rs`.
   - Progress: group target selection and edge-target context actions now route through the private
     `canvas/widget/context_menu/{target_selection,edge_execution}.rs` seams, so group selection
     sync and edge action execution no longer stay duplicated between right-click setup and activation
@@ -418,7 +418,6 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 
