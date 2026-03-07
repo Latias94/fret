@@ -218,6 +218,38 @@ Deferred surfaces:
 - `SheetDescription`, `PopoverDescription`, `AlertDialogDescription`, `EmptyDescription`
 - `FieldDescription` stays text-first until there is concrete demand, because it also carries form-description registration concerns.
 
+### Title-family audit policy
+
+Decision:
+
+- Do **not** add a generic runtime/title-mechanism helper just to mirror the description-family API.
+- Treat title surfaces as **semantic owners** whose typography and container policy may legitimately differ per family.
+- Expose composable `children` APIs selectively at the component layer when upstream/title docs are children-first.
+
+Rationale:
+
+1. The mechanism gap is already closed by inherited text-style / foreground scope; the remaining drift is API shape and composition, not missing runtime text machinery.
+2. Title surfaces do **not** share one stable semantic contract the way description/helper-copy surfaces do: `ArtifactTitle`, `EnvironmentVariablesTitle`, and `TerminalTitle` differ in weight, foreground, and wrapper semantics, while `CodeBlockTitle` is primarily a layout container.
+3. A single `scope_title_text(...)` convenience would either overfit medium/semibold heading-like titles or underfit muted/control/container titles such as `TerminalTitle` and `CodeBlockTitle`.
+
+Policy rule:
+
+- Add `new_children(...)` only when upstream docs/examples already treat the title as composable content or when default fallback text must coexist with custom descendants.
+- Keep the surface text-first when the title is a local recipe with only plain-copy demand.
+- When a title becomes composable, prefer subtree-local inherited refinement/color on the component-owned root so nested passive text stays unpatched.
+
+Current audit outcome:
+
+- Add selective component-layer `children` APIs:
+  - `ArtifactTitle`
+  - `EnvironmentVariablesTitle`
+  - `TerminalTitle`
+- Already aligned / already composable:
+  - `CodeBlockTitle`
+  - `AnnouncementTitle`
+- Keep intentionally text-first for now:
+  - `BannerTitle`
+
 ### Landed authoring surface
 
 The repo should now prefer one boring authoring path:

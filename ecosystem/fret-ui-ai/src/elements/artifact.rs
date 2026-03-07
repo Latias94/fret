@@ -224,26 +224,43 @@ impl ArtifactHeader {
     }
 }
 
-#[derive(Clone)]
 /// Title text aligned with AI Elements `ArtifactTitle`.
 pub struct ArtifactTitle {
-    text: Arc<str>,
+    content: ArtifactTitleContent,
     test_id: Option<Arc<str>>,
+}
+
+enum ArtifactTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl std::fmt::Debug for ArtifactTitle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ArtifactTitle")
-            .field("text", &self.text.as_ref())
-            .field("test_id", &self.test_id.as_deref())
-            .finish()
+        let mut debug = f.debug_struct("ArtifactTitle");
+        match &self.content {
+            ArtifactTitleContent::Text(text) => {
+                debug.field("text", &text.as_ref());
+            }
+            ArtifactTitleContent::Children(children) => {
+                debug.field("children_len", &children.len());
+            }
+        }
+        debug.field("test_id", &self.test_id.as_deref()).finish()
     }
 }
 
 impl ArtifactTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            content: ArtifactTitleContent::Text(text.into()),
+            test_id: None,
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: ArtifactTitleContent::Children(children.into_iter().collect()),
             test_id: None,
         }
     }
@@ -255,35 +272,45 @@ impl ArtifactTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-
-        let mut text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.text,
-            style: Some(typography::as_control_text(TextStyle {
-                font: FontId::default(),
-                size: theme
-                    .metric_by_key("component.artifact.title_text_px")
-                    .unwrap_or_else(|| theme.metric_token("font.size")),
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("font.line_height")),
-                letter_spacing_em: None,
-                ..Default::default()
-            })),
-            color: Some(theme.color_token("foreground")),
-            wrap: fret_core::TextWrap::None,
-            overflow: fret_core::TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
+        let style = typography::as_control_text(TextStyle {
+            font: FontId::default(),
+            size: theme
+                .metric_by_key("component.artifact.title_text_px")
+                .unwrap_or_else(|| theme.metric_token("font.size")),
+            weight: FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: Some(theme.metric_token("font.line_height")),
+            letter_spacing_em: None,
+            ..Default::default()
         });
+        let refinement = typography::composable_refinement_from_style(&style);
+        let foreground = theme.color_token("foreground");
+
+        let mut element = match self.content {
+            ArtifactTitleContent::Text(text) => cx
+                .foreground_scope(foreground, move |cx| {
+                    vec![
+                        fret_ui_kit::ui::raw_text(text)
+                            .wrap(fret_core::TextWrap::None)
+                            .overflow(fret_core::TextOverflow::Clip)
+                            .into_element(cx),
+                    ]
+                })
+                .inherit_foreground(foreground)
+                .inherit_text_style(refinement),
+            ArtifactTitleContent::Children(children) => cx
+                .foreground_scope(foreground, move |_cx| children)
+                .inherit_foreground(foreground)
+                .inherit_text_style(refinement),
+        };
 
         if let Some(test_id) = self.test_id {
-            text = text.attach_semantics(
+            element = element.attach_semantics(
                 fret_ui::element::SemanticsDecoration::default().test_id(test_id),
             );
         }
 
-        text
+        element
     }
 }
 
@@ -727,6 +754,23 @@ mod tests {
             .any(|child| has_test_id(child, test_id))
     }
 
+    fn has_scoped_text_style(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: fret_core::Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_scoped_text_style(child, refinement, foreground))
+    }
+
     #[test]
     fn artifact_keeps_group_role_when_stamping_test_id() {
         let window = AppWindowId::default();
@@ -765,6 +809,73 @@ mod tests {
             });
 
         assert!(has_test_id(&element, "custom-close-label"));
+    }
+
+    #[test]
+    fn artifact_title_children_scope_inherited_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Artifact Title Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.artifact.title_text_px".to_string(), 12.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ArtifactTitle::new_children([cx.text("Artifact heading")])
+                    .test_id("artifact-title")
+                    .into_element(cx)
+            });
+
+        let text = element
+            .children
+            .iter()
+            .find_map(|child| match &child.kind {
+                ElementKind::Text(props) if props.text.as_ref() == "Artifact heading" => {
+                    Some(child)
+                }
+                _ => None,
+            })
+            .expect("expected nested artifact title text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested artifact title leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("artifact-title")
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let style = typography::as_control_text(TextStyle {
+            font: FontId::default(),
+            size: theme
+                .metric_by_key("component.artifact.title_text_px")
+                .unwrap_or_else(|| theme.metric_token("font.size")),
+            weight: FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: Some(theme.metric_token("font.line_height")),
+            letter_spacing_em: None,
+            ..Default::default()
+        });
+        let expected_refinement = typography::composable_refinement_from_style(&style);
+        let expected_foreground = theme.color_token("foreground");
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_foreground
+        ));
     }
 
     #[test]

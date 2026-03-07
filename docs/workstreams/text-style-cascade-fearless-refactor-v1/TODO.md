@@ -94,7 +94,17 @@ Status legend:
 
 | Surface | File | Current state | Recommended next action | Why it still matters |
 | --- | --- | --- | --- | --- |
-| Title-family audit outside `PlanTitle` | `ecosystem/fret-ui-ai/src/elements/{artifact,terminal,environment_variables,code_block}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{banner,announcement}.rs` | Mixed explicit-title ownership patterns remain, but most are probably intentional semantic owners rather than missing mechanism | Audit and classify each surface as intentional owner vs helper candidate before widening the public API | ADR `0314` still tracks broader title-family adoption as an open audit gap |
+
+## D2. Title API audit decisions
+
+| Surface | Current API | Decision | Why | Evidence |
+| --- | --- | --- | --- | --- |
+| `ArtifactTitle` | `new(text)` | Add `new_children(...)` | Upstream AI Elements title is paragraph-like `children` content; nested passive text should inherit component-owned title styling instead of forcing leaf patches | `ecosystem/fret-ui-ai/src/elements/artifact.rs`, `artifact_title_children_scope_inherited_title_typography` |
+| `EnvironmentVariablesTitle` | `new()` + `.text(...)` | Add `new_children(...)` | Upstream heading accepts `children` with a default fallback; Fret now matches that shape without adding runtime text surface area | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs`, `environment_variables_title_children_scope_inherited_typography` |
+| `TerminalTitle` | `new()` + `.label(...)` + `.icon(...)` | Add `new_children(...)` while keeping convenience builders | Upstream terminal title is children-first but also carries default label + icon semantics; selective component API keeps both paths | `ecosystem/fret-ui-ai/src/elements/terminal.rs`, `terminal_title_children_scope_inherited_typography` |
+| `CodeBlockTitle` | children-only container | Keep as-is | Already matches upstream composable header-title role; no extra text helper needed | `ecosystem/fret-ui-ai/src/elements/code_block.rs`, `code_block_children_can_consume_inherited_context` |
+| `AnnouncementTitle` | children-only container | Keep as-is | Already composable and layout-owned; no text-style migration needed | `ecosystem/fret-ui-shadcn/src/extras/announcement.rs` |
+| `BannerTitle` | `new(text)` | Keep text-first for now | Local extras recipe with plain-copy demand only; no upstream/product pressure justifies widening the public API yet | `ecosystem/fret-ui-shadcn/src/extras/banner.rs` |
 
 ## E. Gates
 
