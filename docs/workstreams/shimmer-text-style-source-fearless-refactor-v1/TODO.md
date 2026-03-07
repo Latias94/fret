@@ -13,10 +13,10 @@ Primary contract references:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | AI / plan | `PlanTitle` streaming path | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Shared title scope + `Shimmer::use_resolved_passive_text()` | Landed on subtree-resolved style so streaming and non-streaming title share one semantic path | P0 | `[x]` | `ecosystem/fret-ui-ai/src/elements/plan.rs`, `plan_title_streaming_scopes_inherited_title_typography_for_shimmer` |
 | AI / plan | `PlanDescription` streaming path | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Shared description scope + `Shimmer::use_resolved_passive_text()` | Landed on subtree-resolved style so streaming and non-streaming description copy share one semantic path | P0 | `[x]` | `ecosystem/fret-ui-ai/src/elements/plan.rs`, `plan_description_streaming_scopes_inherited_description_typography_for_shimmer` |
-| AI / reasoning | default thinking message | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Explicit `Sm` visual text via `Shimmer::text_style(...)` | Likely intentional visual ownership; audit after bridge lands | P2 | `[~]` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs:431` |
-| AI / transcription | segment override path | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Caller-owned explicit override propagated into shimmer | Must remain supported; this is an explicit-authoring compatibility case | P1 | `[~]` | `ecosystem/fret-ui-ai/src/elements/transcription.rs:489` |
-| AI / terminal | streaming status label | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Default shimmer with no explicit style override | May stay on theme default unless terminal typography later becomes semantic | P3 | `[~]` | `ecosystem/fret-ui-ai/src/elements/terminal.rs:460` |
-| UI Gallery | shimmer demos | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs` | Mix of default and explicit style demo cases | Keep explicit override demos working while adding one inherited-style demo later | P3 | `[~]` | Demo-only compatibility surface |
+| AI / reasoning | default thinking message | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Trigger-owned subtree scope + `Shimmer::use_resolved_passive_text()` for streaming copy | Landed on trigger-local semantic typography so shimmer and settled copy share the same `text-sm text-muted-foreground` contract | P2 | `[x]` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs`, `reasoning_trigger_default_streaming_message_scopes_inherited_typography_for_shimmer`, `reasoning_trigger_default_settled_message_scopes_inherited_typography` |
+| AI / transcription | segment override path | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Caller-owned explicit text override on `TranscriptionSegment` | Intentionally remains explicit: segment typography is a public authoring seam, not a semantic shimmer default | P1 | `[~]` | `transcription_segment_text_style_override_applies_to_text_child` |
+| AI / terminal | streaming status label | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Status-owned subtree scope + `Shimmer::use_resolved_passive_text()` | Landed on the header status slot typography so the default streaming label follows upstream `text-xs muted` ownership | P3 | `[x]` | `ecosystem/fret-ui-ai/src/elements/terminal.rs`, `terminal_status_default_streaming_message_scopes_inherited_typography_for_shimmer` |
+| UI Gallery | shimmer demos | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs` | Mix of default and explicit style demo cases | Audited as demo-only compatibility surfaces; keep explicit override examples and consider adding one inherited-style example later | P3 | `[~]` | Demo-only compatibility surface |
 
 Suggested review states:
 
@@ -52,8 +52,10 @@ Suggested review states:
 
 - [x] SHIMMER-migrate-020 Migrate `PlanTitle` streaming path to the subtree-resolved mode.
 - [x] SHIMMER-migrate-021 Migrate `PlanDescription` streaming path to the subtree-resolved mode.
-- [ ] SHIMMER-migrate-022 Re-audit `Reasoning` / `Terminal` / gallery demos after the bridge lands.
-- [ ] SHIMMER-migrate-023 Keep `Transcription` explicit override behavior intact.
+- [x] SHIMMER-migrate-022 Re-audit `Reasoning` / `Terminal` / gallery demos after the bridge lands.
+  - `Reasoning` and `TerminalStatus` now consume subtree-resolved typography; gallery demos remain compatibility-focused on purpose.
+- [x] SHIMMER-migrate-023 Keep `Transcription` explicit override behavior intact.
+  - Locked by `transcription_segment_text_style_override_applies_to_text_child`.
 
 ## E. Gates
 

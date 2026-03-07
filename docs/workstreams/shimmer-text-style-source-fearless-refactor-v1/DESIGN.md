@@ -55,14 +55,18 @@ assembly from sneaking back in.
 - `ecosystem/fret-ui-ai/src/elements/voice_selector.rs`
 - `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs`
 
-### Other `Shimmer` call sites to classify
+### Classified `Shimmer` call sites
 
 - `ecosystem/fret-ui-ai/src/elements/reasoning.rs`
+  - migrated to subtree-resolved semantic trigger typography
 - `ecosystem/fret-ui-ai/src/elements/transcription.rs`
+  - intentionally remains explicit because `text_style(...)` is a public authoring seam
 - `ecosystem/fret-ui-ai/src/elements/terminal.rs`
+  - migrated to subtree-resolved status-slot typography
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_demo.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_elements_demo.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_duration_demo.rs`
+  - remaining demo-only audit / docs alignment surfaces
 
 ## Problem statement
 

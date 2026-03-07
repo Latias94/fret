@@ -141,9 +141,8 @@ Recommended sequence:
 - `ecosystem/fret-ui-ai/src/elements/shimmer.rs`
 - `ecosystem/fret-ui-ai/src/elements/plan.rs`
 
-### Remaining migration gaps
+### Remaining audit items
 
-- `ecosystem/fret-ui-ai/src/elements/{reasoning,transcription,terminal}.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs`
 
 ### Existing passive text contract

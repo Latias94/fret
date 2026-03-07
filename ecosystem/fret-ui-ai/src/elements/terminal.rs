@@ -455,12 +455,20 @@ impl TerminalStatus {
             return cx.text("");
         }
 
+        let theme = Theme::global(&*cx.app).clone();
+        let status_fg = color(&theme, "component.terminal.muted_fg", zinc_400());
         let children = if self.children.is_empty() {
-            vec![
+            vec![fret_ui_kit::typography::scope_text_style_with_color(
                 Shimmer::new(Arc::<str>::from("Streaming"))
+                    .use_resolved_passive_text()
                     .refine_layout(LayoutRefinement::default().w_px(Px(64.0)))
                     .into_element(cx),
-            ]
+                typography::preset_text_refinement(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                ),
+                status_fg,
+            )]
         } else {
             self.children
         };
@@ -945,5 +953,92 @@ impl TerminalContent {
             scroll = scroll.viewport_test_id(test_id);
         }
         scroll.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn has_scoped_text_style(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: fret_core::Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_scoped_text_style(child, refinement, foreground))
+    }
+
+    #[test]
+    fn terminal_status_default_streaming_message_scopes_inherited_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let output = app.models_mut().insert(String::new());
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.with_state(TerminalProviderState::default, |st| {
+                    st.controller = Some(TerminalController {
+                        output: output.clone(),
+                        is_streaming: true,
+                        auto_scroll: true,
+                        on_clear: None,
+                    });
+                });
+                TerminalStatus::new().into_element(cx)
+            });
+
+        let theme = fret_ui::Theme::global(&app).clone();
+        let expected_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let expected_fg = color(&theme, "component.terminal.muted_fg", zinc_400());
+
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_fg
+        ));
+
+        let text = find_text_by_content(&element, "Streaming")
+            .expect("expected default terminal streaming label");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf under the scoped terminal status");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
     }
 }
