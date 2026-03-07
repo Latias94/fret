@@ -5,6 +5,7 @@ mod background_execution;
 mod connection_execution;
 mod edge_execution;
 mod input;
+mod key_navigation;
 mod pointer;
 mod selection_activation;
 mod target_selection;
