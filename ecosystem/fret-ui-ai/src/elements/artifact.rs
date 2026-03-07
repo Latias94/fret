@@ -550,9 +550,9 @@ impl ArtifactAction {
     }
 }
 
-#[derive(Clone)]
 /// Close button aligned with AI Elements `ArtifactClose`.
 pub struct ArtifactClose {
+    children: Vec<AnyElement>,
     on_activate: Option<OnActivate>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -563,6 +563,7 @@ pub struct ArtifactClose {
 impl std::fmt::Debug for ArtifactClose {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ArtifactClose")
+            .field("children_len", &self.children.len())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
@@ -575,12 +576,18 @@ impl std::fmt::Debug for ArtifactClose {
 impl ArtifactClose {
     pub fn new() -> Self {
         Self {
+            children: Vec::new(),
             on_activate: None,
             disabled: false,
             test_id: None,
             variant: ButtonVariant::Ghost,
             size: ButtonSize::IconSm,
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
@@ -614,8 +621,12 @@ impl ArtifactClose {
             .variant(self.variant)
             .size(self.size)
             .style(action_button_style())
-            .disabled(self.disabled)
-            .icon(ids::ui::CLOSE);
+            .disabled(self.disabled);
+        if self.children.is_empty() {
+            btn = btn.icon(ids::ui::CLOSE);
+        } else {
+            btn = btn.children(self.children);
+        }
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }
@@ -693,5 +704,76 @@ impl ArtifactContent {
             scroll = scroll.viewport_test_id(test_id);
         }
         scroll.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(480.0)),
+        )
+    }
+
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
+    }
+
+    #[test]
+    fn artifact_keeps_group_role_when_stamping_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Artifact::new([cx.text("content")])
+                    .test_id_root("ui-ai-artifact-root")
+                    .into_element(cx)
+            });
+
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Group)
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("ui-ai-artifact-root")
+        );
+    }
+
+    #[test]
+    fn artifact_close_renders_custom_children_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ArtifactClose::new()
+                    .children([cx.text("Dismiss").test_id("custom-close-label")])
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "custom-close-label"));
     }
 }

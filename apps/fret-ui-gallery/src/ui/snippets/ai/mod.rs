@@ -1,3 +1,5 @@
+#[cfg(feature = "gallery-dev")]
+pub mod artifact_code_display;
 pub mod artifact_demo;
 pub mod chain_of_thought_demo;
 pub mod code_block_demo;
