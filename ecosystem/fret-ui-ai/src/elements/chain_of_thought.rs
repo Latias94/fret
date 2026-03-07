@@ -4,9 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{Color, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
@@ -42,20 +40,6 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         |_cx| Vec::new(),
     )
-}
-
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style
-}
-
-fn text_xs(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style
 }
 
 #[derive(Debug, Default, Clone)]
@@ -428,7 +412,12 @@ impl ChainOfThoughtHeader {
                             LayoutRefinement::default().min_w_0().flex_1(),
                         ),
                         text: Arc::from("Chain of Thought"),
-                        style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                        style: Some(typography::preset_text_style_with_overrides(
+                            &theme,
+                            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                            Some(FontWeight::NORMAL),
+                            None,
+                        )),
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -707,7 +696,12 @@ impl ChainOfThoughtStep {
             ChainOfThoughtStepSlot::Text(label) => cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: label,
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -997,7 +991,12 @@ impl ChainOfThoughtImage {
             out.push(cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: caption,
-                style: Some(text_xs(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(caption_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -1231,5 +1230,61 @@ mod tests {
         assert!(has_test_id(&element, "root"));
         assert!(has_test_id(&element, "header"));
         assert!(has_test_id(&element, "content"));
+    }
+
+    #[test]
+    fn chain_of_thought_surfaces_use_shared_typography_presets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThought::new()
+                    .default_open(true)
+                    .header(ChainOfThoughtHeader::new())
+                    .content(ChainOfThoughtContent::new([
+                        ChainOfThoughtStep::new("Reason about repo state")
+                            .description("Summarize remaining work")
+                            .into_element(cx),
+                        ChainOfThoughtImage::new([cx.text("diagram")])
+                            .caption("Architecture snapshot")
+                            .into_element(cx),
+                    ]))
+                    .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let expected_sm = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+        let expected_xs = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+
+        let header = find_text_by_content(&element, "Chain of Thought").expect("header text");
+        let ElementKind::Text(header_props) = &header.kind else {
+            panic!("expected header default label to render as text");
+        };
+        assert_eq!(header_props.style, expected_sm.clone());
+
+        let step_label =
+            find_text_by_content(&element, "Reason about repo state").expect("step label text");
+        let ElementKind::Text(step_label_props) = &step_label.kind else {
+            panic!("expected step label to render as text");
+        };
+        assert_eq!(step_label_props.style, expected_sm);
+
+        let caption =
+            find_text_by_content(&element, "Architecture snapshot").expect("image caption text");
+        let ElementKind::Text(caption_props) = &caption.kind else {
+            panic!("expected image caption to render as text");
+        };
+        assert_eq!(caption_props.style, expected_xs);
     }
 }

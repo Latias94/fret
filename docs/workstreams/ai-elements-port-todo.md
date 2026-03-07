@@ -40,8 +40,8 @@ Each TODO is labeled:
   - Evidence: `ecosystem/fret-ui-ai/src/elements/conversation.rs`
   - Gate: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs` (`ai_chat_reuses_conversation_without_nested_scroll_area`)
 - [x] AIEL-MVP0-audit-014 Run the next passive-text cleanup batch for `fret-ui-ai` (`task`, `persona`, voice-family surfaces).
-  - Done in slices: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, then `audio_player` + `mic_selector` + `voice_selector` + `transcription`; the tracked family batch now uses the shared preset helper.
-  - Follow-up note: remaining AI-side text-infra work is down to isolated outliers such as `chain_of_thought`, not another family-wide migration pass.
+  - Done in slices: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, then `audio_player` + `mic_selector` + `voice_selector` + `transcription`, and now `chain_of_thought`; the tracked AI batch now uses the shared preset helper or inherited text scopes.
+  - Follow-up note: remaining AI-side closure work is behavior/token polish plus explicit authoring seams, not another family-wide text-infra migration pass.
 
 - [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
 - [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.

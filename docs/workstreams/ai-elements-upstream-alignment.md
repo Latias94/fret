@@ -177,8 +177,8 @@ The upstream docs inventory is now fully represented in `fret-ui-ai` and in the 
 
 - The repo already has an alignment-document trail: `ai-elements-upstream-alignment`,
   `ai-elements-port-todo`, `ai-elements-port-milestones`, and the text-style cascade workstream.
-- The tracked AI-family local text-helper cleanup batch is now complete. The remaining closure work
-  shifts back to behavior/token polish plus isolated outliers such as `chain_of_thought`.
+- The tracked AI-family local text-helper cleanup is now complete. The remaining closure work shifts
+  back to behavior/token polish and other explicit seams, not another AI text-helper migration pass.
 - `Conversation` and `Confirmation` should now be treated as reference examples for the desired
   direction: compound children APIs + inherited typography + focused regression gates.
 
