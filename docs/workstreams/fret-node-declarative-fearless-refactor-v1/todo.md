@@ -218,6 +218,9 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Define the policy for full replace vs diff-based replace in controlled mode.
   - Landed policy: full replace is the current canonical external-to-store sync path; diff-first
     helpers remain deferred until a concrete workload proves they are needed.
+  - Landed helper: `NodeGraphSurfaceBinding::replace_document(...)` /
+    `NodeGraphController::replace_document_and_sync_models(...)` now make whole-document reset
+    semantics explicit (graph + view-state replace + history clear + mirror sync).
 - [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
       for editor-grade controlled integrations.
 

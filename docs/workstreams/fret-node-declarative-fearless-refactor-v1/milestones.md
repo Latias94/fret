@@ -271,6 +271,10 @@ points rather than direct graph mutation.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
     deferred follow-up rather than the default contract.
+  - That policy now has a named app-facing helper: `NodeGraphSurfaceBinding::replace_document(...)`
+    and `NodeGraphController::replace_document_and_sync_models(...)` replace graph + view-state,
+    clear undo/redo history, and re-sync external mirrors in one step; the legacy demo no longer
+    resets the store by calling `NodeGraphStore` directly.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while

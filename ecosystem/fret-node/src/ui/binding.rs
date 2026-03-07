@@ -124,6 +124,23 @@ impl NodeGraphSurfaceBinding {
             .replace_graph_and_sync_models(host, &self.graph, &self.view_state, graph)
     }
 
+    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps the
+    /// external graph/view mirrors in sync.
+    pub fn replace_document<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller.replace_document_and_sync_models(
+            host,
+            &self.graph,
+            &self.view_state,
+            graph,
+            view_state,
+        )
+    }
+
     /// Replaces the authoritative view state and keeps the external view model in sync.
     pub fn replace_view_state<H: UiHost>(
         &self,

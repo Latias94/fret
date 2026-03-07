@@ -304,6 +304,26 @@ impl NodeGraphController {
         self.replace_graph_in_models(host.models_mut(), graph)
     }
 
+    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps
+    /// bound graph/view models in sync.
+    pub fn replace_document<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_in_models(host.models_mut(), graph, view_state)
+    }
+
+    pub fn replace_document_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_in_models(host.models_mut(), graph, view_state)
+    }
+
     pub fn replace_graph_and_sync_models<H: UiHost>(
         &self,
         host: &mut H,
@@ -325,6 +345,36 @@ impl NodeGraphController {
         graph: Graph,
     ) -> Result<(), NodeGraphControllerError> {
         self.replace_graph_in_models(host.models_mut(), graph)?;
+        let _ =
+            self.sync_models_from_store_in_models(host.models_mut(), graph_model, view_state_model);
+        Ok(())
+    }
+
+    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps
+    /// bound graph/view models in sync.
+    pub fn replace_document_and_sync_models<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph_model: &Model<Graph>,
+        view_state_model: &Model<NodeGraphViewState>,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_in_models(host.models_mut(), graph, view_state)?;
+        let _ =
+            self.sync_models_from_store_in_models(host.models_mut(), graph_model, view_state_model);
+        Ok(())
+    }
+
+    pub fn replace_document_and_sync_models_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph_model: &Model<Graph>,
+        view_state_model: &Model<NodeGraphViewState>,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_document_in_models(host.models_mut(), graph, view_state)?;
         let _ =
             self.sync_models_from_store_in_models(host.models_mut(), graph_model, view_state_model);
         Ok(())
@@ -806,6 +856,22 @@ impl NodeGraphController {
         graph: Graph,
     ) -> Result<(), NodeGraphControllerError> {
         match models.update(&self.store, |store| store.replace_graph(graph)) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+        }
+    }
+
+    fn replace_document_in_models(
+        &self,
+        models: &mut ModelStore,
+        graph: Graph,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        match models.update(&self.store, |store| {
+            store.replace_graph(graph);
+            store.replace_view_state(view_state);
+            store.clear_history();
+        }) {
             Ok(()) => Ok(()),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
         }
@@ -1352,6 +1418,97 @@ mod tests {
         assert_eq!(store_nodes, vec![node_a]);
         assert!(model_selection.is_empty());
         assert!(store_selection.is_empty());
+    }
+
+    #[test]
+    fn controller_replace_document_and_sync_models_action_host_resets_history() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, node_b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value.clone());
+        let view = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+
+        let from = graph
+            .read_ref(&host, |value| value.nodes.get(&node_a).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("node pos");
+        let mut tx = GraphTransaction::new().with_label("Move Node");
+        tx.push(GraphOp::SetNodePos {
+            id: node_a,
+            from,
+            to: CanvasPoint {
+                x: from.x + 20.0,
+                y: from.y + 10.0,
+            },
+        });
+        controller
+            .dispatch_transaction_and_sync_models(&mut host, &graph, &view, &tx)
+            .expect("seed history");
+        assert!(controller.can_undo(&host));
+
+        let mut next_graph = Graph::new(
+            graph
+                .read_ref(&host, |value| value.graph_id)
+                .ok()
+                .expect("graph id"),
+        );
+        next_graph.nodes.insert(
+            node_b,
+            graph
+                .read_ref(&host, |value| value.nodes[&node_b].clone())
+                .ok()
+                .expect("node b"),
+        );
+        let mut next_view = NodeGraphViewState::default();
+        next_view.pan = CanvasPoint { x: 88.0, y: 21.0 };
+        next_view.zoom = 1.75;
+        next_view.selected_nodes = vec![node_a];
+
+        controller
+            .replace_document_and_sync_models_action_host(
+                &mut host, &graph, &view, next_graph, next_view,
+            )
+            .expect("replace document through controller");
+
+        let model_nodes = graph
+            .read_ref(&host, |value| {
+                value.nodes.keys().copied().collect::<Vec<_>>()
+            })
+            .ok()
+            .expect("graph model nodes");
+        let (model_pan, model_zoom, model_selection) = view
+            .read_ref(&host, |state| {
+                (state.pan, state.zoom, state.selected_nodes.clone())
+            })
+            .ok()
+            .expect("view model");
+        let (store_pan, store_zoom, store_selection, can_undo, can_redo) = store
+            .read_ref(&host, |value| {
+                (
+                    value.view_state().pan,
+                    value.view_state().zoom,
+                    value.view_state().selected_nodes.clone(),
+                    value.can_undo(),
+                    value.can_redo(),
+                )
+            })
+            .ok()
+            .expect("store state");
+
+        assert_eq!(model_nodes, vec![node_b]);
+        assert_eq!(model_pan, CanvasPoint { x: 88.0, y: 21.0 });
+        assert_eq!(model_zoom, 1.75);
+        assert!(model_selection.is_empty());
+        assert_eq!(store_pan, CanvasPoint { x: 88.0, y: 21.0 });
+        assert_eq!(store_zoom, 1.75);
+        assert!(store_selection.is_empty());
+        assert!(!can_undo);
+        assert!(!can_redo);
     }
 
     #[test]

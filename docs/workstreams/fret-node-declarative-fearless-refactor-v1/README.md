@@ -403,17 +403,18 @@ For new editor surfaces, teach and copy this shape first:
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
-   `view_state_snapshot`, `set_viewport`, `fit_view_nodes`, `replace_graph`,
-   `replace_view_state`, `set_selection`, `undo`, `redo`),
+   `view_state_snapshot`, `set_viewport`, `fit_view_nodes`, `replace_document`,
+   `replace_graph`, `replace_view_state`, `set_selection`, `undo`, `redo`),
 4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
 This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
 
 For controlled sync, the current canonical posture is **full replace first**: use
-`binding.replace_graph(...)` (or the controller's sync helper) when external authority swaps the
-whole graph document, and treat diff-first replace helpers as a later optimization rather than the
-starting contract.
+`binding.replace_document(...)` (or the controller's sync helper) when external authority swaps the
+whole graph document and wants a fresh history boundary; keep `replace_graph(...)` as the graph-only
+helper when view/history policy should stay caller-controlled, and treat diff-first replace helpers
+as a later optimization rather than the starting contract.
 
 ### Recommended target posture
 

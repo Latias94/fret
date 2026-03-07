@@ -50,7 +50,7 @@ copy.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Prefer the binding itself for common app-facing helpers:
   `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport`, `fit_view_nodes`,
-  `replace_graph`, `replace_view_state`, `set_selection`, `undo`, and `redo`.
+  `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `undo`, and `redo`.
 - Treat `binding.controller()` as the advanced escape hatch for helpers that are not yet surfaced on
   the binding or for retained/compat wiring.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
@@ -113,13 +113,17 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 ### Current replace policy
 
 - Today the canonical external-to-store sync path is **full replace first**:
-  `NodeGraphSurfaceBinding::replace_graph(...)` or
-  `NodeGraphController::replace_graph_and_sync_models(...)`.
+  `NodeGraphSurfaceBinding::replace_document(...)` or
+  `NodeGraphController::replace_document_and_sync_models(...)`.
 - Treat that operation as a full reset of the authoritative graph document:
   - it rebuilds lookups,
   - it sanitizes selection against the new graph,
+  - it applies the provided view state against the new graph,
+  - it clears undo/redo history,
   - it re-syncs the external graph/view mirrors,
   - it does **not** emit incremental `NodeChange` / `EdgeChange` diffs.
+- `replace_graph(...)` remains available for graph-only controlled sync when the caller wants to
+  preserve existing view/history policy explicitly.
 - Diff-first replace helpers remain intentionally deferred until we have a concrete editor-grade
   workload that proves full replace is not sufficient.
 
