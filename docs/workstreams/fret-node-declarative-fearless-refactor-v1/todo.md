@@ -428,6 +428,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     branches through the private `canvas/widget/left_click/group_background.rs` seam, so group
     selection sync, pending drag/resize arming, and background marquee/pan fallback no longer stay
     embedded in the main hit-dispatch match.
+  - Progress: `left_click/handlers.rs` now also routes port / edge-anchor branches through the
+    private `canvas/widget/left_click/connection_hits.rs` seam, so connect-on-click resolution,
+    reconnect drag arming, and edge-anchor selection sync no longer stay embedded in the main
+    hit-dispatch match.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

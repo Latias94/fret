@@ -493,6 +493,10 @@ real editors.
   through the private `canvas/widget/left_click/group_background.rs` seam, so group selection
   sync, pending drag/resize arming, and background marquee/pan fallback no longer stay embedded
   in the main hit-dispatch match.
+- `left_click/handlers.rs` now also routes port / edge-anchor branches through the private
+  `canvas/widget/left_click/connection_hits.rs` seam, so connect-on-click resolution, reconnect
+  drag arming, and edge-anchor selection sync no longer stay embedded in the main hit-dispatch
+  match.
 
 ### Deliverables
 
@@ -538,6 +542,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/group_background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
