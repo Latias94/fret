@@ -1,18 +1,19 @@
 use std::sync::Arc;
 
+use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, StackProps};
+use fret_ui::element::AnyElement;
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::elements::attachments::AttachmentData;
+use crate::elements::conversation::CONVERSATION_MANAGED_CONTENT_SLOT_KEY;
 use crate::elements::{
-    AiConversationTranscript, ConversationDownload, ConversationEmptyState,
-    ConversationScrollButton, PromptInput,
+    AiConversationTranscript, Conversation, ConversationContent, ConversationDownload,
+    ConversationEmptyState, ConversationScrollButton, PromptInput,
 };
 use crate::model::AiMessage;
 
@@ -306,8 +307,6 @@ impl AiChat {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
         let messages_value = cx
             .get_model_cloned(&self.messages, Invalidation::Paint)
             .unwrap_or_default();
@@ -324,6 +323,11 @@ impl AiChat {
             .as_ref()
             .and_then(|m| cx.get_model_copied(m, Invalidation::Paint))
             .unwrap_or(0);
+        let conversation_revision = if revision == 0 {
+            messages_value.len().min(u64::MAX as usize) as u64
+        } else {
+            revision
+        };
 
         let provided_handle = self.scroll_handle;
         let handle = cx.with_state(AiChatState::default, |st| {
@@ -333,99 +337,74 @@ impl AiChat {
             st.handle.clone()
         });
 
-        let transcript_body = if is_empty {
-            self.empty_state
-                .unwrap_or_else(|| {
+        let mut transcript_container = Conversation::new([])
+            .scroll_handle(handle.base_handle().clone())
+            .content_revision(conversation_revision)
+            .stick_to_bottom(self.stick_to_bottom)
+            .show_scroll_to_bottom_button(false)
+            .refine_layout(self.transcript_container_layout);
+        if let Some(id) = self.transcript_root_test_id.clone() {
+            transcript_container = transcript_container.test_id(id);
+        }
+        let transcript_container = transcript_container.into_element_with_children(cx, |cx| {
+            let mut children = Vec::new();
+
+            if is_empty {
+                let empty_state = self.empty_state.unwrap_or_else(|| {
                     ConversationEmptyState::new("Start a conversation")
                         .description("Messages will appear here as you send prompts.")
-                })
-                .into_element(cx)
-        } else {
-            let mut transcript = AiConversationTranscript::from_arc(messages_value.clone())
-                .scroll_handle(handle.clone())
-                .stick_to_bottom(self.stick_to_bottom)
-                .tail_padding(fret_core::Px(360.0));
+                });
+                children.push(
+                    ConversationContent::new([empty_state.into_element(cx)])
+                        .content_padding(Space::N0)
+                        .content_gap(Space::N0)
+                        .into_element(cx),
+                );
+            } else {
+                let mut transcript = AiConversationTranscript::from_arc(messages_value.clone())
+                    .scroll_handle(handle.clone())
+                    .stick_to_bottom(self.stick_to_bottom)
+                    .tail_padding(Px(360.0));
 
-            if revision != 0 {
-                transcript = transcript.content_revision(revision);
-            }
-            if let Some(prefix) = self.message_test_id_prefix.clone() {
-                transcript = transcript.test_id_message_prefix(prefix);
-            }
-            if let Some(prefix) = self.transcript_row_test_id_prefix.clone() {
-                transcript = transcript.debug_row_test_id_prefix(prefix);
-            }
-
-            transcript.into_element(cx)
-        };
-
-        let scroll_button = (!is_empty).then(|| {
-            let mut scroll = ConversationScrollButton::new(handle.clone());
-            if let Some(id) = self.scroll_button_test_id.clone() {
-                scroll = scroll.test_id(id);
-            }
-            scroll.into_element(cx)
-        });
-
-        let stack_layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().w_full().h_full().relative(),
-        );
-
-        let transcript_stack = cx.stack_props(
-            StackProps {
-                layout: stack_layout,
-            },
-            |_cx| {
-                let mut out = Vec::new();
-                out.push(transcript_body);
-                if let Some(scroll_button) = scroll_button {
-                    out.push(scroll_button);
+                if revision != 0 {
+                    transcript = transcript.content_revision(revision);
                 }
-                out
-            },
-        );
+                if let Some(prefix) = self.message_test_id_prefix.clone() {
+                    transcript = transcript.test_id_message_prefix(prefix);
+                }
+                if let Some(prefix) = self.transcript_row_test_id_prefix.clone() {
+                    transcript = transcript.debug_row_test_id_prefix(prefix);
+                }
 
-        let mut transcript_container = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            self.transcript_container_layout,
-        );
-        transcript_container.layout.overflow = fret_ui::element::Overflow::Clip;
-        let transcript_container = cx.container(transcript_container, |_cx| vec![transcript_stack]);
-        let transcript_container = if let Some(id) = self.transcript_root_test_id.clone() {
-            cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: fret_core::SemanticsRole::Group,
-                    test_id: Some(id),
-                    ..Default::default()
-                },
-                move |_cx| vec![transcript_container],
-            )
-        } else {
-            transcript_container
-        };
+                children.push(
+                    transcript
+                        .into_element(cx)
+                        .key_context(CONVERSATION_MANAGED_CONTENT_SLOT_KEY),
+                );
+            }
 
-        let download_row = self.show_download.then(|| {
-            let disabled = self.disabled;
-            let on_download = self.on_download.clone();
-            let test_id = self.download_test_id.clone();
-            ui::h_row(move |cx| {
+            if self.show_download {
                 let mut download = ConversationDownload::new("Export Markdown")
                     .show_label(true)
-                    .disabled(disabled);
-                if let Some(on_download) = on_download.clone() {
+                    .disabled(self.disabled);
+                if let Some(on_download) = self.on_download.clone() {
                     download = download.on_activate(on_download);
                 }
-                if let Some(id) = test_id.clone() {
+                if let Some(id) = self.download_test_id.clone() {
                     download = download.test_id(id);
                 }
-                vec![download.into_element(cx)]
-            })
-            .layout(LayoutRefinement::default().w_full())
-            .justify(Justify::End)
-            .gap(Space::N2)
-            .into_element(cx)
+                children.push(download.into_element(cx));
+            }
+
+            if !is_empty {
+                let mut scroll = ConversationScrollButton::default();
+                if let Some(id) = self.scroll_button_test_id.clone() {
+                    scroll = scroll.test_id(id);
+                }
+                children.push(scroll.into_element(cx));
+            }
+
+            children
         });
 
         let mut prompt = PromptInput::new(self.prompt)
@@ -465,17 +444,10 @@ impl AiChat {
 
         let prompt = prompt.into_element(cx);
 
-        let footer = ui::v_stack(|_cx| {
-            let mut out = Vec::new();
-            if let Some(download_row) = download_row {
-                out.push(download_row);
-            }
-            out.push(prompt);
-            out
-        })
-        .layout(LayoutRefinement::default().w_full())
-        .gap(Space::N2)
-        .into_element(cx);
+        let footer = ui::v_stack(|_cx| vec![prompt])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .into_element(cx);
 
         let root = ui::v_stack(|_cx| vec![transcript_container, footer])
             .layout(
@@ -499,5 +471,105 @@ impl AiChat {
             },
             move |_cx| vec![root],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, TextProps};
+
+    use crate::model::{MessagePart, MessageRole};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(320.0)),
+        )
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(expected)
+        {
+            return true;
+        }
+
+        if matches!(
+            &element.kind,
+            ElementKind::Semantics(props) if props.test_id.as_deref() == Some(expected)
+        ) {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, expected))
+    }
+
+    fn has_text(element: &AnyElement, expected: &str) -> bool {
+        match &element.kind {
+            ElementKind::Text(TextProps { text, .. }) if text.as_ref() == expected => true,
+            _ => element
+                .children
+                .iter()
+                .any(|child| has_text(child, expected)),
+        }
+    }
+
+    fn count_wheel_regions(element: &AnyElement) -> usize {
+        let self_count = usize::from(matches!(&element.kind, ElementKind::WheelRegion(_)));
+        self_count
+            + element
+                .children
+                .iter()
+                .map(count_wheel_regions)
+                .sum::<usize>()
+    }
+
+    #[test]
+    fn ai_chat_reuses_conversation_without_nested_scroll_area() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let messages = app.models_mut().insert(
+            vec![AiMessage::new(
+                1,
+                MessageRole::Assistant,
+                [MessagePart::Text(Arc::<str>::from("Hello from assistant"))],
+            )]
+            .into(),
+        );
+        let prompt = app.models_mut().insert(String::new());
+        let handle = VirtualListScrollHandle::new();
+        handle
+            .base_handle()
+            .set_viewport_size(Size::new(Px(320.0), Px(120.0)));
+        handle
+            .base_handle()
+            .set_content_size(Size::new(Px(320.0), Px(720.0)));
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                AiChat::new(messages.clone(), prompt.clone())
+                    .scroll_handle(handle.clone())
+                    .stick_to_bottom(false)
+                    .show_download(true)
+                    .transcript_root_test_id("chat-transcript")
+                    .scroll_button_test_id("chat-scroll")
+                    .download_test_id("chat-download")
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "chat-transcript"));
+        assert!(has_test_id(&element, "chat-scroll.chrome"));
+        assert!(has_text(&element, "Export Markdown"));
+        assert_eq!(count_wheel_regions(&element), 1);
     }
 }

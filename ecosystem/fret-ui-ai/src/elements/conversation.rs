@@ -19,6 +19,8 @@ use crate::model::MessageId;
 use crate::{Message, MessageContent, MessageRole};
 
 pub(crate) const CONVERSATION_CONTENT_SLOT_KEY: &str = "__fret_ui_ai.conversation.content";
+pub(crate) const CONVERSATION_MANAGED_CONTENT_SLOT_KEY: &str =
+    "__fret_ui_ai.conversation.managed_content";
 pub(crate) const CONVERSATION_DOWNLOAD_SLOT_KEY: &str = "__fret_ui_ai.conversation.download";
 pub(crate) const CONVERSATION_SCROLL_BUTTON_SLOT_KEY: &str =
     "__fret_ui_ai.conversation.scroll_button";
@@ -116,6 +118,7 @@ fn content_with_default_layout<H: UiHost>(
 #[derive(Debug, Default)]
 struct ResolvedConversationChildren {
     content: Option<AnyElement>,
+    managed_content: Option<AnyElement>,
     overlay_downloads: Vec<AnyElement>,
     overlay_scroll_buttons: Vec<AnyElement>,
     legacy_content_children: Vec<AnyElement>,
@@ -126,6 +129,10 @@ fn resolve_conversation_root_children(children: Vec<AnyElement>) -> ResolvedConv
 
     for mut child in children {
         match child.key_context.as_deref() {
+            Some(CONVERSATION_MANAGED_CONTENT_SLOT_KEY) if resolved.managed_content.is_none() => {
+                child.key_context = None;
+                resolved.managed_content = Some(child);
+            }
             Some(CONVERSATION_CONTENT_SLOT_KEY) if resolved.content.is_none() => {
                 child.key_context = None;
                 resolved.content = Some(child);
@@ -203,27 +210,39 @@ fn render_conversation_root<H: UiHost>(
     });
 
     let resolved = resolve_conversation_root_children(children);
-    let content = resolved.content.unwrap_or_else(|| {
-        content_with_default_layout(
-            cx,
-            theme,
-            content_padding,
-            content_gap,
-            resolved.legacy_content_children,
-        )
-    });
+    let scroll_body = if let Some(mut managed_content) = resolved.managed_content {
+        if let Some(test_id) = test_id.clone() {
+            managed_content = managed_content.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(test_id),
+            );
+        }
+        managed_content
+    } else {
+        let content = resolved.content.unwrap_or_else(|| {
+            content_with_default_layout(
+                cx,
+                theme,
+                content_padding,
+                content_gap,
+                resolved.legacy_content_children,
+            )
+        });
 
-    let mut scroll_area = ScrollArea::new(vec![content])
-        .scroll_handle(handle.clone())
-        .refine_layout(scroll_layout)
-        .into_element(cx);
-    if let Some(test_id) = test_id.clone() {
-        scroll_area = scroll_area.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        );
-    }
+        let mut scroll_area = ScrollArea::new(vec![content])
+            .scroll_handle(handle.clone())
+            .refine_layout(scroll_layout)
+            .into_element(cx);
+        if let Some(test_id) = test_id.clone() {
+            scroll_area = scroll_area.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(test_id),
+            );
+        }
+        scroll_area
+    };
 
     let root_layout = decl_style::layout_style(theme, layout);
     cx.stack_props(
@@ -231,7 +250,7 @@ fn render_conversation_root<H: UiHost>(
             layout: root_layout,
         },
         move |cx| {
-            let mut out = vec![scroll_area];
+            let mut out = vec![scroll_body];
 
             if !resolved.overlay_downloads.is_empty() {
                 let overlay_layout = decl_style::layout_style(
