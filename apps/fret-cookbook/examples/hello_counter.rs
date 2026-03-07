@@ -132,21 +132,23 @@ impl View for HelloCounterView {
         .justify_center()
         .into_element(cx);
 
-        let header_inner = ui::v_flex(|cx| {
-        ui::children![
-            cx;
-            hero_icon,
-            shadcn::CardTitle::new("Hello Counter"),
-            shadcn::CardDescription::new(
-                "A minimal counter demo using `fret` + shadcn/ui (view runtime + typed actions).",
-            ),
-        ]
-    })
-    .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
-
-        let header = shadcn::CardHeader::new([header_inner]);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push(
+                ui::v_flex(|cx| {
+                    ui::children![
+                        cx;
+                        hero_icon,
+                        shadcn::CardTitle::new("Hello Counter"),
+                        shadcn::CardDescription::new(
+                            "A minimal counter demo using `fret` + shadcn/ui (view runtime + typed actions).",
+                        ),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+            );
+        });
 
         let count_text = cx
             .text_props(TextProps {
@@ -213,39 +215,38 @@ impl View for HelloCounterView {
             .into_element(cx);
 
         let presets = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("1")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset1)
-                    .test_id(TEST_ID_STEP_1)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_1),
                 shadcn::Button::new("5")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset5)
-                    .test_id(TEST_ID_STEP_5)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_5),
                 shadcn::Button::new("10")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset10)
-                    .test_id(TEST_ID_STEP_10)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_10),
             ]
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let step_row = ui::v_flex(|_cx| [step_input, presets])
+        let step_row = ui::v_flex(|cx| ui::children![cx; step_input, presets])
             .gap(Space::N2)
             .w_full()
             .items_center()
             .into_element(cx);
 
         let actions = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconLg)
@@ -254,15 +255,13 @@ impl View for HelloCounterView {
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Decrement")
-                    .test_id(TEST_ID_DEC)
-                    .into_element(cx),
+                    .test_id(TEST_ID_DEC),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
                     .a11y_role(SemanticsRole::Button)
-                    .test_id(TEST_ID_RESET)
-                    .into_element(cx),
+                    .test_id(TEST_ID_RESET),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Default)
                     .size(shadcn::ButtonSize::IconLg)
@@ -271,8 +270,7 @@ impl View for HelloCounterView {
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Increment")
-                    .test_id(TEST_ID_INC)
-                    .into_element(cx),
+                    .test_id(TEST_ID_INC),
             ]
         })
         .gap(Space::N4)
@@ -280,12 +278,13 @@ impl View for HelloCounterView {
         .into_element(cx);
 
         let content_body = ui::v_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 ui::v_flex(|cx| ui::children![cx; count_text, status_line, step_badge])
                     .gap(Space::N2)
                     .items_center()
                     .into_element(cx),
-                ui::v_flex(|_cx| [step_row, step_help])
+                ui::v_flex(|cx| ui::children![cx; step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
                     .items_center()
@@ -296,15 +295,16 @@ impl View for HelloCounterView {
         .items_center()
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([content_body]);
-        let footer = shadcn::CardFooter::new([actions]);
-
-        let card = shadcn::Card::new(ui::children![cx; header, content, footer])
-            .refine_style(ChromeRefinement::default().shadow_lg())
-            .ui()
-            .w_full()
-            .max_w(Px(480.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(cx, shadcn::CardContent::new([content_body]));
+            out.push(shadcn::CardFooter::new([actions]).into_element(cx));
+        })
+        .refine_style(ChromeRefinement::default().shadow_lg())
+        .ui()
+        .w_full()
+        .max_w(Px(480.0))
+        .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }

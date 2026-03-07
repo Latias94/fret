@@ -319,6 +319,9 @@ ID format:
     - `apps/fret-cookbook/examples/query_basics.rs`
     - `apps/fret-cookbook/examples/chart_interactions_basics.rs`
     - `apps/fret-cookbook/examples/docking_basics.rs`
+    - `apps/fret-cookbook/examples/hello_counter.rs`
+    - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
+    - `apps/fret-cookbook/examples/gizmo_basics.rs`
 
 ---
 
