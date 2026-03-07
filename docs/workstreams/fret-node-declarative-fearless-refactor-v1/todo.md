@@ -351,6 +351,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/insert_execution.rs` seam, so background menus, connection menus, drag-drop, and
     reroute-focused commands reuse one `Reroute` create-op path plus one inserted-node selection
     reducer instead of scattering those execution details across multiple widget entrypoints.
+  - Progress: split-edge reroute execution now routes through the private
+    `canvas/widget/split_edge_execution.rs` seam, so edge context actions, double-click gestures, and
+    command-open flows share one reroute split planner, one rejection-toast fallback, and one
+    post-commit selection path instead of repeating that edge-specific transaction wiring inline.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

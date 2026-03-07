@@ -209,37 +209,20 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             if let Some(edge_id) = hit {
                 let invoked_at = position;
-                let at = self.reroute_pos_for_invoked_at(invoked_at);
-
-                let outcome = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_split_edge(
-                                graph,
-                                edge_id,
-                                &NodeKindKey::new(REROUTE_KIND),
-                                at,
-                            );
-                            match plan.decision {
-                                ConnectDecision::Accept => Ok(plan.ops),
-                                ConnectDecision::Reject => Err(plan.diagnostics),
-                            }
-                        })
-                        .ok()
-                };
+                let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
 
                 match outcome {
                     Some(Ok(ops)) => {
-                        let node_id = Self::first_added_node_id(&ops);
-                        if self.commit_ops(cx.app, cx.window, Some("Insert Reroute"), ops) {
-                            self.select_inserted_node(cx.app, node_id);
-                        }
+                        self.apply_split_edge_reroute_ops(
+                            cx.app,
+                            cx.window,
+                            Some("Insert Reroute"),
+                            ops,
+                        );
                     }
                     Some(Err(diags)) => {
-                        if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
-                            self.show_toast(cx.app, cx.window, sev, msg);
-                        }
+                        let (sev, msg) = Self::split_edge_reroute_rejection_toast(&diags);
+                        self.show_toast(cx.app, cx.window, sev, msg);
                     }
                     None => {}
                 }

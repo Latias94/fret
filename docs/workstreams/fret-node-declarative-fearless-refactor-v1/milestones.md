@@ -416,6 +416,10 @@ real editors.
   `canvas/widget/insert_execution.rs`, so background insert, connection insert, drag-drop fallback,
   and reroute selection flows reuse one `Reroute` create-op branch plus one inserted-node selection
   reducer instead of duplicating post-commit focus and draw-order updates across widget entrypoints.
+- Split-edge reroute execution now also has a named private seam,
+  `canvas/widget/split_edge_execution.rs`, so edge context actions, double-click gestures, and
+  command-open flows all share one reroute split planner, one rejection-toast fallback, and one
+  post-commit selection path instead of keeping that edge transaction wiring repeated inline.
 
 ### Deliverables
 
@@ -444,6 +448,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_candidates.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/split_edge_execution.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`

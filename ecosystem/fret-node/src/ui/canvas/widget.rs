@@ -160,6 +160,7 @@ mod right_click;
 mod searcher;
 mod searcher_logic;
 mod selection;
+mod split_edge_execution;
 mod sticky_wire;
 mod stores;
 mod threshold;

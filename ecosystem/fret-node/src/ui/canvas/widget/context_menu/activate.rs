@@ -125,34 +125,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 edge_insert::open_edge_insert_context_menu(self, cx, *edge_id, invoked_at);
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
-                let at = self.reroute_pos_for_invoked_at(invoked_at);
-                let kind = NodeKindKey::new(REROUTE_KIND);
-                let outcome = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_split_edge(graph, *edge_id, &kind, at);
-                            match plan.decision {
-                                ConnectDecision::Accept => Ok(plan.ops),
-                                ConnectDecision::Reject => Err(plan.diagnostics),
-                            }
-                        })
-                        .ok()
-                };
+                let outcome = self.plan_canvas_split_edge_reroute(cx.app, *edge_id, invoked_at);
                 match outcome {
                     Some(Ok(ops)) => {
-                        let node_id = Self::first_added_node_id(&ops);
-                        self.apply_ops(cx.app, cx.window, ops);
-                        self.select_inserted_node(cx.app, node_id);
+                        self.apply_split_edge_reroute_ops(cx.app, cx.window, None, ops);
                     }
                     Some(Err(diags)) => {
-                        let (sev, msg) =
-                            Self::toast_from_diagnostics(&diags).unwrap_or_else(|| {
-                                (
-                                    DiagnosticSeverity::Error,
-                                    Arc::<str>::from("failed to insert reroute"),
-                                )
-                            });
+                        let (sev, msg) = Self::split_edge_reroute_rejection_toast(&diags);
                         self.show_toast(cx.app, cx.window, sev, msg);
                     }
                     None => {}
