@@ -547,6 +547,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
@@ -3098,6 +3099,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
         check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
         check_hover_layout_max: check_hover_layout_max.clone(),
+        check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3365,6 +3367,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
                 check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
                 check_hover_layout_max: check_hover_layout_max.clone(),
+                check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),

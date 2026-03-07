@@ -25,6 +25,7 @@
 - [x] Add `tools/diag-scripts/tooling/text/text-heavy-memory-steady.json` (forces emoji/color glyphs).
 - [x] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady.json` (forces texture cache).
 - [x] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady-after-drop.json` (drops registered images + idle).
+- [x] Add `hello_world_compare_demo` (`apps/fret-demo --bin hello_world_compare_demo`) as a minimal 500x500 Fret compare target for external baselines.
 
 ## Attribution experiments (macOS / Metal)
 

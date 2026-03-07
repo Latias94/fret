@@ -434,6 +434,10 @@ pub(crate) fn write_evidence_index(
         "check.semantics_changed_repainted.json",
     );
     add_file("check.idle_no_paint", "check.idle_no_paint.json");
+    add_file(
+        "check.hello_world_compare_idle_present",
+        "check.hello_world_compare_idle_present.json",
+    );
     add_file("check.pixels_changed", "check.pixels_changed.json");
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
     add_file("check.perf_hints", "check.perf_hints.json");

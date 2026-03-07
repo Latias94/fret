@@ -110,6 +110,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id,
         check_gc_sweep_liveness,
         check_hover_layout_max,
+        check_hello_world_compare_idle_present_max_delta,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
         check_node_graph_cull_window_shifts_max,
@@ -552,6 +553,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         if result.stage.as_deref() == Some("passed") {
             let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                 || check_stale_scene_test_id.is_some()
+                || check_hello_world_compare_idle_present_max_delta.is_some()
                 || check_idle_no_paint_min.is_some()
                 || check_pixels_changed_test_id.is_some()
                 || check_pixels_unchanged_test_id.is_some()

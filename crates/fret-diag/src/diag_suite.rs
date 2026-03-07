@@ -386,6 +386,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id,
         check_gc_sweep_liveness: _,
         check_hover_layout_max,
+        check_hello_world_compare_idle_present_max_delta,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
         check_node_graph_cull_window_shifts_max,
@@ -1386,6 +1387,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         let wants_post_run_checks_for_script = wants_registered_post_run_checks
             || check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
+            || check_hello_world_compare_idle_present_max_delta.is_some()
             || check_idle_no_paint_min.is_some()
             || check_ui_gallery_web_ime_bridge_enabled
             || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
@@ -1913,7 +1915,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     .or(suite_default_pixels_changed_test_id)
                     .map(|s| s.to_string());
             }
-
             checks_for_post_run.check_ui_gallery_code_editor_torture_marker_present |=
                 suite_ui_gallery_code_editor_torture_marker_present;
             checks_for_post_run.check_ui_gallery_code_editor_torture_undo_redo |=

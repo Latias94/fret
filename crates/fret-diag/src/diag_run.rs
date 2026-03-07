@@ -88,6 +88,7 @@ pub(crate) struct RunChecks {
     pub check_drag_cache_root_paint_only_test_id: Option<String>,
     pub check_gc_sweep_liveness: bool,
     pub check_hover_layout_max: Option<u32>,
+    pub check_hello_world_compare_idle_present_max_delta: Option<u64>,
     pub check_idle_no_paint_min: Option<u64>,
     pub check_layout_fast_path_min: Option<u64>,
     pub check_node_graph_cull_window_shifts_max: Option<u64>,
@@ -193,6 +194,7 @@ impl Default for RunChecks {
             check_drag_cache_root_paint_only_test_id: None,
             check_gc_sweep_liveness: false,
             check_hover_layout_max: None,
+            check_hello_world_compare_idle_present_max_delta: None,
             check_idle_no_paint_min: None,
             check_layout_fast_path_min: None,
             check_node_graph_cull_window_shifts_max: None,
@@ -375,6 +377,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id: _,
         check_gc_sweep_liveness: _,
         check_hover_layout_max: _,
+        check_hello_world_compare_idle_present_max_delta: _,
         check_idle_no_paint_min: _,
         check_layout_fast_path_min: _,
         check_node_graph_cull_window_shifts_max: _,
@@ -514,7 +517,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
         .check_wheel_events_max_per_frame
         .or(policy_wheel_events_max_per_frame);
-
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_post_run_checks = check_registry.wants_post_run_checks(&checks_for_post_run);
 

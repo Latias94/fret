@@ -9,6 +9,7 @@ mod drag_cache_gates_streaming;
 mod frames_index_gates;
 mod gc_gates;
 mod gc_gates_streaming;
+mod hello_world_compare;
 mod hover_layout_checks;
 mod interaction_gates;
 mod notify_gates;
@@ -56,6 +57,7 @@ pub(super) use frames_index_gates::{
 };
 pub(super) use gc_gates::check_bundle_for_gc_sweep_liveness;
 pub(super) use gc_gates_streaming::check_bundle_for_gc_sweep_liveness_streaming;
+pub(super) use hello_world_compare::check_out_dir_for_hello_world_compare_idle_present_max_delta;
 pub(super) use hover_layout_checks::check_report_for_hover_layout_invalidations;
 pub(super) use interaction_gates::{
     check_bundle_for_dock_drag_min, check_bundle_for_viewport_capture_min,
