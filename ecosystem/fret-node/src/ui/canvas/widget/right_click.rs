@@ -106,14 +106,7 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
         canvas.interaction.hover_edge = None;
         cx.request_focus(cx.node);
 
-        canvas.update_view_state(cx.app, |s| {
-            s.selected_nodes.clear();
-            s.selected_edges.clear();
-            if !s.selected_groups.iter().any(|id| *id == group_id) {
-                s.selected_groups.clear();
-                s.selected_groups.push(group_id);
-            }
-        });
+        canvas.select_group_context_target(cx.app, group_id);
 
         cx.stop_propagation();
         cx.request_redraw();

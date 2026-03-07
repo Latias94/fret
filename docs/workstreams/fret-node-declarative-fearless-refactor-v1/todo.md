@@ -363,6 +363,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/context_menu/connection_execution.rs` seam, so connection-insert and conversion
     picker actions share planner/result helpers plus suspended-wire resume policy instead of keeping
     large inline outcome enums and drag-resume wiring inside `context_menu/activate.rs`.
+  - Progress: group target selection and edge-target context actions now route through the private
+    `canvas/widget/context_menu/{target_selection,edge_execution}.rs` seams, so group selection
+    sync and edge action execution no longer stay duplicated between right-click setup and activation
+    dispatch branches.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

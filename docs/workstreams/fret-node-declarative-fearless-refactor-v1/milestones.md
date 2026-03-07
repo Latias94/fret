@@ -428,6 +428,10 @@ real editors.
   `canvas/widget/context_menu/connection_execution.rs`, so connection-insert and conversion picker
   actions share planner/result helpers plus suspended-wire resume policy instead of keeping large
   inline outcome enums and drag-resume wiring embedded in `context_menu/activate.rs`.
+- Group target selection and edge-target context actions now also have named private seams,
+  `canvas/widget/context_menu/{target_selection,edge_execution}.rs`, so group selection sync and
+  edge action execution no longer stay duplicated between right-click setup and activation dispatch
+  branches.
 
 ### Deliverables
 
@@ -458,6 +462,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/split_edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`

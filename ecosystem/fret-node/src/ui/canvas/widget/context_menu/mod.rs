@@ -2,8 +2,10 @@ use super::*;
 
 mod activate;
 mod connection_execution;
+mod edge_execution;
 mod input;
 mod pointer;
+mod target_selection;
 
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
