@@ -51,9 +51,20 @@ Status legend:
   - The subtree helper and preset bridge now live in `ecosystem/fret-ui-kit/src/typography.rs`.
 - [x] TSC-kit-023 Document the “one boring path” for subtree-local passive text defaults.
   - See the “Landed authoring surface” section in `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`.
-- [ ] TSC-kit-024 Decide whether the description family should expose a shared composable `children` API now that subtree refinement exists.
+- [x] TSC-kit-024 Decide whether the description family should expose a shared composable `children` API now that subtree refinement exists.
+  - Decision: yes, but selectively at the component/recipe layer (not runtime). `AlertDescription` remains the baseline; `CardDescription` and `DialogDescription` now also expose `new_children(...)`, while text-only surfaces stay unchanged until upstream usage or product pressure justifies the extra API.
 
 ## D. Component enhancement / migration matrix
+
+## D0. Description `children` API decision
+
+| Surface | Current API | Decision | Why | Evidence |
+| --- | --- | --- | --- | --- |
+| `AlertDescription` | `new`, `new_children` | Keep as-is | Canonical proof that subtree description scoping works for nested passive text | `ecosystem/fret-ui-shadcn/src/alert.rs`, `alert_description_children_scope_inherited_text_style` |
+| `CardDescription` | `new` | Add `new_children` | Upstream shadcn frequently nests multiline content inside card descriptions | `ecosystem/fret-ui-shadcn/src/card.rs`, `card_description_children_scope_inherited_text_style` |
+| `DialogDescription` | `new` | Add `new_children` | Upstream dialogs often carry composed description copy while still needing modal description registration | `ecosystem/fret-ui-shadcn/src/dialog.rs`, `dialog_description_children_scope_inherited_text_style` |
+| `SheetDescription`, `PopoverDescription`, `AlertDialogDescription`, `EmptyDescription` | `new` | Keep text-only for now | No current in-tree pressure point; subtree-scoping helper already exists if product usage appears | `ecosystem/fret-ui-shadcn/src/{sheet,popover,alert_dialog,empty}.rs` |
+| `FieldDescription` | `new` + wrap/overflow knobs | Keep text-only for now | It also participates in field registry / `aria-describedby` style wiring, so we avoid widening the public surface without concrete demand | `ecosystem/fret-ui-shadcn/src/field.rs` |
 
 | Area | Surface | File | Current pattern | Target after cascade | Why migrate | Priority | Status | Gate / evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -76,6 +87,14 @@ Status legend:
 | AI / empty state | `ConversationEmptyState` description | `ecosystem/fret-ui-ai/src/elements/conversation_empty_state.rs` | Component-owned description branch | Prefer subtree-local inherited refinement for the optional description subtree | Prevent future nested-child patching pressure | P2 | `[ ]` | Audit needed |
 | AI / reasoning | `ChainOfThoughtStep` description text slot | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | Slot-owned composable xs refinement + shared muted subtree scope for text/children branches | Landed on subtree-local inherited refinement so text and children slots converge without forcing leaf styles | Important mixed text/children pressure point | P2 | `[x]` | `chain_of_thought_step_description_scopes_inherited_typography_for_text_and_children` |
 | kit / foundation | `Label` + passive text helpers | `ecosystem/fret-ui-kit/src/primitives/label.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs` | Root-owned inherited refinement + bare passive text leaves | Landed on composable subtree refinements; leaf style/color stay unset unless the surface semantically owns an override | Foundation surface must not fight the cascade | P0 | `[x]` | `label_defaults_match_shadcn_expectations`, `selectable_label_scopes_inherited_refinement_without_leaf_style`, `text_sm_scopes_inherited_refinement_without_leaf_style`, `prose_variants_and_code_wrap_install_semantic_inherited_overrides` |
+| shadcn / data display | `TableCaption` | `ecosystem/fret-ui-shadcn/src/table.rs` | Caption leaf used explicit table text style + muted color | Landed on subtree-local inherited refinement via `scope_text_style_with_color(...)` while preserving table-local metrics | First non-description shadcn supporting-copy adopter; proves the generic subtree helper path | P1 | `[x]` | `table_caption_scopes_inherited_text_style_without_leaf_overrides` |
+
+## D1. Remaining audit / enhancement candidates
+
+| Surface | File | Current state | Recommended next action | Why it still matters |
+| --- | --- | --- | --- | --- |
+| Toast description path (`Sonner` inherits through it) | `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-shadcn/src/sonner.rs` | Toast title/description leaves still stamp explicit style/color in the renderer path | Move toast description to subtree-scoped inherited refinement first; keep title semantics explicit unless a shared title helper genuinely reduces duplication | High-traffic overlay supporting-copy surface outside the description-family matrix |
+| Title-family audit outside `PlanTitle` | `ecosystem/fret-ui-ai/src/elements/{artifact,terminal,environment_variables,code_block}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{banner,announcement}.rs` | Mixed explicit-title ownership patterns remain, but most are probably intentional semantic owners rather than missing mechanism | Audit and classify each surface as intentional owner vs helper candidate before widening the public API | ADR `0314` still tracks broader title-family adoption as an open audit gap |
 
 ## E. Gates
 
