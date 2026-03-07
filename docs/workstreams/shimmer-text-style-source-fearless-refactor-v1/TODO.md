@@ -46,7 +46,8 @@ Suggested review states:
 - [x] SHIMMER-impl-010 Keep `.text_style(TextStyle)` as a compatibility path.
 - [x] SHIMMER-impl-011 Add a subtree-resolved style source mode for `Shimmer`.
 - [x] SHIMMER-impl-012 Ensure base text and overlay painter share one resolved snapshot.
-- [ ] SHIMMER-impl-013 Prove wrap / overflow / baseline remain aligned under the new mode.
+- [x] SHIMMER-impl-013 Prove wrap / overflow / baseline remain aligned under the new mode.
+  - Locked by `shimmer_resolved_mode_keeps_wrap_overflow_and_baseline_aligned` in `ecosystem/fret-ui-ai/src/elements/shimmer.rs`.
 
 ## D. Semantic migration
 

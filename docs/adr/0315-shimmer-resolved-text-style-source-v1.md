@@ -143,7 +143,7 @@ Recommended sequence:
 
 ### Remaining known gaps
 
-- focused wrap / overflow / baseline parity coverage for the resolved mode is still tracked by `SHIMMER-impl-013` in `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/TODO.md`
+- None at the v1 contract surface after `shimmer_resolved_mode_keeps_wrap_overflow_and_baseline_aligned` locked wrap / overflow / baseline parity in `ecosystem/fret-ui-ai/src/elements/shimmer.rs`.
 
 ### Existing passive text contract
 
