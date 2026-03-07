@@ -322,8 +322,7 @@ fn view(
             ),
         ]
     })
-    .gap(Space::N1)
-    .into_element(cx);
+    .gap(Space::N1);
 
     let size_controls = ui::h_flex(|cx| {
         ui::children![
@@ -344,8 +343,7 @@ fn view(
                 .disabled(preset == 2)
                 .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .into_element(cx),
+                .orientation(shadcn::SeparatorOrientation::Vertical),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)
@@ -364,8 +362,7 @@ fn view(
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let clicks_badge = shadcn::Badge::new(format!("Clicks: {clicks}"))
         .variant(shadcn::BadgeVariant::Secondary)
@@ -441,8 +438,7 @@ fn view(
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
     let hint = shadcn::Alert::new(ui::children![
         cx;
@@ -450,8 +446,7 @@ fn view(
         shadcn::AlertDescription::new(
             "This panel renders into an offscreen texture and is presented via a ViewportSurface element. Input does not arrive as normal UI pointer events; it is forwarded as ViewportInputEvent at the app level.",
         ),
-    ])
-    .into_element(cx);
+    ]);
 
     let viewport = st
         .embedded
@@ -471,26 +466,23 @@ fn view(
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
-        .h_px(Px(420.0))
-        .into_element(cx);
+        .h_px(Px(420.0));
 
-    let content = ui::v_flex(|cx| ui::children![cx; hint, viewport_panel])
-        .gap(Space::N3)
-        .into_element(cx);
+    let content = ui::v_flex(|cx| ui::children![cx; hint, viewport_panel]).gap(Space::N3);
 
     let card = shadcn::Card::build(|cx, out| {
         out.push_ui(
             cx,
-            shadcn::CardHeader::build(|_cx, out| {
-                out.push(header);
-                out.push(size_controls);
-                out.push(info);
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, header);
+                out.push_ui(cx, size_controls);
+                out.push_ui(cx, info);
             }),
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(content);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, content);
             }),
         );
     })

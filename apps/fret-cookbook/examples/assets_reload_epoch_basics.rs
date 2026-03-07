@@ -96,8 +96,7 @@ impl View for AssetsReloadEpochBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let file_image_state = cx.use_image_source_state(&self.file_image);
         let image_panel = render_image_panel(cx, &theme, file_image_state);
@@ -123,13 +122,11 @@ impl View for AssetsReloadEpochBasicsView {
                 svgs.bytes_ready,
                 svgs.bytes_budget
             )),
-        ])
-        .into_element(cx);
+        ]);
 
         let content = ui::v_flex(|cx| ui::children![cx; actions, image_panel, svg_panel, stats])
             .gap(Space::N4)
-            .items_stretch()
-            .into_element(cx);
+            .items_stretch();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -146,8 +143,8 @@ impl View for AssetsReloadEpochBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(content);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
                 }),
             );
         })
@@ -193,40 +190,36 @@ fn render_image_panel(
     .rounded(Radius::Lg)
     .w_px(Px(240.0))
     .h_px(Px(180.0))
-    .overflow_hidden()
-    .into_element(cx);
+    .overflow_hidden();
 
-    let mut body: Vec<AnyElement> = Vec::new();
-    body.push(
-        ui::h_flex(|cx| {
-            ui::children![cx;
-                shadcn::Label::new("File image status:"),
-                shadcn::Badge::new(status)
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .test_id(TEST_ID_IMAGE_STATUS),
-            ]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx),
-    );
-    body.push(image_box);
+    let body = ui::v_flex_build(|cx, out| {
+        out.push_ui(
+            cx,
+            ui::h_flex(|cx| {
+                ui::children![cx;
+                    shadcn::Label::new("File image status:"),
+                    shadcn::Badge::new(status)
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .test_id(TEST_ID_IMAGE_STATUS),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center(),
+        );
+        out.push_ui(cx, image_box);
 
-    if let Some(msg) = st.error {
-        body.push(
-            shadcn::Alert::new(ui::children![cx;
+        if let Some(msg) = st.error {
+            let alert = shadcn::Alert::new(ui::children![cx;
                 shadcn::AlertTitle::new("Image decode/upload failed"),
                 shadcn::AlertDescription::new(msg),
             ])
             .variant(shadcn::AlertVariant::Destructive)
-            .into_element(cx),
-        );
-    }
-
-    let body = ui::v_flex(|_cx| body)
-        .gap(Space::N3)
-        .items_start()
-        .into_element(cx);
+            .into_element(cx);
+            out.push(alert);
+        }
+    })
+    .gap(Space::N3)
+    .items_start();
 
     shadcn::Card::build(|cx, out| {
         out.push_ui(
@@ -243,8 +236,8 @@ fn render_image_panel(
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(body);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, body);
             }),
         );
     })
@@ -293,8 +286,7 @@ fn render_svg_panel(
     .rounded(Radius::Lg)
     .p(Space::N4)
     .w_px(Px(240.0))
-    .h_px(Px(180.0))
-    .into_element(cx);
+    .h_px(Px(180.0));
 
     let body = ui::v_flex(|cx| {
         ui::children![cx;
@@ -312,8 +304,7 @@ fn render_svg_panel(
         ]
     })
     .gap(Space::N3)
-    .items_start()
-    .into_element(cx);
+    .items_start();
 
     shadcn::Card::build(|cx, out| {
         out.push_ui(
@@ -330,8 +321,8 @@ fn render_svg_panel(
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(body);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, body);
             }),
         );
     })

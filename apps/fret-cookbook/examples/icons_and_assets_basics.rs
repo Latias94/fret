@@ -130,8 +130,7 @@ impl View for IconsAndAssetsBasicsView {
                     "Icon packs (lucide), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
                 ),
             );
-        })
-        .into_element(cx);
+        });
 
         let actions = ui::h_flex(|cx| {
             ui::children![cx;
@@ -148,8 +147,7 @@ impl View for IconsAndAssetsBasicsView {
         .gap(Space::N2)
         .items_center()
         .justify_center()
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
         let icon_row =
             |cx: &mut ElementContext<'_, App>, title: &str, ids: [IconId; 3]| -> AnyElement {
@@ -195,7 +193,8 @@ impl View for IconsAndAssetsBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                             let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                             let preload = cx
@@ -221,8 +220,7 @@ impl View for IconsAndAssetsBasicsView {
                                     ]
                                 })
                                 .gap(Space::N2)
-                                .items_center()
-                                .into_element(cx),
+                                .items_center(),
                                 icon_row(
                                     cx,
                                     "Semantic ids (ui.*)",
@@ -253,16 +251,14 @@ impl View for IconsAndAssetsBasicsView {
                             ]
                         })
                         .gap(Space::N4)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .test_id(TEST_ID_PANEL_ICONS)
-        .into_element(cx);
+        .test_id(TEST_ID_PANEL_ICONS);
 
         let file_image_state = cx.use_image_source_state(&self.file_image);
         let memory_image_state = cx.use_image_source_state(&self.memory_image);
@@ -293,8 +289,7 @@ impl View for IconsAndAssetsBasicsView {
             .rounded(Radius::Lg)
             .w_px(Px(160.0))
             .h_px(Px(160.0))
-            .overflow_hidden()
-            .into_element(cx);
+            .overflow_hidden();
 
             ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
                 .gap(Space::N2)
@@ -318,7 +313,8 @@ impl View for IconsAndAssetsBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| {
                             ui::children![
                                 cx;
@@ -332,8 +328,7 @@ impl View for IconsAndAssetsBasicsView {
                                     ]
                                 })
                                 .gap(Space::N2)
-                                .items_center()
-                                .into_element(cx),
+                                .items_center(),
                                 ui::h_flex(|cx| {
                                     ui::children![
                                         cx;
@@ -343,21 +338,18 @@ impl View for IconsAndAssetsBasicsView {
                                 })
                                 .gap(Space::N4)
                                 .items_center()
-                                .w_full()
-                                .into_element(cx),
+                                .w_full(),
                             ]
                         })
                         .gap(Space::N3)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .test_id(TEST_ID_PANEL_IMAGE)
-        .into_element(cx);
+        .test_id(TEST_ID_PANEL_IMAGE);
 
         // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
         cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
@@ -392,8 +384,7 @@ impl View for IconsAndAssetsBasicsView {
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Lg)
-        .p(Space::N4)
-        .into_element(cx);
+        .p(Space::N4);
 
         let svg_panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -411,7 +402,8 @@ impl View for IconsAndAssetsBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| {
                             ui::children![
                                 cx;
@@ -425,35 +417,32 @@ impl View for IconsAndAssetsBasicsView {
                                     ]
                                 })
                                 .gap(Space::N2)
-                                .items_center()
-                                .into_element(cx),
+                                .items_center(),
                                 svg_box,
                             ]
                         })
                         .gap(Space::N3)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .test_id(TEST_ID_PANEL_SVG)
-        .into_element(cx);
+        .test_id(TEST_ID_PANEL_SVG);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(header);
+            out.push_ui(cx, header);
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(
                             |cx| ui::children![cx; actions, icons_panel, svg_panel, image_panel],
                         )
                         .gap(Space::N5)
-                        .w_full()
-                        .into_element(cx),
+                        .w_full(),
                     );
                 }),
             );

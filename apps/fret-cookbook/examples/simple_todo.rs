@@ -96,32 +96,27 @@ impl View for SimpleTodoView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(done_count == 0)
             .action(act::ClearDone)
-            .test_id(TEST_ID_CLEAR_DONE)
-            .into_element(cx);
+            .test_id(TEST_ID_CLEAR_DONE);
 
         let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let add_btn = shadcn::Button::new("Add")
             .disabled(!add_enabled)
             .action(act::Add)
-            .test_id(TEST_ID_ADD)
-            .into_element(cx);
+            .test_id(TEST_ID_ADD);
 
         let input = shadcn::Input::new(self.st.draft.clone())
             .a11y_label("New task")
             .placeholder("Add a task?")
             .submit_command(act::Add.into())
-            .test_id(TEST_ID_DRAFT)
-            .into_element(cx);
+            .test_id(TEST_ID_DRAFT);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let rows = ui::v_flex_build(|cx, out| {
             for t in &todos {
@@ -130,7 +125,6 @@ impl View for SimpleTodoView {
             }
         })
         .gap(Space::N2)
-        .into_element(cx)
         .test_id(TEST_ID_ROWS);
 
         let card = shadcn::Card::build(|cx, out| {
@@ -144,17 +138,17 @@ impl View for SimpleTodoView {
                             "Model + typed actions + keyed lists (no selector/query).",
                         ),
                     );
-                    out.push(header_actions);
+                    out.push_ui(cx, header_actions);
                 }),
             );
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; input_row, rows])
                             .gap(Space::N4)
-                            .w_full()
-                            .into_element(cx),
+                            .w_full(),
                     );
                 }),
             );
@@ -223,7 +217,7 @@ impl View for SimpleTodoView {
 fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
     let done = cx.watch_model(&item.done).paint().copied_or_default();
 
-    let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
+    let checkbox = shadcn::Checkbox::new(item.done.clone());
 
     let text = ui::text(item.text.clone())
         .truncate()
@@ -232,15 +226,14 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
             theme.color_token("muted-foreground")
         } else {
             theme.color_token("foreground")
-        }))
-        .into_element(cx);
+        }));
 
     ui::h_flex(|cx| ui::children![cx; checkbox, text])
         .gap(Space::N2)
         .items_center()
         .w_full()
-        .into_element(cx)
         .test_id(format!("{TEST_ID_ROW_PREFIX}{}", item.id))
+        .into_element(cx)
 }
 
 fn main() -> anyhow::Result<()> {

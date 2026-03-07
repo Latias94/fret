@@ -329,6 +329,8 @@ ID format:
     - `apps/fret-cookbook/examples/text_input_basics.rs`
   - Follow-up polish (same slice, 2026-03-07): late-landing cleanup continued on already-listed `assets_reload_epoch_basics`, `undo_basics`, and `embedded_viewport_basics` to keep builder-first composition consistent after the broader cookbook sweep.
   - Additional 2026-03-07 polish: trimmed remaining builder-path noise in those same pages (button/test_id ordering, alert/header late-landing, and small row composition cleanup) without changing their runtime contracts.
+  - Additional 2026-03-07 follow-up: `icons_and_assets_basics` now keeps the page header, card shells, image/svg status rows, and the final content stack on the late-landing builder path, while `customv1_basics` folds `panel_shell(...)`, the preview/body stacks, and the top-level card body into `push_ui()` so only semantics-driven controls and the final scaffold boundary still land eagerly.
+  - Additional 2026-03-07 follow-up: `simple_todo`, `assets_reload_epoch_basics`, and `embedded_viewport_basics` now keep their toolbar/header rows, card content stacks, and most panel shells on the builder path too; the remaining eager landings are largely the final scaffold/card boundaries plus semantics- or host-bound nodes (progress/meter badges, viewport surfaces, and inline asset error text).
 
 ---
 

@@ -124,15 +124,6 @@ fn on_command(
 fn panel_shell(cx: &mut ElementContext<'_, App>, title: &str, body: AnyElement) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let inner = ui::container(|_cx| vec![body])
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .rounded(Radius::Md)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .w_full()
-        .h_px(Px(320.0))
-        .into_element(cx);
-
     shadcn::Card::build(|cx, out| {
         out.push_ui(
             cx,
@@ -142,8 +133,17 @@ fn panel_shell(cx: &mut ElementContext<'_, App>, title: &str, body: AnyElement) 
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(inner);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    ui::container(|_cx| vec![body])
+                        .bg(ColorRef::Color(theme.color_token("muted")))
+                        .rounded(Radius::Md)
+                        .border_1()
+                        .border_color(ColorRef::Color(theme.color_token("border")))
+                        .w_full()
+                        .h_px(Px(320.0)),
+                );
             }),
         );
     })
@@ -176,16 +176,14 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     ui::v_flex(|cx| {
         ui::children![cx;
             row,
             ui::text("")
                 .text_sm()
-                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                .into_element(cx),
+                .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
         ]
     })
     .gap(Space::N2)
@@ -326,8 +324,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
     let plain_body = preview_content(cx, "plain");
     let plain = panel_shell(cx, "Plain", plain_body);
@@ -383,13 +380,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
 
     let panels = ui::h_flex(|cx| ui::children![cx; plain, custom_panel])
         .gap(Space::N3)
-        .items_stretch()
-        .into_element(cx);
+        .items_stretch();
 
     let body = ui::v_flex(|cx| ui::children![cx; toolbar, panels])
         .gap(Space::N4)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
     let card = shadcn::Card::build(|cx, out| {
         out.push_ui(
@@ -406,8 +401,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
         );
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(body);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, body);
             }),
         );
     })
