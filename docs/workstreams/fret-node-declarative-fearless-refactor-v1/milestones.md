@@ -160,8 +160,8 @@ points rather than direct graph mutation.
 ### Progress note (2026-03-07)
 
 - First landing slices are complete:
-  - `node_graph_surface_paint_only` node-drag commit now builds a `GraphTransaction`.
-  - `NodeGraphSurfacePaintOnlyProps` is now controller-first: `controller: NodeGraphController` is
+  - `node_graph_surface` node-drag commit now builds a `GraphTransaction`.
+  - `NodeGraphSurfaceProps` is now controller-first: `controller: NodeGraphController` is
     required and the store/no-controller fallback path is removed.
   - The declarative path now dispatches committed edits through `NodeGraphController` and syncs
     graph / view models back from store.

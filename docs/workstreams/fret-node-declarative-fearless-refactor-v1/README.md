@@ -105,21 +105,23 @@ update rather than an incidental refactor.
   - Store integration, edit/view queues, overlays, and portal host all exist around this path.
 
 - **Declarative-first direction is already visible**
-  - `node_graph_surface_paint_only` is the default lightweight declarative demo path.
+  - `node_graph_surface` is the default lightweight declarative demo path.
   - `node_graph_surface_compat_retained` already proves that retained can be hidden behind a
     declarative entry surface.
   - The retained bridge is already opt-in only.
 
 ### Still unresolved
 
-- **Public posture ambiguity**
-  - There is not yet one crisp answer to "what should ecosystem authors use for a shipping,
-    editor-grade node graph today?"
+- **Public posture is clearer, but editor-grade closure is still incomplete**
+  - The canonical declarative entrypoint is now `node_graph_surface(...)` with
+    `NodeGraphSurfaceProps` + `NodeGraphController`.
+  - The remaining ambiguity is no longer naming; it is how much editor-grade behavior is already
+    closed on the declarative path versus still landing.
 
 - **Transaction boundary ambiguity in the declarative path**
   - The first M3 slice is now landed: the paint-only node-drag commit builds a
     `GraphTransaction` and dispatches through `NodeGraphController` (store-backed).
-  - `NodeGraphSurfacePaintOnlyProps.controller` is now required; the no-controller fallback path is
+  - `NodeGraphSurfaceProps.controller` is now required; the no-controller fallback path is
     intentionally removed so the demo surface teaches the controller-first contract.
   - Broader declarative commit coverage is still unresolved: this pattern must extend to the rest of
     committed edit flows and converge behind a clearer controller/instance surface.

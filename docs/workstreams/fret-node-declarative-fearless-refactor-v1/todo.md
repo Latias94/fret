@@ -14,7 +14,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Keep diagnostics-driven example hosts aligned with the current `UiDiagnosticsService`
       script-driving surface when syncing from `main`.
 - [x] Publish and maintain an L0 crate audit note (`docs/workstreams/crate-audits/fret-node.l0.md`).
-- [ ] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
+- [x] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
       implementation-only diffs.
 
 ## Cross-cutting red lines
@@ -44,8 +44,8 @@ Execution companion: `design.md` (surface map + next worktree order).
       diagnostics, or temporary compatibility harnesses.
 - [x] Audit examples and internal guides for wording that still suggests retained authoring is the
       normal downstream path.
-- [ ] Decide whether to introduce a future canonical wrapper name such as `node_graph_surface(...)`
-      over the existing paint-only / compat-retained milestones.
+- [x] Introduce the canonical wrapper naming: `NodeGraphSurfaceProps` + `node_graph_surface(...)`,
+      while keeping `node_graph_surface_compat_retained(...)` explicit as the compatibility path.
 
 ## M2 - State boundary split
 
@@ -193,8 +193,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     `GraphTransaction` instead of mutating `Graph` in place.
   - The commit now dispatches through `NodeGraphController` (store-backed) and syncs graph/view
     models back from store.
-  - `NodeGraphSurfacePaintOnlyProps.controller` is now required (controller-first).
-    `NodeGraphSurfacePaintOnlyProps.store` and the no-controller fallback path are removed.
+  - `NodeGraphSurfaceProps.controller` is now required (controller-first).
+    `NodeGraphSurfaceProps.store` and the no-controller fallback path are removed.
 - [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphStore` so the default
       declarative demo path exercises the transaction-safe architecture.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.

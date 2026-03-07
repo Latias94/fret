@@ -57,7 +57,7 @@ pub use controller::{
     NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
     NodeGraphPortConnectionsQuery,
 };
-pub use declarative::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
+pub use declarative::{NodeGraphSurfaceProps, node_graph_surface};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,

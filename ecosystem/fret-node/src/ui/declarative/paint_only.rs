@@ -112,7 +112,7 @@ impl Default for NodeGraphWheelZoomConfig {
 }
 
 #[derive(Clone)]
-pub struct NodeGraphSurfacePaintOnlyProps {
+pub struct NodeGraphSurfaceProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
     pub controller: NodeGraphController,
@@ -152,7 +152,7 @@ pub struct NodeGraphSurfacePaintOnlyProps {
     pub test_id: Option<Arc<str>>,
 }
 
-impl NodeGraphSurfacePaintOnlyProps {
+impl NodeGraphSurfaceProps {
     pub fn new(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
@@ -2121,11 +2121,11 @@ fn paint_nodes_cached(
 /// - Escape cancel clears the local pan-drag state, but cannot currently release pointer capture
 ///   from a key hook (see workstream contract gap log).
 #[track_caller]
-pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
+pub fn node_graph_surface<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    props: NodeGraphSurfacePaintOnlyProps,
+    props: NodeGraphSurfaceProps,
 ) -> AnyElement {
-    let NodeGraphSurfacePaintOnlyProps {
+    let NodeGraphSurfaceProps {
         graph,
         view_state,
         controller,

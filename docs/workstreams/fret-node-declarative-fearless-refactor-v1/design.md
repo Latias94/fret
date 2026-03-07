@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-03-06)
+Status: execution-oriented companion (last updated 2026-03-07)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -28,7 +28,7 @@ something else.
   - owns viewport operations directly (`set_viewport*`, `set_center_in_bounds*`,
     `fit_view_nodes*`, `fit_view_nodes_in_bounds*`),
   - owns transaction-safe graph commits and query helpers.
-- `node_graph_surface_paint_only(...)`
+- `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
   - should keep converging toward the editor-grade path rather than staying a "lite demo only"
     surface forever.

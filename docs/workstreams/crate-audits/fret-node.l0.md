@@ -26,14 +26,14 @@ Evidence anchors:
   - headless model: `Graph`, `Node`, `Edge`, `Port`, `Group`, `StickyNote`, `Symbol` and ID types (re-exported from `core`)
   - rules/diagnostics: `ConnectPlan`, `Diagnostic`, `DiagnosticSeverity`
   - typing: `TypeDesc`, `TypeVarId`
-  - UI (behind `fret-ui`): `NodeGraphController`, `node_graph_surface_paint_only`, presenter/skin/style registry types
+  - UI (behind `fret-ui`): `NodeGraphController`, `node_graph_surface`, presenter/skin/style registry types
     - `NodeGraphController` intentionally mirrors a subset of XYFlow-style “instance” affordances (`set_viewport*`, `fit_view_nodes*`, connection queries) without copying the React/DOM API.
 - Feature flags and intent:
   - default: `["fret-ui", "kit"]` (UI + convenience surfaces are on by default in-tree)
   - `headless`: explicitly builds without `fret-ui`
   - `compat-retained-canvas`: retained-bridge-backed UI surfaces (delete-planned escape hatch)
 - “Accidental” exports to consider removing (L0 hypothesis):
-  - (Resolved) `NodeGraphSurfacePaintOnlyProps` is now controller-first only:
+  - (Resolved) `NodeGraphSurfaceProps` is now controller-first only:
     `controller: NodeGraphController` is required and the `store` fallback is removed.
 
 Evidence anchors:
@@ -87,7 +87,7 @@ Evidence anchors:
 - “Two canonical ways to integrate” drift (controller vs store)
   - Failure mode: ecosystem/app code copies a store-first seam that later becomes delete-planned, while controller-first remains the intended teaching surface.
   - Existing gates: workstream docs + examples.
-  - Missing gate to add (L0): an explicit “golden path” example that only uses `NodeGraphController` + `node_graph_surface_paint_only` (no raw store wiring in app code).
+  - Missing gate to add (L0): an explicit “golden path” example that only uses `NodeGraphController` + `node_graph_surface` (no raw store wiring in app code).
 
 Evidence anchors:
 
@@ -109,10 +109,10 @@ Evidence anchors:
 ## 7) Recommended refactor steps (small, gated)
 
 1. Publish a single “golden path” integration contract:
-   - prefer `NodeGraphController` + `node_graph_surface_paint_only`, treat raw store/queue seams as advanced/compat only — gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
+   - prefer `NodeGraphController` + `node_graph_surface`, treat raw store/queue seams as advanced/compat only — gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
 2. Continue shrinking `paint_only.rs` by responsibility-based submodules:
    - keep pointer session reducers, pointer move, keydown, and portal hosting in separate files under `ui/declarative/paint_only/` — gate: existing `nextest` coverage for the declarative module.
-3. Collapse `NodeGraphSurfacePaintOnlyProps` to one canonical runtime binding input:
+3. Collapse `NodeGraphSurfaceProps` to one canonical runtime binding input:
    - (Done) controller-first only (avoid `controller + store` ambiguity) — gate: `cargo nextest run -p fret-node`.
 4. Add at least one diagnostics-driven gate for portal/overlay anchoring:
    - capture a minimal scripted scenario to lock the cross-frame bounds/portal throttling behavior — gate: `fretboard diag` (plus existing unit tests).
