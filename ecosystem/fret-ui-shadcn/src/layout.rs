@@ -223,9 +223,7 @@ pub(crate) fn container_vstack_fill_width<H: UiHost>(
     stack_props: VStackProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    container_vstack_fill_width_build(cx, props, stack_props, move |_cx, out| {
-        out.extend(children)
-    })
+    container_vstack_fill_width_build(cx, props, stack_props, move |_cx, out| out.extend(children))
 }
 
 pub(crate) fn container_vstack_gap<H: UiHost>(
