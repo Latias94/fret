@@ -51,7 +51,7 @@ use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
 use fret_node::ui::canvas::RejectNonFiniteTx;
-use fret_node::ui::declarative::{NodeGraphSurfaceBinding, NodeGraphSurfaceProps};
+use fret_node::ui::declarative::NodeGraphSurfaceBinding;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
@@ -2554,7 +2554,7 @@ fn render(
                             models.view.clone(),
                             controller,
                         );
-                        let props = NodeGraphSurfaceProps::new(binding);
+                        let props = binding.surface_props();
                         fret_node::ui::declarative::node_graph_surface(cx, props)
                     }
                 };

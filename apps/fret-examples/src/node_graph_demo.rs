@@ -10,7 +10,7 @@ use fret_node::core::{
 use fret_node::io::NodeGraphViewState;
 use fret_node::ui::{
     EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
-    NodeGraphSurfaceBinding, NodeGraphSurfaceProps, node_graph_surface,
+    NodeGraphSurfaceBinding, node_graph_surface,
 };
 use serde_json::Value;
 
@@ -47,7 +47,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
 fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::ViewElements {
     st.surface.observe(cx);
 
-    let mut props = NodeGraphSurfaceProps::new(st.surface.clone());
+    let mut props = st.surface.surface_props();
     props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
     props.paint_overrides = st.paint_overrides.clone();
     node_graph_surface(cx, props).into()

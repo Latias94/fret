@@ -401,7 +401,7 @@ Concretely:
 For new editor surfaces, teach and copy this shape first:
 
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
-2. render `node_graph_surface(cx, NodeGraphSurfaceProps::new(binding.clone()))`,
+2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. route app-facing viewport/query/edit operations through `binding.controller()`,
 4. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
@@ -551,12 +551,16 @@ Canonical runnable targets:
 - default declarative demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
 - compatibility harness: `cargo run -p fret-demo --features node-graph-demos-legacy --bin node_graph_legacy_demo`
 
-Canonical gate families to keep alive:
+### Compact gate matrix
 
-- `cargo nextest run -p fret-node`
-- `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+| Gate | Command | Why it stays |
+| --- | --- | --- |
+| declarative + compat conformance | `cargo nextest run -p fret-node --features compat-retained-canvas` | keeps declarative reducers and retained compatibility closure from drifting apart while deprecation is still blocked |
+| example wiring smoke | `cargo check -p fret-examples` | keeps `node_graph_demo` and the legacy compatibility harness compiling against the current public teaching surface |
+| paint-only diagnostics | `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos` | protects cache, portal-bounds, hover-anchor, and paint-only scripted regressions |
+| layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
-The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.
 
 
 

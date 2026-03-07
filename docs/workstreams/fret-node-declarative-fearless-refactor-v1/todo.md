@@ -315,7 +315,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Paint-only portal bounds and hover-anchor diagnostics.
 - [x] Retained editor conformance tests in `ecosystem/fret-node/src/ui/canvas/widget/tests/`.
 - [x] Store/runtime tests in `ecosystem/fret-node/src/runtime/tests.rs`.
-- [ ] Add a compact gate matrix to the README once the first transaction-safe declarative milestone
+- [x] Add a compact gate matrix to the README once the first transaction-safe declarative milestone
       lands.
 
 ## Open questions that must not get lost
