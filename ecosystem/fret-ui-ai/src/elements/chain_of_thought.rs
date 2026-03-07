@@ -726,31 +726,48 @@ impl ChainOfThoughtStep {
             ),
         };
 
+        let description_refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+
         let mut body_children: Vec<AnyElement> = Vec::new();
         body_children.push(label);
 
         if let Some(description) = self.description {
             let description = match description {
-                ChainOfThoughtStepSlot::Text(description) => cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: description,
-                    style: Some(text_xs(&theme, FontWeight::NORMAL)),
-                    color: Some(base_fg),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }),
-                ChainOfThoughtStepSlot::Elements(children) => cx.container(
-                    ContainerProps {
-                        layout: decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
+                ChainOfThoughtStepSlot::Text(description) => {
+                    typography::scope_text_style_with_color(
+                        cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: description,
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
+                        }),
+                        description_refinement.clone(),
+                        base_fg,
+                    )
+                }
+                ChainOfThoughtStepSlot::Elements(children) => {
+                    typography::scope_text_style_with_color(
+                        cx.container(
+                            ContainerProps {
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                                ..Default::default()
+                            },
+                            move |_cx| children,
                         ),
-                        ..Default::default()
-                    },
-                    move |_cx| children,
-                ),
+                        description_refinement,
+                        base_fg,
+                    )
+                }
             };
             body_children.push(description);
         }
@@ -1048,6 +1065,36 @@ mod tests {
             .any(|child| has_test_id(child, test_id))
     }
 
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn has_inherited_scope(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_inherited_scope(child, refinement, foreground))
+    }
+
     #[test]
     fn chain_of_thought_search_results_wraps() {
         let window = AppWindowId::default();
@@ -1067,6 +1114,52 @@ mod tests {
                 "expected ChainOfThoughtSearchResults to enable flex wrap"
             );
         });
+    }
+
+    #[test]
+    fn chain_of_thought_step_description_scopes_inherited_typography_for_text_and_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let expected_theme = fret_ui::Theme::global(&app).snapshot();
+        let expected_refinement = typography::composable_preset_text_refinement(
+            &expected_theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let expected_fg = expected_theme.color_token("muted-foreground");
+
+        let text_element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThoughtStep::new("label")
+                    .description("desc")
+                    .into_element(cx)
+            });
+
+        let text_desc =
+            find_text_by_content(&text_element, "desc").expect("expected text description element");
+        let ElementKind::Text(props) = &text_desc.kind else {
+            panic!("expected description branch to render a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            text_desc.inherited_text_style.as_ref(),
+            Some(&expected_refinement)
+        );
+        assert_eq!(text_desc.inherited_foreground, Some(expected_fg));
+
+        let children_element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThoughtStep::new("label")
+                    .description_children([ui::raw_text("child description").into_element(cx)])
+                    .into_element(cx)
+            });
+
+        assert!(
+            has_inherited_scope(&children_element, &expected_refinement, expected_fg),
+            "expected description children slot to inherit xs muted typography"
+        );
     }
 
     #[test]
