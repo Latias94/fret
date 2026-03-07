@@ -390,6 +390,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: static group/background/edge context-menu items now route through the private
     `canvas/widget/context_menu/item_builders.rs` seam, so command-item construction no longer
     stays duplicated between `right_click.rs` and `context_menu/opening.rs`.
+  - Progress: split-edge reroute outcome handling now routes through the private
+    `canvas/widget/split_edge_execution.rs` seam, so command-open, double-click, and edge context
+    actions no longer duplicate the same outcome/toast/application branches.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
@@ -437,5 +440,4 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 

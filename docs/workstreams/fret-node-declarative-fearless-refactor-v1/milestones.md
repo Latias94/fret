@@ -455,6 +455,9 @@ real editors.
 - Static group/background/edge context-menu items now also have a named private seam,
   `canvas/widget/context_menu/item_builders.rs`, so command-item construction no longer stays
   duplicated between `right_click.rs` and `context_menu/opening.rs`.
+- Split-edge reroute outcome handling now also routes through the private
+  `canvas/widget/split_edge_execution.rs` seam, so command-open, double-click, and edge context
+  actions no longer duplicate the same outcome/toast/application branches.
 
 ### Deliverables
 

@@ -141,17 +141,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .last_pos
             .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
         let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
-
-        match outcome {
-            Some(Ok(ops)) => {
-                self.apply_split_edge_reroute_ops(cx.app, cx.window, Some("Insert Reroute"), ops);
-            }
-            Some(Err(diags)) => {
-                let (sev, msg) = Self::split_edge_reroute_rejection_toast(&diags);
-                self.show_toast(cx.app, cx.window, sev, msg);
-            }
-            None => {}
-        }
+        self.execute_split_edge_reroute_outcome(cx.app, cx.window, Some("Insert Reroute"), outcome);
 
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);

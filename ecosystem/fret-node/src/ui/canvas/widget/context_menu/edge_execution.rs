@@ -15,16 +15,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
             NodeGraphContextMenuAction::InsertReroute => {
                 let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
-                match outcome {
-                    Some(Ok(ops)) => {
-                        self.apply_split_edge_reroute_ops(cx.app, cx.window, None, ops);
-                    }
-                    Some(Err(diags)) => {
-                        let (sev, msg) = Self::split_edge_reroute_rejection_toast(&diags);
-                        self.show_toast(cx.app, cx.window, sev, msg);
-                    }
-                    None => {}
-                }
+                self.execute_split_edge_reroute_outcome(cx.app, cx.window, None, outcome);
                 true
             }
             NodeGraphContextMenuAction::DeleteEdge => {
