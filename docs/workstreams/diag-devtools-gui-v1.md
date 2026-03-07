@@ -16,6 +16,7 @@ and “contract-first” philosophy.
 Related foundations:
 
 - Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
+- Artifact + evidence contract (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect + pick UX: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - Base contract ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
