@@ -92,6 +92,11 @@ class TableAccumulator:
         self.detachment_counter: Counter[str] = Counter()
         self.direct_to_display_counter: Counter[str] = Counter()
         self.label_counter: Counter[str] = Counter()
+        self.backtrace_user_frame_counter: Counter[str] = Counter()
+        self.backtrace_fret_frame_counter: Counter[str] = Counter()
+        self.backtrace_wgpu_frame_counter: Counter[str] = Counter()
+        self.label_backtrace_user_frame_counter: dict[str, Counter[str]] = {}
+        self.label_backtrace_fret_frame_counter: dict[str, Counter[str]] = {}
         self.event_type_counter: Counter[str] = Counter()
         self.resource_type_counter: Counter[str] = Counter()
         self.allocation_type_counter: Counter[str] = Counter()
@@ -232,6 +237,22 @@ class TableAccumulator:
         if size_value is not None:
             self.size_values.append(size_value)
 
+        backtrace_frames = extract_backtrace_frame_names(row_map, index, "backtrace")
+        if backtrace_frames:
+            user_frame = first_matching_backtrace_frame(backtrace_frames, is_likely_user_backtrace_frame)
+            if user_frame:
+                self.backtrace_user_frame_counter[user_frame] += 1
+                if label:
+                    self.label_backtrace_user_frame_counter.setdefault(label, Counter())[user_frame] += 1
+            fret_frame = first_matching_backtrace_frame(backtrace_frames, is_likely_fret_frame)
+            if fret_frame:
+                self.backtrace_fret_frame_counter[fret_frame] += 1
+                if label:
+                    self.label_backtrace_fret_frame_counter.setdefault(label, Counter())[fret_frame] += 1
+            wgpu_frame = first_matching_backtrace_frame(backtrace_frames, is_likely_wgpu_frame)
+            if wgpu_frame:
+                self.backtrace_wgpu_frame_counter[wgpu_frame] += 1
+
     def render(self, schema_name: str, columns: list[str]) -> dict[str, Any]:
         first_ts = self.timestamp_values[0] if self.timestamp_values else None
         last_ts = self.timestamp_values[-1] if self.timestamp_values else None
@@ -281,6 +302,26 @@ class TableAccumulator:
             if schema_name == "metal-application-encoders-list":
                 summary["encoder_labels"] = labels_head
                 summary["encoder_duration_total_ms"] = self.encoder_duration_total_ns / 1_000_000.0
+        if self.backtrace_user_frame_counter:
+            summary["backtrace_user_frames_head"] = dict(self.backtrace_user_frame_counter.most_common(12))
+        if self.backtrace_fret_frame_counter:
+            summary["backtrace_fret_frames_head"] = dict(self.backtrace_fret_frame_counter.most_common(12))
+        if self.backtrace_wgpu_frame_counter:
+            summary["backtrace_wgpu_frames_head"] = dict(self.backtrace_wgpu_frame_counter.most_common(12))
+        if self.label_backtrace_user_frame_counter:
+            summary["label_backtrace_user_frames_head"] = {
+                label: dict(counter.most_common(4))
+                for label, _ in self.label_counter.most_common(4)
+                for counter in [self.label_backtrace_user_frame_counter.get(label)]
+                if counter
+            }
+        if self.label_backtrace_fret_frame_counter:
+            summary["label_backtrace_fret_frames_head"] = {
+                label: dict(counter.most_common(4))
+                for label, _ in self.label_counter.most_common(4)
+                for counter in [self.label_backtrace_fret_frame_counter.get(label)]
+                if counter
+            }
         if self.event_type_counter:
             summary["event_types_head"] = dict(self.event_type_counter.most_common(12))
         if self.resource_type_counter:
@@ -559,6 +600,75 @@ def extract_int(
     if elem is None:
         return None
     return cell_raw_int(elem, index)
+
+
+SYSTEM_BACKTRACE_FRAME_PREFIXES = (
+    "std::",
+    "core::",
+    "alloc::",
+    "objc::",
+)
+
+SYSTEM_BACKTRACE_FRAME_HINTS = (
+    "__",
+    "_dispatch_",
+    "_pthread",
+    "start_wqthread",
+    "CFRunLoop",
+    "CoreFoundation",
+    "AppKit",
+    "HIToolbox",
+    "libsystem_",
+    "dyld",
+    "objc_msgSend",
+)
+
+
+def extract_backtrace_frame_names(
+    row_map: dict[str, ET.Element],
+    index: dict[str, ET.Element],
+    *names: str,
+) -> list[str]:
+    elem = first_present(row_map, *names)
+    if elem is None:
+        return []
+    resolved = resolve_elem(elem, index)
+    frame_names: list[str] = []
+    for frame in resolved.findall("frame"):
+        resolved_frame = resolve_elem(frame, index)
+        name = resolved_frame.attrib.get("name")
+        if name:
+            frame_names.append(name)
+    return frame_names
+
+
+def is_likely_system_backtrace_frame(name: str) -> bool:
+    if name.startswith(SYSTEM_BACKTRACE_FRAME_PREFIXES):
+        return True
+    return any(hint in name for hint in SYSTEM_BACKTRACE_FRAME_HINTS)
+
+
+def is_likely_fret_frame(name: str) -> bool:
+    return "fret_" in name or "hello_world_compare_demo" in name or "wgpu_hello_world_control" in name
+
+
+def is_likely_wgpu_frame(name: str) -> bool:
+    return "wgpu" in name and "fret_" not in name
+
+
+def is_likely_user_backtrace_frame(name: str) -> bool:
+    if is_likely_fret_frame(name) or is_likely_wgpu_frame(name):
+        return True
+    if name.startswith(SYSTEM_BACKTRACE_FRAME_PREFIXES):
+        return False
+    return "::" in name and not is_likely_system_backtrace_frame(name)
+
+
+def first_matching_backtrace_frame(frame_names: list[str], predicate) -> str | None:
+    for name in frame_names:
+        if predicate(name):
+            return name
+    return None
 
 
 def load_store_schema_xml(path: Path) -> str:

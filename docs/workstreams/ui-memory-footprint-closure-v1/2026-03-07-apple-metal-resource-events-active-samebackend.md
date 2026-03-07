@@ -205,9 +205,18 @@ The first label-level clue is already surprisingly specific:
 - the other full active modes stay in the same band (`8300–8475` rows),
 - and the event stream remains pinned to the main thread in these runs.
 
+The new backtrace clustering makes that lead much sharper:
+
+- the app/user-side boundary for the staging rows is overwhelmingly `wgpu_hal::metal::Device::create_buffer`,
+- for Fret runs, the same staging label clusters primarily under `fret_render_wgpu::renderer::render_scene::execute`,
+- the second-largest steady contributor is `fret_render_wgpu::renderer::uniform_resources::UniformResources::write_viewport_uniforms_into`,
+- full-scene runs add only a small extra tail from `fret_render_wgpu::text::GlyphAtlas::flush_uploads`,
+- and `present-only empty` still shows the same `render_scene_execute + viewport uniforms` pattern even without text/swatches.
+
 So the first optimization suspect is no longer a vague “some buffers”: it is now much more likely the
-`wgpu` staging/upload path (or something very close to it), not the small number of visible
-`CAMetalLayer` drawable texture rows.
+`wgpu` staging/upload path driven by Fret's steady render/present path—especially scene execution and
+viewport uniform writes—rather than the small number of visible `CAMetalLayer` drawable texture rows or
+hello-world text content itself.
 
 This should still be treated as a follow-up optimization lead rather than a closed steady-state
 attribution, but it is now a much sharper lead than before.

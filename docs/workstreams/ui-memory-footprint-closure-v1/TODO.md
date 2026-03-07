@@ -210,9 +210,13 @@
 - [x] Expand the `Metal Resource Events` active matrix around the floor rather than brute-forcing more noisy Apple templates.
   - Added `present-only` full and `present-only` empty on the same path.
   - Result: the full-scene live Metal plateau (`42.45 MiB`) already exists in pure `present-only`, while `present-only empty` still lands at `38.33 MiB`. So the active floor is already present before real rerender/layout, and visible hello-world content adds only about `4.12 MiB` at this layer.
-- [ ] Use the new `Metal Resource Events` evidence to attack the two remaining unknowns directly.
-  - Promote the current label-level lead into a real attribution pass: `metal-resource-allocations.labels_head` is already dominated by `"(wgpu internal) Staging  ( 128.00 KiB ,  Shared )"` even in `present-only`, so confirm that with label/backtrace clustering before changing runtime code.
-  - Keep chasing the residual `~60–75 MiB` outside `metal-current-allocated-size` with another Apple-side category path rather than adding more redundant mode rows.
+- [x] Use the new `Metal Resource Events` evidence to turn the staging lead into a real attribution pass.
+  - `metal-resource-allocations.labels_head` is indeed dominated by `"(wgpu internal) Staging  ( 128.00 KiB ,  Shared )"` even in `present-only`.
+  - The new backtrace clustering now points that staging churn primarily at `fret_render_wgpu::renderer::render_scene::execute` and `UniformResources::write_viewport_uniforms_into`, with `GlyphAtlas::flush_uploads` only as a smaller full-scene add-on.
+- [ ] Turn the clustered staging lead into bounded runtime experiments before changing broader architecture.
+  - Test whether the `present-only` floor drops when viewport/uniform staging reuse improves, because that path is now one of the clearest steady contributors.
+  - Separate text/glyph uploads from the core render/present floor, since `GlyphAtlas::flush_uploads` looks secondary rather than primary here.
+- [ ] Keep chasing the residual `~60–75 MiB` outside `metal-current-allocated-size` with another Apple-side category path rather than adding more redundant mode rows.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.
   - Continuous control is a good stress case here: `target/diag/wgpu-control-pid-audit-continuous-20260306-r2/summary.json` still collapsed into a partial `Trace1.run`-only bundle, while the same config in `target/diag/wgpu-control-pid-audit-continuous-20260306-r3/summary.json` produced a full bundle.
