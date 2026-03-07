@@ -90,7 +90,7 @@ Usage:
     fretboard diag layout-perf-summary [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--top <n>] [--warmup-frames <n>] [--json] [--out <path>]
   fretboard diag ai-packet [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--test-id <test_id>] [--packet-out <dir>] [--sidecars-only] [--include-triage] [--warmup-frames <n>]
   fretboard diag query test-id [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json] [--out <path>]
-  fretboard diag query scroll-extents-observation [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--window <id>] [--top <n>] [--all] [--json] [--out <path>]
+  fretboard diag query scroll-extents-observation [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--window <id>] [--top <n>] [--all] [--deep-scan] [--timeline] [--json] [--out <path>]
   fretboard diag slice [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id> [--frame-id <n>] [--snapshot-seq <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json] [--out <path>]
   fretboard diag inspect on|off|toggle|status [--consume-clicks <bool>]
   fretboard diag pick-arm

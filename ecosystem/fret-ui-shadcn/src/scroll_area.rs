@@ -1740,4 +1740,183 @@ mod tests {
             "expected auto scrollbar to mount for overflow when using an explicit handle"
         );
     }
+
+    #[test]
+    fn scroll_area_docs_card_content_size_matches_visible_page_root_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let mut services = FakeServices::default();
+        let handle = ScrollHandle::default();
+
+        fn fill_width_layout() -> LayoutStyle {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+            layout
+        }
+
+        fn paragraph(cx: &mut ElementContext<'_, App>, text: impl Into<String>) -> AnyElement {
+            let mut props = ContainerProps::default();
+            props.layout = fill_width_layout();
+            let text = text.into();
+            cx.container(props, move |cx| vec![cx.text(text.clone())])
+        }
+
+        fn section(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
+            let preview = cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(0.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        cx.text(format!("Alert preview {idx}")),
+                        cx.text("A preview panel with title and description."),
+                        cx.text("Visible content should define the scroll extent."),
+                    ]
+                },
+            );
+
+            let code = cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(0.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    (0..16)
+                        .map(|line| {
+                            cx.text(format!(
+                                "let alert_section_{idx}_{line} = very_long_code_line_for_copy_paste_surface;"
+                            ))
+                        })
+                        .collect::<Vec<_>>()
+                },
+            );
+
+            let tabs = crate::Tabs::uncontrolled(Some("preview"))
+                .content_fill_remaining(false)
+                .test_id(format!("docs-tabs-{idx}"))
+                .items([
+                    crate::TabsItem::new("preview", "Preview", [preview]),
+                    crate::TabsItem::new("code", "Code", [code]),
+                ])
+                .into_element(cx);
+
+            cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(6.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        cx.text(format!("Section {idx}")),
+                        paragraph(
+                            cx,
+                            format!(
+                                "Docs-like section {idx} with a preview/code tabs pair and wrapped copy."
+                            ),
+                        ),
+                        tabs,
+                    ]
+                },
+            )
+        }
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa-docs-card-height-regression",
+            |cx| {
+                let body = cx
+                    .column(
+                        ColumnProps {
+                            layout: fill_width_layout(),
+                            gap: Px(12.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut out = Vec::with_capacity(8);
+                            out.push(paragraph(
+                                cx,
+                                "Preview follows the docs-card structure used by the UI gallery.",
+                            ));
+                            out.extend((0..6).map(|idx| section(cx, idx)));
+                            out.push(paragraph(
+                                cx,
+                                "Notes: content size should track the visible page root rather than an oversized intrinsic probe.",
+                            ));
+                            out
+                        },
+                    )
+                    .test_id("docs-root");
+
+                let page_root = crate::Card::new([
+                    crate::CardHeader::new([
+                        crate::CardTitle::new("Preview").into_element(cx),
+                        crate::CardDescription::new(
+                            "Interactive preview for validating behaviors.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    crate::CardContent::new([body]).into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("page-root");
+
+                vec![
+                    ScrollArea::new(vec![page_root])
+                        .type_(ScrollAreaType::Auto)
+                        .scroll_handle(handle.clone())
+                        .viewport_test_id("sa.viewport")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let page_root = node_id_by_test_id(&snap, "page-root");
+        let docs_root = node_id_by_test_id(&snap, "docs-root");
+        let page_bounds = ui.debug_node_bounds(page_root).expect("page root bounds");
+        let docs_bounds = ui.debug_node_bounds(docs_root).expect("docs root bounds");
+
+        assert!(
+            handle.max_offset().y.0 > 0.01,
+            "expected docs card preview to overflow vertically; viewport={:?} content={:?} page={:?} docs={:?}",
+            handle.viewport_size(),
+            handle.content_size(),
+            page_bounds,
+            docs_bounds
+        );
+        let docs_bottom = docs_bounds.origin.y.0 + docs_bounds.size.height.0;
+        let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
+        assert!(
+            handle.content_size().height.0 + 1.0 >= docs_bottom
+                && handle.content_size().height.0 <= page_bottom + 1.0,
+            "expected scroll content height to stay within the visible docs/page bounds: content={:?} page={:?} docs={:?} docs_bottom={} page_bottom={}",
+            handle.content_size(),
+            page_bounds,
+            docs_bounds,
+            docs_bottom,
+            page_bottom,
+        );
+    }
 }

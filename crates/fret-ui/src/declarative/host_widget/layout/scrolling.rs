@@ -204,9 +204,25 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
         // to `content_bounds`. When descendants overflow that forced rect, `node_bounds` at the
         // barrier root can under-report the true content extent.
         //
-        // Prefer observing immediate children of the barrier root, falling back to the barrier
-        // root bounds when no children are present.
+        // Prefer observing immediate children of the barrier root, but keep the peeled root's own
+        // bounds as a baseline when they differ from the forced `content_bounds` rect. That
+        // preserves shell/padding contribution for real content roots while still ignoring the
+        // synthetic wrapper case where the root is just the forced scroll content box.
         let mut any = false;
+        if let Some(bounds) = tree.node_bounds(observe_root) {
+            let same_origin = (bounds.origin.x.0 - content_bounds.origin.x.0).abs() <= 0.5
+                && (bounds.origin.y.0 - content_bounds.origin.y.0).abs() <= 0.5;
+            let same_size = (bounds.size.width.0 - content_bounds.size.width.0).abs() <= 0.5
+                && (bounds.size.height.0 - content_bounds.size.height.0).abs() <= 0.5;
+            if !(same_origin && same_size) {
+                let right =
+                    (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
+                let bottom =
+                    (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
+                observed.width = Px(observed.width.0.max(right));
+                observed.height = Px(observed.height.0.max(bottom));
+            }
+        }
         let observe_children: Vec<NodeId> = tree.children_ref(observe_root).to_vec();
         for child in observe_children {
             immediate_children_visited = immediate_children_visited.saturating_add(1);
@@ -1580,6 +1596,11 @@ impl ElementHostWidget {
                 app: cx.app,
                 window,
             };
+            let shrink_validation_enabled = defer_this_frame
+                || (cx.children.len() == 1
+                    && probe_unbounded_for_measure
+                    && ((props.axis.scroll_x() && content_w.0 > desired.width.0 + 0.5)
+                        || (props.axis.scroll_y() && content_h.0 > desired.height.0 + 0.5)));
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,
                 cx.children,
@@ -1587,7 +1608,8 @@ impl ElementHostWidget {
                 props.axis,
                 Size::new(content_w, content_h),
                 extent_may_be_stale,
-                at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent,
+                (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
+                    || shrink_validation_enabled,
             );
 
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
@@ -1718,11 +1740,14 @@ impl ElementHostWidget {
                 );
             }
 
-            if defer_this_frame {
-                // When we reuse cached extents (deferred probe or view-cache intrinsic caches),
-                // the cached `last_max_child` can temporarily overestimate the true scroll extent
-                // after content shrinks. Clamp down when possible without triggering an extra deep
-                // measurement walk.
+            if shrink_validation_enabled
+                && !observation.wrapper_peel_budget_hit
+                && !observation.deep_scan_budget_hit
+            {
+                // Single-child scroll subtrees can over-measure under unbounded probe passes
+                // (including deferred/cached paths and clean probe/final flows). When a bounded
+                // post-layout observation proves the laid-out content is smaller, clamp the
+                // scroll extent down without scheduling another deep measure walk.
                 let mut changed = false;
                 if props.axis.scroll_x()
                     && observed.width.0 > 0.0
