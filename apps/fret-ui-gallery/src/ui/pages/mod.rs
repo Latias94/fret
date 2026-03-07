@@ -129,6 +129,7 @@ mod button;
 mod button_group;
 mod calendar;
 mod card;
+pub(crate) use card::card_doc_scaffold_metrics_json;
 mod carousel;
 #[cfg(feature = "gallery-dev")]
 mod chart;

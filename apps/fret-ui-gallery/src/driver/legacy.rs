@@ -122,6 +122,15 @@ const DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER: TimerToken = TimerToken(0x7569_6761_6c6
 #[derive(Clone)]
 struct UiGalleryHarnessModelIds {
     selected_page: Model<Arc<str>>,
+    workspace_tabs: Model<Vec<Arc<str>>>,
+    workspace_dirty_tabs: Model<Vec<Arc<str>>>,
+    nav_query: Model<String>,
+    settings_menu_bar_os: Model<Option<Arc<str>>>,
+    settings_menu_bar_in_window: Model<Option<Arc<str>>>,
+    chrome_show_workspace_tab_strip: Model<bool>,
+    cmdk_query: Model<String>,
+    last_action: Model<Arc<str>>,
+    input_file_value: Model<String>,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
@@ -975,7 +984,12 @@ impl UiGalleryDriver {
         let workspace_dirty_tabs = app
             .models_mut()
             .insert(vec![Arc::<str>::from(PAGE_OVERLAY)]);
-        let nav_query = app.models_mut().insert(String::new());
+        let nav_query_default = std::env::var_os(ENV_UI_GALLERY_NAV_QUERY)
+            .and_then(|value| (!value.is_empty()).then_some(value))
+            .map(|value| value.to_string_lossy().trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_default();
+        let nav_query = app.models_mut().insert(nav_query_default);
         let theme_preset = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("zinc/light")));
@@ -1402,6 +1416,15 @@ impl UiGalleryDriver {
                 window,
                 UiGalleryHarnessModelIds {
                     selected_page: state.selected_page.clone(),
+                    workspace_tabs: state.workspace_tabs.clone(),
+                    workspace_dirty_tabs: state.workspace_dirty_tabs.clone(),
+                    nav_query: state.nav_query.clone(),
+                    settings_menu_bar_os: state.settings_menu_bar_os.clone(),
+                    settings_menu_bar_in_window: state.settings_menu_bar_in_window.clone(),
+                    chrome_show_workspace_tab_strip: state.chrome_show_workspace_tab_strip.clone(),
+                    cmdk_query: state.cmdk_query.clone(),
+                    last_action: state.last_action.clone(),
+                    input_file_value: state.input_file_value.clone(),
                     code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
                     code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
                     code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),

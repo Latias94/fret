@@ -109,8 +109,7 @@ use compare::{
     compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
     maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
     read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
-    scan_perf_threshold_failures, stop_launched_demo,
-    wait_for_files_with_extensions,
+    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
 use gates::{
@@ -395,6 +394,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut lint_eps_px: f32 = 0.5;
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
+    let mut check_memory_p90_max: Vec<(String, u64)> = Vec::new();
+    let mut repeat_compare_enabled: bool = true;
     let mut reuse_launch: bool = false;
     let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
@@ -1044,6 +1045,39 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --repeat".to_string())?
                     .max(1);
+                i += 1;
+            }
+            "--no-compare" => {
+                repeat_compare_enabled = false;
+                i += 1;
+            }
+            "--check-memory-p90-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-memory-p90-max".to_string());
+                };
+                let v = v.trim();
+                let (key, bytes_str) = if let Some((a, b)) = v.split_once(':') {
+                    (a.trim(), b.trim())
+                } else if let Some((a, b)) = v.split_once('=') {
+                    (a.trim(), b.trim())
+                } else {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                };
+                if key.is_empty() || bytes_str.is_empty() {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                }
+                let bytes = bytes_str.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-memory-p90-max: invalid bytes (expected u64)"
+                        .to_string()
+                })?;
+                check_memory_p90_max.push((key.to_string(), bytes));
                 i += 1;
             }
             "--max-top-total-us" => {
@@ -3288,6 +3322,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_high_priority,
                 launch_write_bundle_json,
                 perf_repeat,
+                check_memory_p90_max: check_memory_p90_max.clone(),
+                compare_enabled: repeat_compare_enabled,
                 compare_eps_px,
                 compare_ignore_bounds,
                 compare_ignore_scene_fingerprint,

@@ -6,7 +6,7 @@ use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
 use fret_ui::declarative;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsDecoration, SpacerProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsProps, SpacerProps};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
 use fret_workspace::WorkspaceFrame;
@@ -268,14 +268,16 @@ fn render_root_contents(
     center_layout.size.height = fret_ui::element::Length::Fill;
     center_layout.flex.grow = 1.0;
 
-    let center = cx.flex(
-        fret_ui::element::FlexProps {
-            layout: center_layout,
-            direction: fret_core::Axis::Horizontal,
-            ..Default::default()
-        },
-        |_cx| vec![sidebar, content],
-    );
+    let center = cx
+        .flex(
+            fret_ui::element::FlexProps {
+                layout: center_layout,
+                direction: fret_core::Axis::Horizontal,
+                ..Default::default()
+            },
+            |_cx| vec![sidebar, content],
+        )
+        .test_id("ui-gallery-workspace-center");
 
     let mut frame_el = WorkspaceFrame::new(center).top(top_bar);
     if frame.show_status_bar {
@@ -290,10 +292,18 @@ fn render_root_contents(
     }
     let frame_el = frame_el.into_element(cx);
 
-    let panel = frame_el.attach_semantics(
-        SemanticsDecoration::default()
-            .role(SemanticsRole::Panel)
-            .label("fret-ui-gallery"),
+    let mut frame_semantics_layout = LayoutStyle::default();
+    frame_semantics_layout.size.width = Length::Fill;
+    frame_semantics_layout.size.height = Length::Fill;
+    let panel = cx.semantics(
+        SemanticsProps {
+            layout: frame_semantics_layout,
+            role: SemanticsRole::Panel,
+            label: Some(Arc::from("fret-ui-gallery")),
+            test_id: Some(Arc::from("ui-gallery-workspace-frame")),
+            ..Default::default()
+        },
+        |_cx| [frame_el],
     );
     menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
 

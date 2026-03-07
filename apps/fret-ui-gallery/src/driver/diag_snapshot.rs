@@ -2,6 +2,17 @@ use fret_app::App;
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use std::sync::Arc;
 
+use crate::spec::{
+    BISECT_DISABLE_CARD_CODE_TABS, BISECT_DISABLE_CARD_PAGE_INTRO,
+    BISECT_DISABLE_CARD_SECTION_CARD_CONTENT, BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
+    BISECT_DISABLE_CARD_SECTION_DEMO, BISECT_DISABLE_CARD_SECTION_IMAGE,
+    BISECT_DISABLE_CARD_SECTION_MEETING_NOTES, BISECT_DISABLE_CARD_SECTION_NOTES,
+    BISECT_DISABLE_CARD_SECTION_RTL, BISECT_DISABLE_CARD_SECTION_SIZE,
+    BISECT_DISABLE_CARD_SECTION_USAGE, BISECT_MINIMAL_ROOT, BISECT_SIMPLE_CONTENT,
+    BISECT_SIMPLE_SIDEBAR, PAGE_GROUPS, ui_gallery_bisect_flags,
+};
+use crate::ui::{card_doc_scaffold_metrics_json, nav_visibility_summary};
+
 #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
@@ -9,6 +20,149 @@ use crate::harness::{
 };
 
 use super::UiGalleryHarnessDiagnosticsStore;
+
+fn arc_str_len(value: &Arc<str>) -> u64 {
+    value.len() as u64
+}
+
+fn opt_arc_str_len(value: Option<&Arc<str>>) -> u64 {
+    value.map(arc_str_len).unwrap_or(0)
+}
+
+fn vec_arc_str_len(values: &[Arc<str>]) -> u64 {
+    values.iter().map(arc_str_len).sum()
+}
+
+fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
+    let mut entries = 0u64;
+    let mut keywords = 0u64;
+    let mut string_bytes = 0u64;
+    for (id, meta) in app.commands().iter() {
+        entries = entries.saturating_add(1);
+        string_bytes = string_bytes
+            .saturating_add(id.0.len() as u64)
+            .saturating_add(meta.title.len() as u64)
+            .saturating_add(
+                meta.description
+                    .as_ref()
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0),
+            )
+            .saturating_add(meta.category.as_ref().map(|v| v.len() as u64).unwrap_or(0));
+        for keyword in &meta.keywords {
+            keywords = keywords.saturating_add(1);
+            string_bytes = string_bytes.saturating_add(keyword.len() as u64);
+        }
+    }
+    serde_json::json!({
+        "command_registry_entries": entries,
+        "command_registry_keywords": keywords,
+        "command_registry_string_bytes_estimate_total": string_bytes,
+    })
+}
+
+fn command_palette_entries_bytes_estimate(app: &App) -> serde_json::Value {
+    let mut entries = 0u64;
+    let mut groups = 0u64;
+    let mut string_bytes = 0u64;
+
+    let mut commands: Vec<_> = app
+        .commands()
+        .iter()
+        .filter_map(|(id, meta)| (!meta.hidden).then_some((id, meta)))
+        .collect();
+    commands.sort_by(|(a_id, a_meta), (b_id, b_meta)| {
+        match (&a_meta.category, &b_meta.category) {
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (Some(a), Some(b)) => a.as_ref().cmp(b.as_ref()),
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+        .then_with(|| a_meta.title.as_ref().cmp(b_meta.title.as_ref()))
+        .then_with(|| a_id.as_str().cmp(b_id.as_str()))
+    });
+
+    let mut seen_categories = std::collections::BTreeSet::<Arc<str>>::new();
+    for (id, meta) in commands {
+        entries = entries.saturating_add(1);
+        string_bytes = string_bytes
+            .saturating_add(meta.title.len() as u64)
+            .saturating_add(id.as_str().len() as u64);
+        if let Some(category) = meta.category.as_ref() {
+            if seen_categories.insert(category.clone()) {
+                groups = groups.saturating_add(1);
+                string_bytes = string_bytes.saturating_add(category.len() as u64);
+            }
+            string_bytes = string_bytes.saturating_add(category.len() as u64);
+        }
+        if let Some(description) = meta.description.as_ref() {
+            string_bytes = string_bytes.saturating_add(description.len() as u64);
+        }
+        for keyword in &meta.keywords {
+            string_bytes = string_bytes.saturating_add(keyword.len() as u64);
+        }
+    }
+
+    serde_json::json!({
+        "command_palette_entries_count": entries,
+        "command_palette_groups_count": groups,
+        "command_palette_entries_string_bytes_estimate_total": string_bytes,
+    })
+}
+
+fn settings_sheet_static_string_bytes_estimate() -> serde_json::Value {
+    let strings = [
+        "Settings",
+        "Menu bar presentation (OS vs in-window) + chrome toggles.",
+        "Menu bar surfaces",
+        "Chrome",
+        "Command availability (debug)",
+        "Auto (Windows/macOS on; Linux/Web off)",
+        "On",
+        "Off",
+        "Auto (Linux/Web on; Windows/macOS off)",
+        "On",
+        "Off",
+        "Workspace tabs in the top bar",
+        "edit.can_undo (enables OS/in-window Undo)",
+        "edit.can_redo (enables OS/in-window Redo)",
+        "Apply (in memory)",
+        "Write project .fret/settings.json",
+        "Close",
+    ];
+    let total = strings.iter().map(|s| s.len() as u64).sum::<u64>();
+    serde_json::json!({
+        "settings_sheet_static_strings_count": strings.len() as u64,
+        "settings_sheet_static_string_bytes_estimate_total": total,
+    })
+}
+
+fn page_specs_string_bytes_estimate() -> serde_json::Value {
+    let mut entries = 0u64;
+    let mut tags = 0u64;
+    let mut string_bytes = 0u64;
+    for group in PAGE_GROUPS {
+        string_bytes = string_bytes.saturating_add(group.title.len() as u64);
+        for item in group.items {
+            entries = entries.saturating_add(1);
+            string_bytes = string_bytes
+                .saturating_add(item.id.len() as u64)
+                .saturating_add(item.label.len() as u64)
+                .saturating_add(item.title.len() as u64)
+                .saturating_add(item.origin.len() as u64)
+                .saturating_add(item.command.len() as u64);
+            for tag in item.tags {
+                tags = tags.saturating_add(1);
+                string_bytes = string_bytes.saturating_add(tag.len() as u64);
+            }
+        }
+    }
+    serde_json::json!({
+        "page_specs_entries": entries,
+        "page_specs_tags": tags,
+        "page_specs_string_bytes_estimate_total": string_bytes,
+    })
+}
 
 pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
     app.with_global_mut_untracked(
@@ -19,6 +173,17 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let ids = store.per_window.get(&window)?;
 
                 let selected_page = app.models().get_cloned(&ids.selected_page)?;
+                let workspace_tabs = app.models().get_cloned(&ids.workspace_tabs)?;
+                let workspace_dirty_tabs = app.models().get_cloned(&ids.workspace_dirty_tabs)?;
+                let nav_query = app.models().get_cloned(&ids.nav_query)?;
+                let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
+                let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
+                let chrome_show_workspace_tab_strip = app
+                    .models()
+                    .get_cloned(&ids.chrome_show_workspace_tab_strip)?;
+                let cmdk_query = app.models().get_cloned(&ids.cmdk_query)?;
+                let last_action = app.models().get_cloned(&ids.last_action)?;
+                let input_file_value = app.models().get_cloned(&ids.input_file_value)?;
                 let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
                 let boundary_identifier = app
                     .models()
@@ -223,6 +388,86 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     }
                 };
 
+                let bisect = ui_gallery_bisect_flags();
+                let nav_visibility = nav_visibility_summary(nav_query.as_str());
+                let mut shell = serde_json::Map::new();
+                shell.insert("schema_version".to_string(), serde_json::json!(1));
+                shell.insert("bisect_flags".to_string(), serde_json::json!(bisect));
+                shell.insert("minimal_root".to_string(), serde_json::json!((bisect & BISECT_MINIMAL_ROOT) != 0));
+                shell.insert("simple_sidebar".to_string(), serde_json::json!((bisect & BISECT_SIMPLE_SIDEBAR) != 0));
+                shell.insert("simple_content".to_string(), serde_json::json!((bisect & BISECT_SIMPLE_CONTENT) != 0));
+                shell.insert("card_section_demo_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_DEMO) != 0));
+                shell.insert("card_section_usage_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_USAGE) != 0));
+                shell.insert("card_section_size_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_SIZE) != 0));
+                shell.insert("card_section_card_content_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_CARD_CONTENT) != 0));
+                shell.insert("card_section_meeting_notes_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_MEETING_NOTES) != 0));
+                shell.insert("card_section_image_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_IMAGE) != 0));
+                shell.insert("card_section_rtl_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_RTL) != 0));
+                shell.insert("card_section_compositions_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) != 0));
+                shell.insert("card_section_notes_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_SECTION_NOTES) != 0));
+                shell.insert("card_code_tabs_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_CODE_TABS) != 0));
+                shell.insert("card_page_intro_disabled".to_string(), serde_json::json!((bisect & BISECT_DISABLE_CARD_PAGE_INTRO) != 0));
+                if selected_page.as_ref() == "card" {
+                    if let Some(obj) = card_doc_scaffold_metrics_json(bisect).as_object() {
+                        for (k, v) in obj {
+                            shell.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+                shell.insert(
+                    "card_sections_hidden_count".to_string(),
+                    serde_json::json!(
+                        ((bisect & BISECT_DISABLE_CARD_SECTION_DEMO) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_USAGE) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_SIZE) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_CARD_CONTENT) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_MEETING_NOTES) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_IMAGE) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_RTL) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) != 0) as u64
+                            + ((bisect & BISECT_DISABLE_CARD_SECTION_NOTES) != 0) as u64
+                    ),
+                );
+                shell.insert("workspace_tabs_count".to_string(), serde_json::json!(workspace_tabs.len() as u64));
+                shell.insert("workspace_tabs_bytes_estimate_total".to_string(), serde_json::json!(vec_arc_str_len(&workspace_tabs)));
+                shell.insert("workspace_dirty_tabs_count".to_string(), serde_json::json!(workspace_dirty_tabs.len() as u64));
+                shell.insert("workspace_dirty_tabs_bytes_estimate_total".to_string(), serde_json::json!(vec_arc_str_len(&workspace_dirty_tabs)));
+                shell.insert("nav_query_len_bytes".to_string(), serde_json::json!(nav_query.len() as u64));
+                shell.insert("nav_visible_groups_count".to_string(), serde_json::json!(nav_visibility.visible_groups_count));
+                shell.insert("nav_visible_items_count".to_string(), serde_json::json!(nav_visibility.visible_items_count));
+                shell.insert("nav_visible_ai_items_count".to_string(), serde_json::json!(nav_visibility.visible_ai_items_count));
+                shell.insert("nav_visible_tags_count".to_string(), serde_json::json!(nav_visibility.visible_tags_count));
+                shell.insert("nav_max_group_items_count".to_string(), serde_json::json!(nav_visibility.max_group_items_count));
+                shell.insert("nav_visible_string_bytes_estimate_total".to_string(), serde_json::json!(nav_visibility.visible_string_bytes_estimate_total));
+                shell.insert("cmdk_query_len_bytes".to_string(), serde_json::json!(cmdk_query.len() as u64));
+                shell.insert("last_action_len_bytes".to_string(), serde_json::json!(last_action.len() as u64));
+                shell.insert("text_input_len_bytes".to_string(), serde_json::json!(text_input.len() as u64));
+                shell.insert("text_area_len_bytes".to_string(), serde_json::json!(text_area.len() as u64));
+                shell.insert("input_file_value_len_bytes".to_string(), serde_json::json!(input_file_value.len() as u64));
+                shell.insert("settings_menu_bar_os_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_os.as_ref())));
+                shell.insert("settings_menu_bar_in_window_len_bytes".to_string(), serde_json::json!(opt_arc_str_len(settings_menu_bar_in_window.as_ref())));
+                shell.insert("chrome_show_workspace_tab_strip".to_string(), serde_json::json!(chrome_show_workspace_tab_strip));
+                if let Some(obj) = command_registry_string_bytes_estimate(app).as_object() {
+                    for (k, v) in obj {
+                        shell.insert(k.clone(), v.clone());
+                    }
+                }
+                if let Some(obj) = page_specs_string_bytes_estimate().as_object() {
+                    for (k, v) in obj {
+                        shell.insert(k.clone(), v.clone());
+                    }
+                }
+                if let Some(obj) = command_palette_entries_bytes_estimate(app).as_object() {
+                    for (k, v) in obj {
+                        shell.insert(k.clone(), v.clone());
+                    }
+                }
+                if let Some(obj) = settings_sheet_static_string_bytes_estimate().as_object() {
+                    for (k, v) in obj {
+                        shell.insert(k.clone(), v.clone());
+                    }
+                }
+
                 let mut out = serde_json::Map::new();
                 out.insert("schema_version".to_string(), serde_json::json!(1));
                 out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
@@ -249,6 +494,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                         "text_area_chars": text_area.chars().count(),
                     }),
                 );
+                out.insert("shell".to_string(), serde_json::Value::Object(shell));
 
                 Some(serde_json::Value::Object(out))
             })));

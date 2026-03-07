@@ -75,7 +75,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--fret-active-mode",
-        choices=["idle", "present-only", "paint-model", "layout-model"],
+        choices=["idle", "present-only", "rerender-only", "paint-model", "layout-model"],
         help="Optional active-mode env for both Fret compare runs.",
     )
     return parser.parse_args()

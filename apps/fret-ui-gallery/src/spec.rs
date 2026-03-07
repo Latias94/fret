@@ -5,6 +5,7 @@ use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
+pub(crate) const ENV_UI_GALLERY_NAV_QUERY: &str = "FRET_UI_GALLERY_NAV_QUERY";
 
 pub(crate) const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
 pub(crate) const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
@@ -14,6 +15,17 @@ pub(crate) const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
 pub(crate) const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
 pub(crate) const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
 pub(crate) const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_DEMO: u32 = 1 << 8;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_USAGE: u32 = 1 << 9;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_SIZE: u32 = 1 << 10;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_CARD_CONTENT: u32 = 1 << 11;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_MEETING_NOTES: u32 = 1 << 12;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_IMAGE: u32 = 1 << 13;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_RTL: u32 = 1 << 14;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_COMPOSITIONS: u32 = 1 << 15;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_NOTES: u32 = 1 << 16;
+pub(crate) const BISECT_DISABLE_CARD_CODE_TABS: u32 = 1 << 17;
+pub(crate) const BISECT_DISABLE_CARD_PAGE_INTRO: u32 = 1 << 18;
 
 pub(crate) fn ui_gallery_bisect_flags() -> u32 {
     static FLAGS: OnceLock<u32> = OnceLock::new();

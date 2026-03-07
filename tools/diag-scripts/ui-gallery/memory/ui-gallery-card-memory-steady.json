@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery: card memory steady",
+    "tags": ["ui-gallery", "card", "memory", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DIAG_DEBUG_SNAPSHOT": 0,
+      "FRET_DIAG_SEMANTICS_TEST_IDS_ONLY": 1,
+      "FRET_DIAG_MAX_SEMANTICS_NODES": 8000,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_UI_GALLERY_START_PAGE": "card"
+    },
+    "target_hints": [
+      "Starts UI Gallery on the card page, waits for steady state, then captures a bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "ui-gallery-card-memory-steady", "max_snapshots": 1 }
+  ]
+}

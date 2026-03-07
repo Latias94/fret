@@ -60,7 +60,8 @@ pub(in crate::ui) mod snippets;
 
 pub(crate) use content::content_view;
 pub(crate) use models::UiGalleryModels;
-pub(crate) use nav::sidebar_view;
+pub(crate) use nav::{nav_visibility_summary, sidebar_view};
+pub(crate) use pages::card_doc_scaffold_metrics_json;
 use pages::preview_motion_presets;
 #[cfg(feature = "gallery-dev")]
 use previews::gallery::*;

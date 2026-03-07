@@ -244,6 +244,189 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
     let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
     let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
 
+    let semantics_nodes_json = last_snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+    let semantics_nodes = semantics_nodes_json.map(|v| v.len() as u64);
+    let current_page_test_id = last_snapshot
+        .get("app_snapshot")
+        .filter(|snapshot| snapshot.get("kind").and_then(|v| v.as_str()) == Some("fret_ui_gallery"))
+        .and_then(|snapshot| snapshot.get("selected_page"))
+        .and_then(|v| v.as_str())
+        .map(|selected_page| format!("ui-gallery-page-{}", selected_page.replace('_', "-")));
+
+    let (
+        ui_gallery_nav_scroll_semantics_subtree_nodes,
+        ui_gallery_page_overlay_semantics_subtree_nodes,
+        ui_gallery_command_palette_semantics_subtree_nodes,
+        ui_gallery_settings_open_semantics_subtree_nodes,
+        ui_gallery_workspace_frame_semantics_subtree_nodes,
+        ui_gallery_top_bar_semantics_subtree_nodes,
+        ui_gallery_workspace_tabstrip_semantics_subtree_nodes,
+        ui_gallery_status_bar_semantics_subtree_nodes,
+        ui_gallery_content_shell_semantics_subtree_nodes,
+        ui_gallery_content_header_semantics_subtree_nodes,
+        ui_gallery_content_scroll_semantics_subtree_nodes,
+        ui_gallery_page_preview_semantics_subtree_nodes,
+        ui_gallery_current_page_semantics_subtree_nodes,
+        ui_gallery_card_section_demo_semantics_subtree_nodes,
+        ui_gallery_card_section_usage_semantics_subtree_nodes,
+        ui_gallery_card_section_size_semantics_subtree_nodes,
+        ui_gallery_card_section_card_content_semantics_subtree_nodes,
+        ui_gallery_card_section_meeting_notes_semantics_subtree_nodes,
+        ui_gallery_card_section_image_semantics_subtree_nodes,
+        ui_gallery_card_section_rtl_semantics_subtree_nodes,
+        ui_gallery_card_section_compositions_semantics_subtree_nodes,
+        ui_gallery_card_section_notes_semantics_subtree_nodes,
+    ) = if let Some(nodes) = semantics_nodes_json {
+        use std::collections::HashMap;
+        let mut children: HashMap<u64, Vec<u64>> = HashMap::new();
+        let mut roots_by_test_id: HashMap<String, u64> = HashMap::new();
+        for node in nodes {
+            let id = node.get("id").and_then(|v| v.as_u64());
+            let parent = node.get("parent").and_then(|v| v.as_u64());
+            if let Some(id) = id {
+                children.entry(id).or_default();
+                if let Some(parent) = parent {
+                    children.entry(parent).or_default().push(id);
+                }
+                if let Some(test_id) = node.get("test_id").and_then(|v| v.as_str()) {
+                    roots_by_test_id.insert(test_id.to_string(), id);
+                }
+            }
+        }
+
+        let subtree_size = |root: Option<u64>| -> Option<u64> {
+            let root = root?;
+            let mut stack = vec![root];
+            let mut seen = std::collections::BTreeSet::new();
+            while let Some(cur) = stack.pop() {
+                if !seen.insert(cur) {
+                    continue;
+                }
+                if let Some(kids) = children.get(&cur) {
+                    for child in kids {
+                        stack.push(*child);
+                    }
+                }
+            }
+            Some(seen.len() as u64)
+        };
+        let subtree_size_by_test_id =
+            |test_id: &str| subtree_size(roots_by_test_id.get(test_id).copied());
+
+        (
+            subtree_size_by_test_id("ui-gallery-nav-scroll"),
+            subtree_size_by_test_id("ui-gallery-page-overlay"),
+            subtree_size_by_test_id("ui-gallery-command-palette"),
+            subtree_size_by_test_id("ui-gallery-settings-open"),
+            subtree_size_by_test_id("ui-gallery-workspace-frame"),
+            subtree_size_by_test_id("ui-gallery-top-bar"),
+            subtree_size_by_test_id("ui-gallery-workspace-tabstrip"),
+            subtree_size_by_test_id("ui-gallery-status-bar"),
+            subtree_size_by_test_id("ui-gallery-content-shell"),
+            subtree_size_by_test_id("ui-gallery-content-header"),
+            subtree_size_by_test_id("ui-gallery-content-scroll"),
+            subtree_size_by_test_id("ui-gallery-page-preview"),
+            subtree_size(
+                current_page_test_id
+                    .as_deref()
+                    .and_then(|test_id| roots_by_test_id.get(test_id).copied()),
+            ),
+            subtree_size_by_test_id("ui-gallery-card-section-demo"),
+            subtree_size_by_test_id("ui-gallery-card-section-usage"),
+            subtree_size_by_test_id("ui-gallery-card-section-size"),
+            subtree_size_by_test_id("ui-gallery-card-section-card-content"),
+            subtree_size_by_test_id("ui-gallery-card-section-meeting-notes"),
+            subtree_size_by_test_id("ui-gallery-card-section-image"),
+            subtree_size_by_test_id("ui-gallery-card-section-rtl"),
+            subtree_size_by_test_id("ui-gallery-card-section-compositions"),
+            subtree_size_by_test_id("ui-gallery-card-section-notes"),
+        )
+    } else {
+        (
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None,
+        )
+    };
+    let layers_in_paint_order = last_snapshot
+        .get("debug")
+        .and_then(|v| v.get("layers_in_paint_order"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.len() as u64);
+    let scroll_nodes = last_snapshot
+        .get("debug")
+        .and_then(|v| v.get("scroll_nodes"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.len() as u64);
+    let element_runtime = last_snapshot
+        .get("debug")
+        .and_then(|v| v.get("element_runtime"))
+        .and_then(|v| v.as_object());
+    let er_u64 = |k: &str| {
+        element_runtime
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_u64())
+    };
+    let er_len = |k: &str| -> Option<u64> {
+        element_runtime
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_array())
+            .map(|v| v.len() as u64)
+    };
+    let er_pair_second_sum = |k: &str| -> Option<u64> {
+        let items = element_runtime
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_array())?;
+        Some(items.iter().fold(0u64, |acc, item| {
+            let next = item
+                .as_array()
+                .and_then(|entry| entry.get(1))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            acc.saturating_add(next)
+        }))
+    };
+    let er_len_zero_default = |k: &str| -> Option<u64> {
+        let runtime = element_runtime?;
+        Some(
+            runtime
+                .get(k)
+                .and_then(|v| v.as_array())
+                .map_or(0, |items| items.len() as u64),
+        )
+    };
+    let er_object_array_u64_sum_zero_default = |k: &str, field: &str| -> Option<u64> {
+        let runtime = element_runtime?;
+        let items = runtime.get(k).and_then(|v| v.as_array());
+        Some(items.map_or(0u64, |items| {
+            items.iter().fold(0u64, |acc, item| {
+                let next = item
+                    .as_object()
+                    .and_then(|entry| entry.get(field))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                acc.saturating_add(next)
+            })
+        }))
+    };
+    let er_object_array_u64_max_zero_default = |k: &str, field: &str| -> Option<u64> {
+        let runtime = element_runtime?;
+        let items = runtime.get(k).and_then(|v| v.as_array());
+        Some(items.map_or(0u64, |items| {
+            items.iter().fold(0u64, |acc, item| {
+                let next = item
+                    .as_object()
+                    .and_then(|entry| entry.get(field))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                acc.max(next)
+            })
+        }))
+    };
+
     let render_text = last_snapshot
         .get("resource_caches")
         .and_then(|v| v.get("render_text"))
@@ -303,6 +486,17 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
             Some(wgpu_metal_current_allocated_size_bytes_max.map_or(v, |cur| cur.max(v)));
     }
 
+    let app_snapshot_shell = last_snapshot
+        .get("app_snapshot")
+        .filter(|snapshot| snapshot.get("kind").and_then(|v| v.as_str()) == Some("fret_ui_gallery"))
+        .and_then(|snapshot| snapshot.get("shell"))
+        .and_then(|v| v.as_object());
+    let shell_u64 = |k: &str| {
+        app_snapshot_shell
+            .and_then(|shell| shell.get(k))
+            .and_then(|v| v.as_u64())
+    };
+
     Some(serde_json::json!({
         "bundle_schema_version": v.get("schema_version").and_then(|v| v.as_u64()),
         "window": first_window.get("window").and_then(|v| v.as_u64()),
@@ -334,6 +528,79 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "wgpu_metal_current_allocated_size_bytes_min": wgpu_metal_current_allocated_size_bytes_min,
         "wgpu_metal_current_allocated_size_bytes_max": wgpu_metal_current_allocated_size_bytes_max,
         "renderer_intermediate_peak_in_use_bytes": get_u64("renderer_intermediate_peak_in_use_bytes"),
+        "ui_frame_arena_capacity_estimate_bytes": get_u64("frame_arena_capacity_estimate_bytes"),
+        "ui_layout_nodes_visited": get_u64("layout_nodes_visited"),
+        "ui_prepaint_nodes_visited": get_u64("prepaint_nodes_visited"),
+        "ui_interaction_records": get_u64("interaction_records"),
+        "ui_layout_invalidations_count": get_u64("layout_invalidations_count"),
+        "ui_view_cache_roots_total": get_u64("view_cache_roots_total"),
+        "ui_view_cache_roots_reused": get_u64("view_cache_roots_reused"),
+        "ui_semantics_nodes": semantics_nodes,
+        "ui_element_runtime_observed_models_count": er_len("observed_models"),
+        "ui_element_runtime_observed_globals_count": er_len("observed_globals"),
+        "ui_element_runtime_observed_environment_count": er_len("observed_environment"),
+        "ui_element_runtime_view_cache_reuse_roots_count": er_len("view_cache_reuse_roots"),
+        "ui_element_runtime_view_cache_reuse_root_elements_total": er_pair_second_sum("view_cache_reuse_root_element_counts"),
+        "ui_element_runtime_continuous_frame_lease_owners_count": er_len_zero_default("continuous_frame_leases"),
+        "ui_element_runtime_continuous_frame_lease_count_total": er_object_array_u64_sum_zero_default("continuous_frame_leases", "count"),
+        "ui_element_runtime_continuous_frame_lease_count_max": er_object_array_u64_max_zero_default("continuous_frame_leases", "count"),
+        "ui_element_runtime_animation_frame_request_roots_count": er_len_zero_default("animation_frame_request_roots"),
+        "ui_element_runtime_retained_keep_alive_roots_len": er_u64("retained_keep_alive_roots_len"),
+        "ui_element_runtime_rendered_state_entries": er_u64("rendered_state_entries"),
+        "ui_element_runtime_next_state_entries": er_u64("next_state_entries"),
+        "ui_element_runtime_lag_state_frames": er_u64("lag_state_frames"),
+        "ui_element_runtime_lag_state_entries_total": er_u64("lag_state_entries_total"),
+        "ui_element_runtime_state_entries_total": er_u64("state_entries_total"),
+        "ui_element_runtime_nodes_count": er_u64("nodes_count"),
+        "ui_element_runtime_bounds_entries_total": er_u64("bounds_entries_total"),
+        "ui_element_runtime_timer_targets_count": er_u64("timer_targets_count"),
+        "ui_element_runtime_transient_events_count": er_u64("transient_events_count"),
+        "ui_element_runtime_view_cache_state_key_roots_count": er_u64("view_cache_state_key_roots_count"),
+        "ui_element_runtime_view_cache_state_key_entries_total": er_u64("view_cache_state_key_entries_total"),
+        "ui_element_runtime_view_cache_element_roots_count": er_u64("view_cache_element_roots_count"),
+        "ui_element_runtime_view_cache_element_entries_total": er_u64("view_cache_element_entries_total"),
+        "ui_element_runtime_view_cache_key_mismatch_roots_count": er_u64("view_cache_key_mismatch_roots_count"),
+        "ui_element_runtime_scratch_element_children_vec_pool_len": er_u64("scratch_element_children_vec_pool_len"),
+        "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": er_u64("scratch_element_children_vec_pool_capacity_total"),
+        "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": er_u64("scratch_element_children_vec_pool_bytes_estimate_total"),
+        "ui_gallery_nav_scroll_semantics_subtree_nodes": ui_gallery_nav_scroll_semantics_subtree_nodes,
+        "ui_gallery_page_overlay_semantics_subtree_nodes": ui_gallery_page_overlay_semantics_subtree_nodes,
+        "ui_gallery_command_palette_semantics_subtree_nodes": ui_gallery_command_palette_semantics_subtree_nodes,
+        "ui_gallery_settings_open_semantics_subtree_nodes": ui_gallery_settings_open_semantics_subtree_nodes,
+        "ui_gallery_workspace_frame_semantics_subtree_nodes": ui_gallery_workspace_frame_semantics_subtree_nodes,
+        "ui_gallery_top_bar_semantics_subtree_nodes": ui_gallery_top_bar_semantics_subtree_nodes,
+        "ui_gallery_workspace_tabstrip_semantics_subtree_nodes": ui_gallery_workspace_tabstrip_semantics_subtree_nodes,
+        "ui_gallery_status_bar_semantics_subtree_nodes": ui_gallery_status_bar_semantics_subtree_nodes,
+        "ui_gallery_content_shell_semantics_subtree_nodes": ui_gallery_content_shell_semantics_subtree_nodes,
+        "ui_gallery_content_header_semantics_subtree_nodes": ui_gallery_content_header_semantics_subtree_nodes,
+        "ui_gallery_content_scroll_semantics_subtree_nodes": ui_gallery_content_scroll_semantics_subtree_nodes,
+        "ui_gallery_page_preview_semantics_subtree_nodes": ui_gallery_page_preview_semantics_subtree_nodes,
+        "ui_gallery_current_page_semantics_subtree_nodes": ui_gallery_current_page_semantics_subtree_nodes,
+        "ui_gallery_card_section_demo_semantics_subtree_nodes": ui_gallery_card_section_demo_semantics_subtree_nodes,
+        "ui_gallery_card_section_usage_semantics_subtree_nodes": ui_gallery_card_section_usage_semantics_subtree_nodes,
+        "ui_gallery_card_section_size_semantics_subtree_nodes": ui_gallery_card_section_size_semantics_subtree_nodes,
+        "ui_gallery_card_section_card_content_semantics_subtree_nodes": ui_gallery_card_section_card_content_semantics_subtree_nodes,
+        "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes": ui_gallery_card_section_meeting_notes_semantics_subtree_nodes,
+        "ui_gallery_card_section_image_semantics_subtree_nodes": ui_gallery_card_section_image_semantics_subtree_nodes,
+        "ui_gallery_card_section_rtl_semantics_subtree_nodes": ui_gallery_card_section_rtl_semantics_subtree_nodes,
+        "ui_gallery_card_section_compositions_semantics_subtree_nodes": ui_gallery_card_section_compositions_semantics_subtree_nodes,
+        "ui_gallery_card_section_notes_semantics_subtree_nodes": ui_gallery_card_section_notes_semantics_subtree_nodes,
+        "ui_layers_in_paint_order": layers_in_paint_order,
+        "ui_scroll_nodes": scroll_nodes,
+        "ui_gallery_nav_visible_groups_count": shell_u64("nav_visible_groups_count"),
+        "ui_gallery_nav_visible_items_count": shell_u64("nav_visible_items_count"),
+        "ui_gallery_nav_visible_ai_items_count": shell_u64("nav_visible_ai_items_count"),
+        "ui_gallery_nav_visible_tags_count": shell_u64("nav_visible_tags_count"),
+        "ui_gallery_nav_max_group_items_count": shell_u64("nav_max_group_items_count"),
+        "ui_gallery_nav_visible_string_bytes_estimate_total": shell_u64("nav_visible_string_bytes_estimate_total"),
+        "ui_gallery_card_doc_section_slots_total": shell_u64("card_doc_section_slots_total"),
+        "ui_gallery_card_doc_visible_sections_count": shell_u64("card_doc_visible_sections_count"),
+        "ui_gallery_card_doc_visible_sections_with_code_count": shell_u64("card_doc_visible_sections_with_code_count"),
+        "ui_gallery_card_doc_visible_sections_with_shell_count": shell_u64("card_doc_visible_sections_with_shell_count"),
+        "ui_gallery_card_doc_intro_len_bytes": shell_u64("card_doc_intro_len_bytes"),
+        "ui_gallery_card_doc_visible_static_text_bytes_estimate_total": shell_u64("card_doc_visible_static_text_bytes_estimate_total"),
+        "ui_gallery_card_doc_visible_code_bytes_estimate_total": shell_u64("card_doc_visible_code_bytes_estimate_total"),
+        "ui_gallery_card_doc_visible_code_lines_estimate_total": shell_u64("card_doc_visible_code_lines_estimate_total"),
         "renderer_gpu_images_bytes_estimate": get_u64("renderer_gpu_images_bytes_estimate"),
         "renderer_gpu_render_targets_bytes_estimate": get_u64("renderer_gpu_render_targets_bytes_estimate"),
 

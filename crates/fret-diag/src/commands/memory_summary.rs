@@ -25,6 +25,79 @@ struct MemorySampleRow {
     wgpu_allocator_total_allocated_bytes: Option<u64>,
     wgpu_allocator_total_reserved_bytes: Option<u64>,
     renderer_intermediate_peak_in_use_bytes: Option<u64>,
+    ui_frame_arena_capacity_estimate_bytes: Option<u64>,
+    ui_layout_invalidations_count: Option<u64>,
+    ui_view_cache_roots_total: Option<u64>,
+    ui_view_cache_roots_reused: Option<u64>,
+    ui_element_runtime_observed_models_count: Option<u64>,
+    ui_element_runtime_observed_globals_count: Option<u64>,
+    ui_element_runtime_observed_environment_count: Option<u64>,
+    ui_element_runtime_view_cache_reuse_roots_count: Option<u64>,
+    ui_element_runtime_view_cache_reuse_root_elements_total: Option<u64>,
+    ui_element_runtime_continuous_frame_lease_owners_count: Option<u64>,
+    ui_element_runtime_continuous_frame_lease_count_total: Option<u64>,
+    ui_element_runtime_continuous_frame_lease_count_max: Option<u64>,
+    ui_element_runtime_animation_frame_request_roots_count: Option<u64>,
+    ui_element_runtime_retained_keep_alive_roots_len: Option<u64>,
+    ui_element_runtime_rendered_state_entries: Option<u64>,
+    ui_element_runtime_next_state_entries: Option<u64>,
+    ui_element_runtime_lag_state_frames: Option<u64>,
+    ui_element_runtime_lag_state_entries_total: Option<u64>,
+    ui_element_runtime_state_entries_total: Option<u64>,
+    ui_element_runtime_nodes_count: Option<u64>,
+    ui_element_runtime_bounds_entries_total: Option<u64>,
+    ui_element_runtime_timer_targets_count: Option<u64>,
+    ui_element_runtime_transient_events_count: Option<u64>,
+    ui_element_runtime_view_cache_state_key_roots_count: Option<u64>,
+    ui_element_runtime_view_cache_state_key_entries_total: Option<u64>,
+    ui_element_runtime_view_cache_element_roots_count: Option<u64>,
+    ui_element_runtime_view_cache_element_entries_total: Option<u64>,
+    ui_element_runtime_view_cache_key_mismatch_roots_count: Option<u64>,
+    ui_element_runtime_scratch_element_children_vec_pool_len: Option<u64>,
+    ui_element_runtime_scratch_element_children_vec_pool_capacity_total: Option<u64>,
+    ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total: Option<u64>,
+    ui_layout_nodes_visited: Option<u64>,
+    ui_prepaint_nodes_visited: Option<u64>,
+    ui_interaction_records: Option<u64>,
+    ui_semantics_nodes: Option<u64>,
+    ui_gallery_nav_scroll_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_page_overlay_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_command_palette_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_settings_open_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_workspace_frame_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_top_bar_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_workspace_tabstrip_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_status_bar_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_content_shell_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_content_header_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_content_scroll_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_page_preview_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_current_page_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_demo_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_usage_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_size_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_card_content_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_meeting_notes_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_image_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_rtl_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_compositions_semantics_subtree_nodes: Option<u64>,
+    ui_gallery_card_section_notes_semantics_subtree_nodes: Option<u64>,
+    ui_layers_in_paint_order: Option<u64>,
+    ui_scroll_nodes: Option<u64>,
+    ui_gallery_nav_visible_groups_count: Option<u64>,
+    ui_gallery_nav_visible_items_count: Option<u64>,
+    ui_gallery_nav_visible_ai_items_count: Option<u64>,
+    ui_gallery_nav_visible_tags_count: Option<u64>,
+    ui_gallery_nav_max_group_items_count: Option<u64>,
+    ui_gallery_nav_visible_string_bytes_estimate_total: Option<u64>,
+    ui_gallery_card_doc_section_slots_total: Option<u64>,
+    ui_gallery_card_doc_visible_sections_count: Option<u64>,
+    ui_gallery_card_doc_visible_sections_with_code_count: Option<u64>,
+    ui_gallery_card_doc_visible_sections_with_shell_count: Option<u64>,
+    ui_gallery_card_doc_intro_len_bytes: Option<u64>,
+    ui_gallery_card_doc_visible_static_text_bytes_estimate_total: Option<u64>,
+    ui_gallery_card_doc_visible_code_bytes_estimate_total: Option<u64>,
+    ui_gallery_card_doc_visible_code_lines_estimate_total: Option<u64>,
     renderer_gpu_images_bytes_estimate: Option<u64>,
     renderer_gpu_render_targets_bytes_estimate: Option<u64>,
     render_text_atlas_bytes_live_estimate_total: Option<u64>,
@@ -266,7 +339,7 @@ hint: run with `--session-auto` (recommended) so samples appear under `<dir>/ses
     if rows.is_empty() {
         return Err(format!(
             "no parseable evidence.index.json under: {}\n\
-hint: ensure each session root contains `evidence.index.json`",
+hint: ensure diagnostics materialized `evidence.index.json` in a session root or nested sample bundle directory",
             src.display()
         ));
     }
@@ -309,12 +382,19 @@ fn resolve_sample_dirs(
     top_sessions: Option<usize>,
 ) -> Result<Vec<(String, PathBuf)>, String> {
     if src.is_dir() && resolve::looks_like_diag_session_root(src) {
-        let id = src
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("session")
-            .to_string();
-        return Ok(vec![(id, src.to_path_buf())]);
+        if src.join("evidence.index.json").is_file() {
+            let id = src
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("session")
+                .to_string();
+            return Ok(vec![(id, src.to_path_buf())]);
+        }
+
+        let nested = collect_nested_sample_dirs(src);
+        if !nested.is_empty() {
+            return Ok(nested);
+        }
     }
 
     if src.is_dir() && src.join(crate::session::SESSIONS_DIRNAME).is_dir() {
@@ -325,10 +405,26 @@ fn resolve_sample_dirs(
         }
 
         let mut picks: Vec<(String, PathBuf)> = Vec::new();
+        let push_session_samples =
+            |picks: &mut Vec<(String, PathBuf)>, sid: String, session_dir: PathBuf| {
+                if session_dir.join("evidence.index.json").is_file() {
+                    picks.push((sid, session_dir));
+                    return;
+                }
+                let nested = collect_nested_sample_dirs(&session_dir);
+                if nested.is_empty() {
+                    picks.push((sid, session_dir));
+                    return;
+                }
+                for (child_id, child_dir) in nested {
+                    picks.push((format!("{sid}/{child_id}"), child_dir));
+                }
+            };
+
         if want.is_empty() || want == "all" {
             let n = top_sessions.unwrap_or(usize::MAX);
             for s in sessions.into_iter().take(n) {
-                picks.push((s.session_id, s.session_dir));
+                push_session_samples(&mut picks, s.session_id, s.session_dir);
             }
             return Ok(picks);
         }
@@ -351,20 +447,46 @@ hint: list sessions via `fretboard diag list sessions --dir {}`",
                 src.display()
             ));
         }
-        picks.push((sid, out_dir));
+        push_session_samples(&mut picks, sid, out_dir);
         return Ok(picks);
     }
 
     if src.is_dir() {
-        // A non-session out dir (legacy). Treat it as a single sample if it looks like one.
-        if src.join("evidence.index.json").is_file()
-            || src.join("resource.footprint.json").is_file()
-        {
+        if src.join("evidence.index.json").is_file() {
             return Ok(vec![("out_dir".to_string(), src.to_path_buf())]);
+        }
+
+        let nested = collect_nested_sample_dirs(src);
+        if !nested.is_empty() {
+            return Ok(nested);
         }
     }
 
     Ok(Vec::new())
+}
+
+fn collect_nested_sample_dirs(root: &Path) -> Vec<(String, PathBuf)> {
+    let iter = match std::fs::read_dir(root) {
+        Ok(iter) => iter,
+        Err(_) => return Vec::new(),
+    };
+    let mut out: Vec<(String, PathBuf)> = iter
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let path = entry.path();
+            if !path.is_dir() || !path.join("evidence.index.json").is_file() {
+                return None;
+            }
+            let id = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("sample")
+                .to_string();
+            Some((id, path))
+        })
+        .collect();
+    out.sort_by(|a, b| b.0.cmp(&a.0));
+    out
 }
 
 fn resolve_sample_dirs_recursive(
@@ -406,7 +528,8 @@ fn resolve_sample_dirs_recursive(
             continue;
         }
 
-        if resolve::looks_like_diag_session_root(&dir) {
+        if resolve::looks_like_diag_session_root(&dir) && dir.join("evidence.index.json").is_file()
+        {
             let id = rel_sample_id(src, &dir);
             out.push((id, dir));
             continue;
@@ -429,9 +552,7 @@ fn resolve_sample_dirs_recursive(
             continue;
         }
 
-        if dir.join("evidence.index.json").is_file()
-            || dir.join("resource.footprint.json").is_file()
-        {
+        if dir.join("evidence.index.json").is_file() {
             let id = rel_sample_id(src, &dir);
             out.push((id, dir));
             continue;
@@ -549,6 +670,253 @@ fn read_sample_row(
             bundle,
             "renderer_intermediate_peak_in_use_bytes",
         ),
+        ui_frame_arena_capacity_estimate_bytes: get_u64(
+            bundle,
+            "ui_frame_arena_capacity_estimate_bytes",
+        ),
+        ui_layout_invalidations_count: get_u64(bundle, "ui_layout_invalidations_count"),
+        ui_view_cache_roots_total: get_u64(bundle, "ui_view_cache_roots_total"),
+        ui_view_cache_roots_reused: get_u64(bundle, "ui_view_cache_roots_reused"),
+        ui_element_runtime_observed_models_count: get_u64(
+            bundle,
+            "ui_element_runtime_observed_models_count",
+        ),
+        ui_element_runtime_observed_globals_count: get_u64(
+            bundle,
+            "ui_element_runtime_observed_globals_count",
+        ),
+        ui_element_runtime_observed_environment_count: get_u64(
+            bundle,
+            "ui_element_runtime_observed_environment_count",
+        ),
+        ui_element_runtime_view_cache_reuse_roots_count: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_reuse_roots_count",
+        ),
+        ui_element_runtime_view_cache_reuse_root_elements_total: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_reuse_root_elements_total",
+        ),
+        ui_element_runtime_continuous_frame_lease_owners_count: get_u64(
+            bundle,
+            "ui_element_runtime_continuous_frame_lease_owners_count",
+        ),
+        ui_element_runtime_continuous_frame_lease_count_total: get_u64(
+            bundle,
+            "ui_element_runtime_continuous_frame_lease_count_total",
+        ),
+        ui_element_runtime_continuous_frame_lease_count_max: get_u64(
+            bundle,
+            "ui_element_runtime_continuous_frame_lease_count_max",
+        ),
+        ui_element_runtime_animation_frame_request_roots_count: get_u64(
+            bundle,
+            "ui_element_runtime_animation_frame_request_roots_count",
+        ),
+        ui_element_runtime_retained_keep_alive_roots_len: get_u64(
+            bundle,
+            "ui_element_runtime_retained_keep_alive_roots_len",
+        ),
+        ui_element_runtime_rendered_state_entries: get_u64(
+            bundle,
+            "ui_element_runtime_rendered_state_entries",
+        ),
+        ui_element_runtime_next_state_entries: get_u64(
+            bundle,
+            "ui_element_runtime_next_state_entries",
+        ),
+        ui_element_runtime_lag_state_frames: get_u64(bundle, "ui_element_runtime_lag_state_frames"),
+        ui_element_runtime_lag_state_entries_total: get_u64(
+            bundle,
+            "ui_element_runtime_lag_state_entries_total",
+        ),
+        ui_element_runtime_state_entries_total: get_u64(
+            bundle,
+            "ui_element_runtime_state_entries_total",
+        ),
+        ui_element_runtime_nodes_count: get_u64(bundle, "ui_element_runtime_nodes_count"),
+        ui_element_runtime_bounds_entries_total: get_u64(
+            bundle,
+            "ui_element_runtime_bounds_entries_total",
+        ),
+        ui_element_runtime_timer_targets_count: get_u64(
+            bundle,
+            "ui_element_runtime_timer_targets_count",
+        ),
+        ui_element_runtime_transient_events_count: get_u64(
+            bundle,
+            "ui_element_runtime_transient_events_count",
+        ),
+        ui_element_runtime_view_cache_state_key_roots_count: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_state_key_roots_count",
+        ),
+        ui_element_runtime_view_cache_state_key_entries_total: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_state_key_entries_total",
+        ),
+        ui_element_runtime_view_cache_element_roots_count: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_element_roots_count",
+        ),
+        ui_element_runtime_view_cache_element_entries_total: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_element_entries_total",
+        ),
+        ui_element_runtime_view_cache_key_mismatch_roots_count: get_u64(
+            bundle,
+            "ui_element_runtime_view_cache_key_mismatch_roots_count",
+        ),
+        ui_element_runtime_scratch_element_children_vec_pool_len: get_u64(
+            bundle,
+            "ui_element_runtime_scratch_element_children_vec_pool_len",
+        ),
+        ui_element_runtime_scratch_element_children_vec_pool_capacity_total: get_u64(
+            bundle,
+            "ui_element_runtime_scratch_element_children_vec_pool_capacity_total",
+        ),
+        ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total: get_u64(
+            bundle,
+            "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total",
+        ),
+        ui_layout_nodes_visited: get_u64(bundle, "ui_layout_nodes_visited"),
+        ui_prepaint_nodes_visited: get_u64(bundle, "ui_prepaint_nodes_visited"),
+        ui_interaction_records: get_u64(bundle, "ui_interaction_records"),
+        ui_semantics_nodes: get_u64(bundle, "ui_semantics_nodes"),
+        ui_gallery_nav_scroll_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_nav_scroll_semantics_subtree_nodes",
+        ),
+        ui_gallery_page_overlay_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_page_overlay_semantics_subtree_nodes",
+        ),
+        ui_gallery_command_palette_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_command_palette_semantics_subtree_nodes",
+        ),
+        ui_gallery_settings_open_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_settings_open_semantics_subtree_nodes",
+        ),
+        ui_gallery_workspace_frame_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_workspace_frame_semantics_subtree_nodes",
+        ),
+        ui_gallery_top_bar_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_top_bar_semantics_subtree_nodes",
+        ),
+        ui_gallery_workspace_tabstrip_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_workspace_tabstrip_semantics_subtree_nodes",
+        ),
+        ui_gallery_status_bar_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_status_bar_semantics_subtree_nodes",
+        ),
+        ui_gallery_content_shell_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_content_shell_semantics_subtree_nodes",
+        ),
+        ui_gallery_content_header_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_content_header_semantics_subtree_nodes",
+        ),
+        ui_gallery_content_scroll_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_content_scroll_semantics_subtree_nodes",
+        ),
+        ui_gallery_page_preview_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_page_preview_semantics_subtree_nodes",
+        ),
+        ui_gallery_current_page_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_current_page_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_demo_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_demo_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_usage_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_usage_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_size_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_size_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_card_content_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_card_content_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_meeting_notes_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_image_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_image_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_rtl_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_rtl_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_compositions_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_compositions_semantics_subtree_nodes",
+        ),
+        ui_gallery_card_section_notes_semantics_subtree_nodes: get_u64(
+            bundle,
+            "ui_gallery_card_section_notes_semantics_subtree_nodes",
+        ),
+        ui_layers_in_paint_order: get_u64(bundle, "ui_layers_in_paint_order"),
+        ui_scroll_nodes: get_u64(bundle, "ui_scroll_nodes"),
+        ui_gallery_nav_visible_groups_count: get_u64(bundle, "ui_gallery_nav_visible_groups_count"),
+        ui_gallery_nav_visible_items_count: get_u64(bundle, "ui_gallery_nav_visible_items_count"),
+        ui_gallery_nav_visible_ai_items_count: get_u64(
+            bundle,
+            "ui_gallery_nav_visible_ai_items_count",
+        ),
+        ui_gallery_nav_visible_tags_count: get_u64(bundle, "ui_gallery_nav_visible_tags_count"),
+        ui_gallery_nav_max_group_items_count: get_u64(
+            bundle,
+            "ui_gallery_nav_max_group_items_count",
+        ),
+        ui_gallery_nav_visible_string_bytes_estimate_total: get_u64(
+            bundle,
+            "ui_gallery_nav_visible_string_bytes_estimate_total",
+        ),
+        ui_gallery_card_doc_section_slots_total: get_u64(
+            bundle,
+            "ui_gallery_card_doc_section_slots_total",
+        ),
+        ui_gallery_card_doc_visible_sections_count: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_sections_count",
+        ),
+        ui_gallery_card_doc_visible_sections_with_code_count: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_sections_with_code_count",
+        ),
+        ui_gallery_card_doc_visible_sections_with_shell_count: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_sections_with_shell_count",
+        ),
+        ui_gallery_card_doc_intro_len_bytes: get_u64(bundle, "ui_gallery_card_doc_intro_len_bytes"),
+        ui_gallery_card_doc_visible_static_text_bytes_estimate_total: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_static_text_bytes_estimate_total",
+        ),
+        ui_gallery_card_doc_visible_code_bytes_estimate_total: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_code_bytes_estimate_total",
+        ),
+        ui_gallery_card_doc_visible_code_lines_estimate_total: get_u64(
+            bundle,
+            "ui_gallery_card_doc_visible_code_lines_estimate_total",
+        ),
         renderer_gpu_images_bytes_estimate: get_u64(bundle, "renderer_gpu_images_bytes_estimate"),
         renderer_gpu_render_targets_bytes_estimate: get_u64(
             bundle,
@@ -638,6 +1006,79 @@ fn build_report(
         "wgpu_allocator_total_allocated_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_allocated_bytes).collect()),
         "wgpu_allocator_total_reserved_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_reserved_bytes).collect()),
         "renderer_intermediate_peak_in_use_bytes": stats_u64(rows.iter().filter_map(|r| r.renderer_intermediate_peak_in_use_bytes).collect()),
+        "ui_frame_arena_capacity_estimate_bytes": stats_u64(rows.iter().filter_map(|r| r.ui_frame_arena_capacity_estimate_bytes).collect()),
+        "ui_layout_invalidations_count": stats_u64(rows.iter().filter_map(|r| r.ui_layout_invalidations_count).collect()),
+        "ui_view_cache_roots_total": stats_u64(rows.iter().filter_map(|r| r.ui_view_cache_roots_total).collect()),
+        "ui_view_cache_roots_reused": stats_u64(rows.iter().filter_map(|r| r.ui_view_cache_roots_reused).collect()),
+        "ui_element_runtime_observed_models_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_observed_models_count).collect()),
+        "ui_element_runtime_observed_globals_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_observed_globals_count).collect()),
+        "ui_element_runtime_observed_environment_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_observed_environment_count).collect()),
+        "ui_element_runtime_view_cache_reuse_roots_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_reuse_roots_count).collect()),
+        "ui_element_runtime_view_cache_reuse_root_elements_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_reuse_root_elements_total).collect()),
+        "ui_element_runtime_continuous_frame_lease_owners_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_continuous_frame_lease_owners_count).collect()),
+        "ui_element_runtime_continuous_frame_lease_count_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_continuous_frame_lease_count_total).collect()),
+        "ui_element_runtime_continuous_frame_lease_count_max": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_continuous_frame_lease_count_max).collect()),
+        "ui_element_runtime_animation_frame_request_roots_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_animation_frame_request_roots_count).collect()),
+        "ui_element_runtime_retained_keep_alive_roots_len": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_retained_keep_alive_roots_len).collect()),
+        "ui_element_runtime_rendered_state_entries": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_rendered_state_entries).collect()),
+        "ui_element_runtime_next_state_entries": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_next_state_entries).collect()),
+        "ui_element_runtime_lag_state_frames": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_lag_state_frames).collect()),
+        "ui_element_runtime_lag_state_entries_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_lag_state_entries_total).collect()),
+        "ui_element_runtime_state_entries_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_state_entries_total).collect()),
+        "ui_element_runtime_nodes_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_nodes_count).collect()),
+        "ui_element_runtime_bounds_entries_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_bounds_entries_total).collect()),
+        "ui_element_runtime_timer_targets_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_timer_targets_count).collect()),
+        "ui_element_runtime_transient_events_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_transient_events_count).collect()),
+        "ui_element_runtime_view_cache_state_key_roots_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_state_key_roots_count).collect()),
+        "ui_element_runtime_view_cache_state_key_entries_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_state_key_entries_total).collect()),
+        "ui_element_runtime_view_cache_element_roots_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_element_roots_count).collect()),
+        "ui_element_runtime_view_cache_element_entries_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_element_entries_total).collect()),
+        "ui_element_runtime_view_cache_key_mismatch_roots_count": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_view_cache_key_mismatch_roots_count).collect()),
+        "ui_element_runtime_scratch_element_children_vec_pool_len": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_len).collect()),
+        "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_capacity_total).collect()),
+        "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total).collect()),
+        "ui_layout_nodes_visited": stats_u64(rows.iter().filter_map(|r| r.ui_layout_nodes_visited).collect()),
+        "ui_prepaint_nodes_visited": stats_u64(rows.iter().filter_map(|r| r.ui_prepaint_nodes_visited).collect()),
+        "ui_interaction_records": stats_u64(rows.iter().filter_map(|r| r.ui_interaction_records).collect()),
+        "ui_semantics_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_semantics_nodes).collect()),
+        "ui_gallery_nav_scroll_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_scroll_semantics_subtree_nodes).collect()),
+        "ui_gallery_page_overlay_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_page_overlay_semantics_subtree_nodes).collect()),
+        "ui_gallery_command_palette_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_command_palette_semantics_subtree_nodes).collect()),
+        "ui_gallery_settings_open_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_settings_open_semantics_subtree_nodes).collect()),
+        "ui_gallery_workspace_frame_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_workspace_frame_semantics_subtree_nodes).collect()),
+        "ui_gallery_top_bar_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_top_bar_semantics_subtree_nodes).collect()),
+        "ui_gallery_workspace_tabstrip_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_workspace_tabstrip_semantics_subtree_nodes).collect()),
+        "ui_gallery_status_bar_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_status_bar_semantics_subtree_nodes).collect()),
+        "ui_gallery_content_shell_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_content_shell_semantics_subtree_nodes).collect()),
+        "ui_gallery_content_header_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_content_header_semantics_subtree_nodes).collect()),
+        "ui_gallery_content_scroll_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_content_scroll_semantics_subtree_nodes).collect()),
+        "ui_gallery_page_preview_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_page_preview_semantics_subtree_nodes).collect()),
+        "ui_gallery_current_page_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_current_page_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_demo_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_demo_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_usage_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_usage_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_size_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_size_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_card_content_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_card_content_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_meeting_notes_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_image_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_image_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_rtl_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_rtl_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_compositions_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_compositions_semantics_subtree_nodes).collect()),
+        "ui_gallery_card_section_notes_semantics_subtree_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_section_notes_semantics_subtree_nodes).collect()),
+        "ui_layers_in_paint_order": stats_u64(rows.iter().filter_map(|r| r.ui_layers_in_paint_order).collect()),
+        "ui_scroll_nodes": stats_u64(rows.iter().filter_map(|r| r.ui_scroll_nodes).collect()),
+        "ui_gallery_nav_visible_groups_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_visible_groups_count).collect()),
+        "ui_gallery_nav_visible_items_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_visible_items_count).collect()),
+        "ui_gallery_nav_visible_ai_items_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_visible_ai_items_count).collect()),
+        "ui_gallery_nav_visible_tags_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_visible_tags_count).collect()),
+        "ui_gallery_nav_max_group_items_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_max_group_items_count).collect()),
+        "ui_gallery_nav_visible_string_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_nav_visible_string_bytes_estimate_total).collect()),
+        "ui_gallery_card_doc_section_slots_total": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_section_slots_total).collect()),
+        "ui_gallery_card_doc_visible_sections_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_sections_count).collect()),
+        "ui_gallery_card_doc_visible_sections_with_code_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_sections_with_code_count).collect()),
+        "ui_gallery_card_doc_visible_sections_with_shell_count": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_sections_with_shell_count).collect()),
+        "ui_gallery_card_doc_intro_len_bytes": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_intro_len_bytes).collect()),
+        "ui_gallery_card_doc_visible_static_text_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_static_text_bytes_estimate_total).collect()),
+        "ui_gallery_card_doc_visible_code_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_code_bytes_estimate_total).collect()),
+        "ui_gallery_card_doc_visible_code_lines_estimate_total": stats_u64(rows.iter().filter_map(|r| r.ui_gallery_card_doc_visible_code_lines_estimate_total).collect()),
         "renderer_gpu_images_bytes_estimate": stats_u64(rows.iter().filter_map(|r| r.renderer_gpu_images_bytes_estimate).collect()),
         "renderer_gpu_render_targets_bytes_estimate": stats_u64(rows.iter().filter_map(|r| r.renderer_gpu_render_targets_bytes_estimate).collect()),
         "render_text_atlas_bytes_live_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_atlas_bytes_live_estimate_total).collect()),
@@ -1067,6 +1508,79 @@ fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
         "wgpu_allocator_total_allocated_bytes": r.wgpu_allocator_total_allocated_bytes,
         "wgpu_allocator_total_reserved_bytes": r.wgpu_allocator_total_reserved_bytes,
         "renderer_intermediate_peak_in_use_bytes": r.renderer_intermediate_peak_in_use_bytes,
+        "ui_frame_arena_capacity_estimate_bytes": r.ui_frame_arena_capacity_estimate_bytes,
+        "ui_layout_invalidations_count": r.ui_layout_invalidations_count,
+        "ui_view_cache_roots_total": r.ui_view_cache_roots_total,
+        "ui_view_cache_roots_reused": r.ui_view_cache_roots_reused,
+        "ui_element_runtime_observed_models_count": r.ui_element_runtime_observed_models_count,
+        "ui_element_runtime_observed_globals_count": r.ui_element_runtime_observed_globals_count,
+        "ui_element_runtime_observed_environment_count": r.ui_element_runtime_observed_environment_count,
+        "ui_element_runtime_view_cache_reuse_roots_count": r.ui_element_runtime_view_cache_reuse_roots_count,
+        "ui_element_runtime_view_cache_reuse_root_elements_total": r.ui_element_runtime_view_cache_reuse_root_elements_total,
+        "ui_element_runtime_continuous_frame_lease_owners_count": r.ui_element_runtime_continuous_frame_lease_owners_count,
+        "ui_element_runtime_continuous_frame_lease_count_total": r.ui_element_runtime_continuous_frame_lease_count_total,
+        "ui_element_runtime_continuous_frame_lease_count_max": r.ui_element_runtime_continuous_frame_lease_count_max,
+        "ui_element_runtime_animation_frame_request_roots_count": r.ui_element_runtime_animation_frame_request_roots_count,
+        "ui_element_runtime_retained_keep_alive_roots_len": r.ui_element_runtime_retained_keep_alive_roots_len,
+        "ui_element_runtime_rendered_state_entries": r.ui_element_runtime_rendered_state_entries,
+        "ui_element_runtime_next_state_entries": r.ui_element_runtime_next_state_entries,
+        "ui_element_runtime_lag_state_frames": r.ui_element_runtime_lag_state_frames,
+        "ui_element_runtime_lag_state_entries_total": r.ui_element_runtime_lag_state_entries_total,
+        "ui_element_runtime_state_entries_total": r.ui_element_runtime_state_entries_total,
+        "ui_element_runtime_nodes_count": r.ui_element_runtime_nodes_count,
+        "ui_element_runtime_bounds_entries_total": r.ui_element_runtime_bounds_entries_total,
+        "ui_element_runtime_timer_targets_count": r.ui_element_runtime_timer_targets_count,
+        "ui_element_runtime_transient_events_count": r.ui_element_runtime_transient_events_count,
+        "ui_element_runtime_view_cache_state_key_roots_count": r.ui_element_runtime_view_cache_state_key_roots_count,
+        "ui_element_runtime_view_cache_state_key_entries_total": r.ui_element_runtime_view_cache_state_key_entries_total,
+        "ui_element_runtime_view_cache_element_roots_count": r.ui_element_runtime_view_cache_element_roots_count,
+        "ui_element_runtime_view_cache_element_entries_total": r.ui_element_runtime_view_cache_element_entries_total,
+        "ui_element_runtime_view_cache_key_mismatch_roots_count": r.ui_element_runtime_view_cache_key_mismatch_roots_count,
+        "ui_element_runtime_scratch_element_children_vec_pool_len": r.ui_element_runtime_scratch_element_children_vec_pool_len,
+        "ui_element_runtime_scratch_element_children_vec_pool_capacity_total": r.ui_element_runtime_scratch_element_children_vec_pool_capacity_total,
+        "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total": r.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total,
+        "ui_layout_nodes_visited": r.ui_layout_nodes_visited,
+        "ui_prepaint_nodes_visited": r.ui_prepaint_nodes_visited,
+        "ui_interaction_records": r.ui_interaction_records,
+        "ui_semantics_nodes": r.ui_semantics_nodes,
+        "ui_gallery_nav_scroll_semantics_subtree_nodes": r.ui_gallery_nav_scroll_semantics_subtree_nodes,
+        "ui_gallery_page_overlay_semantics_subtree_nodes": r.ui_gallery_page_overlay_semantics_subtree_nodes,
+        "ui_gallery_command_palette_semantics_subtree_nodes": r.ui_gallery_command_palette_semantics_subtree_nodes,
+        "ui_gallery_settings_open_semantics_subtree_nodes": r.ui_gallery_settings_open_semantics_subtree_nodes,
+        "ui_gallery_workspace_frame_semantics_subtree_nodes": r.ui_gallery_workspace_frame_semantics_subtree_nodes,
+        "ui_gallery_top_bar_semantics_subtree_nodes": r.ui_gallery_top_bar_semantics_subtree_nodes,
+        "ui_gallery_workspace_tabstrip_semantics_subtree_nodes": r.ui_gallery_workspace_tabstrip_semantics_subtree_nodes,
+        "ui_gallery_status_bar_semantics_subtree_nodes": r.ui_gallery_status_bar_semantics_subtree_nodes,
+        "ui_gallery_content_shell_semantics_subtree_nodes": r.ui_gallery_content_shell_semantics_subtree_nodes,
+        "ui_gallery_content_header_semantics_subtree_nodes": r.ui_gallery_content_header_semantics_subtree_nodes,
+        "ui_gallery_content_scroll_semantics_subtree_nodes": r.ui_gallery_content_scroll_semantics_subtree_nodes,
+        "ui_gallery_page_preview_semantics_subtree_nodes": r.ui_gallery_page_preview_semantics_subtree_nodes,
+        "ui_gallery_current_page_semantics_subtree_nodes": r.ui_gallery_current_page_semantics_subtree_nodes,
+        "ui_gallery_card_section_demo_semantics_subtree_nodes": r.ui_gallery_card_section_demo_semantics_subtree_nodes,
+        "ui_gallery_card_section_usage_semantics_subtree_nodes": r.ui_gallery_card_section_usage_semantics_subtree_nodes,
+        "ui_gallery_card_section_size_semantics_subtree_nodes": r.ui_gallery_card_section_size_semantics_subtree_nodes,
+        "ui_gallery_card_section_card_content_semantics_subtree_nodes": r.ui_gallery_card_section_card_content_semantics_subtree_nodes,
+        "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes": r.ui_gallery_card_section_meeting_notes_semantics_subtree_nodes,
+        "ui_gallery_card_section_image_semantics_subtree_nodes": r.ui_gallery_card_section_image_semantics_subtree_nodes,
+        "ui_gallery_card_section_rtl_semantics_subtree_nodes": r.ui_gallery_card_section_rtl_semantics_subtree_nodes,
+        "ui_gallery_card_section_compositions_semantics_subtree_nodes": r.ui_gallery_card_section_compositions_semantics_subtree_nodes,
+        "ui_gallery_card_section_notes_semantics_subtree_nodes": r.ui_gallery_card_section_notes_semantics_subtree_nodes,
+        "ui_layers_in_paint_order": r.ui_layers_in_paint_order,
+        "ui_scroll_nodes": r.ui_scroll_nodes,
+        "ui_gallery_nav_visible_groups_count": r.ui_gallery_nav_visible_groups_count,
+        "ui_gallery_nav_visible_items_count": r.ui_gallery_nav_visible_items_count,
+        "ui_gallery_nav_visible_ai_items_count": r.ui_gallery_nav_visible_ai_items_count,
+        "ui_gallery_nav_visible_tags_count": r.ui_gallery_nav_visible_tags_count,
+        "ui_gallery_nav_max_group_items_count": r.ui_gallery_nav_max_group_items_count,
+        "ui_gallery_nav_visible_string_bytes_estimate_total": r.ui_gallery_nav_visible_string_bytes_estimate_total,
+        "ui_gallery_card_doc_section_slots_total": r.ui_gallery_card_doc_section_slots_total,
+        "ui_gallery_card_doc_visible_sections_count": r.ui_gallery_card_doc_visible_sections_count,
+        "ui_gallery_card_doc_visible_sections_with_code_count": r.ui_gallery_card_doc_visible_sections_with_code_count,
+        "ui_gallery_card_doc_visible_sections_with_shell_count": r.ui_gallery_card_doc_visible_sections_with_shell_count,
+        "ui_gallery_card_doc_intro_len_bytes": r.ui_gallery_card_doc_intro_len_bytes,
+        "ui_gallery_card_doc_visible_static_text_bytes_estimate_total": r.ui_gallery_card_doc_visible_static_text_bytes_estimate_total,
+        "ui_gallery_card_doc_visible_code_bytes_estimate_total": r.ui_gallery_card_doc_visible_code_bytes_estimate_total,
+        "ui_gallery_card_doc_visible_code_lines_estimate_total": r.ui_gallery_card_doc_visible_code_lines_estimate_total,
         "renderer_gpu_images_bytes_estimate": r.renderer_gpu_images_bytes_estimate,
         "renderer_gpu_render_targets_bytes_estimate": r.renderer_gpu_render_targets_bytes_estimate,
         "render_text_atlas_bytes_live_estimate_total": r.render_text_atlas_bytes_live_estimate_total,
@@ -1138,6 +1652,177 @@ fn opt_u64_for_key(row: &MemorySampleRow, key: &str) -> Option<u64> {
         "wgpu_allocator_total_allocated_bytes" => row.wgpu_allocator_total_allocated_bytes,
         "wgpu_allocator_total_reserved_bytes" => row.wgpu_allocator_total_reserved_bytes,
         "renderer_intermediate_peak_in_use_bytes" => row.renderer_intermediate_peak_in_use_bytes,
+        "ui_frame_arena_capacity_estimate_bytes" => row.ui_frame_arena_capacity_estimate_bytes,
+        "ui_layout_invalidations_count" => row.ui_layout_invalidations_count,
+        "ui_view_cache_roots_total" => row.ui_view_cache_roots_total,
+        "ui_view_cache_roots_reused" => row.ui_view_cache_roots_reused,
+        "ui_element_runtime_observed_models_count" => row.ui_element_runtime_observed_models_count,
+        "ui_element_runtime_observed_globals_count" => {
+            row.ui_element_runtime_observed_globals_count
+        }
+        "ui_element_runtime_observed_environment_count" => {
+            row.ui_element_runtime_observed_environment_count
+        }
+        "ui_element_runtime_view_cache_reuse_roots_count" => {
+            row.ui_element_runtime_view_cache_reuse_roots_count
+        }
+        "ui_element_runtime_view_cache_reuse_root_elements_total" => {
+            row.ui_element_runtime_view_cache_reuse_root_elements_total
+        }
+        "ui_element_runtime_continuous_frame_lease_owners_count" => {
+            row.ui_element_runtime_continuous_frame_lease_owners_count
+        }
+        "ui_element_runtime_continuous_frame_lease_count_total" => {
+            row.ui_element_runtime_continuous_frame_lease_count_total
+        }
+        "ui_element_runtime_continuous_frame_lease_count_max" => {
+            row.ui_element_runtime_continuous_frame_lease_count_max
+        }
+        "ui_element_runtime_animation_frame_request_roots_count" => {
+            row.ui_element_runtime_animation_frame_request_roots_count
+        }
+        "ui_element_runtime_retained_keep_alive_roots_len" => {
+            row.ui_element_runtime_retained_keep_alive_roots_len
+        }
+        "ui_element_runtime_rendered_state_entries" => {
+            row.ui_element_runtime_rendered_state_entries
+        }
+        "ui_element_runtime_next_state_entries" => row.ui_element_runtime_next_state_entries,
+        "ui_element_runtime_lag_state_frames" => row.ui_element_runtime_lag_state_frames,
+        "ui_element_runtime_lag_state_entries_total" => {
+            row.ui_element_runtime_lag_state_entries_total
+        }
+        "ui_element_runtime_state_entries_total" => row.ui_element_runtime_state_entries_total,
+        "ui_element_runtime_nodes_count" => row.ui_element_runtime_nodes_count,
+        "ui_element_runtime_bounds_entries_total" => row.ui_element_runtime_bounds_entries_total,
+        "ui_element_runtime_timer_targets_count" => row.ui_element_runtime_timer_targets_count,
+        "ui_element_runtime_transient_events_count" => {
+            row.ui_element_runtime_transient_events_count
+        }
+        "ui_element_runtime_view_cache_state_key_roots_count" => {
+            row.ui_element_runtime_view_cache_state_key_roots_count
+        }
+        "ui_element_runtime_view_cache_state_key_entries_total" => {
+            row.ui_element_runtime_view_cache_state_key_entries_total
+        }
+        "ui_element_runtime_view_cache_element_roots_count" => {
+            row.ui_element_runtime_view_cache_element_roots_count
+        }
+        "ui_element_runtime_view_cache_element_entries_total" => {
+            row.ui_element_runtime_view_cache_element_entries_total
+        }
+        "ui_element_runtime_view_cache_key_mismatch_roots_count" => {
+            row.ui_element_runtime_view_cache_key_mismatch_roots_count
+        }
+        "ui_element_runtime_scratch_element_children_vec_pool_len" => {
+            row.ui_element_runtime_scratch_element_children_vec_pool_len
+        }
+        "ui_element_runtime_scratch_element_children_vec_pool_capacity_total" => {
+            row.ui_element_runtime_scratch_element_children_vec_pool_capacity_total
+        }
+        "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total" => {
+            row.ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total
+        }
+        "ui_layout_nodes_visited" => row.ui_layout_nodes_visited,
+        "ui_prepaint_nodes_visited" => row.ui_prepaint_nodes_visited,
+        "ui_interaction_records" => row.ui_interaction_records,
+        "ui_semantics_nodes" => row.ui_semantics_nodes,
+        "ui_gallery_nav_scroll_semantics_subtree_nodes" => {
+            row.ui_gallery_nav_scroll_semantics_subtree_nodes
+        }
+        "ui_gallery_page_overlay_semantics_subtree_nodes" => {
+            row.ui_gallery_page_overlay_semantics_subtree_nodes
+        }
+        "ui_gallery_command_palette_semantics_subtree_nodes" => {
+            row.ui_gallery_command_palette_semantics_subtree_nodes
+        }
+        "ui_gallery_settings_open_semantics_subtree_nodes" => {
+            row.ui_gallery_settings_open_semantics_subtree_nodes
+        }
+        "ui_gallery_workspace_frame_semantics_subtree_nodes" => {
+            row.ui_gallery_workspace_frame_semantics_subtree_nodes
+        }
+        "ui_gallery_top_bar_semantics_subtree_nodes" => {
+            row.ui_gallery_top_bar_semantics_subtree_nodes
+        }
+        "ui_gallery_workspace_tabstrip_semantics_subtree_nodes" => {
+            row.ui_gallery_workspace_tabstrip_semantics_subtree_nodes
+        }
+        "ui_gallery_status_bar_semantics_subtree_nodes" => {
+            row.ui_gallery_status_bar_semantics_subtree_nodes
+        }
+        "ui_gallery_content_shell_semantics_subtree_nodes" => {
+            row.ui_gallery_content_shell_semantics_subtree_nodes
+        }
+        "ui_gallery_content_header_semantics_subtree_nodes" => {
+            row.ui_gallery_content_header_semantics_subtree_nodes
+        }
+        "ui_gallery_content_scroll_semantics_subtree_nodes" => {
+            row.ui_gallery_content_scroll_semantics_subtree_nodes
+        }
+        "ui_gallery_page_preview_semantics_subtree_nodes" => {
+            row.ui_gallery_page_preview_semantics_subtree_nodes
+        }
+        "ui_gallery_current_page_semantics_subtree_nodes" => {
+            row.ui_gallery_current_page_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_demo_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_demo_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_usage_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_usage_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_size_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_size_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_card_content_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_card_content_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_meeting_notes_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_image_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_image_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_rtl_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_rtl_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_compositions_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_compositions_semantics_subtree_nodes
+        }
+        "ui_gallery_card_section_notes_semantics_subtree_nodes" => {
+            row.ui_gallery_card_section_notes_semantics_subtree_nodes
+        }
+        "ui_layers_in_paint_order" => row.ui_layers_in_paint_order,
+        "ui_scroll_nodes" => row.ui_scroll_nodes,
+        "ui_gallery_nav_visible_groups_count" => row.ui_gallery_nav_visible_groups_count,
+        "ui_gallery_nav_visible_items_count" => row.ui_gallery_nav_visible_items_count,
+        "ui_gallery_nav_visible_ai_items_count" => row.ui_gallery_nav_visible_ai_items_count,
+        "ui_gallery_nav_visible_tags_count" => row.ui_gallery_nav_visible_tags_count,
+        "ui_gallery_nav_max_group_items_count" => row.ui_gallery_nav_max_group_items_count,
+        "ui_gallery_nav_visible_string_bytes_estimate_total" => {
+            row.ui_gallery_nav_visible_string_bytes_estimate_total
+        }
+        "ui_gallery_card_doc_section_slots_total" => row.ui_gallery_card_doc_section_slots_total,
+        "ui_gallery_card_doc_visible_sections_count" => {
+            row.ui_gallery_card_doc_visible_sections_count
+        }
+        "ui_gallery_card_doc_visible_sections_with_code_count" => {
+            row.ui_gallery_card_doc_visible_sections_with_code_count
+        }
+        "ui_gallery_card_doc_visible_sections_with_shell_count" => {
+            row.ui_gallery_card_doc_visible_sections_with_shell_count
+        }
+        "ui_gallery_card_doc_intro_len_bytes" => row.ui_gallery_card_doc_intro_len_bytes,
+        "ui_gallery_card_doc_visible_static_text_bytes_estimate_total" => {
+            row.ui_gallery_card_doc_visible_static_text_bytes_estimate_total
+        }
+        "ui_gallery_card_doc_visible_code_bytes_estimate_total" => {
+            row.ui_gallery_card_doc_visible_code_bytes_estimate_total
+        }
+        "ui_gallery_card_doc_visible_code_lines_estimate_total" => {
+            row.ui_gallery_card_doc_visible_code_lines_estimate_total
+        }
         "renderer_gpu_images_bytes_estimate" => row.renderer_gpu_images_bytes_estimate,
         "renderer_gpu_render_targets_bytes_estimate" => {
             row.renderer_gpu_render_targets_bytes_estimate
@@ -1177,6 +1862,79 @@ fn valid_u64_keys() -> &'static [&'static str] {
         "wgpu_allocator_total_allocated_bytes",
         "wgpu_allocator_total_reserved_bytes",
         "renderer_intermediate_peak_in_use_bytes",
+        "ui_frame_arena_capacity_estimate_bytes",
+        "ui_layout_invalidations_count",
+        "ui_view_cache_roots_total",
+        "ui_view_cache_roots_reused",
+        "ui_element_runtime_observed_models_count",
+        "ui_element_runtime_observed_globals_count",
+        "ui_element_runtime_observed_environment_count",
+        "ui_element_runtime_view_cache_reuse_roots_count",
+        "ui_element_runtime_view_cache_reuse_root_elements_total",
+        "ui_element_runtime_continuous_frame_lease_owners_count",
+        "ui_element_runtime_continuous_frame_lease_count_total",
+        "ui_element_runtime_continuous_frame_lease_count_max",
+        "ui_element_runtime_animation_frame_request_roots_count",
+        "ui_element_runtime_retained_keep_alive_roots_len",
+        "ui_element_runtime_rendered_state_entries",
+        "ui_element_runtime_next_state_entries",
+        "ui_element_runtime_lag_state_frames",
+        "ui_element_runtime_lag_state_entries_total",
+        "ui_element_runtime_state_entries_total",
+        "ui_element_runtime_nodes_count",
+        "ui_element_runtime_bounds_entries_total",
+        "ui_element_runtime_timer_targets_count",
+        "ui_element_runtime_transient_events_count",
+        "ui_element_runtime_view_cache_state_key_roots_count",
+        "ui_element_runtime_view_cache_state_key_entries_total",
+        "ui_element_runtime_view_cache_element_roots_count",
+        "ui_element_runtime_view_cache_element_entries_total",
+        "ui_element_runtime_view_cache_key_mismatch_roots_count",
+        "ui_element_runtime_scratch_element_children_vec_pool_len",
+        "ui_element_runtime_scratch_element_children_vec_pool_capacity_total",
+        "ui_element_runtime_scratch_element_children_vec_pool_bytes_estimate_total",
+        "ui_layout_nodes_visited",
+        "ui_prepaint_nodes_visited",
+        "ui_interaction_records",
+        "ui_semantics_nodes",
+        "ui_gallery_nav_scroll_semantics_subtree_nodes",
+        "ui_gallery_page_overlay_semantics_subtree_nodes",
+        "ui_gallery_command_palette_semantics_subtree_nodes",
+        "ui_gallery_settings_open_semantics_subtree_nodes",
+        "ui_gallery_workspace_frame_semantics_subtree_nodes",
+        "ui_gallery_top_bar_semantics_subtree_nodes",
+        "ui_gallery_workspace_tabstrip_semantics_subtree_nodes",
+        "ui_gallery_status_bar_semantics_subtree_nodes",
+        "ui_gallery_content_shell_semantics_subtree_nodes",
+        "ui_gallery_content_header_semantics_subtree_nodes",
+        "ui_gallery_content_scroll_semantics_subtree_nodes",
+        "ui_gallery_page_preview_semantics_subtree_nodes",
+        "ui_gallery_current_page_semantics_subtree_nodes",
+        "ui_gallery_card_section_demo_semantics_subtree_nodes",
+        "ui_gallery_card_section_usage_semantics_subtree_nodes",
+        "ui_gallery_card_section_size_semantics_subtree_nodes",
+        "ui_gallery_card_section_card_content_semantics_subtree_nodes",
+        "ui_gallery_card_section_meeting_notes_semantics_subtree_nodes",
+        "ui_gallery_card_section_image_semantics_subtree_nodes",
+        "ui_gallery_card_section_rtl_semantics_subtree_nodes",
+        "ui_gallery_card_section_compositions_semantics_subtree_nodes",
+        "ui_gallery_card_section_notes_semantics_subtree_nodes",
+        "ui_layers_in_paint_order",
+        "ui_scroll_nodes",
+        "ui_gallery_nav_visible_groups_count",
+        "ui_gallery_nav_visible_items_count",
+        "ui_gallery_nav_visible_ai_items_count",
+        "ui_gallery_nav_visible_tags_count",
+        "ui_gallery_nav_max_group_items_count",
+        "ui_gallery_nav_visible_string_bytes_estimate_total",
+        "ui_gallery_card_doc_section_slots_total",
+        "ui_gallery_card_doc_visible_sections_count",
+        "ui_gallery_card_doc_visible_sections_with_code_count",
+        "ui_gallery_card_doc_visible_sections_with_shell_count",
+        "ui_gallery_card_doc_intro_len_bytes",
+        "ui_gallery_card_doc_visible_static_text_bytes_estimate_total",
+        "ui_gallery_card_doc_visible_code_bytes_estimate_total",
+        "ui_gallery_card_doc_visible_code_lines_estimate_total",
         "renderer_gpu_images_bytes_estimate",
         "renderer_gpu_render_targets_bytes_estimate",
         "render_text_atlas_bytes_live_estimate_total",

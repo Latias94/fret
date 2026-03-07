@@ -28,6 +28,7 @@ static COMPARE_WINDOW_ID: OnceLock<Mutex<Option<AppWindowId>>> = OnceLock::new()
 enum CompareActiveMode {
     Idle,
     PresentOnly,
+    RerenderOnly,
     PaintModel,
     LayoutModel,
 }
@@ -44,6 +45,9 @@ impl CompareActiveMode {
         match raw.trim().to_ascii_lowercase().as_str() {
             "idle" => Self::Idle,
             "present" | "present-only" | "present_only" => Self::PresentOnly,
+            "rerender" | "rerender-only" | "rerender_only" | "render-only" | "render_only" => {
+                Self::RerenderOnly
+            }
             "paint" | "paint-model" | "paint_model" => Self::PaintModel,
             "layout" | "layout-model" | "layout_model" => Self::LayoutModel,
             other => {
@@ -68,6 +72,7 @@ impl CompareActiveMode {
         match self {
             Self::Idle => "idle",
             Self::PresentOnly => "present-only",
+            Self::RerenderOnly => "rerender-only",
             Self::PaintModel => "paint-model",
             Self::LayoutModel => "layout-model",
         }
@@ -82,7 +87,7 @@ impl CompareActiveMode {
     }
 
     fn uses_animation_frame_loop(self) -> bool {
-        matches!(self, Self::PaintModel | Self::LayoutModel)
+        matches!(self, Self::RerenderOnly | Self::PaintModel | Self::LayoutModel)
     }
 }
 

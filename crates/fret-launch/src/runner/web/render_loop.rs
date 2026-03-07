@@ -671,11 +671,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         submit.push(cmd);
         gfx.ctx.queue.submit(submit);
         frame.present();
+        self.app.with_global_mut_untracked(
+            fret_runtime::RunnerPresentDiagnosticsStore::default,
+            |store, _app| {
+                store.record_present(self.app_window, self.frame_id);
+            },
+        );
         drop(keepalive);
 
         self.drain_turns(event_loop, window, &mut gfx, &mut state);
         if gfx.diag_keepalive_redraw {
             window.request_redraw();
+            self.app.with_global_mut_untracked(
+                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                |store, _app| {
+                    store.record(
+                        self.app_window,
+                        self.frame_id,
+                        fret_runtime::RunnerFrameDriveReason::WebDiagKeepaliveRedraw,
+                    );
+                },
+            );
         }
 
         self.window_state = Some(state);
