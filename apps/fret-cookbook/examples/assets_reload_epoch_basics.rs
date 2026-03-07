@@ -82,28 +82,19 @@ impl View for AssetsReloadEpochBasicsView {
             .map(|v| v.0)
             .unwrap_or(0);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Assets reload epoch basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let actions = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("Bump assets reload epoch")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::BumpReload)
                     .test_id(TEST_ID_BUMP_RELOAD)
-                    .into_element(cx),
+                    ,
                 shadcn::Badge::new(format!("epoch: {epoch}"))
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+                    ,
                 shadcn::Badge::new("Tip: edit files under `assets/` then click reload.")
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+                    ,
             ]
         })
         .gap(Space::N2)
@@ -121,8 +112,8 @@ impl View for AssetsReloadEpochBasicsView {
         let stats = {
             let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
             let svgs = fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);
-            shadcn::Alert::new([
-                shadcn::AlertTitle::new("Budgets + cache stats").into_element(cx),
+            shadcn::Alert::new(ui::children![cx;
+                shadcn::AlertTitle::new("Budgets + cache stats"),
                 shadcn::AlertDescription::new(format!(
                     "Images: ready={} pending={} failed={} bytes={} / {} | SVGs: ready={} bytes={} / {}",
                     images.ready_count,
@@ -133,23 +124,40 @@ impl View for AssetsReloadEpochBasicsView {
                     svgs.ready_count,
                     svgs.bytes_ready,
                     svgs.bytes_budget
-                ))
-                .into_element(cx),
+                )),
             ])
             .into_element(cx)
         };
 
-        let content = ui::v_flex(|_cx| [actions, image_panel, svg_panel, stats])
+        let content = ui::v_flex(|cx| ui::children![cx; actions, image_panel, svg_panel, stats])
             .gap(Space::N4)
             .items_stretch()
             .into_element(cx);
 
-        let card =
-            shadcn::Card::new([header, shadcn::CardContent::new([content]).into_element(cx)])
-                .ui()
-                .w_full()
-                .max_w(Px(900.0))
-                .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Assets reload epoch basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(content);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(900.0))
+        .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
@@ -194,11 +202,10 @@ fn render_image_panel(
     let mut body: Vec<AnyElement> = Vec::new();
     body.push(
         ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("File image status:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("File image status:"),
                 shadcn::Badge::new(status)
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx)
                     .test_id(TEST_ID_IMAGE_STATUS),
             ]
         })
@@ -210,32 +217,40 @@ fn render_image_panel(
 
     if let Some(msg) = st.error {
         body.push(
-            shadcn::Alert::new([
-                shadcn::AlertTitle::new("Image decode/upload failed").into_element(cx),
-                shadcn::AlertDescription::new(msg).into_element(cx),
+            shadcn::Alert::new(ui::children![cx;
+                shadcn::AlertTitle::new("Image decode/upload failed"),
+                shadcn::AlertDescription::new(msg),
             ])
             .variant(shadcn::AlertVariant::Destructive)
             .into_element(cx),
         );
     }
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Image from disk").into_element(cx),
-            shadcn::CardDescription::new(
-                "Loads `assets/textures/test.jpg` via ImageSource + ImageAssetCache (async decode, cached upload).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([
-            ui::v_flex(|_cx| body)
-                .gap(Space::N3)
-                .items_start()
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
+    let body = ui::v_flex(|_cx| body)
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx);
+
+    shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new("Image from disk"));
+                out.push_ui(
+                    cx,
+                    shadcn::CardDescription::new(
+                        "Loads `assets/textures/test.jpg` via ImageSource + ImageAssetCache (async decode, cached upload).",
+                    ),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(body);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .into_element(cx)
@@ -284,37 +299,45 @@ fn render_svg_panel(
     .h_px(Px(180.0))
     .into_element(cx);
 
-    shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("SVG icon from disk").into_element(cx),
-            shadcn::CardDescription::new(
-                "Loads `assets/demo/icon-search.svg` via SvgFileSource + UiAssetsReloadEpoch.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([ui::v_flex(|cx| {
-            [
-                ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("SVG status:").into_element(cx),
-                        shadcn::Badge::new(status)
-                            .variant(shadcn::BadgeVariant::Secondary)
-                            .into_element(cx)
-                            .test_id(TEST_ID_SVG_STATUS),
-                    ]
-                })
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                box_el,
-            ]
-        })
-        .gap(Space::N3)
-        .items_start()
-        .into_element(cx)])
-        .into_element(cx),
-    ])
+    let body = ui::v_flex(|cx| {
+        ui::children![cx;
+            ui::h_flex(|cx| {
+                ui::children![cx;
+                    shadcn::Label::new("SVG status:"),
+                    shadcn::Badge::new(status)
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .test_id(TEST_ID_SVG_STATUS),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center(),
+            box_el,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx);
+
+    shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new("SVG icon from disk"));
+                out.push_ui(
+                    cx,
+                    shadcn::CardDescription::new(
+                        "Loads `assets/demo/icon-search.svg` via SvgFileSource + UiAssetsReloadEpoch.",
+                    ),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(body);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .into_element(cx)

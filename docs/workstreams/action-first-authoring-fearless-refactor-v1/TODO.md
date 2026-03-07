@@ -298,6 +298,7 @@ ID format:
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
     - `apps/fret-cookbook/examples/router_basics.rs`
     - `apps/fret-cookbook/examples/undo_basics.rs`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
 
 ---
 
