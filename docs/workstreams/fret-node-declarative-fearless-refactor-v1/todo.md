@@ -302,7 +302,13 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 - [ ] Move from portal/bounds experimentation toward a declared editor-grade portal hosting path for
       the visible subset.
+  - Progress: declarative portal hosting now routes visible-subset selection through
+    `collect_portal_label_infos_for_visible_subset(...)`, which locks draw-order/cap semantics and
+    uses dragged node rects (not stale pre-drag rects) for viewport culling.
 - [ ] Clarify how node content subtrees publish measured geometry into derived stores.
+  - Progress: portal subtree bounds harvest now routes through
+    `sync_portal_canvas_bounds_in_models(...)`, giving `LayoutQueryRegion` publish semantics an
+    explicit epsilon-filtered seam instead of ad-hoc inline store writes.
 - [x] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
   - `NodeGraphPortalHost::with_controller` now prefers
     `NodeGraphController::submit_transaction_and_sync_models`.
@@ -322,6 +328,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     `portal_bounds_store` wins when hosted bounds exist, while `hover_anchor_store` remains the
     fallback when portals are disabled or unavailable; motion-specific anchoring coverage is still
     pending.
+  - Progress: portal visible-subset hosting now also has a motion gate proving a dragged node that
+    crosses into the viewport is hosted using its dragged rect rather than its stale pre-drag rect.
 
 ## M5 - Compatibility retained convergence
 

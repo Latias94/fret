@@ -290,6 +290,11 @@ points rather than direct graph mutation.
     positioning prefers hosted portal bounds when available, but deterministically falls back to the
     local hover-anchor store when portals are disabled or unavailable; focused tests lock both
     precedence paths.
+  - Declarative portal hosting now has named seams for both visible-subset selection and subtree
+    bounds publication: `collect_portal_label_infos_for_visible_subset(...)` keeps draw-order/cap
+    semantics deterministic and culls against dragged rects, while
+    `sync_portal_canvas_bounds_in_models(...)` makes `LayoutQueryRegion` bounds harvest
+    epsilon-filtered and reviewable.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while

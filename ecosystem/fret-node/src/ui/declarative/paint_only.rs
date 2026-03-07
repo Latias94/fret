@@ -855,6 +855,137 @@ struct PortalLabelInfo {
     hovered: bool,
 }
 
+fn portal_node_rect_for_surface(
+    draw: &NodeRectDraw,
+    drag_active: bool,
+    dragged_nodes: Option<&[crate::core::NodeId]>,
+    ddx: f32,
+    ddy: f32,
+) -> Rect {
+    let mut rect = draw.rect;
+    if drag_active && dragged_nodes.is_some_and(|nodes| nodes.binary_search(&draw.id).is_ok()) {
+        rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
+    }
+    rect
+}
+
+fn collect_portal_label_infos_for_visible_subset(
+    graph: &Graph,
+    draws: Option<&[NodeRectDraw]>,
+    bounds: Rect,
+    view: PanZoom2D,
+    cull_canvas: Option<Rect>,
+    portal_max_nodes: usize,
+    hovered_node: Option<crate::core::NodeId>,
+    selected_nodes: &[crate::core::NodeId],
+    node_drag: Option<&NodeDragState>,
+) -> Vec<PortalLabelInfo> {
+    let Some(draws) = draws else {
+        return Vec::new();
+    };
+    if portal_max_nodes == 0 {
+        return Vec::new();
+    }
+
+    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
+    let drag_active = node_drag.is_some_and(NodeDragState::is_active);
+    let (ddx, ddy) = node_drag
+        .filter(|_| drag_active)
+        .map(|d| node_drag_delta_canvas(view, d))
+        .unwrap_or((0.0, 0.0));
+    let dragged_nodes = node_drag
+        .filter(|d| d.is_active())
+        .map(|d| d.nodes_sorted.as_ref());
+
+    let mut infos: Vec<PortalLabelInfo> = Vec::new();
+    for draw in draws.iter() {
+        if infos.len() >= portal_max_nodes {
+            break;
+        }
+
+        let rect = portal_node_rect_for_surface(draw, drag_active, dragged_nodes, ddx, ddy);
+        if let Some(cull) = cull_canvas
+            && !rects_intersect(cull, rect)
+        {
+            continue;
+        }
+
+        let origin_screen = view.canvas_to_screen(bounds, rect.origin);
+        let left = Px(origin_screen.x.0 - bounds.origin.x.0);
+        let top = Px(origin_screen.y.0 - bounds.origin.y.0);
+        let width = Px((rect.size.width.0 * zoom).max(0.0));
+
+        if !left.0.is_finite() || !top.0.is_finite() || !width.0.is_finite() {
+            continue;
+        }
+
+        let label: Arc<str> = graph
+            .nodes
+            .get(&draw.id)
+            .map(|n| Arc::<str>::from(n.kind.0.as_str()))
+            .unwrap_or_else(|| Arc::<str>::from("node"));
+
+        let (ports_in, ports_out) = graph
+            .nodes
+            .get(&draw.id)
+            .map(|node| {
+                let mut ports_in = 0u32;
+                let mut ports_out = 0u32;
+                for pid in node.ports.iter() {
+                    let Some(port) = graph.ports.get(pid) else {
+                        continue;
+                    };
+                    match port.dir {
+                        crate::core::PortDirection::In => ports_in += 1,
+                        crate::core::PortDirection::Out => ports_out += 1,
+                    }
+                }
+                (ports_in, ports_out)
+            })
+            .unwrap_or((0, 0));
+
+        infos.push(PortalLabelInfo {
+            id: draw.id,
+            left,
+            top,
+            width,
+            height: Px(38.0),
+            label,
+            ports_in,
+            ports_out,
+            selected: selected_nodes.iter().any(|id| *id == draw.id),
+            hovered: hovered_node.is_some_and(|id| id == draw.id),
+        });
+    }
+
+    infos
+}
+
+fn sync_portal_canvas_bounds_in_models(
+    models: &mut fret_runtime::ModelStore,
+    portal_bounds_store: &Model<PortalBoundsStore>,
+    node_id: crate::core::NodeId,
+    canvas_bounds: Rect,
+) -> bool {
+    let should_update = models
+        .read(portal_bounds_store, |st| {
+            let Some(prev) = st.nodes_canvas_bounds.get(&node_id) else {
+                return true;
+            };
+            !rect_approx_eq(*prev, canvas_bounds, 0.25)
+        })
+        .unwrap_or(true);
+
+    if !should_update {
+        return false;
+    }
+
+    let _ = models.update(portal_bounds_store, |st| {
+        st.nodes_canvas_bounds.insert(node_id, canvas_bounds);
+    });
+    true
+}
+
 fn rect_contains_point(rect: Rect, p: Point) -> bool {
     let x0 = rect.origin.x.0;
     let y0 = rect.origin.y.0;
@@ -3263,7 +3394,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     // router during this milestone.
                     let bounds = grid_cache_value.bounds;
                     let view = view_for_paint;
-                    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
 
                     if bounds.size.width.0.is_finite()
                         && bounds.size.height.0.is_finite()
@@ -3272,110 +3402,20 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     {
                         let cull_canvas = canvas_viewport_rect(bounds, view, cull_margin_screen_px);
 
-                        let drag_active = node_drag_value
-                            .as_ref()
-                            .is_some_and(NodeDragState::is_active);
-                        let (ddx, ddy) = node_drag_value
-                            .as_ref()
-                            .filter(|_| drag_active)
-                            .map(|d| node_drag_delta_canvas(view, d))
-                            .unwrap_or((0.0, 0.0));
-
-                        let hovered = hovered_node_value;
-                        let selected = selected_nodes.clone();
-                        let dragged_nodes = node_drag_value
-                            .as_ref()
-                            .filter(|d| d.is_active())
-                            .map(|d| d.nodes_sorted.clone());
-
                         let portal_bounds_store = portal_bounds_store.clone();
                         let portal_infos: Vec<PortalLabelInfo> = cx
                             .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                                let Some(draws) = node_draws.as_deref() else {
-                                    return Vec::new();
-                                };
-
-                                let mut infos: Vec<PortalLabelInfo> = Vec::new();
-                                for d in draws.iter() {
-                                    if infos.len() >= portal_max_nodes {
-                                        break;
-                                    }
-
-                                    if let Some(cull) = cull_canvas
-                                        && !rects_intersect(cull, d.rect)
-                                    {
-                                        continue;
-                                    }
-
-                                    let mut origin_canvas = d.rect.origin;
-                                    if drag_active
-                                        && let Some(nodes) = dragged_nodes.as_deref()
-                                        && nodes.binary_search(&d.id).is_ok()
-                                    {
-                                        origin_canvas = Point::new(
-                                            Px(origin_canvas.x.0 + ddx),
-                                            Px(origin_canvas.y.0 + ddy),
-                                        );
-                                    }
-
-                                    let origin_screen =
-                                        view.canvas_to_screen(bounds, origin_canvas);
-                                    let left = Px(origin_screen.x.0 - bounds.origin.x.0);
-                                    let top = Px(origin_screen.y.0 - bounds.origin.y.0);
-                                    let width = Px((d.rect.size.width.0 * zoom).max(0.0));
-
-                                    if !left.0.is_finite()
-                                        || !top.0.is_finite()
-                                        || !width.0.is_finite()
-                                    {
-                                        continue;
-                                    }
-
-                                    let label: Arc<str> = graph_value
-                                        .nodes
-                                        .get(&d.id)
-                                        .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-                                        .unwrap_or_else(|| Arc::<str>::from("node"));
-
-                                    let (ports_in, ports_out) = graph_value
-                                        .nodes
-                                        .get(&d.id)
-                                        .map(|n| {
-                                            let mut ports_in = 0u32;
-                                            let mut ports_out = 0u32;
-                                            for pid in n.ports.iter() {
-                                                let Some(port) = graph_value.ports.get(pid) else {
-                                                    continue;
-                                                };
-                                                match port.dir {
-                                                    crate::core::PortDirection::In => ports_in += 1,
-                                                    crate::core::PortDirection::Out => {
-                                                        ports_out += 1
-                                                    }
-                                                }
-                                            }
-                                            (ports_in, ports_out)
-                                        })
-                                        .unwrap_or((0, 0));
-
-                                    let selected = selected.iter().any(|id| *id == d.id);
-                                    let hovered = hovered.is_some_and(|id| id == d.id);
-
-                                    infos.push(PortalLabelInfo {
-                                        id: d.id,
-                                        left,
-                                        top,
-                                        width,
-                                        height: Px(38.0),
-                                        label,
-                                        ports_in,
-                                        ports_out,
-                                        selected,
-                                        hovered,
-                                    });
-                                }
-
-                                infos
+                                collect_portal_label_infos_for_visible_subset(
+                                    graph_value,
+                                    node_draws.as_deref().map(|draws| draws.as_slice()),
+                                    bounds,
+                                    view,
+                                    cull_canvas,
+                                    portal_max_nodes,
+                                    hovered_node_value,
+                                    selected_nodes.as_slice(),
+                                    node_drag_value.as_ref(),
+                                )
                             })
                             .unwrap_or_default();
 
@@ -3437,27 +3477,12 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                                                     visual_bounds,
                                                 );
 
-                                                let should_update = cx
-                                                    .app
-                                                    .models()
-                                                    .read(&portal_bounds_store, |st| {
-                                                        let Some(prev) =
-                                                            st.nodes_canvas_bounds.get(&info.id)
-                                                        else {
-                                                            return true;
-                                                        };
-                                                        !rect_approx_eq(*prev, canvas_bounds, 0.25)
-                                                    })
-                                                    .unwrap_or(true);
-
-                                                if should_update {
-                                                    let _ = cx.app.models_mut().update(
-                                                        &portal_bounds_store,
-                                                        |st| {
-                                                            st.nodes_canvas_bounds
-                                                                .insert(info.id, canvas_bounds);
-                                                        },
-                                                    );
+                                                if sync_portal_canvas_bounds_in_models(
+                                                    cx.app.models_mut(),
+                                                    &portal_bounds_store,
+                                                    info.id,
+                                                    canvas_bounds,
+                                                ) {
                                                     cx.request_frame();
                                                 }
                                             }
@@ -3937,12 +3962,13 @@ mod tests {
         DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
         HoverTooltipAnchorSource, Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot,
         LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
-        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, PendingSelectionState,
-        PortalBoundsStore, PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
-        authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
-        begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
-        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-        build_marquee_preview_selected_nodes, build_node_drag_transaction,
+        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, NodeRectDraw,
+        PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
+        apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
+        begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+        build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+        build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
         commit_graph_transaction, commit_marquee_selection_action_host,
         commit_node_drag_transaction, commit_pending_selection_action_host,
         complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
@@ -3956,7 +3982,7 @@ mod tests {
         handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
         nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
         pointer_crossed_threshold, resolve_hover_tooltip_anchor, stable_hash_u64,
-        sync_authoritative_surface_boundary_in_models,
+        sync_authoritative_surface_boundary_in_models, sync_portal_canvas_bounds_in_models,
         update_hovered_node_pointer_move_action_host, view_from_state,
     };
     use crate::core::{
@@ -6551,6 +6577,155 @@ mod tests {
 
         assert_eq!(from_pending, vec![node_b]);
         assert_eq!(from_view, vec![node_a]);
+    }
+
+    #[test]
+    fn collect_portal_label_infos_for_visible_subset_uses_dragged_rect_for_visibility() {
+        let node = NodeId::from_u128(9101);
+        let mut graph = Graph::new(GraphId::from_u128(9100));
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 200.0, y: 0.0 }));
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(200.0), Px(0.0)),
+                fret_core::Size::new(Px(40.0), Px(20.0)),
+            ),
+        }];
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(100.0), Px(100.0)),
+        );
+        let view = PanZoom2D::default();
+        let cull = Some(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(100.0), Px(100.0)),
+        ));
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(-160.0), Px(0.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+
+        let infos = collect_portal_label_infos_for_visible_subset(
+            &graph,
+            Some(draws.as_slice()),
+            bounds,
+            view,
+            cull,
+            8,
+            Some(node),
+            &[node],
+            Some(&drag),
+        );
+
+        assert_eq!(infos.len(), 1);
+        assert_eq!(infos[0].id, node);
+        assert_eq!(infos[0].left, Px(40.0));
+        assert!(infos[0].selected);
+        assert!(infos[0].hovered);
+    }
+
+    #[test]
+    fn collect_portal_label_infos_for_visible_subset_respects_draw_order_and_cap() {
+        let node_a = NodeId::from_u128(9111);
+        let node_b = NodeId::from_u128(9112);
+        let node_c = NodeId::from_u128(9113);
+        let mut graph = Graph::new(GraphId::from_u128(9110));
+        graph
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 10.0, y: 0.0 }));
+        graph
+            .nodes
+            .insert(node_c, test_node(CanvasPoint { x: 20.0, y: 0.0 }));
+        let draws = vec![
+            NodeRectDraw {
+                id: node_b,
+                rect: Rect::new(
+                    Point::new(Px(10.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+            NodeRectDraw {
+                id: node_a,
+                rect: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+            NodeRectDraw {
+                id: node_c,
+                rect: Rect::new(
+                    Point::new(Px(20.0), Px(0.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            },
+        ];
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let infos = collect_portal_label_infos_for_visible_subset(
+            &graph,
+            Some(draws.as_slice()),
+            bounds,
+            PanZoom2D::default(),
+            None,
+            2,
+            None,
+            &[node_a],
+            None,
+        );
+
+        assert_eq!(
+            infos.iter().map(|info| info.id).collect::<Vec<_>>(),
+            vec![node_b, node_a]
+        );
+        assert!(!infos[0].selected);
+        assert!(infos[1].selected);
+    }
+
+    #[test]
+    fn sync_portal_canvas_bounds_in_models_ignores_epsilon_churn() {
+        let mut host = TestActionHostImpl::default();
+        let node = NodeId::from_u128(9121);
+        let portal_bounds = host.models.insert(PortalBoundsStore::default());
+        let initial = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(30.0), Px(40.0)),
+        );
+        assert!(sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            initial,
+        ));
+
+        let near = Rect::new(
+            Point::new(Px(10.1), Px(20.1)),
+            fret_core::Size::new(Px(30.1), Px(40.1)),
+        );
+        assert!(!sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            near,
+        ));
+        assert!(sync_portal_canvas_bounds_in_models(
+            &mut host.models,
+            &portal_bounds,
+            node,
+            Rect::new(
+                Point::new(Px(12.0), Px(24.0)),
+                fret_core::Size::new(Px(30.0), Px(40.0)),
+            ),
+        ));
     }
 
     #[test]
