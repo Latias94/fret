@@ -293,7 +293,8 @@ Recommended PR slices:
    - thirty-ninth landing: `diag_suite` now builds editor/markdown/text default post-run checks plus merge wiring through dedicated helpers, so policy-heavy boolean gate planning no longer lives in the same orchestration block as bundle resolution and summary accounting
    - fortieth landing: `diag_suite` now routes explicit-or-policy post-run trigger decisions through a dedicated helper, so trigger growth no longer stays as one expanding OR-chain inline in `cmd_suite`
    - forty-first landing: `diag_suite` now routes retained-vlist script-specific overrides through `SuiteScriptOverrideChecks`, so trigger planning and post-run application reuse the same per-script override seam instead of filtering the same checks twice
-   - next recommended landing: extract suite success/failure summary emit helpers so lint-failure and pass-result writing stop living inline beside execution control flow
+   - forty-second landing: `diag_suite` now routes suite success/failure summary payload assembly and emission through `SuiteSummaryEmitInput` plus dedicated helpers, so setup failures, run failures, lint failures, and pass-result writing no longer duplicate payload/write/regression-summary plumbing inline
+   - next recommended landing: extract per-script suite row builders so tooling/setup/script/lint outcome rows stop open-coding the same JSON fragments inline
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

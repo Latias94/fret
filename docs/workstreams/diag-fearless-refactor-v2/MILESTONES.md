@@ -34,13 +34,14 @@ Deliverables:
 
 Progress update:
 
-- `diag_suite` has now landed four consecutive seam slices around post-run check orchestration:
+- `diag_suite` has now landed five consecutive seam slices around post-run and result-summary orchestration:
   - core default check planning,
   - editor/markdown/text default check planning,
   - explicit-or-policy post-run trigger planning,
-  - retained-vlist script override planning.
-- The next remaining high-ROI seam in this area is suite summary/failure emit factoring rather than
-  more check-policy growth in `cmd_suite`.
+  - retained-vlist script override planning,
+  - suite success/failure summary emit factoring.
+- The next remaining high-ROI seam in this area is per-script row payload shaping rather than
+  bringing summary-write duplication back into `cmd_suite`.
 
 Exit criteria:
 

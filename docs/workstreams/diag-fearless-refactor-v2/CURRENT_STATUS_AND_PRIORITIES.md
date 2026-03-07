@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (next target inside this file is summary/failure emit factoring after the recent default-check and trigger extractions)
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring has landed; the next target inside this file is per-row payload shaping for tooling/script/lint outcomes)
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/diag_run.rs`
 - `crates/fret-diag/src/commands/artifacts.rs`
@@ -149,6 +149,10 @@ Recent progress since this note was drafted:
 - `diag_suite` now also routes explicit-or-policy post-run trigger decisions through a named helper,
   and retained-vlist script-specific overrides now flow through `SuiteScriptOverrideChecks`, so the
   trigger predicate and post-run application share one per-script override vocabulary.
+- `diag_suite` now also routes suite success/failure summary payload assembly and emission through
+  `SuiteSummaryEmitInput` + dedicated helpers, so setup failures, run failures, lint failures, and
+  pass-result writing no longer duplicate the same `suite.summary.json` / `regression.summary.json`
+  plumbing inline.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.

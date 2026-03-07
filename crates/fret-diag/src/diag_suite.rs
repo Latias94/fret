@@ -288,6 +288,76 @@ fn suite_row_to_regression_item(
     }
 }
 
+struct SuiteSummaryEmitInput<'a> {
+    workspace_root: &'a Path,
+    resolved_out_dir: &'a Path,
+    suite_summary_path: &'a Path,
+    regression_summary_path: &'a Path,
+    suite_name: Option<&'a str>,
+    generated_unix_ms: u64,
+    warmup_frames: u64,
+    reuse_launch: bool,
+    wants_screenshots: bool,
+    stage_counts: &'a std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &'a std::collections::BTreeMap<String, u64>,
+    rows: &'a [serde_json::Value],
+    evidence_aggregate: &'a suite_summary::SuiteEvidenceAggregate,
+}
+
+fn build_suite_summary_payload(
+    input: &SuiteSummaryEmitInput<'_>,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+) -> serde_json::Value {
+    let mut payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": input.generated_unix_ms,
+        "kind": "suite_summary",
+        "status": status,
+        "suite": input.suite_name,
+        "out_dir": input.resolved_out_dir.display().to_string(),
+        "warmup_frames": input.warmup_frames,
+        "reuse_launch": input.reuse_launch,
+        "wants_screenshots": input.wants_screenshots,
+        "stage_counts": input.stage_counts,
+        "reason_code_counts": input.reason_code_counts,
+        "evidence_aggregate": input.evidence_aggregate.as_json(),
+        "rows": input.rows,
+    });
+    let object = payload
+        .as_object_mut()
+        .expect("suite summary payload must stay an object");
+    if let Some(error_reason_code) = error_reason_code {
+        object.insert(
+            "error_reason_code".to_string(),
+            serde_json::json!(error_reason_code),
+        );
+    }
+    if let Some(failure_kind) = failure_kind {
+        object.insert("failure_kind".to_string(), serde_json::json!(failure_kind));
+    }
+    payload
+}
+
+fn emit_suite_summary(
+    input: &SuiteSummaryEmitInput<'_>,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+) {
+    let payload = build_suite_summary_payload(input, status, error_reason_code, failure_kind);
+    let _ = write_json_value(input.suite_summary_path, &payload);
+    write_regression_summary_for_suite(
+        input.workspace_root,
+        input.resolved_out_dir,
+        input.regression_summary_path,
+        input.suite_name,
+        input.generated_unix_ms,
+        &payload,
+    );
+}
+
 fn write_regression_summary_for_suite(
     workspace_root: &Path,
     resolved_out_dir: &Path,
@@ -1770,30 +1840,25 @@ hint: list suites via `fretboard diag list suites`"
                     "reason_code": "tooling.connect.failed",
                     "error": err,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "error",
-                    "error_reason_code": "tooling.connect.failed",
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "error",
+                    Some("tooling.connect.failed"),
+                    None,
                 );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
@@ -1832,30 +1897,25 @@ hint: list suites via `fretboard diag list suites`"
                     "reason_code": "tooling.launch.failed",
                     "error": err,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "error",
-                    "error_reason_code": "tooling.launch.failed",
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "error",
+                    Some("tooling.launch.failed"),
+                    None,
                 );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
@@ -1886,33 +1946,28 @@ hint: list suites via `fretboard diag list suites`"
                     "reason_code": "tooling.connect.failed",
                     "error": err,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "error",
-                    "error_reason_code": "tooling.connect.failed",
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "error",
+                    Some("tooling.connect.failed"),
+                    None,
                 );
                 return Err("suite setup failed (see suite.summary.json)".to_string());
             }
@@ -1957,33 +2012,28 @@ hint: list suites via `fretboard diag list suites`"
                         "reason_code": "tooling.launch.failed",
                         "error": err,
                     }));
-                    let payload = serde_json::json!({
-                        "schema_version": 1,
-                        "generated_unix_ms": suite_summary_generated_unix_ms,
-                        "kind": "suite_summary",
-                        "status": "error",
-                        "error_reason_code": "tooling.launch.failed",
-                        "suite": suite_summary_suite,
-                        "out_dir": resolved_out_dir.display().to_string(),
-                        "warmup_frames": warmup_frames,
-                        "reuse_launch": reuse_launch,
-                        "wants_screenshots": suite_wants_screenshots,
-                        "stage_counts": suite_stage_counts,
-                        "reason_code_counts": suite_reason_code_counts,
-                        "evidence_aggregate": suite_evidence_agg.as_json(),
-                        "rows": suite_rows,
-                    });
                     if !keep_open {
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     }
-                    let _ = write_json_value(&suite_summary_path, &payload);
-                    write_regression_summary_for_suite(
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &regression_summary_path,
-                        suite_summary_suite.as_deref(),
-                        suite_summary_generated_unix_ms,
-                        &payload,
+                    emit_suite_summary(
+                        &SuiteSummaryEmitInput {
+                            workspace_root: &workspace_root,
+                            resolved_out_dir: &resolved_out_dir,
+                            suite_summary_path: &suite_summary_path,
+                            regression_summary_path: &regression_summary_path,
+                            suite_name: suite_summary_suite.as_deref(),
+                            generated_unix_ms: suite_summary_generated_unix_ms,
+                            warmup_frames,
+                            reuse_launch,
+                            wants_screenshots: suite_wants_screenshots,
+                            stage_counts: &suite_stage_counts,
+                            reason_code_counts: &suite_reason_code_counts,
+                            rows: &suite_rows,
+                            evidence_aggregate: &suite_evidence_agg,
+                        },
+                        "error",
+                        Some("tooling.launch.failed"),
+                        None,
                     );
                     return Err("suite run failed (see suite.summary.json)".to_string());
                 }
@@ -2176,33 +2226,28 @@ hint: list suites via `fretboard diag list suites`"
                     "reason_code": tooling_reason_code,
                     "error": e,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "error",
-                    "error_reason_code": error_reason_code,
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "error",
+                    Some(error_reason_code.as_str()),
+                    None,
                 );
                 return Err("suite run failed (see suite.summary.json)".to_string());
             }
@@ -2249,32 +2294,28 @@ hint: list suites via `fretboard diag list suites`"
                     "lint": lint_summary,
                     "evidence_highlights": evidence_highlights,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "failed",
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "failed",
+                    None,
+                    None,
                 );
                 std::process::exit(1);
             }
@@ -2295,32 +2336,28 @@ hint: list suites via `fretboard diag list suites`"
                     "lint": lint_summary,
                     "evidence_highlights": evidence_highlights,
                 }));
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": suite_summary_generated_unix_ms,
-                    "kind": "suite_summary",
-                    "status": "failed",
-                    "suite": suite_summary_suite,
-                    "out_dir": resolved_out_dir.display().to_string(),
-                    "warmup_frames": warmup_frames,
-                    "reuse_launch": reuse_launch,
-                    "wants_screenshots": suite_wants_screenshots,
-                    "stage_counts": suite_stage_counts,
-                    "reason_code_counts": suite_reason_code_counts,
-                    "evidence_aggregate": suite_evidence_agg.as_json(),
-                    "rows": suite_rows,
-                });
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
-                let _ = write_json_value(&suite_summary_path, &payload);
-                write_regression_summary_for_suite(
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &regression_summary_path,
-                    suite_summary_suite.as_deref(),
-                    suite_summary_generated_unix_ms,
-                    &payload,
+                emit_suite_summary(
+                    &SuiteSummaryEmitInput {
+                        workspace_root: &workspace_root,
+                        resolved_out_dir: &resolved_out_dir,
+                        suite_summary_path: &suite_summary_path,
+                        regression_summary_path: &regression_summary_path,
+                        suite_name: suite_summary_suite.as_deref(),
+                        generated_unix_ms: suite_summary_generated_unix_ms,
+                        warmup_frames,
+                        reuse_launch,
+                        wants_screenshots: suite_wants_screenshots,
+                        stage_counts: &suite_stage_counts,
+                        reason_code_counts: &suite_reason_code_counts,
+                        rows: &suite_rows,
+                        evidence_aggregate: &suite_evidence_agg,
+                    },
+                    "failed",
+                    None,
+                    None,
                 );
                 std::process::exit(1);
             }
@@ -2404,31 +2441,26 @@ hint: list suites via `fretboard diag list suites`"
                         "lint": lint_summary,
                         "evidence_highlights": evidence_highlights,
                     }));
-                    let payload = serde_json::json!({
-                        "schema_version": 1,
-                        "generated_unix_ms": suite_summary_generated_unix_ms,
-                        "kind": "suite_summary",
-                        "status": "failed",
-                        "suite": suite_summary_suite,
-                        "out_dir": resolved_out_dir.display().to_string(),
-                        "warmup_frames": warmup_frames,
-                        "reuse_launch": reuse_launch,
-                        "wants_screenshots": suite_wants_screenshots,
-                        "stage_counts": suite_stage_counts,
-                        "reason_code_counts": suite_reason_code_counts,
-                        "evidence_aggregate": suite_evidence_agg.as_json(),
-                        "rows": suite_rows,
-                        "failure_kind": "lint_failed",
-                    });
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    let _ = write_json_value(&suite_summary_path, &payload);
-                    write_regression_summary_for_suite(
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &regression_summary_path,
-                        suite_summary_suite.as_deref(),
-                        suite_summary_generated_unix_ms,
-                        &payload,
+                    emit_suite_summary(
+                        &SuiteSummaryEmitInput {
+                            workspace_root: &workspace_root,
+                            resolved_out_dir: &resolved_out_dir,
+                            suite_summary_path: &suite_summary_path,
+                            regression_summary_path: &regression_summary_path,
+                            suite_name: suite_summary_suite.as_deref(),
+                            generated_unix_ms: suite_summary_generated_unix_ms,
+                            warmup_frames,
+                            reuse_launch,
+                            wants_screenshots: suite_wants_screenshots,
+                            stage_counts: &suite_stage_counts,
+                            reason_code_counts: &suite_reason_code_counts,
+                            rows: &suite_rows,
+                            evidence_aggregate: &suite_evidence_agg,
+                        },
+                        "failed",
+                        None,
+                        Some("lint_failed"),
                     );
                     std::process::exit(1);
                 }
@@ -2640,29 +2672,25 @@ hint: list suites via `fretboard diag list suites`"
     if !keep_open {
         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
     }
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": suite_summary_generated_unix_ms,
-        "kind": "suite_summary",
-        "status": "passed",
-        "suite": suite_summary_suite,
-        "out_dir": resolved_out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "reuse_launch": reuse_launch,
-        "wants_screenshots": suite_wants_screenshots,
-        "stage_counts": suite_stage_counts,
-        "reason_code_counts": suite_reason_code_counts,
-        "evidence_aggregate": suite_evidence_agg.as_json(),
-        "rows": suite_rows,
-    });
-    let _ = write_json_value(&suite_summary_path, &payload);
-    write_regression_summary_for_suite(
-        &workspace_root,
-        &resolved_out_dir,
-        &regression_summary_path,
-        suite_summary_suite.as_deref(),
-        suite_summary_generated_unix_ms,
-        &payload,
+    emit_suite_summary(
+        &SuiteSummaryEmitInput {
+            workspace_root: &workspace_root,
+            resolved_out_dir: &resolved_out_dir,
+            suite_summary_path: &suite_summary_path,
+            regression_summary_path: &regression_summary_path,
+            suite_name: suite_summary_suite.as_deref(),
+            generated_unix_ms: suite_summary_generated_unix_ms,
+            warmup_frames,
+            reuse_launch,
+            wants_screenshots: suite_wants_screenshots,
+            stage_counts: &suite_stage_counts,
+            reason_code_counts: &suite_reason_code_counts,
+            rows: &suite_rows,
+            evidence_aggregate: &suite_evidence_agg,
+        },
+        "passed",
+        None,
+        None,
     );
     if !stats_json {
         println!("SUITE-SUMMARY {}", suite_summary_path.display());
