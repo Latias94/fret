@@ -80,13 +80,15 @@ impl View for MarkdownAndCodeBasicsView {
         // Keep the "Copy" affordance visible in scripts/screenshots without requiring hover.
         components.code_block_ui.copy_button_on_hover = false;
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Markdown and code basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Markdown rendering + fenced code blocks (copy button, wrap mode, max height).",
-            )
-            .into_element(cx),
-        ])
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Markdown and code basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "Markdown rendering + fenced code blocks (copy button, wrap mode, max height).",
+                ),
+            );
+        })
         .into_element(cx);
 
         let wrap_toggle = shadcn::ToggleGroup::single(self.wrap.clone())
@@ -102,42 +104,37 @@ impl View for MarkdownAndCodeBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_WRAP);
 
-        let cap_switch = shadcn::Switch::new(self.cap_height.clone())
-            .test_id(TEST_ID_CAP_HEIGHT)
-            .into_element(cx);
+        let cap_switch = shadcn::Switch::new(self.cap_height.clone()).test_id(TEST_ID_CAP_HEIGHT);
 
         let reset = shadcn::Button::new("Reset sample")
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
             .icon(IconId::new_static("ui.reset"))
             .action(act::Reset)
-            .into_element(cx)
             .test_id(TEST_ID_RESET);
 
         let controls = ui::v_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Code wrap:").into_element(cx),
-                        ui::h_flex(|_cx| [wrap_toggle])
-                            .w_full()
-                            .justify_center()
-                            .into_element(cx),
+                    ui::children![
+                        cx;
+                        shadcn::Label::new("Code wrap:"),
+                        ui::h_flex(|_cx| [wrap_toggle]).w_full().justify_center(),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Cap code block height:").into_element(cx),
+                    ui::children![
+                        cx;
+                        shadcn::Label::new("Cap code block height:"),
                         cap_switch,
                         reset,
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
             ]
         })
         .gap(Space::N2)
@@ -147,7 +144,6 @@ impl View for MarkdownAndCodeBasicsView {
             .a11y_label("Markdown source")
             .placeholder("Markdown…")
             .min_height(Px(420.0))
-            .into_element(cx)
             .test_id(TEST_ID_SOURCE);
 
         let preview_content =
@@ -161,32 +157,40 @@ impl View for MarkdownAndCodeBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_PREVIEW_SCROLL);
 
-        let left = ui::v_flex(|_cx| [editor])
+        let left = ui::v_flex(|cx| ui::children![cx; editor])
             .gap(Space::N2)
             .flex_1()
             .min_w_0()
             .into_element(cx);
-        let right = ui::v_flex(|_cx| [preview_scroll])
+        let right = ui::v_flex(|cx| ui::children![cx; preview_scroll])
             .gap(Space::N2)
             .flex_1()
             .min_w_0()
             .into_element(cx);
 
-        let panels = ui::h_flex(|_cx| [left, right])
+        let panels = ui::h_flex(|cx| ui::children![cx; left, right])
             .gap(Space::N4)
             .items_stretch()
             .w_full()
             .into_element(cx);
 
-        let body = ui::v_flex(|cx| [controls, shadcn::Separator::new().into_element(cx), panels])
+        let body = ui::v_flex(|cx| ui::children![cx; controls, shadcn::Separator::new(), panels])
             .gap(Space::N3)
             .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(980.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(980.0))
+        .into_element(cx);
 
         cx.on_action_notify_model_set::<act::Reset, String>(
             self.source.clone(),

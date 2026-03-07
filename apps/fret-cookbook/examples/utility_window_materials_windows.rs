@@ -167,10 +167,10 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         "Reports effective/clamped window style via diagnostics."
     };
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new(title).into_element(cx),
-        shadcn::CardDescription::new(description).into_element(cx),
-    ])
+    let header = shadcn::CardHeader::build(|cx, out| {
+        out.push_ui(cx, shadcn::CardTitle::new(title));
+        out.push_ui(cx, shadcn::CardDescription::new(description));
+    })
     .into_element(cx);
 
     let content = ui::v_flex(|cx| {
@@ -200,67 +200,63 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             .text_color(ColorRef::Color(color_muted_foreground))
             .into_element(cx);
 
-        let buttons = ui::h_flex(|cx| {
-            if is_windows {
-                vec![
-                    shadcn::Button::new("None")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_TO_NONE))
-                        .test_id(TEST_ID_TO_NONE)
-                        .into_element(cx),
-                    shadcn::Button::new("Mica")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_TO_MICA))
-                        .test_id(TEST_ID_TO_MICA)
-                        .into_element(cx),
-                    shadcn::Button::new("Acrylic")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_TO_ACRYLIC))
-                        .test_id(TEST_ID_TO_ACRYLIC)
-                        .into_element(cx),
-                    shadcn::Button::new("Quit")
-                        .variant(shadcn::ButtonVariant::Destructive)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_QUIT))
-                        .into_element(cx),
-                ]
-            } else if is_macos {
-                vec![
-                    shadcn::Button::new("None")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_TO_NONE))
-                        .test_id(TEST_ID_TO_NONE)
-                        .into_element(cx),
-                    shadcn::Button::new("Vibrancy")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_TO_VIBRANCY))
-                        .test_id(TEST_ID_TO_VIBRANCY)
-                        .into_element(cx),
-                    shadcn::Button::new("Quit")
-                        .variant(shadcn::ButtonVariant::Destructive)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_QUIT))
-                        .into_element(cx),
-                ]
-            } else {
-                vec![
-                    shadcn::Button::new("Quit")
-                        .variant(shadcn::ButtonVariant::Destructive)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CommandId::from(CMD_QUIT))
-                        .into_element(cx),
-                ]
-            }
-        })
-        .gap(Space::N2)
-        .into_element(cx);
+        let buttons_children = if is_windows {
+            ui::children![
+                cx;
+                shadcn::Button::new("None")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .test_id(TEST_ID_TO_NONE),
+                shadcn::Button::new("Mica")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_TO_MICA))
+                    .test_id(TEST_ID_TO_MICA),
+                shadcn::Button::new("Acrylic")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_TO_ACRYLIC))
+                    .test_id(TEST_ID_TO_ACRYLIC),
+                shadcn::Button::new("Quit")
+                    .variant(shadcn::ButtonVariant::Destructive)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_QUIT)),
+            ]
+        } else if is_macos {
+            ui::children![
+                cx;
+                shadcn::Button::new("None")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .test_id(TEST_ID_TO_NONE),
+                shadcn::Button::new("Vibrancy")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_TO_VIBRANCY))
+                    .test_id(TEST_ID_TO_VIBRANCY),
+                shadcn::Button::new("Quit")
+                    .variant(shadcn::ButtonVariant::Destructive)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_QUIT)),
+            ]
+        } else {
+            ui::children![
+                cx;
+                shadcn::Button::new("Quit")
+                    .variant(shadcn::ButtonVariant::Destructive)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CommandId::from(CMD_QUIT)),
+            ]
+        };
 
-        [
+        let buttons = ui::h_flex(|_cx| buttons_children)
+            .gap(Space::N2)
+            .into_element(cx);
+
+        ui::children![
+            cx;
             platform_line,
             style_line,
             caps_line,
@@ -272,10 +268,15 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     .gap(Space::N3)
     .into_element(cx);
 
-    let surface = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let surface = shadcn::Card::build(|cx, out| {
+        out.push(header);
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(content);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .max_w(Px(760.0))
@@ -285,11 +286,13 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     // backdrop material is enabled, switch to a transparent root so the OS material can show
     // through where not covered by UI (most content lives inside the centered Card).
     ui::container(|cx| {
-        [ui::v_flex(|_cx| [surface])
-            .items_center()
-            .justify_center()
-            .size_full()
-            .into_element(cx)]
+        ui::children![
+            cx;
+            ui::v_flex(|cx| ui::children![cx; surface])
+                .items_center()
+                .justify_center()
+                .size_full(),
+        ]
     })
     .bg(ColorRef::Color(root_background))
     .p(Space::N6)

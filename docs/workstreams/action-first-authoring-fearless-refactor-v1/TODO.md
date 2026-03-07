@@ -234,14 +234,16 @@ ID format:
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
       - `apps/fret-cookbook/examples/customv1_basics.rs`
-    - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
-    - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
+      - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
+      - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
       - `apps/fret-cookbook/examples/router_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+      - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
+      - `apps/fret-cookbook/examples/drop_shadow_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
     - Inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
