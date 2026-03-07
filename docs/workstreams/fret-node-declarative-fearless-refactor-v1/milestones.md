@@ -471,6 +471,9 @@ real editors.
 - Searcher row activation and pending-drag arming now also route through the private
   `canvas/widget/searcher_activation.rs` seam, so pointer hit resolution, active-row sync, and
   pointer-up activation/dismiss fallback no longer stay repeated inline in `searcher.rs`.
+- Searcher keyboard navigation and query mutation now also route through the private
+  `canvas/widget/searcher_input.rs` seam, so active-row stepping, Enter activation handoff, and
+  query-edit rebuild triggers no longer stay embedded in `searcher.rs`.
 
 ### Deliverables
 
@@ -510,6 +513,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

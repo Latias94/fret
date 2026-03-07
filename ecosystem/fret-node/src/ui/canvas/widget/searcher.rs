@@ -2,6 +2,7 @@ use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
 use super::searcher_activation::searcher_pointer_hit;
+use super::searcher_input::SearcherStepDirection;
 use super::searcher_ui::{finish_searcher_event, invalidate_searcher_paint};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
@@ -25,82 +26,28 @@ pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if matches!(
         key,
         fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter
-    ) && canvas.interaction.searcher.is_some()
+    ) && canvas.try_activate_active_searcher_row(cx)
     {
-        let row_ix = canvas
-            .interaction
-            .searcher
-            .as_ref()
-            .map(|s| s.active_row)
-            .unwrap_or(0);
-        if canvas.try_activate_searcher_row(cx, row_ix) {
-            return finish_searcher_event(cx);
-        }
+        return finish_searcher_event(cx);
     }
 
-    let Some(searcher) = canvas.interaction.searcher.as_mut() else {
+    if canvas.interaction.searcher.is_none() {
         return false;
-    };
+    }
 
     match key {
         fret_core::KeyCode::ArrowDown => {
-            let n = searcher.rows.len();
-            if n > 0 {
-                let mut ix = (searcher.active_row + 1) % n;
-                for _ in 0..n {
-                    if searcher
-                        .rows
-                        .get(ix)
-                        .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
-                    {
-                        searcher.active_row = ix;
-                        break;
-                    }
-                    ix = (ix + 1) % n;
-                }
-                NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-            }
+            let _ = canvas.step_searcher_active_row(SearcherStepDirection::Forward);
             return finish_searcher_event(cx);
         }
         fret_core::KeyCode::ArrowUp => {
-            let n = searcher.rows.len();
-            if n > 0 {
-                let mut ix = if searcher.active_row == 0 {
-                    n - 1
-                } else {
-                    searcher.active_row - 1
-                };
-                for _ in 0..n {
-                    if searcher
-                        .rows
-                        .get(ix)
-                        .is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row)
-                    {
-                        searcher.active_row = ix;
-                        break;
-                    }
-                    ix = if ix == 0 { n - 1 } else { ix - 1 };
-                }
-                NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-            }
+            let _ = canvas.step_searcher_active_row(SearcherStepDirection::Backward);
             return finish_searcher_event(cx);
-        }
-        fret_core::KeyCode::Backspace => {
-            if !searcher.query.is_empty() {
-                searcher.query.pop();
-                NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
-                return finish_searcher_event(cx);
-            }
         }
         _ => {}
     }
 
-    if !modifiers.ctrl
-        && !modifiers.meta
-        && let Some(ch) = fret_core::keycode_to_ascii_lowercase(key)
-    {
-        searcher.query.push(ch);
-        NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
+    if canvas.update_searcher_query_from_key(key, modifiers) {
         return finish_searcher_event(cx);
     }
 
