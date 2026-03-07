@@ -23,9 +23,11 @@ Use controlled mode when:
 
 If you are building a typical editor UI with a single graph instance, prefer the
 **binding-first declarative** path: construct one store-backed `NodeGraphSurfaceBinding`, render
-`node_graph_surface(...)`, and use the binding's `NodeGraphController` for imperative viewport or
-query work. This keeps undo/redo, lookup caches, and editor interactions in the store/runtime
-while teaching the same declarative surface that app code should copy.
+`node_graph_surface(...)`, use the binding's common helpers for viewport/history/controlled-sync
+work, and drop to `binding.controller()` only for advanced helpers that are not yet surfaced on the
+binding or for retained/compat composition. This keeps undo/redo, lookup caches, and editor
+interactions in the store/runtime while teaching the same declarative surface that app code should
+copy.
 
 ## Building blocks (headless-safe)
 
@@ -46,8 +48,11 @@ while teaching the same declarative surface that app code should copy.
 
 - Create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
-- Route app-facing viewport/query/edit operations through `binding.controller()`.
-- Use `binding.undo(...)` / `binding.redo(...)` when app code wants history actions without manually re-syncing graph/view mirrors.
+- Prefer the binding itself for common app-facing helpers:
+  `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport`, `fit_view_nodes`,
+  `replace_graph`, `replace_view_state`, `set_selection`, `undo`, and `redo`.
+- Treat `binding.controller()` as the advanced escape hatch for helpers that are not yet surfaced on
+  the binding or for retained/compat wiring.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
   commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.
@@ -104,6 +109,19 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 - Viewport/selection is modeled separately:
   - app-owned view state: `io::NodeGraphViewState`
   - change events: `runtime::events::ViewChange` via `NodeGraphViewCallbacks` (`on_view_change` / `on_viewport_change`)
+
+### Current replace policy
+
+- Today the canonical external-to-store sync path is **full replace first**:
+  `NodeGraphSurfaceBinding::replace_graph(...)` or
+  `NodeGraphController::replace_graph_and_sync_models(...)`.
+- Treat that operation as a full reset of the authoritative graph document:
+  - it rebuilds lookups,
+  - it sanitizes selection against the new graph,
+  - it re-syncs the external graph/view mirrors,
+  - it does **not** emit incremental `NodeChange` / `EdgeChange` diffs.
+- Diff-first replace helpers remain intentionally deferred until we have a concrete editor-grade
+  workload that proves full replace is not sufficient.
 
 ## Runnable example
 

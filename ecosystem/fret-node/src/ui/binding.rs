@@ -2,7 +2,7 @@ use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-use crate::core::Graph;
+use crate::core::{CanvasPoint, EdgeId, Graph, GroupId, NodeId};
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
 
@@ -68,6 +68,7 @@ impl NodeGraphSurfaceBinding {
         self.view_state.clone()
     }
 
+    /// Advanced escape hatch for controller-only helpers not yet surfaced on the binding.
     pub fn controller(&self) -> NodeGraphController {
         self.controller.clone()
     }
@@ -78,6 +79,21 @@ impl NodeGraphSurfaceBinding {
 
     pub fn surface_props(&self) -> NodeGraphSurfaceProps {
         NodeGraphSurfaceProps::new(self.clone())
+    }
+
+    /// Reads the current viewport from the authoritative store-backed controller.
+    pub fn viewport<H: UiHost>(&self, host: &H) -> (CanvasPoint, f32) {
+        self.controller.viewport(host)
+    }
+
+    /// Clones the current graph snapshot from the authoritative store.
+    pub fn graph_snapshot<H: UiHost>(&self, host: &H) -> Option<Graph> {
+        self.controller.graph_snapshot(host)
+    }
+
+    /// Clones the current view-state snapshot from the authoritative store.
+    pub fn view_state_snapshot<H: UiHost>(&self, host: &H) -> Option<NodeGraphViewState> {
+        self.controller.view_state_snapshot(host)
     }
 
     /// Observes the external graph/view mirrors that the declarative surface keeps in sync.
@@ -96,6 +112,53 @@ impl NodeGraphSurfaceBinding {
     pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
         self.controller
             .sync_models_from_store_action_host(host, &self.graph, &self.view_state)
+    }
+
+    /// Replaces the authoritative graph and keeps the external graph/view mirrors in sync.
+    pub fn replace_graph<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: Graph,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .replace_graph_and_sync_models(host, &self.graph, &self.view_state, graph)
+    }
+
+    /// Replaces the authoritative view state and keeps the external view model in sync.
+    pub fn replace_view_state<H: UiHost>(
+        &self,
+        host: &mut H,
+        view_state: NodeGraphViewState,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller
+            .replace_view_state_and_sync_model(host, &self.view_state, view_state)
+    }
+
+    /// Replaces the authoritative selection and keeps the external view model in sync.
+    pub fn set_selection<H: UiHost>(
+        &self,
+        host: &mut H,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.controller.set_selection_and_sync_view_model(
+            host,
+            &self.view_state,
+            nodes,
+            edges,
+            groups,
+        )
+    }
+
+    /// Applies a viewport change through the bound controller.
+    pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) -> bool {
+        self.controller.set_viewport(host, pan, zoom)
+    }
+
+    /// Fits the viewport to the given node ids through the bound controller.
+    pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
+        self.controller.fit_view_nodes(host, nodes)
     }
 
     /// Returns whether the bound store currently has undo history.

@@ -215,7 +215,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     dispatches through store commit callbacks, and controller-backed pending-selection / marquee
     commits prove they dispatch through store selection callbacks rather than only syncing local
     view models.
-- [ ] Define the policy for full replace vs diff-based replace in controlled mode.
+- [x] Define the policy for full replace vs diff-based replace in controlled mode.
+  - Landed policy: full replace is the current canonical external-to-store sync path; diff-first
+    helpers remain deferred until a concrete workload proves they are needed.
 - [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
       for editor-grade controlled integrations.
 
@@ -324,10 +326,13 @@ Execution companion: `design.md` (surface map + next worktree order).
 ## Open questions that must not get lost
 
 - [ ] Exact naming for the split state types.
-- [ ] Exact naming for the controller/instance facade.
+- [x] Exact naming for the controller/instance facade.
+  - Landed naming: `NodeGraphSurfaceBinding` is the instance-style app-facing bundle, while
+    `NodeGraphController` remains the imperative runtime facade / advanced escape hatch.
 - [ ] Whether `edit_queue` and `view_queue` remain public long-term or collapse behind the
       controller surface.
-- [ ] Whether controlled sync should expose diff-first helpers by default.
+- [ ] Whether diff-first controlled sync earns a public helper after the full-replace-first path
+      proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
 

@@ -50,7 +50,7 @@ However, the overall authoring story is still not fully converged:
 - the declarative surface is not yet the transaction-safe editor-grade path,
 - `NodeGraphViewState` currently mixes pure view state with interaction policy and runtime tuning,
 - runtime capabilities are spread across store, queues, lookups, commands, and helpers without one
-  obvious controller/instance facade,
+  obvious app-facing facade pair (`NodeGraphSurfaceBinding` + `NodeGraphController`),
 - some workstream content has become too implementation-local and no longer helps reviewers decide
   what must land next.
 
@@ -323,8 +323,8 @@ This layer should converge on:
 
 - `NodeGraphStore` as the transaction-aware state owner,
 - `NodeGraphLookups` as the canonical fast-query substrate,
-- a new thin **controller/instance facade** that exposes the ergonomic app-facing surface,
-- explicit controlled-mode helpers for full replace vs diff-driven replace.
+- the `NodeGraphSurfaceBinding` + `NodeGraphController` pair as the ergonomic app-facing facade,
+- explicit controlled-mode helpers, with full replace as today's canonical sync path and diff-driven replace deferred.
 
 Target state split:
 
@@ -402,11 +402,18 @@ For new editor surfaces, teach and copy this shape first:
 
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
-3. route app-facing viewport/query/edit operations through `binding.controller()`,
-4. use `binding.undo(...)` / `binding.redo(...)` for history actions that should keep graph/view mirrors in sync,
+3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
+   `view_state_snapshot`, `set_viewport`, `fit_view_nodes`, `replace_graph`,
+   `replace_view_state`, `set_selection`, `undo`, `redo`),
+4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
 This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
+
+For controlled sync, the current canonical posture is **full replace first**: use
+`binding.replace_graph(...)` (or the controller's sync helper) when external authority swaps the
+whole graph document, and treat diff-first replace helpers as a later optimization rather than the
+starting contract.
 
 ### Recommended target posture
 

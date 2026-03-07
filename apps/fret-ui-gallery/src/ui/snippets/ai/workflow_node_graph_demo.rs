@@ -13,7 +13,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_node::io::NodeGraphViewState;
     use fret_node::runtime::store::NodeGraphStore;
     use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphViewQueue};
-    use fret_node::ui::{NodeGraphCanvas, NodeGraphController, NodeGraphEditor};
+    use fret_node::ui::{
+        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
+    };
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -31,9 +33,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     #[derive(Default)]
     struct HarnessState {
-        graph: Option<Model<Graph>>,
-        view: Option<Model<NodeGraphViewState>>,
-        controller: Option<NodeGraphController>,
+        binding: Option<NodeGraphSurfaceBinding>,
         bounds: Option<Model<Option<fret_core::Rect>>>,
     }
 
@@ -272,20 +272,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     }
 
     let existing = cx.with_state(HarnessState::default, |st| {
-        match (
-            st.graph.clone(),
-            st.view.clone(),
-            st.controller.clone(),
-            st.bounds.clone(),
-        ) {
-            (Some(graph), Some(view), Some(controller), Some(bounds)) => {
-                Some((graph, view, controller, bounds))
-            }
+        match (st.binding.clone(), st.bounds.clone()) {
+            (Some(binding), Some(bounds)) => Some((binding, bounds)),
             _ => None,
         }
     });
 
-    let (graph, view, controller, bounds) = if let Some(existing) = existing {
+    let (binding, bounds) = if let Some(existing) = existing {
         existing
     } else {
         let graph_value = build_demo_graph(GraphId::from_u128(42));
@@ -297,16 +290,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             NodeGraphViewState::default(),
         ));
         let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
+        let binding = NodeGraphSurfaceBinding::from_models(graph, view, controller);
         let bounds = cx.app.models_mut().insert(None);
 
         cx.with_state(HarnessState::default, |st| {
-            st.graph = Some(graph.clone());
-            st.view = Some(view.clone());
-            st.controller = Some(controller.clone());
+            st.binding = Some(binding.clone());
             st.bounds = Some(bounds.clone());
         });
 
-        (graph, view, controller, bounds)
+        (binding, bounds)
     };
 
     let max_w = LayoutRefinement::default()
@@ -315,18 +307,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .min_w_0();
 
     let zoom_in: OnActivate = Arc::new({
-        let view = view.clone();
-        let controller = controller.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
         move |host, _cx, _reason| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = host
-                .models_mut()
-                .read(&view, |st| (st.pan, st.zoom))
-                .unwrap_or((CanvasPoint::default(), 1.0));
+            let (pan, zoom) = binding.viewport(host);
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -336,23 +324,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 (z * 1.10).min(4.0)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = controller.set_viewport(host, pan, zoom);
+            let _ = binding.set_viewport(host, pan, zoom);
         }
     });
 
     let zoom_out: OnActivate = Arc::new({
-        let view = view.clone();
-        let controller = controller.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
         move |host, _cx, _reason| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = host
-                .models_mut()
-                .read(&view, |st| (st.pan, st.zoom))
-                .unwrap_or((CanvasPoint::default(), 1.0));
+            let (pan, zoom) = binding.viewport(host);
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -362,26 +346,25 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 (z / 1.10).max(0.15)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = controller.set_viewport(host, pan, zoom);
+            let _ = binding.set_viewport(host, pan, zoom);
         }
     });
 
     let fit_view: OnActivate = Arc::new({
-        let graph = graph.clone();
-        let controller = controller.clone();
+        let binding = binding.clone();
         move |host, _cx, _reason| {
-            let nodes = host
-                .models_mut()
-                .read(&graph, |g| g.nodes.keys().copied().collect::<Vec<_>>())
+            let nodes = binding
+                .graph_snapshot(host)
+                .map(|graph| graph.nodes.keys().copied().collect::<Vec<_>>())
                 .unwrap_or_default();
-            let _ = controller.fit_view_nodes(host, nodes);
+            let _ = binding.fit_view_nodes(host, nodes);
         }
     });
 
     let reset_view: OnActivate = Arc::new({
-        let controller = controller.clone();
+        let binding = binding.clone();
         move |host, _cx, _reason| {
-            let _ = controller.set_viewport(host, CanvasPoint::default(), 1.0);
+            let _ = binding.set_viewport(host, CanvasPoint::default(), 1.0);
         }
     });
 
@@ -459,9 +442,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     });
 
     let stage = cx.container(stage_props, move |cx| {
-        let graph = graph.clone();
-        let view = view.clone();
-        let controller = controller.clone();
+        let binding = binding.clone();
         let bounds = bounds.clone();
 
         let mut layout = LayoutStyle::default();
@@ -472,8 +453,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
-            let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                .with_controller(controller.clone())
+            let canvas = NodeGraphCanvas::new(binding.graph_model(), binding.view_state_model())
+                .with_controller(binding.controller())
                 .with_fit_view_on_mount();
             let canvas_node = ui.create_node_retained(canvas);
             let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));

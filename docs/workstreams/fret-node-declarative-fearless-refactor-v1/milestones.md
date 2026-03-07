@@ -176,7 +176,7 @@ points rather than direct graph mutation.
     `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
   - Retained glue now starts consuming controller-owned viewport transport instead of teaching raw
     queue mutation first: `NodeGraphCanvas::with_controller`, `NodeGraphMiniMapOverlay::with_controller`,
-    and the gallery workflow snippet controls now route viewport actions through the controller.
+    and the gallery workflow snippet controls now route common viewport actions through the binding-first facade.
   - Those helpers now have a real store fallback when no `view_queue` exists, and still route
     through queued `SetViewport` requests when a queue is present.
   - The controller now also owns an optional edit transport and queue-aware submission helpers
@@ -264,17 +264,23 @@ points rather than direct graph mutation.
   - `NodeGraphController` now also owns undo/redo sync helpers for the default store-backed
     app-facing surface, and focused declarative coverage now proves node-drag commit history can be
     undone/redone while graph/view mirrors stay in sync.
+  - `NodeGraphSurfaceBinding` now acts as the instance-style app-facing facade for common queries,
+    viewport actions, and controlled-sync helpers (`replace_graph`, `replace_view_state`,
+    `set_selection`, `undo`, `redo`), while `binding.controller()` stays available as the advanced
+    escape hatch.
+  - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
+    document is treated as a reset + re-sync operation, while diff-first replace helpers remain a
+    deferred follow-up rather than the default contract.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while
     `install_callbacks(...)` / `NodeGraphCanvas::with_callbacks(...)` keep the composite seam.
-- Remaining M3 scope is still substantial: we still need a broader controller surface, more
-  declarative commit coverage, and explicit undo/redo / controlled-mode gates.
+- Remaining M3 scope is still substantial: we still need broader advanced-controller coverage,
+  more declarative commit coverage, and additional controlled-mode / parity gates.
 
 ### Deliverables
 
-- A thin `NodeGraphController` / `NodeGraphInstance` style facade (exact naming can change) that
-  unifies:
+- The `NodeGraphSurfaceBinding` + `NodeGraphController` pair that together provide an instance-style facade and unify:
   - viewport manipulation,
   - common graph queries,
   - canonical update/edit entry points,

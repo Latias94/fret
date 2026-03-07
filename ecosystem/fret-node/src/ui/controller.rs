@@ -304,6 +304,32 @@ impl NodeGraphController {
         self.replace_graph_in_models(host.models_mut(), graph)
     }
 
+    pub fn replace_graph_and_sync_models<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph_model: &Model<Graph>,
+        view_state_model: &Model<NodeGraphViewState>,
+        graph: Graph,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_graph_in_models(host.models_mut(), graph)?;
+        let _ =
+            self.sync_models_from_store_in_models(host.models_mut(), graph_model, view_state_model);
+        Ok(())
+    }
+
+    pub fn replace_graph_and_sync_models_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph_model: &Model<Graph>,
+        view_state_model: &Model<NodeGraphViewState>,
+        graph: Graph,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.replace_graph_in_models(host.models_mut(), graph)?;
+        let _ =
+            self.sync_models_from_store_in_models(host.models_mut(), graph_model, view_state_model);
+        Ok(())
+    }
+
     pub fn replace_view_state<H: UiHost>(
         &self,
         host: &mut H,
@@ -1263,6 +1289,69 @@ mod tests {
             .expect("store node position");
         assert_eq!(graph_pos, to);
         assert_eq!(store_pos, to);
+    }
+
+    #[test]
+    fn controller_replace_graph_and_sync_models_action_host_updates_bound_models() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, node_b) = make_test_graph_two_nodes();
+        let mut initial_view = NodeGraphViewState::default();
+        initial_view.selected_nodes = vec![node_b];
+        let graph = host.models.insert(graph_value.clone());
+        let view = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view));
+        let controller = NodeGraphController::new(store.clone());
+
+        let mut replacement = Graph::new(
+            graph
+                .read_ref(&host, |value| value.graph_id)
+                .ok()
+                .expect("graph id"),
+        );
+        replacement.nodes.insert(
+            node_a,
+            graph
+                .read_ref(&host, |value| value.nodes[&node_a].clone())
+                .ok()
+                .expect("node a"),
+        );
+
+        controller
+            .replace_graph_and_sync_models_action_host(
+                &mut host,
+                &graph,
+                &view,
+                replacement.clone(),
+            )
+            .expect("replace graph through controller");
+
+        let model_nodes = graph
+            .read_ref(&host, |value| {
+                value.nodes.keys().copied().collect::<Vec<_>>()
+            })
+            .ok()
+            .expect("graph model nodes");
+        let store_nodes = store
+            .read_ref(&host, |value| {
+                value.graph().nodes.keys().copied().collect::<Vec<_>>()
+            })
+            .ok()
+            .expect("store nodes");
+        let model_selection = view
+            .read_ref(&host, |state| state.selected_nodes.clone())
+            .ok()
+            .expect("view selection");
+        let store_selection = store
+            .read_ref(&host, |value| value.view_state().selected_nodes.clone())
+            .ok()
+            .expect("store selection");
+
+        assert_eq!(model_nodes, vec![node_a]);
+        assert_eq!(store_nodes, vec![node_a]);
+        assert!(model_selection.is_empty());
+        assert!(store_selection.is_empty());
     }
 
     #[test]
