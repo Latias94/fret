@@ -233,16 +233,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
                         if self.commit_ops(cx.app, cx.window, Some("Insert Reroute"), ops) {
-                            if let Some(node_id) = node_id {
-                                self.update_view_state(cx.app, |s| {
-                                    s.selected_edges.clear();
-                                    s.selected_groups.clear();
-                                    s.selected_nodes.clear();
-                                    s.selected_nodes.push(node_id);
-                                    s.draw_order.retain(|id| *id != node_id);
-                                    s.draw_order.push(node_id);
-                                });
-                            }
+                            self.select_inserted_node(cx.app, node_id);
                         }
                     }
                     Some(Err(diags)) => {

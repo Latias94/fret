@@ -11,11 +11,11 @@ pub(super) use ui_dnd::{
 
 pub(super) use crate::REROUTE_KIND;
 pub(super) use crate::core::{CanvasPoint, EdgeId};
-pub(super) use crate::ops::GraphOp;
 pub(super) use crate::rules::ConnectDecision;
 pub(super) use crate::ui::canvas::state::{InsertNodeDragPreview, ViewSnapshot};
 pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
 pub(super) use crate::ui::canvas::widget::{
     HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    insert_candidate_canvas_point,
 };

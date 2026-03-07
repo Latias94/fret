@@ -32,30 +32,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-                let outcome = if candidate.kind.0 == REROUTE_KIND {
-                    Some(Ok(Self::build_reroute_create_ops(*at)))
-                } else {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            presenter.plan_create_node(graph, &candidate, *at)
-                        })
-                        .ok()
-                };
+                let outcome = self.plan_canvas_insert_candidate_ops(cx.app, &candidate, *at);
                 match outcome {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
                         if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                            if let Some(node_id) = node_id {
-                                self.update_view_state(cx.app, |s| {
-                                    s.selected_edges.clear();
-                                    s.selected_groups.clear();
-                                    s.selected_nodes.clear();
-                                    s.selected_nodes.push(node_id);
-                                    s.draw_order.retain(|id| *id != node_id);
-                                    s.draw_order.push(node_id);
-                                });
-                            }
+                            self.select_inserted_node(cx.app, node_id);
                         }
                     }
                     Some(Err(msg)) => {
@@ -82,11 +64,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
-                            let insert_ops = if candidate.kind.0 == REROUTE_KIND {
-                                Ok(Self::build_reroute_create_ops(*at))
-                            } else {
-                                presenter.plan_create_node(graph, &candidate, *at)
-                            };
+                            let insert_ops = Self::plan_insert_candidate_ops_with_graph(
+                                presenter, graph, &candidate, *at,
+                            );
                             let insert_ops = match insert_ops {
                                 Ok(ops) => ops,
                                 Err(msg) => {
@@ -113,16 +93,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Outcome::Apply(ops, created_node, continue_from) => {
                         let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
                         if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                            if let Some(node_id) = created_node {
-                                self.update_view_state(cx.app, |s| {
-                                    s.selected_edges.clear();
-                                    s.selected_groups.clear();
-                                    s.selected_nodes.clear();
-                                    s.selected_nodes.push(node_id);
-                                    s.draw_order.retain(|id| *id != node_id);
-                                    s.draw_order.push(node_id);
-                                });
-                            }
+                            self.select_inserted_node(cx.app, created_node);
                             if let Some((sev, msg)) = toast {
                                 self.show_toast(cx.app, cx.window, sev, msg);
                             }
@@ -172,16 +143,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
                         self.apply_ops(cx.app, cx.window, ops);
-                        if let Some(node_id) = node_id {
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_groups.clear();
-                                s.selected_nodes.clear();
-                                s.selected_nodes.push(node_id);
-                                s.draw_order.retain(|id| *id != node_id);
-                                s.draw_order.push(node_id);
-                            });
-                        }
+                        self.select_inserted_node(cx.app, node_id);
                     }
                     Some(Err(diags)) => {
                         let (sev, msg) =
@@ -279,16 +241,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let node_id = Self::first_added_node_id(&ops);
                         self.apply_ops(cx.app, cx.window, ops);
                         self.interaction.suspended_wire_drag = None;
-                        if let Some(node_id) = node_id {
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_groups.clear();
-                                s.selected_nodes.clear();
-                                s.selected_nodes.push(node_id);
-                                s.draw_order.retain(|id| *id != node_id);
-                                s.draw_order.push(node_id);
-                            });
-                        }
+                        self.select_inserted_node(cx.app, node_id);
                     }
                     Outcome::Reject(sev, msg) => {
                         self.show_toast(cx.app, cx.window, sev, msg);

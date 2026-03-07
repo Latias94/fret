@@ -30,11 +30,7 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let mut applied = false;
 
     if let Some(edge_id) = edge_hit {
-        let at = if candidate.kind.0 == REROUTE_KIND {
-            canvas.reroute_pos_for_invoked_at(pos)
-        } else {
-            at
-        };
+        let at = insert_candidate_canvas_point(canvas, &candidate, pos);
         let planned = canvas
             .graph
             .read_ref(cx.app, |graph| {
@@ -51,15 +47,8 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
         if let Some(Ok(ops)) = planned {
             let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
             applied = canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops);
-            if applied && let Some(node_id) = node_id {
-                canvas.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_groups.clear();
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node_id);
-                    s.draw_order.retain(|id| *id != node_id);
-                    s.draw_order.push(node_id);
-                });
+            if applied {
+                canvas.select_inserted_node(cx.app, node_id);
             }
         } else if let Some(Err(diags)) = planned {
             if let Some((sev, msg)) = NodeGraphCanvasWith::<M>::toast_from_diagnostics(&diags) {
@@ -69,32 +58,14 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     if !applied {
-        let ops: Option<Vec<GraphOp>> = if candidate.kind.0 == REROUTE_KIND {
-            Some(NodeGraphCanvasWith::<M>::build_reroute_create_ops(at))
-        } else {
-            let presenter = &mut *canvas.presenter;
-            canvas
-                .graph
-                .read_ref(cx.app, |graph| {
-                    presenter.plan_create_node(graph, &candidate, at)
-                })
-                .ok()
-                .and_then(|r| r.ok())
-        };
+        let ops = canvas
+            .plan_canvas_insert_candidate_ops(cx.app, &candidate, at)
+            .and_then(|result| result.ok());
 
         if let Some(ops) = ops {
             let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
             if canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                if let Some(node_id) = node_id {
-                    canvas.update_view_state(cx.app, |s| {
-                        s.selected_edges.clear();
-                        s.selected_groups.clear();
-                        s.selected_nodes.clear();
-                        s.selected_nodes.push(node_id);
-                        s.draw_order.retain(|id| *id != node_id);
-                        s.draw_order.push(node_id);
-                    });
-                }
+                canvas.select_inserted_node(cx.app, node_id);
             }
         } else {
             canvas.show_toast(

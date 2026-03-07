@@ -16,14 +16,7 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
     canvas.record_recent_kind(&candidate.kind);
 
     let outcome = {
-        let at = if candidate.kind.0 == REROUTE_KIND {
-            canvas.reroute_pos_for_invoked_at(invoked_at)
-        } else {
-            CanvasPoint {
-                x: invoked_at.x.0,
-                y: invoked_at.y.0,
-            }
-        };
+        let at = insert_candidate_canvas_point(canvas, &candidate, invoked_at);
 
         let presenter = &mut *canvas.presenter;
         canvas
@@ -53,21 +46,11 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
 
     match outcome {
         Outcome::Apply(ops) => {
-            let select_node = candidate.kind.0 == REROUTE_KIND;
-            let node_id = select_node
+            let node_id = is_reroute_insert_candidate(&candidate)
                 .then(|| NodeGraphCanvasWith::<M>::first_added_node_id(&ops))
                 .flatten();
             canvas.apply_ops(cx.app, cx.window, ops);
-            if let Some(node_id) = node_id {
-                canvas.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_groups.clear();
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node_id);
-                    s.draw_order.retain(|id| *id != node_id);
-                    s.draw_order.push(node_id);
-                });
-            }
+            canvas.select_inserted_node(cx.app, node_id);
         }
         Outcome::Reject(sev, msg) => canvas.show_toast(cx.app, cx.window, sev, msg),
         Outcome::Ignore => {}

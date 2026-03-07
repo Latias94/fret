@@ -347,6 +347,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/insert_candidates.rs` seam, so background / connection / edge pickers share the
     same `Reroute` prepend rule and edge-insert menus reuse one candidate-to-menu-item mapping
     instead of rebuilding those lists in each opener.
+  - Progress: insert-node execution policy now routes through the private
+    `canvas/widget/insert_execution.rs` seam, so background menus, connection menus, drag-drop, and
+    reroute-focused commands reuse one `Reroute` create-op path plus one inserted-node selection
+    reducer instead of scattering those execution details across multiple widget entrypoints.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
