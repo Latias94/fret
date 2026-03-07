@@ -279,6 +279,10 @@ points rather than direct graph mutation.
     and `NodeGraphController::replace_document_and_sync_models(...)` replace graph + view-state,
     clear undo/redo history, and re-sync external mirrors in one step; the legacy demo no longer
     resets the store by calling `NodeGraphStore` directly.
+  - Declarative surface now tracks the authoritative graph/selection boundary: graph-document
+    replacement clears local pan / node-drag / marquee / pending-selection / hover / portal
+    transient state, while selection-only authoritative changes clear selection-scoped previews
+    without flushing pan/hover caches; focused tests lock this real editor-flow parity gate.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while

@@ -57,6 +57,12 @@ copy.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
   pending click-selection preview, hover targets, and live drag arming/preview are not persisted
   into `NodeGraphViewState` until commit/cancel time.
+- When authoritative graph state changes externally, declarative surfaces now drop stale local
+  transient state on the next frame instead of letting preview/hover state leak across documents.
+  - Graph-document replacement clears pan, node-drag, marquee, pending-selection, hover, and
+    portal-anchor transient state.
+  - Selection-only authoritative changes clear selection-scoped preview state while preserving
+    pan/hover caches.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
   commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.
@@ -125,6 +131,8 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
   - it applies the provided view state against the new graph,
   - it clears undo/redo history,
   - it re-syncs the external graph/view mirrors,
+  - it clears declarative local transient sessions on the next frame so preview/hover state cannot
+    bleed across document swaps,
   - it does **not** emit incremental `NodeChange` / `EdgeChange` diffs.
 - `replace_graph(...)` remains available for graph-only controlled sync when the caller wants to
   preserve existing view/history policy explicitly.

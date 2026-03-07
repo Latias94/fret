@@ -305,6 +305,81 @@ fn stable_hash_u64(seed: u64, value: &impl std::hash::Hash) -> u64 {
     hasher.finish()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct AuthoritativeSurfaceBoundarySnapshot {
+    graph_id: crate::core::GraphId,
+    graph_rev: u64,
+    selected_nodes_hash: u64,
+    selected_edges_hash: u64,
+    selected_groups_hash: u64,
+}
+
+fn authoritative_surface_boundary_snapshot(
+    graph_id: crate::core::GraphId,
+    graph_rev: u64,
+    view_state: &NodeGraphViewState,
+) -> AuthoritativeSurfaceBoundarySnapshot {
+    AuthoritativeSurfaceBoundarySnapshot {
+        graph_id,
+        graph_rev,
+        selected_nodes_hash: stable_hash_u64(17, &view_state.selected_nodes),
+        selected_edges_hash: stable_hash_u64(19, &view_state.selected_edges),
+        selected_groups_hash: stable_hash_u64(23, &view_state.selected_groups),
+    }
+}
+
+fn sync_authoritative_surface_boundary_in_models(
+    models: &mut fret_runtime::ModelStore,
+    boundary: &Model<Option<AuthoritativeSurfaceBoundarySnapshot>>,
+    next: AuthoritativeSurfaceBoundarySnapshot,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    hovered_node: &Model<Option<crate::core::NodeId>>,
+    hover_anchor_store: &Model<HoverAnchorStore>,
+    portal_bounds_store: &Model<PortalBoundsStore>,
+) -> bool {
+    let previous = models.read(boundary, |state| *state).ok().flatten();
+    let _ = models.update(boundary, |state| *state = Some(next));
+
+    let Some(previous) = previous else {
+        return false;
+    };
+
+    let graph_changed = previous.graph_id != next.graph_id || previous.graph_rev != next.graph_rev;
+    let selection_changed = previous.selected_nodes_hash != next.selected_nodes_hash
+        || previous.selected_edges_hash != next.selected_edges_hash
+        || previous.selected_groups_hash != next.selected_groups_hash;
+
+    if !graph_changed && !selection_changed {
+        return false;
+    }
+
+    if graph_changed {
+        let _ = models.update(drag, |state| *state = None);
+    }
+
+    if graph_changed || selection_changed {
+        let _ = models.update(marquee, |state| *state = None);
+        let _ = models.update(node_drag, |state| *state = None);
+        let _ = models.update(pending_selection, |state| *state = None);
+    }
+
+    if graph_changed {
+        let _ = models.update(hovered_node, |state| *state = None);
+        let _ = models.update(hover_anchor_store, |state| {
+            *state = HoverAnchorStore::default()
+        });
+        let _ = models.update(portal_bounds_store, |state| {
+            state.nodes_canvas_bounds.clear();
+            state.pending_fit_to_portals = false;
+        });
+    }
+
+    true
+}
+
 #[derive(Debug, Clone)]
 struct GridPaintCacheState {
     /// Last known bounds for the surface (updated from pointer hooks, and optionally from
@@ -2220,9 +2295,38 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let hover_anchor_store: Model<HoverAnchorStore> =
         use_uncontrolled_model(cx, HoverAnchorStore::default);
 
+    // Tracks the authoritative graph/selection boundary seen by this surface instance.
+    let authoritative_surface_boundary: Model<Option<AuthoritativeSurfaceBoundarySnapshot>> =
+        use_uncontrolled_model(cx, || None);
+
     // Always observe the graph model so changes can invalidate the surface even when we don't need
     // to clone it on steady-state frames.
     cx.observe_model(&graph, Invalidation::Paint);
+
+    let view_value = cx
+        .get_model_cloned(&view_state, Invalidation::Layout)
+        .unwrap_or_default();
+    let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
+    let graph_id = cx
+        .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
+            graph_value.graph_id
+        })
+        .ok()
+        .unwrap_or_else(|| crate::core::GraphId::from_u128(0));
+    let authoritative_boundary =
+        authoritative_surface_boundary_snapshot(graph_id, graph_rev, &view_value);
+    let _ = sync_authoritative_surface_boundary_in_models(
+        cx.app.models_mut(),
+        &authoritative_surface_boundary,
+        authoritative_boundary,
+        &drag,
+        &marquee_drag,
+        &node_drag,
+        &pending_selection,
+        &hovered_node,
+        &hover_anchor_store,
+        &portal_bounds_store,
+    );
 
     // These models affect portal positioning, so treat them as layout-invalidating in a cached view.
     let drag_value = cx
@@ -2248,9 +2352,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         .get_model_cloned(&pending_selection, Invalidation::Layout)
         .unwrap_or(None);
 
-    let view_value = cx
-        .get_model_cloned(&view_state, Invalidation::Layout)
-        .unwrap_or_default();
     let view_for_paint = view_from_state(&view_value);
     let theme = Theme::global(&*cx.app).snapshot();
     let style_tokens = NodeGraphStyle::from_snapshot(theme.clone());
@@ -2272,7 +2373,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let paint_overrides = paint_overrides_ref.as_deref();
     let paint_overrides_rev = paint_overrides.map(|o| o.revision()).unwrap_or(0);
 
-    let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
     let node_origin = view_value.interaction.node_origin;
     let resolved_interaction = view_value.resolved_interaction_state();
@@ -3785,20 +3885,20 @@ mod tests {
     use fret_ui::action::UiActionHost;
 
     use super::{
-        DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
-        DerivedGeometryCacheState, DragState, Invalidation, LeftPointerDownOutcome,
-        LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
-        MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
+        AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
+        DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
+        Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
+        MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
         NodeDragReleaseOutcome, NodeDragState, PendingSelectionState, PortalBoundsStore,
         PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
-        begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-        build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
-        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
-        build_node_drag_transaction, commit_graph_transaction,
-        commit_marquee_selection_action_host, commit_node_drag_transaction,
-        commit_pending_selection_action_host, complete_left_pointer_release_action_host,
-        complete_node_drag_release_action_host, effective_selected_nodes_for_paint,
-        escape_cancel_declarative_interactions_action_host,
+        authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
+        begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
+        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+        build_marquee_preview_selected_nodes, build_node_drag_transaction,
+        commit_graph_transaction, commit_marquee_selection_action_host,
+        commit_node_drag_transaction, commit_pending_selection_action_host,
+        complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
+        effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
         handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
@@ -3806,6 +3906,7 @@ mod tests {
         handle_node_drag_pointer_move_action_host,
         handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
         pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
+        stable_hash_u64, sync_authoritative_surface_boundary_in_models,
         update_hovered_node_pointer_move_action_host,
     };
     use crate::core::{
@@ -6400,6 +6501,236 @@ mod tests {
 
         assert_eq!(from_pending, vec![node_b]);
         assert_eq!(from_view, vec![node_a]);
+    }
+
+    #[test]
+    fn sync_authoritative_surface_boundary_in_models_clears_graph_scoped_transients_on_graph_change()
+     {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9021);
+        let node_b = NodeId::from_u128(9022);
+        let previous_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let boundary = host
+            .models
+            .insert(Some(authoritative_surface_boundary_snapshot(
+                GraphId::from_u128(9020),
+                3,
+                &previous_view,
+            )));
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(3.0), Px(4.0)),
+        }));
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(8.0), Px(8.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([node_a]),
+        }));
+        let node_drag = host.models.insert(Some(test_node_drag_state(
+            NodeDragPhase::Active,
+            Point::new(Px(16.0), Px(0.0)),
+        )));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(node_a));
+        let hover_anchor = host.models.insert(HoverAnchorStore {
+            hovered_id: Some(node_a),
+            hovered_canvas_bounds: Some(Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(100.0), Px(40.0)),
+            )),
+        });
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.fit_to_portals_count = 7;
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state.nodes_canvas_bounds.insert(
+            node_a,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(20.0), Px(20.0)),
+            ),
+        );
+        let portal_bounds = host.models.insert(portal_bounds_state);
+
+        let next_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            ..NodeGraphViewState::default()
+        };
+
+        assert!(sync_authoritative_surface_boundary_in_models(
+            &mut host.models,
+            &boundary,
+            authoritative_surface_boundary_snapshot(GraphId::from_u128(9020), 4, &next_view),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &hovered,
+            &hover_anchor,
+            &portal_bounds,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_none())
+                .expect("drag readable")
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert!(
+            host.models
+                .read(&hovered, |state| state.is_none())
+                .expect("hovered readable")
+        );
+        host.models
+            .read(&hover_anchor, |state| {
+                assert_eq!(state.hovered_id, None);
+                assert_eq!(state.hovered_canvas_bounds, None);
+            })
+            .expect("hover anchor readable");
+        host.models
+            .read(&portal_bounds, |state| {
+                assert_eq!(state.fit_to_portals_count, 7);
+                assert!(!state.pending_fit_to_portals);
+                assert!(state.nodes_canvas_bounds.is_empty());
+            })
+            .expect("portal bounds readable");
+    }
+
+    #[test]
+    fn sync_authoritative_surface_boundary_in_models_keeps_pan_and_hover_on_selection_only_change()
+    {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9031);
+        let node_b = NodeId::from_u128(9032);
+        let previous_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let boundary = host
+            .models
+            .insert(Some(AuthoritativeSurfaceBoundarySnapshot {
+                graph_id: GraphId::from_u128(9030),
+                graph_rev: 9,
+                selected_nodes_hash: stable_hash_u64(17, &previous_view.selected_nodes),
+                selected_edges_hash: stable_hash_u64(19, &previous_view.selected_edges),
+                selected_groups_hash: stable_hash_u64(23, &previous_view.selected_groups),
+            }));
+        let drag = host.models.insert(Some(DragState {
+            button: MouseButton::Middle,
+            last_pos: Point::new(Px(11.0), Px(12.0)),
+        }));
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(8.0), Px(8.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        }));
+        let node_drag = host.models.insert(Some(test_node_drag_state(
+            NodeDragPhase::Armed,
+            Point::new(Px(5.0), Px(0.0)),
+        )));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(node_a));
+        let hover_bounds = Rect::new(
+            Point::new(Px(10.0), Px(10.0)),
+            fret_core::Size::new(Px(40.0), Px(20.0)),
+        );
+        let hover_anchor = host.models.insert(HoverAnchorStore {
+            hovered_id: Some(node_a),
+            hovered_canvas_bounds: Some(hover_bounds),
+        });
+        let mut portal_bounds_state = PortalBoundsStore::default();
+        portal_bounds_state.fit_to_portals_count = 5;
+        portal_bounds_state.pending_fit_to_portals = true;
+        portal_bounds_state
+            .nodes_canvas_bounds
+            .insert(node_a, hover_bounds);
+        let portal_bounds = host.models.insert(portal_bounds_state);
+
+        let next_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            ..NodeGraphViewState::default()
+        };
+
+        assert!(sync_authoritative_surface_boundary_in_models(
+            &mut host.models,
+            &boundary,
+            authoritative_surface_boundary_snapshot(GraphId::from_u128(9030), 9, &next_view),
+            &drag,
+            &marquee,
+            &node_drag,
+            &pending,
+            &hovered,
+            &hover_anchor,
+            &portal_bounds,
+        ));
+        assert!(
+            host.models
+                .read(&drag, |state| state.is_some())
+                .expect("drag readable")
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(node_a)
+        );
+        host.models
+            .read(&hover_anchor, |state| {
+                assert_eq!(state.hovered_id, Some(node_a));
+                assert_eq!(state.hovered_canvas_bounds, Some(hover_bounds));
+            })
+            .expect("hover anchor readable");
+        host.models
+            .read(&portal_bounds, |state| {
+                assert_eq!(state.fit_to_portals_count, 5);
+                assert!(state.pending_fit_to_portals);
+                assert_eq!(state.nodes_canvas_bounds.get(&node_a), Some(&hover_bounds));
+            })
+            .expect("portal bounds readable");
     }
 
     #[test]

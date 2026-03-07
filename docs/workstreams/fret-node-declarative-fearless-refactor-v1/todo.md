@@ -289,8 +289,12 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed paint precedence helper: active marquee preview overrides pending selection preview,
     which overrides committed selection for paint/layout only.
 - [ ] Ensure new declarative interaction work does not regress cache discipline.
-- [ ] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only
+- [x] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only
       counters.
+  - Landed authoritative-boundary gate: when controlled-mode authority replaces the graph document,
+    declarative local transient state (pan / node-drag / marquee / pending-selection / hover /
+    portal anchors) is cleared on the next frame; selection-only authoritative changes clear only
+    selection-scoped preview state so viewport/hover caches do not regress.
 
 ## M4 - Portal and overlay closure
 

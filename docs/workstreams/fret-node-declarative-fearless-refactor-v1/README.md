@@ -218,6 +218,7 @@ Current landed boundary for the declarative paint-only path:
 - **local surface state**: active pan session, node-drag preview/arming, marquee preview/arming,
   pending click-selection preview, hover target/anchor, and hit-test scratch/cache inputs,
 - **paint precedence**: active marquee preview > pending selection preview > committed selection.
+- **authoritative reset rule**: external authoritative graph replacement now drops local pan / node-drag / marquee / pending-selection / hover / portal transient state, while committed-selection-only authority updates drop selection-scoped preview state without flushing pan/hover caches.
 
 ### P4. The API surface needs a coherent controller facade
 
