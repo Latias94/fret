@@ -176,6 +176,40 @@ surface from the post-v1 density goals:
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
 
+### Late-landing child composition (v1 best practice)
+
+Avoid forcing early `into_element(cx)` when the only reason is “I need a `Vec<AnyElement>` now”.
+Prefer collecting children at `into_element(cx)` time:
+
+- layout wrappers: prefer `ui::children![cx; ...]` inside `ui::{h_flex,v_flex}(|cx| ...)` closures.
+- shadcn composites: prefer `*_::build(...)` variants when available:
+  - `Card::build(...)`, `CardHeader::build(...)`, `CardContent::build(...)`
+  - `Table::build(...)`, `TableRow::build(...)`, `TableCell::build(child)`
+  - overlay triggers like `DialogTrigger::build(...)`, `SheetTrigger::build(...)`.
+
+Example (card, late-landing):
+
+```rust,ignore
+let card = shadcn::Card::build(|cx, out| {
+    out.push_ui(
+        cx,
+        shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Title"));
+            out.push_ui(cx, shadcn::CardDescription::new("Description"));
+        }),
+    );
+    out.push_ui(
+        cx,
+        shadcn::CardContent::build(|_cx, out| {
+            out.push(body);
+        }),
+    );
+})
+.ui()
+.w_full()
+.into_element(cx);
+```
+
 ### Overlay composition note (Dialog/Sheet)
 
 When composing shadcn overlays via `.compose()`, prefer `.content_with(|cx| ...)` when the content

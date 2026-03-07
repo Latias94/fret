@@ -286,6 +286,19 @@ ID format:
     - `ecosystem/fret/src/interop/embedded_viewport.rs`
     - `ecosystem/fret/src/app_entry.rs`
 
+- [~] AFA-adopt-045 Reduce “early element landing” noise in cookbook demos (polish pass).
+  - Goal: prefer late-landing child collection (`ui::children![cx; ...]`, `*_::build(...)`) and keep
+    `test_id` / key-context / semantics patches on the builder path whenever possible.
+  - Non-goal (for this pass): introducing a new UI macro/DSL or replacing `ui::children!` with a new
+    mandatory composition language (that is a post-v1/v2 ergonomics decision).
+  - Evidence (recent slice):
+    - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - `apps/fret-cookbook/examples/form_basics.rs`
+    - `apps/fret-cookbook/examples/async_inbox_basics.rs`
+    - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+    - `apps/fret-cookbook/examples/router_basics.rs`
+    - `apps/fret-cookbook/examples/undo_basics.rs`
+
 ---
 
 ## F. Evidence + Regression Gates

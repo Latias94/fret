@@ -27,6 +27,12 @@ teaching surfaces, and gates line up.
   pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
   ergonomics work rather than unfinished migration closure.
 
+Adoption note (as of 2026-03-07):
+
+- A follow-up polish pass is active to reduce “early element landing” (`into_element(cx)` cliffs) in
+  cookbook demos by preferring late-landing child composition (`ui::children!`, `*_::build(...)`).
+  See `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (`AFA-adopt-045`).
+
 Evidence anchors (verified in-tree as of 2026-03-07):
 
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
