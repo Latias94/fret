@@ -244,6 +244,9 @@ ID format:
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
       - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
       - `apps/fret-cookbook/examples/drop_shadow_basics.rs`
+      - `apps/fret-cookbook/examples/overlay_basics.rs`
+      - `apps/fret-cookbook/examples/toast_basics.rs`
+      - `apps/fret-cookbook/examples/query_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
     - Inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.

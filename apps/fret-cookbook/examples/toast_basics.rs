@@ -69,44 +69,51 @@ impl View for ToastBasicsView {
         });
         cx.on_action_availability::<act::DismissAll>(|_host, _acx| CommandAvailability::Available);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Toast basics (Sonner)").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal Sonner integration: render a Toaster and dispatch toast requests from actions.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let buttons = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("Default toast")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::DefaultToast)
-                    .test_id(TEST_ID_DEFAULT)
-                    .into_element(cx),
+                    .test_id(TEST_ID_DEFAULT),
                 shadcn::Button::new("Success toast")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::SuccessToast)
-                    .test_id(TEST_ID_SUCCESS)
-                    .into_element(cx),
+                    .test_id(TEST_ID_SUCCESS),
                 shadcn::Button::new("Dismiss all")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::DismissAll)
-                    .test_id(TEST_ID_DISMISS_ALL)
-                    .into_element(cx),
+                    .test_id(TEST_ID_DISMISS_ALL),
             ]
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let card =
-            shadcn::Card::new([header, shadcn::CardContent::new([buttons]).into_element(cx)])
-                .ui()
-                .w_full()
-                .max_w(Px(720.0))
-                .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Toast basics (Sonner)"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A minimal Sonner integration: render a Toaster and dispatch toast requests from actions.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(buttons);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(720.0))
+        .into_element(cx);
 
         let toaster = shadcn::Toaster::new().into_element(cx);
 
