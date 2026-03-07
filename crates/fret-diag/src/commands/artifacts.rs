@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use super::args::resolve_latest_bundle_dir_path;
 use super::resolve;
 use super::sidecars;
 
@@ -27,21 +26,21 @@ pub(crate) fn cmd_pack(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let bundle_dir = match rest.first() {
-        Some(src) => {
-            let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-            let src = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src)?;
-            crate::resolve_bundle_root_dir(&src)?
-        }
-        None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
+    let source = rest
+        .first()
+        .map(|src| crate::resolve_path(workspace_root, PathBuf::from(src)))
+        .unwrap_or_default();
+    let resolved = resolve::resolve_bundle_input_or_latest(&source, out_dir).map_err(|error| {
+        if rest.is_empty() {
             format!(
-                "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                out_dir.display()
+                "{} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                error
             )
-        })?,
-    };
-
-    let bundle_dir = crate::resolve_bundle_root_dir(&bundle_dir)?;
+        } else {
+            error
+        }
+    })?;
+    let bundle_dir = resolved.bundle_dir;
     let out = pack_out
         .map(|p| crate::resolve_path(workspace_root, p))
         .unwrap_or_else(|| {
@@ -61,11 +60,7 @@ pub(crate) fn cmd_pack(
             }
         });
 
-    let artifacts_root = if bundle_dir.starts_with(out_dir) {
-        out_dir.to_path_buf()
-    } else {
-        bundle_dir.parent().unwrap_or(out_dir).to_path_buf()
-    };
+    let artifacts_root = resolved.artifacts_root;
 
     if ensure_ai_packet || pack_ai_only {
         let packet_dir = bundle_dir.join("ai.packet");
@@ -293,8 +288,8 @@ pub(crate) fn cmd_triage(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
 
     let mut payload = if lite {
         let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
@@ -392,8 +387,8 @@ pub(crate) fn cmd_lint(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
 
     let report = lint_bundle_from_path(
         &bundle_path,
@@ -450,8 +445,8 @@ pub(crate) fn cmd_test_ids(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
 
     let out = test_ids_out
         .map(|p| crate::resolve_path(workspace_root, p))
@@ -511,8 +506,8 @@ pub(crate) fn cmd_test_ids_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -548,8 +543,8 @@ pub(crate) fn cmd_frames_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -589,8 +584,9 @@ pub(crate) fn cmd_meta(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let src = resolved.bundle_dir;
 
     let (meta_path, default_out) = if src.is_file()
         && src

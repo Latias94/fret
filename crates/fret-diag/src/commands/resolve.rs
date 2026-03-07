@@ -21,6 +21,20 @@ struct ResolveLatestOutput {
     latest_bundle_artifact: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedBundleInput {
+    pub bundle_dir: PathBuf,
+    #[allow(dead_code)]
+    pub bundle_artifact: PathBuf,
+    pub artifacts_root: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedBundleRef {
+    pub bundle_dir: PathBuf,
+    pub bundle_artifact: PathBuf,
+}
+
 pub(crate) fn cmd_resolve(
     rest: &[String],
     pack_after_run: bool,
@@ -171,6 +185,47 @@ pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(
     let (bundle_dir, _session_id, _source) =
         resolve_latest_bundle_dir_from_base_or_session_out_dir(path, None)?;
     Ok(bundle_dir)
+}
+
+pub(crate) fn resolve_bundle_input_or_latest(
+    src: &Path,
+    default_out_dir: &Path,
+) -> Result<ResolvedBundleInput, String> {
+    let source_path = if src.as_os_str().is_empty() {
+        super::args::resolve_latest_bundle_dir_path(default_out_dir).map_err(|_err| {
+            format!(
+                "no diagnostics bundle found under {}",
+                default_out_dir.display()
+            )
+        })?
+    } else {
+        src.to_path_buf()
+    };
+
+    let source_path = resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&source_path)?;
+    let bundle_dir = crate::resolve_bundle_root_dir(&source_path)?;
+    let bundle_artifact = crate::resolve_bundle_artifact_path(&bundle_dir);
+    let artifacts_root = if bundle_dir.starts_with(default_out_dir) {
+        default_out_dir.to_path_buf()
+    } else {
+        bundle_dir.parent().unwrap_or(default_out_dir).to_path_buf()
+    };
+
+    Ok(ResolvedBundleInput {
+        bundle_dir,
+        bundle_artifact,
+        artifacts_root,
+    })
+}
+
+pub(crate) fn resolve_bundle_ref(src: &Path) -> Result<ResolvedBundleRef, String> {
+    let src = resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(src)?;
+    let bundle_dir = crate::resolve_bundle_root_dir(&src)?;
+    let bundle_artifact = crate::resolve_bundle_artifact_path(&bundle_dir);
+    Ok(ResolvedBundleRef {
+        bundle_dir,
+        bundle_artifact,
+    })
 }
 
 fn resolve_session_out_dir_for_base_dir(
@@ -385,5 +440,19 @@ mod tests {
         assert_eq!(sid.as_deref(), Some("200-1"));
         assert_eq!(dir, bundle_dir);
         assert_eq!(source, "script.result.json:last_bundle_dir");
+    }
+
+    #[test]
+    fn resolve_bundle_input_or_latest_returns_bundle_artifact_and_root() {
+        let root = make_temp_dir("fret-diag-resolve-bundle-input");
+        let bundle_dir = root.join("123-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.meta.json"), b"{}" as &[u8])
+            .expect("write bundle.meta.json");
+
+        let resolved = resolve_bundle_input_or_latest(&bundle_dir, &root).expect("resolve input");
+        assert_eq!(resolved.bundle_dir, bundle_dir);
+        assert_eq!(resolved.bundle_artifact, bundle_dir.join("bundle.json"));
+        assert_eq!(resolved.artifacts_root, root);
     }
 }
