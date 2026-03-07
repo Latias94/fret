@@ -340,6 +340,44 @@ fn build_suite_summary_payload(
     payload
 }
 
+fn build_suite_tooling_error_row(
+    script: Option<&str>,
+    error_code: &'static str,
+    reason_code: Option<&str>,
+    error: &str,
+) -> serde_json::Value {
+    let mut row = serde_json::json!({
+        "error_code": error_code,
+        "reason_code": reason_code,
+        "error": error,
+    });
+    if let Some(script) = script {
+        row.as_object_mut()
+            .expect("suite tooling error row must stay an object")
+            .insert("script".to_string(), serde_json::json!(script));
+    }
+    row
+}
+
+fn build_suite_script_result_row(
+    script_key: &str,
+    result: &crate::stats::ScriptResultSummary,
+    lint_summary: Option<&serde_json::Value>,
+    evidence_highlights: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "script": script_key,
+        "run_id": result.run_id,
+        "stage": result.stage.clone(),
+        "step_index": result.step_index,
+        "reason_code": result.reason_code.clone(),
+        "reason": result.reason.clone(),
+        "last_bundle_dir": result.last_bundle_dir.clone(),
+        "lint": lint_summary.cloned(),
+        "evidence_highlights": evidence_highlights.cloned(),
+    })
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -1835,11 +1873,12 @@ hint: list suites via `fretboard diag list suites`"
                     "tooling_error",
                     Some("connect_devtools_ws_tooling".to_string()),
                 );
-                suite_rows.push(serde_json::json!({
-                    "error_code": "tooling.connect.failed",
-                    "reason_code": "tooling.connect.failed",
-                    "error": err,
-                }));
+                suite_rows.push(build_suite_tooling_error_row(
+                    None,
+                    "tooling.connect.failed",
+                    Some("tooling.connect.failed"),
+                    &err,
+                ));
                 emit_suite_summary(
                     &SuiteSummaryEmitInput {
                         workspace_root: &workspace_root,
@@ -1892,11 +1931,12 @@ hint: list suites via `fretboard diag list suites`"
                     "tooling_error",
                     Some("maybe_launch_demo".to_string()),
                 );
-                suite_rows.push(serde_json::json!({
-                    "error_code": "tooling.launch.failed",
-                    "reason_code": "tooling.launch.failed",
-                    "error": err,
-                }));
+                suite_rows.push(build_suite_tooling_error_row(
+                    None,
+                    "tooling.launch.failed",
+                    Some("tooling.launch.failed"),
+                    &err,
+                ));
                 emit_suite_summary(
                     &SuiteSummaryEmitInput {
                         workspace_root: &workspace_root,
@@ -1941,11 +1981,12 @@ hint: list suites via `fretboard diag list suites`"
                     "tooling_error",
                     Some("connect_filesystem_tooling".to_string()),
                 );
-                suite_rows.push(serde_json::json!({
-                    "error_code": "tooling.connect.failed",
-                    "reason_code": "tooling.connect.failed",
-                    "error": err,
-                }));
+                suite_rows.push(build_suite_tooling_error_row(
+                    None,
+                    "tooling.connect.failed",
+                    Some("tooling.connect.failed"),
+                    &err,
+                ));
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
@@ -2006,12 +2047,12 @@ hint: list suites via `fretboard diag list suites`"
                         "tooling_error",
                         Some(script_key.clone()),
                     );
-                    suite_rows.push(serde_json::json!({
-                        "script": script_key,
-                        "error_code": "tooling.launch.failed",
-                        "reason_code": "tooling.launch.failed",
-                        "error": err,
-                    }));
+                    suite_rows.push(build_suite_tooling_error_row(
+                        Some(script_key.as_str()),
+                        "tooling.launch.failed",
+                        Some("tooling.launch.failed"),
+                        &err,
+                    ));
                     if !keep_open {
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     }
@@ -2220,12 +2261,12 @@ hint: list suites via `fretboard diag list suites`"
                 let error_reason_code = tooling_reason_code
                     .clone()
                     .unwrap_or_else(|| "tooling.suite.error".to_string());
-                suite_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "error_code": "tooling.suite.error",
-                    "reason_code": tooling_reason_code,
-                    "error": e,
-                }));
+                suite_rows.push(build_suite_tooling_error_row(
+                    Some(script_key.as_str()),
+                    "tooling.suite.error",
+                    tooling_reason_code.as_deref(),
+                    &e,
+                ));
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
@@ -2283,17 +2324,12 @@ hint: list suites via `fretboard diag list suites`"
                     result.reason.as_deref().unwrap_or("unknown"),
                     result.last_bundle_dir.as_deref().unwrap_or("")
                 );
-                suite_rows.push(serde_json::json!({
-                    "script": script_key,
-                    "run_id": result.run_id,
-                    "stage": result.stage,
-                    "step_index": result.step_index,
-                    "reason_code": result.reason_code,
-                    "reason": result.reason,
-                    "last_bundle_dir": result.last_bundle_dir,
-                    "lint": lint_summary,
-                    "evidence_highlights": evidence_highlights,
-                }));
+                suite_rows.push(build_suite_script_result_row(
+                    &script_key,
+                    &result,
+                    lint_summary.as_ref(),
+                    evidence_highlights.as_ref(),
+                ));
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
@@ -2325,17 +2361,12 @@ hint: list suites via `fretboard diag list suites`"
                     src.display(),
                     result
                 );
-                suite_rows.push(serde_json::json!({
-                    "script": script_key,
-                    "run_id": result.run_id,
-                    "stage": result.stage,
-                    "step_index": result.step_index,
-                    "reason_code": result.reason_code,
-                    "reason": result.reason,
-                    "last_bundle_dir": result.last_bundle_dir,
-                    "lint": lint_summary,
-                    "evidence_highlights": evidence_highlights,
-                }));
+                suite_rows.push(build_suite_script_result_row(
+                    &script_key,
+                    &result,
+                    lint_summary.as_ref(),
+                    evidence_highlights.as_ref(),
+                ));
                 if !keep_open {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
@@ -2430,17 +2461,12 @@ hint: list suites via `fretboard diag list suites`"
                         report.error_issues,
                         out.display()
                     );
-                    suite_rows.push(serde_json::json!({
-                        "script": script_key,
-                        "run_id": result.run_id,
-                        "stage": result.stage,
-                        "step_index": result.step_index,
-                        "reason_code": result.reason_code,
-                        "reason": result.reason,
-                        "last_bundle_dir": result.last_bundle_dir,
-                        "lint": lint_summary,
-                        "evidence_highlights": evidence_highlights,
-                    }));
+                    suite_rows.push(build_suite_script_result_row(
+                        &script_key,
+                        &result,
+                        lint_summary.as_ref(),
+                        evidence_highlights.as_ref(),
+                    ));
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     emit_suite_summary(
                         &SuiteSummaryEmitInput {
@@ -2649,17 +2675,12 @@ hint: list suites via `fretboard diag list suites`"
             )?;
         }
 
-        suite_rows.push(serde_json::json!({
-            "script": script_key,
-            "run_id": result.run_id,
-            "stage": result.stage,
-            "step_index": result.step_index,
-            "reason_code": result.reason_code,
-            "reason": result.reason,
-            "last_bundle_dir": result.last_bundle_dir,
-            "lint": lint_summary,
-            "evidence_highlights": evidence_highlights,
-        }));
+        suite_rows.push(build_suite_script_result_row(
+            &script_key,
+            &result,
+            lint_summary.as_ref(),
+            evidence_highlights.as_ref(),
+        ));
 
         if !reuse_process {
             let is_last = idx.saturating_add(1) >= script_count;
