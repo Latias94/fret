@@ -1220,6 +1220,73 @@ fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
     drag.nodes_sorted.binary_search(&id).is_ok()
 }
 
+fn hovered_canvas_anchor_rect_for_surface(
+    hovered_id: crate::core::NodeId,
+    draws: Option<&[NodeRectDraw]>,
+    view: PanZoom2D,
+    node_drag: Option<&NodeDragState>,
+) -> Option<Rect> {
+    let draw = draws?.iter().find(|draw| draw.id == hovered_id)?;
+    let mut rect = draw.rect;
+    let drag_active = node_drag.is_some_and(NodeDragState::is_active);
+    if drag_active && node_drag.is_some_and(|drag| node_drag_contains(drag, hovered_id)) {
+        let drag = node_drag.expect("checked active node drag");
+        let (ddx, ddy) = node_drag_delta_canvas(view, drag);
+        rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
+    }
+    Some(rect)
+}
+
+fn sync_hover_anchor_store_in_models(
+    models: &mut fret_runtime::ModelStore,
+    hover_anchor_store: &Model<HoverAnchorStore>,
+    hovered_id: Option<crate::core::NodeId>,
+    draws: Option<&[NodeRectDraw]>,
+    view: PanZoom2D,
+    node_drag: Option<&NodeDragState>,
+) -> bool {
+    if let Some(hovered_id) = hovered_id {
+        let Some(rect) = hovered_canvas_anchor_rect_for_surface(hovered_id, draws, view, node_drag)
+        else {
+            return false;
+        };
+
+        let should_update = models
+            .read(hover_anchor_store, |st| {
+                if st.hovered_id != Some(hovered_id) {
+                    return true;
+                }
+                let Some(prev) = st.hovered_canvas_bounds else {
+                    return true;
+                };
+                !rect_approx_eq(prev, rect, 0.25)
+            })
+            .unwrap_or(true);
+        if !should_update {
+            return false;
+        }
+
+        let _ = models.update(hover_anchor_store, |st| {
+            st.hovered_id = Some(hovered_id);
+            st.hovered_canvas_bounds = Some(rect);
+        });
+        return true;
+    }
+
+    let should_clear = models
+        .read(hover_anchor_store, |st| st.hovered_id.is_some())
+        .unwrap_or(false);
+    if !should_clear {
+        return false;
+    }
+
+    let _ = models.update(hover_anchor_store, |st| {
+        st.hovered_id = None;
+        st.hovered_canvas_bounds = None;
+    });
+    true
+}
+
 fn build_node_drag_transaction(
     graph: &Graph,
     nodes: &[crate::core::NodeId],
@@ -3770,59 +3837,15 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 }
 
                 // Keep a best-effort hovered bounds record independent of portal hosting caps.
-                if let Some(hovered_id) = hovered_node_value {
-                    if let Some(draws) = node_draws.as_deref()
-                        && let Some(draw) = draws.iter().find(|d| d.id == hovered_id)
-                    {
-                        let mut rect = draw.rect;
-                        let drag_active = node_drag_value
-                            .as_ref()
-                            .is_some_and(NodeDragState::is_active);
-                        if drag_active
-                            && node_drag_value
-                                .as_ref()
-                                .is_some_and(|d| node_drag_contains(d, hovered_id))
-                        {
-                            let (ddx, ddy) =
-                                node_drag_delta_canvas(view_for_paint, node_drag_value.as_ref().unwrap());
-                            rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
-                        }
-
-                        let should_update = cx
-                            .app
-                            .models()
-                            .read(&hover_anchor_store, |st| {
-                                if st.hovered_id != Some(hovered_id) {
-                                    return true;
-                                }
-                                let Some(prev) = st.hovered_canvas_bounds else {
-                                    return true;
-                                };
-                                !rect_approx_eq(prev, rect, 0.25)
-                            })
-                            .unwrap_or(true);
-
-                        if should_update {
-                            let _ = cx.app.models_mut().update(&hover_anchor_store, |st| {
-                                st.hovered_id = Some(hovered_id);
-                                st.hovered_canvas_bounds = Some(rect);
-                            });
-                            cx.request_frame();
-                        }
-                    }
-                } else {
-                    let should_clear = cx
-                        .app
-                        .models()
-                        .read(&hover_anchor_store, |st| st.hovered_id.is_some())
-                        .unwrap_or(false);
-                    if should_clear {
-                        let _ = cx.app.models_mut().update(&hover_anchor_store, |st| {
-                            st.hovered_id = None;
-                            st.hovered_canvas_bounds = None;
-                        });
-                        cx.request_frame();
-                    }
+                if sync_hover_anchor_store_in_models(
+                    cx.app.models_mut(),
+                    &hover_anchor_store,
+                    hovered_node_value,
+                    node_draws.as_deref().map(|draws| draws.as_slice()),
+                    view_for_paint,
+                    node_drag_value.as_ref(),
+                ) {
+                    cx.request_frame();
                 }
 
                 // Hover tooltip is an incremental declarative overlay example. It consumes the
@@ -4178,12 +4201,13 @@ mod tests {
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
         handle_node_drag_left_pointer_release_action_host,
         handle_node_drag_pointer_move_action_host,
-        handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
-        nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
-        pointer_crossed_threshold, record_portal_measured_node_size_in_state,
-        resolve_hover_tooltip_anchor, stable_hash_u64,
-        sync_authoritative_surface_boundary_in_models, sync_portal_canvas_bounds_in_models,
-        update_hovered_node_pointer_move_action_host, view_from_state,
+        handle_pending_selection_left_pointer_release_action_host,
+        hovered_canvas_anchor_rect_for_surface, node_drag_commit_delta, nodes_cache_key,
+        pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
+        record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
+        sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
+        sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
+        view_from_state,
     };
     use crate::core::{
         CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group,
@@ -6927,6 +6951,95 @@ mod tests {
                 fret_core::Size::new(Px(30.0), Px(40.0)),
             ),
         ));
+    }
+
+    #[test]
+    fn sync_hover_anchor_store_in_models_tracks_dragged_hovered_node_rect() {
+        let mut models = ModelStore::default();
+        let hover_anchor = models.insert(HoverAnchorStore::default());
+        let node = NodeId::from_u128(9407);
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ),
+        }];
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(40.0), Px(-20.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+
+        assert!(sync_hover_anchor_store_in_models(
+            &mut models,
+            &hover_anchor,
+            Some(node),
+            Some(draws.as_slice()),
+            view,
+            Some(&drag),
+        ));
+
+        let stored = models.read(&hover_anchor, |st| st.clone()).unwrap();
+        assert_eq!(stored.hovered_id, Some(node));
+        assert_eq!(
+            stored.hovered_canvas_bounds,
+            Some(Rect::new(
+                Point::new(Px(30.0), Px(10.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ))
+        );
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_prefers_dragged_portal_bounds_over_stale_hover_anchor() {
+        let node = NodeId::from_u128(9408);
+        let draws = vec![NodeRectDraw {
+            id: node,
+            rect: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                fret_core::Size::new(Px(120.0), Px(60.0)),
+            ),
+        }];
+        let drag = NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(40.0), Px(-20.0)),
+            phase: NodeDragPhase::Active,
+            nodes_sorted: Arc::from([node]),
+        };
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let dragged_portal =
+            hovered_canvas_anchor_rect_for_surface(node, Some(draws.as_slice()), view, Some(&drag))
+                .expect("dragged rect");
+        let stale_hover = draws[0].rect;
+
+        let anchor = resolve_hover_tooltip_anchor(
+            bounds,
+            view,
+            false,
+            Some(dragged_portal),
+            Some(stale_hover),
+        )
+        .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::PortalBoundsStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, dragged_portal.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(240.0));
     }
 
     #[test]

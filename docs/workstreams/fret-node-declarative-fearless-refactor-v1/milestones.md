@@ -388,6 +388,9 @@ real editors.
   `flush_portal_measured_geometry_state(...)` stage `LayoutQueryRegion` measurements, and derived
   geometry cache keys now include presenter revision so measured node-size publication rebuilds
   geometry/index caches deterministically.
+- Declarative motion anchoring now has explicit gates on both sides of the portal/overlay seam:
+  dragged hovered nodes update `hover_anchor_store` using drag-adjusted rects, and tooltip anchor
+  resolution still prefers dragged portal bounds over stale hover anchors when both are available.
 
 ### Deliverables
 

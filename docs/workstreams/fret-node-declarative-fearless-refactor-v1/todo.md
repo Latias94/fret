@@ -326,17 +326,19 @@ Execution companion: `design.md` (surface map + next worktree order).
     no longer exposes public queue transport props.
 - [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
       currently blurry.
-- [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
+- [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
     `portal_lifecycle_conformance.rs`), and those retained gates now run again after the harness was
     updated for the latest `EventCx` / `LayoutCx` contract.
   - Progress: declarative paint-only tooltip anchoring now has focused correctness gates proving
     `portal_bounds_store` wins when hosted bounds exist, while `hover_anchor_store` remains the
-    fallback when portals are disabled or unavailable; motion-specific anchoring coverage is still
-    pending.
+    fallback when portals are disabled or unavailable.
   - Progress: portal visible-subset hosting now also has a motion gate proving a dragged node that
     crosses into the viewport is hosted using its dragged rect rather than its stale pre-drag rect.
+  - Progress: declarative hover anchoring now also has a motion gate proving drag-adjusted hover
+    rects update `hover_anchor_store`, and a portal-vs-hover precedence gate proving dragged portal
+    bounds still win over stale hover anchors when the hovered node moves.
 
 ## M5 - Compatibility retained convergence
 
