@@ -145,27 +145,6 @@ pub(crate) fn looks_like_diag_session_root(dir: &Path) -> bool {
         || dir.join("exit.touch").is_file()
 }
 
-pub(crate) fn maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(path: &Path) -> PathBuf {
-    if !path.is_dir() {
-        return path.to_path_buf();
-    }
-    if crate::resolve_bundle_artifact_path_no_materialize(path).is_some() {
-        // Already a bundle export dir (or a packed `_root` bundle dir).
-        return path.to_path_buf();
-    }
-    if !(looks_like_diag_session_root(path) || path.join(crate::session::SESSIONS_DIRNAME).is_dir())
-    {
-        // Not a diagnostics out dir; treat as user-provided bundle dir input.
-        return path.to_path_buf();
-    }
-    if let Ok((bundle_dir, _session_id, _source)) =
-        resolve_latest_bundle_dir_from_base_or_session_out_dir(path, None)
-    {
-        return bundle_dir;
-    }
-    path.to_path_buf()
-}
-
 pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(
     path: &Path,
 ) -> Result<PathBuf, String> {

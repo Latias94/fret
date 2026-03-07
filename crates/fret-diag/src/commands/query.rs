@@ -880,7 +880,8 @@ hint: pass a diagnostics out dir (or bundle dir) that contains script.result.jso
                 })?
             } else {
                 let resolved =
-                    resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+                    resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src)
+                        .unwrap_or_else(|_| src.clone());
                 let start = if resolved.is_dir() {
                     resolved.as_path()
                 } else {
@@ -909,7 +910,8 @@ hint: pass a diagnostics out dir (or bundle dir) that contains script.result.jso
             })?
         } else {
             let resolved =
-                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+                resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src)
+                    .unwrap_or_else(|_| src.clone());
             let start = if resolved.is_dir() {
                 resolved.as_path()
             } else {
