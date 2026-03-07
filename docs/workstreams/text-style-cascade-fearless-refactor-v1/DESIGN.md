@@ -1,6 +1,6 @@
 # Text Style Cascade (Fearless Refactor v1)
 
-Status: Draft (workstream note)
+Status: In progress.
 
 This document is **non-normative**. It tracks the implementation plan for ADR 0314:
 
@@ -174,13 +174,30 @@ The repo should converge on one boring path:
 
 ### Policy model
 
-`fret-ui-kit` should eventually offer helpers such as:
+`fret-ui-kit` now owns the subtree authoring surface in `ecosystem/fret-ui-kit/src/typography.rs`:
 
 - `scope_text_style(...)`
-- `scope_text_style_children(...)`
-- `TypographyPreset -> TextStyleRefinement`
+- `scope_text_style_with_color(...)`
+- `scope_description_text(...)`
+- `TypographyPreset -> TextStyleRefinement` via `preset_text_refinement(...)`
 
 This keeps semantic naming (`description`, `control_ui_sm`, `muted_body`) out of `crates/fret-ui`.
+
+### Landed authoring surface
+
+The repo should now prefer one boring authoring path:
+
+1. If a passive text leaf should fully inherit subtree-local defaults, start from `ui::raw_text(...)`
+   instead of `ui::text(...)` so no preset style is baked into the leaf.
+2. Install subtree defaults on a real root using `fret_ui_kit::typography::scope_text_style(...)` or
+   `scope_text_style_with_color(...)`.
+3. For description/helper-copy surfaces, prefer `scope_description_text(...)` (or the fallback-key
+   variant) instead of rebuilding metric lookup logic per component.
+4. If a component already has a `TypographyPreset`, bridge it through
+   `fret_ui_kit::typography::preset_text_refinement(...)` rather than re-encoding the same policy
+   as ad hoc `TextStyleRefinement` literals.
+
+This is the preferred ecosystem path until/unless a richer subtree text authoring DSL is needed.
 
 ## What this workstream is not
 

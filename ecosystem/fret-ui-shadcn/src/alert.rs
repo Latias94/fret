@@ -7,7 +7,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 
-use crate::typography_scope::scope_description;
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
 };
@@ -354,12 +354,12 @@ impl AlertDescription {
         let theme = Theme::global(&*cx.app).snapshot();
 
         match self.content {
-            AlertDescriptionContent::Text(text) => scope_description(
+            AlertDescriptionContent::Text(text) => scope_description_text(
                 ui::raw_text(text).wrap(TextWrap::Word).into_element(cx),
                 &theme,
                 "component.alert.description",
             ),
-            AlertDescriptionContent::Children(children) => scope_description(
+            AlertDescriptionContent::Children(children) => scope_description_text(
                 ui::v_flex(move |_cx| children)
                     .gap(Space::N1)
                     .items_start()
@@ -429,14 +429,14 @@ mod tests {
         let theme = fret_ui::Theme::global(&app).snapshot();
         assert_eq!(
             element.inherited_text_style.as_ref(),
-            Some(&crate::typography_scope::description_refinement(
+            Some(&fret_ui_kit::typography::description_text_refinement(
                 &theme,
                 "component.alert.description",
             ))
         );
         assert_eq!(
             element.inherited_foreground,
-            Some(crate::typography_scope::muted_foreground(&theme))
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
     }
 

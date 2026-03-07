@@ -2,10 +2,11 @@
 
 use std::sync::Arc;
 
-use fret_core::{TextLineHeightPolicy, TextStyleRefinement};
+use fret_core::TextLineHeightPolicy;
+use fret_ui::Theme;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui::{Theme, ThemeSnapshot};
+use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Alert, Button, ButtonSize, ButtonVariant};
@@ -71,24 +72,6 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         |_cx| Vec::new(),
     )
-}
-
-fn alert_description_text_style(theme: &ThemeSnapshot) -> TextStyleRefinement {
-    let px = theme
-        .metric_by_key("component.alert.description_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.alert.description_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-    TextStyleRefinement {
-        size: Some(px),
-        line_height: Some(line_height),
-        line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
-        ..Default::default()
-    }
 }
 
 const CONFIRMATION_REQUEST_SLOT_KEY: &str = "__fret_ui_ai.confirmation.request";
@@ -344,10 +327,9 @@ impl ConfirmationTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let description_style = alert_description_text_style(&theme);
+        let description_style = description_text_refinement(&theme, "component.alert.description");
         let el = cx
-            .foreground_scope(fg, move |_cx| self.children)
+            .foreground_scope(muted_foreground_color(&theme), move |_cx| self.children)
             .inherit_text_style(description_style);
         let Some(test_id) = self.test_id else {
             return el;

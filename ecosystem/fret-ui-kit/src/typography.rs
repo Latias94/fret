@@ -1,8 +1,10 @@
 use fret_core::{
-    FontId, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle, TextVerticalPlacement,
+    Color, FontId, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle, TextStyleRefinement,
+    TextVerticalPlacement,
 };
-use fret_ui::Theme;
+use fret_ui::element::AnyElement;
 
+use crate::style::ThemeTokenRead;
 use crate::theme_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,7 +59,7 @@ impl TypographyPreset {
         Self::new(TextIntent::Content, UiTextFamily::Monospace, size)
     }
 
-    pub fn resolve(self, theme: &Theme) -> TextStyle {
+    pub fn resolve(self, theme: &impl ThemeTokenRead) -> TextStyle {
         match self.intent {
             TextIntent::Control => control_text_style_with_family(theme, self.size, self.family),
             TextIntent::Content => content_text_style_with_family(theme, self.size, self.family),
@@ -65,19 +67,19 @@ impl TypographyPreset {
     }
 }
 
-fn font_size(theme: &Theme) -> Px {
+fn font_size(theme: &impl ThemeTokenRead) -> Px {
     theme
         .metric_by_key("font.size")
         .unwrap_or_else(|| theme.metric_token("font.size"))
 }
 
-fn font_line_height(theme: &Theme) -> Px {
+fn font_line_height(theme: &impl ThemeTokenRead) -> Px {
     theme
         .metric_by_key("font.line_height")
         .unwrap_or_else(|| theme.metric_token("font.line_height"))
 }
 
-fn base_line_height_ratio(theme: &Theme) -> f32 {
+fn base_line_height_ratio(theme: &impl ThemeTokenRead) -> f32 {
     let base_size_px = font_size(theme).0;
     let base_line_height_px = font_line_height(theme).0;
     if base_size_px.is_finite()
@@ -149,7 +151,7 @@ fn force_strut_from_style(style: &TextStyle) -> Option<TextStrutStyle> {
 /// Returns a theme-based text style intended for content-like multiline text areas.
 ///
 /// This leaves `TextLineHeightPolicy` as `ExpandToFit` to avoid clipping.
-pub fn text_area_content_text_style(theme: &Theme) -> TextStyle {
+pub fn text_area_content_text_style(theme: &impl ThemeTokenRead) -> TextStyle {
     TextStyle {
         font: FontId::ui(),
         size: font_size(theme),
@@ -160,7 +162,11 @@ pub fn text_area_content_text_style(theme: &Theme) -> TextStyle {
 
 /// Returns a theme-based text style intended for content-like multiline text areas, scaled to an
 /// explicit size.
-pub fn text_area_content_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+pub fn text_area_content_text_style_scaled(
+    theme: &impl ThemeTokenRead,
+    font: FontId,
+    size: Px,
+) -> TextStyle {
     let ratio = base_line_height_ratio(theme);
     let line_height = Px((size.0 * ratio).max(size.0));
 
@@ -181,7 +187,7 @@ pub fn text_area_content_text_style_scaled(theme: &Theme, font: FontId, size: Px
 /// - fixed line height policy (stable line boxes),
 /// - and a forced strut derived from the chosen style line height (stable baseline across mixed
 ///   scripts / emoji fallback runs).
-pub fn text_area_control_text_style(theme: &Theme) -> TextStyle {
+pub fn text_area_control_text_style(theme: &impl ThemeTokenRead) -> TextStyle {
     let mut style = text_area_content_text_style(theme);
     style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
     style.strut_style = force_strut_from_style(&style);
@@ -190,7 +196,11 @@ pub fn text_area_control_text_style(theme: &Theme) -> TextStyle {
 
 /// Returns an opt-in text style intended for UI/form multiline text areas, scaled to an explicit
 /// size.
-pub fn text_area_control_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+pub fn text_area_control_text_style_scaled(
+    theme: &impl ThemeTokenRead,
+    font: FontId,
+    size: Px,
+) -> TextStyle {
     let ratio = base_line_height_ratio(theme);
     let line_height = Px((size.0 * ratio).max(size.0));
 
@@ -209,13 +219,13 @@ pub fn text_area_control_text_style_scaled(theme: &Theme, font: FontId, size: Px
 ///
 /// This is a policy helper for ecosystem components. It is intentionally not a `fret-ui` runtime
 /// commitment (see ADR 0066).
-pub fn control_text_style(theme: &Theme, size: UiTextSize) -> TextStyle {
+pub fn control_text_style(theme: &impl ThemeTokenRead, size: UiTextSize) -> TextStyle {
     control_text_style_with_family(theme, size, UiTextFamily::Ui)
 }
 
 /// Returns a control-text style intended for UI components (stable line box).
 pub fn control_text_style_with_family(
-    theme: &Theme,
+    theme: &impl ThemeTokenRead,
     size: UiTextSize,
     family: UiTextFamily,
 ) -> TextStyle {
@@ -267,7 +277,7 @@ pub fn control_text_style_with_family(
 }
 
 /// Returns a content-text style intended for prose surfaces (avoid clipping).
-pub fn content_text_style(theme: &Theme, size: UiTextSize) -> TextStyle {
+pub fn content_text_style(theme: &impl ThemeTokenRead, size: UiTextSize) -> TextStyle {
     let mut style = control_text_style(theme, size);
     style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
     style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
@@ -276,7 +286,7 @@ pub fn content_text_style(theme: &Theme, size: UiTextSize) -> TextStyle {
 
 /// Returns a content-text style intended for prose surfaces (avoid clipping).
 pub fn content_text_style_with_family(
-    theme: &Theme,
+    theme: &impl ThemeTokenRead,
     size: UiTextSize,
     family: UiTextFamily,
 ) -> TextStyle {
@@ -291,7 +301,7 @@ pub fn content_text_style_with_family(
 ///
 /// This is intended for widget surfaces that take `TextStyle` directly (e.g. text inputs) where the
 /// component decides the font size but still wants stable line box behavior.
-pub fn control_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+pub fn control_text_style_scaled(theme: &impl ThemeTokenRead, font: FontId, size: Px) -> TextStyle {
     let ratio = base_line_height_ratio(theme);
     let line_height = Px((size.0 * ratio).max(size.0));
     fixed_line_box_style(font, size, line_height)
@@ -301,14 +311,233 @@ pub fn control_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextS
 /// metric directly (no scaling).
 ///
 /// This matches common “UI control” usage where size and line height are independently tokenized.
-pub fn control_text_style_for_font_size(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+pub fn control_text_style_for_font_size(
+    theme: &impl ThemeTokenRead,
+    font: FontId,
+    size: Px,
+) -> TextStyle {
     fixed_line_box_style(font, size, font_line_height(theme))
+}
+
+fn color_by_aliases(theme: &impl ThemeTokenRead, aliases: &[&str], fallback_token: &str) -> Color {
+    aliases
+        .iter()
+        .find_map(|key| theme.color_by_key(key))
+        .unwrap_or_else(|| theme.color_token(fallback_token))
+}
+
+pub fn muted_foreground_color(theme: &impl ThemeTokenRead) -> Color {
+    color_by_aliases(
+        theme,
+        &["muted.foreground", "muted-foreground", "muted_foreground"],
+        "muted-foreground",
+    )
+}
+
+pub fn scope_text_style(element: AnyElement, refinement: TextStyleRefinement) -> AnyElement {
+    element.inherit_text_style(refinement)
+}
+
+pub fn scope_text_style_with_color(
+    element: AnyElement,
+    refinement: TextStyleRefinement,
+    foreground: Color,
+) -> AnyElement {
+    element
+        .inherit_foreground(foreground)
+        .inherit_text_style(refinement)
+}
+
+pub fn description_text_refinement(
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+) -> TextStyleRefinement {
+    description_text_refinement_with_fallbacks(theme, metric_prefix, None, None)
+}
+
+pub fn description_text_refinement_with_fallbacks(
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+    fallback_size_key: Option<&str>,
+    fallback_line_height_key: Option<&str>,
+) -> TextStyleRefinement {
+    let size_key = format!("{metric_prefix}_px");
+    let line_height_key = format!("{metric_prefix}_line_height");
+
+    let size = theme
+        .metric_by_key(&size_key)
+        .or_else(|| fallback_size_key.and_then(|key| theme.metric_by_key(key)))
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key(&line_height_key)
+        .or_else(|| fallback_line_height_key.and_then(|key| theme.metric_by_key(key)))
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyleRefinement {
+        size: Some(size),
+        line_height: Some(line_height),
+        line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
+        ..Default::default()
+    }
+}
+
+pub fn scope_description_text(
+    element: AnyElement,
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+) -> AnyElement {
+    scope_description_text_with_fallbacks(element, theme, metric_prefix, None, None)
+}
+
+pub fn scope_description_text_with_fallbacks(
+    element: AnyElement,
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+    fallback_size_key: Option<&str>,
+    fallback_line_height_key: Option<&str>,
+) -> AnyElement {
+    scope_text_style_with_color(
+        element,
+        description_text_refinement_with_fallbacks(
+            theme,
+            metric_prefix,
+            fallback_size_key,
+            fallback_line_height_key,
+        ),
+        muted_foreground_color(theme),
+    )
+}
+
+pub fn refinement_from_style(style: &TextStyle) -> TextStyleRefinement {
+    TextStyleRefinement {
+        font: Some(style.font.clone()),
+        size: Some(style.size),
+        weight: Some(style.weight),
+        slant: Some(style.slant),
+        line_height: style.line_height,
+        line_height_em: style.line_height_em,
+        line_height_policy: Some(style.line_height_policy),
+        letter_spacing_em: style.letter_spacing_em,
+        vertical_placement: Some(style.vertical_placement),
+        leading_distribution: Some(style.leading_distribution),
+    }
+}
+
+pub fn preset_text_refinement(
+    theme: &impl ThemeTokenRead,
+    preset: TypographyPreset,
+) -> TextStyleRefinement {
+    refinement_from_style(&preset.resolve(theme))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_ui::element::{ContainerProps, ElementKind};
+    use fret_ui::elements::GlobalElementId;
     use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn description_text_refinement_uses_component_metrics_and_fixed_policy() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.dialog.description_px".to_string(), 13.0),
+                    ("component.dialog.description_line_height".to_string(), 18.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+
+        let refinement = description_text_refinement(&theme, "component.dialog.description");
+        assert_eq!(refinement.size, Some(Px(13.0)));
+        assert_eq!(refinement.line_height, Some(Px(18.0)));
+        assert_eq!(
+            refinement.line_height_policy,
+            Some(TextLineHeightPolicy::FixedFromStyle)
+        );
+    }
+
+    #[test]
+    fn scope_description_text_attaches_color_and_inherited_refinement() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.card.description_px".to_string(), 12.0),
+                    ("component.card.description_line_height".to_string(), 17.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#778899".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+        let element = scope_description_text(
+            AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Container(ContainerProps::default()),
+                Vec::new(),
+            ),
+            &theme,
+            "component.card.description",
+        );
+
+        assert_eq!(
+            element.inherited_foreground,
+            Some(muted_foreground_color(&theme))
+        );
+        assert_eq!(
+            element.inherited_text_style,
+            Some(description_text_refinement(
+                &theme,
+                "component.card.description"
+            ))
+        );
+    }
+
+    #[test]
+    fn preset_text_refinement_matches_resolved_preset() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_SM_PX.to_string(),
+                        13.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT.to_string(),
+                        18.0,
+                    ),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+        let preset = TypographyPreset::control_ui(UiTextSize::Sm);
+        let style = preset.resolve(&theme);
+
+        assert_eq!(
+            preset_text_refinement(&theme, preset),
+            refinement_from_style(&style)
+        );
+    }
 
     #[test]
     fn with_intent_updates_line_height_policy() {

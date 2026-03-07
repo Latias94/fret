@@ -69,6 +69,10 @@ Exit criteria:
 
 - Component authors have a preferred helper path instead of leaf-level manual assembly.
 
+Status note:
+
+- Landed in `ecosystem/fret-ui-kit/src/typography.rs` with subtree helpers, a preset-to-refinement bridge, and guidance to pair subtree defaults with `ui::raw_text(...)` when a leaf should stay unstyled.
+
 ## Milestone 4 — High-value component migration
 
 Goal:
@@ -99,7 +103,7 @@ Exit criteria:
 
 Status note:
 
-- The shadcn description family and `ConfirmationTitle` now use subtree-scoped inherited text refinement; `fret-ui-kit` helper ergonomics remain the main open gap before broader adoption.
+- The shadcn description family and `ConfirmationTitle` now use the shared `fret-ui-kit` typography helpers; broader adoption is the main remaining gap.
 
 ## Milestone 5 — Cleanup and adoption guardrails
 

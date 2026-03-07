@@ -24,7 +24,7 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
-use crate::typography_scope::scope_description;
+use fret_ui_kit::typography::scope_description_text;
 
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
@@ -1374,7 +1374,7 @@ impl SheetDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        scope_description(
+        scope_description_text(
             ui::raw_text(self.text)
                 .wrap(TextWrap::Word)
                 .overflow(TextOverflow::Clip)
@@ -1445,14 +1445,14 @@ mod tests {
         let theme = fret_ui::Theme::global(&app).snapshot();
         assert_eq!(
             element.inherited_text_style.as_ref(),
-            Some(&crate::typography_scope::description_refinement(
+            Some(&fret_ui_kit::typography::description_text_refinement(
                 &theme,
                 "component.sheet.description",
             ))
         );
         assert_eq!(
             element.inherited_foreground,
-            Some(crate::typography_scope::muted_foreground(&theme))
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
     }
 

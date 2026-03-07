@@ -40,14 +40,17 @@ Status legend:
 
 ## C. Ecosystem authoring (`fret-ui-kit`)
 
-- [ ] TSC-kit-020 Add subtree text-style helpers.
-  - Candidate shape:
+- [x] TSC-kit-020 Add subtree text-style helpers.
+  - Landed in `ecosystem/fret-ui-kit/src/typography.rs`:
     - `scope_text_style(...)`
-    - `scope_text_style_children(...)`
-    - `inherited_text_style(...)`
-- [ ] TSC-kit-021 Add a preset-to-refinement bridge for stable semantic typography.
-- [ ] TSC-kit-022 Align the helper story with `ui-typography-presets-v1`.
-- [ ] TSC-kit-023 Document the “one boring path” for subtree-local passive text defaults.
+    - `scope_text_style_with_color(...)`
+    - `scope_description_text(...)`
+- [x] TSC-kit-021 Add a preset-to-refinement bridge for stable semantic typography.
+  - Landed as `fret_ui_kit::typography::preset_text_refinement(...)`.
+- [x] TSC-kit-022 Align the helper story with `ui-typography-presets-v1`.
+  - The subtree helper and preset bridge now live in `ecosystem/fret-ui-kit/src/typography.rs`.
+- [x] TSC-kit-023 Document the “one boring path” for subtree-local passive text defaults.
+  - See the “Landed authoring surface” section in `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`.
 - [ ] TSC-kit-024 Decide whether the description family should expose a shared composable `children` API now that subtree refinement exists.
 
 ## D. Component enhancement / migration matrix
@@ -88,7 +91,7 @@ Status legend:
     - `card`
     - `field`
 - [~] TSC-cleanup-042 Stop introducing new passive-text components that manually rebuild the same description/body text style contract.
-  - Guardrail landed for the existing description family via `ecosystem/fret-ui-shadcn/src/typography_scope.rs`; broader adoption still depends on `fret-ui-kit` helpers.
+  - Guardrail now lives in `ecosystem/fret-ui-kit/src/typography.rs`; broader adoption still depends on migrating more passive-text surfaces.
 - [ ] TSC-cleanup-043 Remove temporary compatibility shims once migrated surfaces are covered by tests.
 
 ## G. Docs / alignment
@@ -96,4 +99,4 @@ Status legend:
 - [x] TSC-docs-050 Add ADR 0314.
 - [x] TSC-docs-051 Add this workstream doc set.
 - [x] TSC-docs-052 Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` as implementation progresses.
-- [ ] TSC-docs-053 Update user-facing authoring guidance after the helper surface lands.
+- [x] TSC-docs-053 Update user-facing authoring guidance after the helper surface lands.

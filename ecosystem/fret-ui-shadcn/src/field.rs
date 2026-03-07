@@ -15,8 +15,9 @@ use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
-use crate::typography_scope::{
-    description_refinement_with_fallbacks, muted_foreground, scope_description_with_fallbacks,
+use fret_ui_kit::typography::{
+    description_text_refinement_with_fallbacks, muted_foreground_color,
+    scope_description_text_with_fallbacks,
 };
 
 fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
@@ -398,12 +399,12 @@ impl FieldSet {
             let rest_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
             let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
-            let muted = muted_foreground(&theme);
+            let muted = muted_foreground_color(&theme);
             let desc_mt_neg_n1 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
             let desc_mt_neg_n1p5 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1p5));
-            let desc_line_height = description_refinement_with_fallbacks(
+            let desc_line_height = description_text_refinement_with_fallbacks(
                 &theme,
                 "component.field.description",
                 Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
@@ -1201,7 +1202,7 @@ impl FieldDescription {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        let el = scope_description_with_fallbacks(
+        let el = scope_description_text_with_fallbacks(
             ui::raw_text(self.text)
                 .wrap(wrap)
                 .overflow(overflow)
@@ -1534,10 +1535,10 @@ impl Field {
                     &theme,
                     LayoutRefinement::default().w_full().min_w_0(),
                 );
-                let muted = muted_foreground(&theme);
+                let muted = muted_foreground_color(&theme);
                 let desc_mt_neg =
                     decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
-                let desc_line_height = description_refinement_with_fallbacks(
+                let desc_line_height = description_text_refinement_with_fallbacks(
                     &theme,
                     "component.field.description",
                     Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
@@ -1883,7 +1884,7 @@ mod tests {
         assert_eq!(
             element.inherited_text_style.as_ref(),
             Some(
-                &crate::typography_scope::description_refinement_with_fallbacks(
+                &fret_ui_kit::typography::description_text_refinement_with_fallbacks(
                     &theme,
                     "component.field.description",
                     Some(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_SM_PX),
@@ -1893,7 +1894,7 @@ mod tests {
         );
         assert_eq!(
             element.inherited_foreground,
-            Some(crate::typography_scope::muted_foreground(&theme))
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
     }
 
