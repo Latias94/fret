@@ -432,6 +432,10 @@ real editors.
   `canvas/widget/context_menu/{target_selection,edge_execution}.rs`, so group selection sync and
   edge action execution no longer stay duplicated between right-click setup and activation dispatch
   branches.
+- Background insert picker activation now also has a named private seam,
+  `canvas/widget/context_menu/background_execution.rs`, so background insert planning,
+  commit/selection, and rejection-toast handling no longer stay embedded in
+  `context_menu/activate.rs`.
 
 ### Deliverables
 
@@ -462,6 +466,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/split_edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
@@ -514,7 +519,6 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
-
 
 
 

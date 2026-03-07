@@ -16,26 +16,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
                 cx.dispatch_command(command);
             }
-            (
-                ContextMenuTarget::BackgroundInsertNodePicker { at },
-                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
-            ) => {
-                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+            (ContextMenuTarget::BackgroundInsertNodePicker { at }, action) => {
+                if self.activate_background_context_action(cx, *at, action, menu_candidates) {
                     return;
-                };
-                self.record_recent_kind(&candidate.kind);
-                let outcome = self.plan_canvas_insert_candidate_ops(cx.app, &candidate, *at);
-                match outcome {
-                    Some(Ok(ops)) => {
-                        let node_id = Self::first_added_node_id(&ops);
-                        if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                            self.select_inserted_node(cx.app, node_id);
-                        }
-                    }
-                    Some(Err(msg)) => {
-                        self.show_toast(cx.app, cx.window, DiagnosticSeverity::Info, msg)
-                    }
-                    None => {}
                 }
             }
             (
