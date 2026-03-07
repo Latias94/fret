@@ -61,6 +61,23 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Shared env override forwarded to control and both Fret cases (KEY=VALUE).",
     )
+    parser.add_argument(
+        "--control-env",
+        action="append",
+        default=[],
+        help="Env override forwarded only to the pure wgpu control run (KEY=VALUE).",
+    )
+    parser.add_argument(
+        "--fret-env",
+        action="append",
+        default=[],
+        help="Env override forwarded only to both Fret compare runs (KEY=VALUE).",
+    )
+    parser.add_argument(
+        "--fret-active-mode",
+        choices=["idle", "present-only", "paint-model", "layout-model"],
+        help="Optional active-mode env for both Fret compare runs.",
+    )
     return parser.parse_args()
 
 
@@ -128,11 +145,17 @@ def main() -> int:
         sample_offsets, args.post_sample_wait_secs
     )
     shared_env = dict(parse_env_kv(raw) for raw in args.shared_env)
+    control_env = dict(parse_env_kv(raw) for raw in args.control_env)
+    fret_env = dict(parse_env_kv(raw) for raw in args.fret_env)
+    if args.fret_active_mode:
+        fret_env["FRET_HELLO_WORLD_COMPARE_ACTIVE_MODE"] = args.fret_active_mode
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     runs_dir = out_dir / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
+
+    fret_label_suffix = f" ({args.fret_active_mode})" if args.fret_active_mode else ""
 
     control_external, control_internal = run_external_sample(
         out_dir=runs_dir / "wgpu-control",
@@ -143,6 +166,7 @@ def main() -> int:
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
             **shared_env,
+            **control_env,
             "FRET_WGPU_HELLO_WORLD_CONTROL_INTERNAL_REPORT_PATH": str(
                 runs_dir / "wgpu-control" / "internal.gpu.json"
             ),
@@ -154,13 +178,14 @@ def main() -> int:
     )
     fret_full_external, fret_full_internal = run_external_sample(
         out_dir=runs_dir / "fret-compare-full",
-        label="fret compare full",
+        label=f"fret compare full{fret_label_suffix}",
         binary=args.fret_binary,
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
             **shared_env,
+            **fret_env,
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH": str(
                 runs_dir / "fret-compare-full" / "internal.gpu.json"
             ),
@@ -172,13 +197,14 @@ def main() -> int:
     )
     fret_empty_external, fret_empty_internal = run_external_sample(
         out_dir=runs_dir / "fret-compare-empty",
-        label="fret compare empty",
+        label=f"fret compare empty{fret_label_suffix}",
         binary=args.fret_binary,
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
             **shared_env,
+            **fret_env,
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH": str(
                 runs_dir / "fret-compare-empty" / "internal.gpu.json"
             ),
@@ -227,6 +253,9 @@ def main() -> int:
             "height_px": args.window_height,
         },
         "shared_env": shared_env,
+        "control_env": control_env,
+        "fret_env": fret_env,
+        "fret_active_mode": args.fret_active_mode,
         "artifacts": {
             "control_external": str(control_external),
             "control_internal": str(control_internal),

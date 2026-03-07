@@ -45,6 +45,24 @@ def format_mib(value: int | None) -> str:
     return f"{value_mib:.1f}"
 
 
+def format_surface_note(requested_surface: dict[str, Any], steady_surface: dict[str, Any]) -> str:
+    actual_mode = steady_surface.get("present_mode") or requested_surface.get("present_mode")
+    requested_mode = requested_surface.get("present_mode_raw")
+    latency = steady_surface.get("desired_maximum_frame_latency")
+    if latency is None:
+        latency = requested_surface.get("desired_maximum_frame_latency")
+    parts: list[str] = []
+    if actual_mode and requested_mode and actual_mode != requested_mode:
+        parts.append(f"mode={actual_mode}(req={requested_mode})")
+    elif actual_mode:
+        parts.append(f"mode={actual_mode}")
+    elif requested_mode:
+        parts.append(f"req={requested_mode}")
+    if latency is not None:
+        parts.append(f"lat={latency}")
+    return ",".join(parts) if parts else "n/a"
+
+
 def summarize_case(
     label: str,
     external_summary: dict[str, Any],
@@ -61,6 +79,8 @@ def summarize_case(
         internal_sample = find_sample(internal_samples, offset_secs)
         allocator = (internal_sample or {}).get("allocator") or {}
         runtime = (internal_sample or {}).get("runtime") or {}
+        surface = (internal_sample or {}).get("surface") or {}
+        renderer_perf = (internal_sample or {}).get("renderer_perf") or {}
         runner_present = runtime.get("runner_present") or {}
         present_count = runtime.get("present_count")
         if present_count is None:
@@ -89,10 +109,19 @@ def summarize_case(
                 "residual_bytes": residual_bytes,
                 "redraw_count": runtime.get("redraw_count") or runtime.get("render_count"),
                 "present_count": present_count,
+                "surface": surface,
+                "renderer_gpu_images_bytes_estimate": renderer_perf.get("gpu_images_bytes_estimate"),
+                "renderer_gpu_render_targets_bytes_estimate": renderer_perf.get("gpu_render_targets_bytes_estimate"),
+                "renderer_intermediate_peak_in_use_bytes": renderer_perf.get("intermediate_peak_in_use_bytes"),
+                "renderer_render_plan_estimated_peak_intermediate_bytes": renderer_perf.get("render_plan_estimated_peak_intermediate_bytes"),
             }
         )
 
     steady = find_sample(paired_samples, steady_offset_secs)
+    requested_runtime = internal_summary.get("requested_runtime") or {}
+    scene = requested_runtime.get("scene") or {}
+    requested_surface = requested_runtime.get("surface") or {}
+    steady_surface = (steady or {}).get("surface") or {}
     physical_footprint_peak_bytes_max = max_sample_value(
         paired_samples, "physical_footprint_peak_bytes"
     )
@@ -119,6 +148,10 @@ def summarize_case(
         "paired_samples": paired_samples,
         "external_summary": external_summary,
         "internal_summary": internal_summary,
+        "requested_runtime": requested_runtime,
+        "active_mode": scene.get("active_mode")
+        or ("continuous-redraw" if scene.get("continuous_redraw") else "n/a"),
+        "surface_note": format_surface_note(requested_surface, steady_surface),
         "physical_footprint_peak_bytes_max": physical_footprint_peak_bytes_max,
         "physical_footprint_sample_max_bytes": physical_footprint_sample_max_bytes,
         "graphics_total_sample_max_bytes": graphics_total_sample_max_bytes,
@@ -129,14 +162,16 @@ def summarize_case(
 
 def markdown_report(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| Case | Steady | Peak MiB | Drop MiB | Physical MiB | Graphics MiB | Metal MiB | Residual MiB | Owned MiB | IOSurface MiB | IOAccel MiB | Redraws | Presents |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Case | Mode | Surface | Steady | Peak MiB | Drop MiB | Physical MiB | Graphics MiB | Metal MiB | Residual MiB | RImg MiB | RRT MiB | RInterm MiB | Owned MiB | IOSurface MiB | IOAccel MiB | Redraws | Presents |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in rows:
         steady = row.get("steady") or {}
         lines.append(
-            "| {label} | {offset:.1f}s | {peak} | {drop} | {physical} | {graphics} | {metal} | {residual} | {owned} | {iosurface} | {ioaccel} | {redraws} | {presents} |".format(
+            "| {label} | {active_mode} | {surface_note} | {offset:.1f}s | {peak} | {drop} | {physical} | {graphics} | {metal} | {residual} | {renderer_images} | {renderer_render_targets} | {renderer_intermediate} | {owned} | {iosurface} | {ioaccel} | {redraws} | {presents} |".format(
                 label=row["label"],
+                active_mode=row.get("active_mode", "n/a"),
+                surface_note=row.get("surface_note", "n/a"),
                 offset=float(steady.get("offset_secs", row.get("steady_offset_secs", 0.0))),
                 peak=format_mib(row.get("physical_footprint_peak_bytes_max")),
                 drop=format_mib(row.get("startup_collapse_bytes")),
@@ -144,6 +179,9 @@ def markdown_report(rows: list[dict[str, Any]]) -> str:
                 graphics=format_mib(steady.get("graphics_total_bytes")),
                 metal=format_mib(steady.get("metal_current_allocated_size_bytes")),
                 residual=format_mib(steady.get("residual_bytes")),
+                renderer_images=format_mib(steady.get("renderer_gpu_images_bytes_estimate")),
+                renderer_render_targets=format_mib(steady.get("renderer_gpu_render_targets_bytes_estimate")),
+                renderer_intermediate=format_mib(steady.get("renderer_intermediate_peak_in_use_bytes")),
                 owned=format_mib(steady.get("owned_unmapped_memory_dirty_bytes")),
                 iosurface=format_mib(steady.get("io_surface_dirty_bytes")),
                 ioaccel=format_mib(steady.get("io_accelerator_dirty_bytes")),

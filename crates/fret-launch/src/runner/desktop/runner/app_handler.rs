@@ -285,6 +285,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             state.surface = Some(surface_state);
             state.window.request_redraw();
+            self.app.with_global_mut_untracked(
+                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                |store, _app| {
+                    store.record(
+                        app_window,
+                        self.frame_id,
+                        fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
+                    );
+                },
+            );
         }
     }
 }
@@ -2097,6 +2107,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         context.queue.submit(cmd_buffers);
                         frame.present();
+                        self.app.with_global_mut_untracked(
+                            fret_runtime::RunnerPresentDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record_present(app_window, self.frame_id);
+                            },
+                        );
                         drop(engine_keepalive);
 
                         #[cfg(feature = "diag-screenshots")]
@@ -2137,7 +2153,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
+                                let surface_record =
+                                    super::render::capture_surface_config_diagnostics_record(
+                                        &surface.config,
+                                    );
                                 state.window.request_redraw();
+                                let _ = surface;
+                                let _ = state;
+                                self.record_surface_config_snapshot(app_window, surface_record);
+                                self.app.with_global_mut_untracked(
+                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record(
+                                            app_window,
+                                            self.frame_id,
+                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverLost,
+                                        );
+                                    },
+                                );
                                 self.raf_windows.insert(app_window);
                                 return;
                             }
@@ -2146,7 +2179,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
+                                let surface_record =
+                                    super::render::capture_surface_config_diagnostics_record(
+                                        &surface.config,
+                                    );
                                 state.window.request_redraw();
+                                let _ = surface;
+                                let _ = state;
+                                self.record_surface_config_snapshot(app_window, surface_record);
+                                self.app.with_global_mut_untracked(
+                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record(
+                                            app_window,
+                                            self.frame_id,
+                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverOutdated,
+                                        );
+                                    },
+                                );
                                 self.raf_windows.insert(app_window);
                                 return;
                             }
@@ -2157,6 +2207,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 // Schedule a one-shot redraw so the window doesn't stay blank until
                                 // the next user input arrives.
                                 state.window.request_redraw();
+                                self.app.with_global_mut_untracked(
+                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record(
+                                            app_window,
+                                            self.frame_id,
+                                            fret_runtime::RunnerFrameDriveReason::SurfaceRecoverTimeout,
+                                        );
+                                    },
+                                );
                                 self.raf_windows.insert(app_window);
                                 return;
                             }
@@ -2801,6 +2861,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             for app_window in self.raf_windows.drain() {
                 if let Some(state) = self.windows.get(app_window) {
                     state.window.request_redraw();
+                    self.app.with_global_mut_untracked(
+                        fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                        |store, _app| {
+                            store.record(
+                                app_window,
+                                self.frame_id,
+                                fret_runtime::RunnerFrameDriveReason::AboutToWaitRaf,
+                            );
+                        },
+                    );
                 }
             }
         }

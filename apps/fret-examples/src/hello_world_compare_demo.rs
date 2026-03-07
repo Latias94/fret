@@ -4,13 +4,15 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use fret::prelude::*;
 use fret_core::{AppWindowId, Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
-use fret_render::{Renderer, WgpuContext};
+use fret_render::{Renderer, RendererPerfFrameStore, WgpuContext};
 use fret_runtime::{
     RunnerFrameDriveDiagnosticsStore, RunnerPresentDiagnosticsStore,
-    WindowGlobalChangeDiagnosticsStore, WindowRedrawRequestDiagnosticsStore,
+    RunnerSurfaceConfigDiagnosticsStore, WindowGlobalChangeDiagnosticsStore,
+    WindowRedrawRequestDiagnosticsStore,
 };
 use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, TextProps};
+use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use serde_json::json;
 
 const TEST_ID_ROOT: &str = "hello_world_compare.root";
@@ -20,19 +22,99 @@ const INTERNAL_GPU_REPORT_BASENAME: &str = "hello_world_compare.internal_gpu.jso
 
 static PROCESS_LAUNCH_AT: OnceLock<Instant> = OnceLock::new();
 static PROCESS_LAUNCH_UNIX_MS: OnceLock<u64> = OnceLock::new();
+static COMPARE_WINDOW_ID: OnceLock<Mutex<Option<AppWindowId>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompareActiveMode {
+    Idle,
+    PresentOnly,
+    PaintModel,
+    LayoutModel,
+}
+
+impl CompareActiveMode {
+    fn from_env(legacy_continuous_redraw: bool) -> Self {
+        let Some(raw) = env_string("FRET_HELLO_WORLD_COMPARE_ACTIVE_MODE") else {
+            return if legacy_continuous_redraw {
+                Self::PresentOnly
+            } else {
+                Self::Idle
+            };
+        };
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "idle" => Self::Idle,
+            "present" | "present-only" | "present_only" => Self::PresentOnly,
+            "paint" | "paint-model" | "paint_model" => Self::PaintModel,
+            "layout" | "layout-model" | "layout_model" => Self::LayoutModel,
+            other => {
+                eprintln!(
+                    "hello_world_compare active_mode_invalid value={other} default={} ",
+                    if legacy_continuous_redraw {
+                        Self::PresentOnly.as_str()
+                    } else {
+                        Self::Idle.as_str()
+                    }
+                );
+                if legacy_continuous_redraw {
+                    Self::PresentOnly
+                } else {
+                    Self::Idle
+                }
+            }
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::PresentOnly => "present-only",
+            Self::PaintModel => "paint-model",
+            Self::LayoutModel => "layout-model",
+        }
+    }
+
+    fn is_active(self) -> bool {
+        !matches!(self, Self::Idle)
+    }
+
+    fn uses_continuous_frames_lease(self) -> bool {
+        matches!(self, Self::PresentOnly)
+    }
+
+    fn uses_animation_frame_loop(self) -> bool {
+        matches!(self, Self::PaintModel | Self::LayoutModel)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 struct CompareFlags {
     no_text: bool,
     no_swatches: bool,
+    legacy_continuous_redraw: bool,
+    active_mode: CompareActiveMode,
 }
 
 impl CompareFlags {
     fn from_env() -> Self {
+        let legacy_continuous_redraw = env_flag("FRET_HELLO_WORLD_COMPARE_CONTINUOUS_REDRAW");
         Self {
             no_text: env_flag("FRET_HELLO_WORLD_COMPARE_NO_TEXT"),
             no_swatches: env_flag("FRET_HELLO_WORLD_COMPARE_NO_SWATCHES"),
+            legacy_continuous_redraw,
+            active_mode: CompareActiveMode::from_env(legacy_continuous_redraw),
         }
+    }
+
+    fn is_active(self) -> bool {
+        self.active_mode.is_active()
+    }
+
+    fn uses_continuous_frames_lease(self) -> bool {
+        self.active_mode.uses_continuous_frames_lease()
+    }
+
+    fn uses_animation_frame_loop(self) -> bool {
+        self.active_mode.uses_animation_frame_loop()
     }
 }
 
@@ -96,6 +178,25 @@ static RUNTIME_FRAME_SAMPLE_STATE: OnceLock<Mutex<RuntimeFrameSampleState>> = On
 
 fn runtime_frame_sample_state() -> &'static Mutex<RuntimeFrameSampleState> {
     RUNTIME_FRAME_SAMPLE_STATE.get_or_init(|| Mutex::new(RuntimeFrameSampleState::default()))
+}
+
+fn compare_window_id_state() -> &'static Mutex<Option<AppWindowId>> {
+    COMPARE_WINDOW_ID.get_or_init(|| Mutex::new(None))
+}
+
+fn remember_compare_window(window: AppWindowId) {
+    let mut slot = compare_window_id_state()
+        .lock()
+        .unwrap_or_else(|err| err.into_inner());
+    *slot = Some(window);
+}
+
+fn compare_window_id() -> Option<AppWindowId> {
+    compare_window_id_state()
+        .lock()
+        .unwrap_or_else(|err| err.into_inner())
+        .as_ref()
+        .copied()
 }
 
 fn internal_gpu_report_path() -> Option<PathBuf> {
@@ -361,6 +462,76 @@ fn capture_global_change_sample_json(
     })
 }
 
+fn capture_surface_config_sample_json(
+    surface_config_store: &RunnerSurfaceConfigDiagnosticsStore,
+    launch_unix_ms: u64,
+) -> serde_json::Value {
+    let window = compare_window_id();
+    let Some(window) = window else {
+        return json!({
+            "present": false,
+            "window_known": false,
+        });
+    };
+    let Some(snapshot) = surface_config_store.window_snapshot(window) else {
+        return json!({
+            "present": false,
+            "window_known": true,
+        });
+    };
+    json!({
+        "present": true,
+        "window_known": true,
+        "width_px": snapshot.width_px,
+        "height_px": snapshot.height_px,
+        "format": snapshot.format,
+        "present_mode": snapshot.present_mode,
+        "desired_maximum_frame_latency": snapshot.desired_maximum_frame_latency,
+        "alpha_mode": snapshot.alpha_mode,
+        "configure_count": snapshot.configure_count,
+        "last_configure_frame_id": snapshot.last_configure_frame_id,
+        "last_configure_unix_ms": snapshot.last_configure_unix_ms,
+        "last_configure_since_launch_ms": snapshot
+            .last_configure_unix_ms
+            .map(|unix_ms| unix_ms.saturating_sub(launch_unix_ms)),
+    })
+}
+
+fn capture_renderer_perf_sample_json(
+    renderer_perf_store: &RendererPerfFrameStore,
+) -> serde_json::Value {
+    let window = compare_window_id();
+    let Some(window) = window else {
+        return json!({
+            "present": false,
+            "window_known": false,
+        });
+    };
+    let Some(snapshot) = renderer_perf_store.latest_for_window(window) else {
+        return json!({
+            "present": false,
+            "window_known": true,
+        });
+    };
+    let perf = snapshot.perf;
+    json!({
+        "present": true,
+        "window_known": true,
+        "tick_id": snapshot.tick_id,
+        "frame_id": snapshot.frame_id,
+        "frames": perf.frames,
+        "gpu_images_live": perf.gpu_images_live,
+        "gpu_images_bytes_estimate": perf.gpu_images_bytes_estimate,
+        "gpu_render_targets_live": perf.gpu_render_targets_live,
+        "gpu_render_targets_bytes_estimate": perf.gpu_render_targets_bytes_estimate,
+        "intermediate_budget_bytes": perf.intermediate_budget_bytes,
+        "intermediate_full_target_bytes": perf.intermediate_full_target_bytes,
+        "intermediate_peak_in_use_bytes": perf.intermediate_peak_in_use_bytes,
+        "render_plan_estimated_peak_intermediate_bytes": perf.render_plan_estimated_peak_intermediate_bytes,
+        "render_plan_degradations": perf.render_plan_degradations,
+    })
+}
+
 fn env_flag(name: &str) -> bool {
     std::env::var_os(name)
         .and_then(|value| value.into_string().ok())
@@ -522,6 +693,12 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
         WindowGlobalChangeDiagnosticsStore::default,
         |store, _app| store.clone(),
     );
+    let surface_config_store = app.with_global_mut_untracked(
+        RunnerSurfaceConfigDiagnosticsStore::default,
+        |store, _app| store.clone(),
+    );
+    let renderer_perf_store =
+        app.with_global_mut_untracked(RendererPerfFrameStore::default, |store, _app| store.clone());
     let instance = context.instance.clone();
     let device = context.device.clone();
     let adapter_info = context.adapter.get_info();
@@ -539,6 +716,11 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
         "scene": {
             "no_text": compare_flags.no_text,
             "no_swatches": compare_flags.no_swatches,
+            "active_mode": compare_flags.active_mode.as_str(),
+            "active": compare_flags.is_active(),
+            "continuous_redraw": compare_flags.uses_continuous_frames_lease(),
+            "animation_frame_loop": compare_flags.uses_animation_frame_loop(),
+            "legacy_continuous_redraw_env": compare_flags.legacy_continuous_redraw,
         },
         "startup": {
             "pre_init_sleep_secs": pre_init_sleep_duration()
@@ -591,6 +773,8 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
             let sample = capture_internal_gpu_sample(
                 &instance,
                 &device,
+                &surface_config_store,
+                &renderer_perf_store,
                 &runner_present_store,
                 &runner_frame_drive_store,
                 &redraw_request_store,
@@ -600,7 +784,7 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
                 config.top_n,
             );
             eprintln!(
-                "hello_world_compare internal_gpu_sample offset_secs={offset_secs:.3} metal_current_allocated_size_bytes={} allocator_total_allocated_bytes={} hub_textures={} runner_present_total={} runner_frame_drive_total={} redraw_request_total={} global_change_batches={}",
+                "hello_world_compare internal_gpu_sample offset_secs={offset_secs:.3} metal_current_allocated_size_bytes={} allocator_total_allocated_bytes={} hub_textures={} surface_configures={} renderer_gpu_images_bytes={} renderer_gpu_render_targets_bytes={} runner_present_total={} runner_frame_drive_total={} redraw_request_total={} global_change_batches={}",
                 sample["allocator"]["metal_current_allocated_size_bytes"]
                     .as_u64()
                     .unwrap_or(0),
@@ -608,6 +792,13 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
                     .as_u64()
                     .unwrap_or(0),
                 sample["hub"]["textures"].as_u64().unwrap_or(0),
+                sample["surface"]["configure_count"].as_u64().unwrap_or(0),
+                sample["renderer_perf"]["gpu_images_bytes_estimate"]
+                    .as_u64()
+                    .unwrap_or(0),
+                sample["renderer_perf"]["gpu_render_targets_bytes_estimate"]
+                    .as_u64()
+                    .unwrap_or(0),
                 sample["runtime"]["runner_present"]["total_present_count"]
                     .as_u64()
                     .unwrap_or(0),
@@ -641,6 +832,8 @@ fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) 
 fn capture_internal_gpu_sample(
     instance: &wgpu::Instance,
     device: &wgpu::Device,
+    surface_config_store: &RunnerSurfaceConfigDiagnosticsStore,
+    renderer_perf_store: &RendererPerfFrameStore,
     runner_present_store: &RunnerPresentDiagnosticsStore,
     runner_frame_drive_store: &RunnerFrameDriveDiagnosticsStore,
     redraw_request_store: &WindowRedrawRequestDiagnosticsStore,
@@ -713,6 +906,8 @@ fn capture_internal_gpu_sample(
         "captured_since_launch_ms": captured_unix_ms.saturating_sub(launch_unix_ms),
         "hub": hub_json,
         "allocator": allocator_json,
+        "surface": capture_surface_config_sample_json(surface_config_store, launch_unix_ms),
+        "renderer_perf": capture_renderer_perf_sample_json(renderer_perf_store),
         "runtime": capture_runtime_frame_sample_json(
             runner_present_store,
             runner_frame_drive_store,
@@ -739,20 +934,41 @@ fn current_metal_allocated_size_bytes(_device: &wgpu::Device) -> Option<u64> {
 
 struct HelloWorldCompareView {
     flags: CompareFlags,
+    frame_tick: u64,
 }
 
 impl View for HelloWorldCompareView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, window: AppWindowId) -> Self {
+        remember_compare_window(window);
         Self {
             flags: CompareFlags::from_env(),
+            frame_tick: 0,
         }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());
+        if self.flags.uses_animation_frame_loop() {
+            cx.request_animation_frame();
+            self.frame_tick = self.frame_tick.wrapping_add(1);
+        }
         update_runtime_frame_sample_state(cx);
 
         let title_color = Color::from_srgb_hex_rgb(0xffffff);
-        let panel_bg = Color::from_srgb_hex_rgb(0x505050);
+        let bg_wave = if matches!(self.flags.active_mode, CompareActiveMode::PaintModel) {
+            ((self.frame_tick / 2) % 24) as u32
+        } else {
+            0
+        };
+        let panel_bg = Color::from_srgb_hex_rgb(
+            ((0x50 + bg_wave) << 16) | ((0x50 + (bg_wave / 2)) << 8) | (0x50 + bg_wave),
+        );
+        let layout_probe_height_px =
+            if matches!(self.flags.active_mode, CompareActiveMode::LayoutModel) {
+                8.0 + (((self.frame_tick / 2) % 5) as f32 * 12.0)
+            } else {
+                8.0
+            };
 
         let swatch =
             |cx: &mut ElementContext<'_, App>, fill_rgb: u32, border_rgb: u32| -> AnyElement {
@@ -765,6 +981,12 @@ impl View for HelloWorldCompareView {
                     .border_color(ColorRef::Color(Color::from_srgb_hex_rgb(border_rgb)))
                     .into_element(cx)
             };
+        let layout_probe = ui::container(|_cx| Vec::<AnyElement>::new())
+            .w_px(Px(160.0))
+            .h_px(Px(layout_probe_height_px))
+            .bg(ColorRef::Color(panel_bg))
+            .rounded(Radius::Md)
+            .into_element(cx);
 
         let title = (!self.flags.no_text).then(|| {
             cx.text_props(TextProps {
@@ -802,6 +1024,7 @@ impl View for HelloWorldCompareView {
         });
 
         let mut children = Vec::<AnyElement>::new();
+        children.push(layout_probe);
         if let Some(title) = title {
             children.push(title);
         }
