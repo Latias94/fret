@@ -412,6 +412,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: searcher pointer hover feedback and wheel scroll state now route through the
     private `canvas/widget/searcher_pointer.rs` seam, so hovered-row sync, hover-driven active-row
     promotion, and wheel scroll clamping no longer stay embedded in `searcher.rs`.
+  - Progress: `searcher.rs` now acts as a thin retained event router, while escape / key /
+    pointer-down / pointer-up / pointer-move / wheel behavior each delegate to their owning
+    private seam instead of keeping event glue in one file.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

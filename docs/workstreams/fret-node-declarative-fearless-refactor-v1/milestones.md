@@ -477,6 +477,9 @@ real editors.
 - Searcher pointer hover feedback and wheel scroll state now also route through the private
   `canvas/widget/searcher_pointer.rs` seam, so hovered-row sync, hover-driven active-row
   promotion, and wheel scroll clamping no longer stay embedded in `searcher.rs`.
+- `searcher.rs` now also acts as a thin retained event router, while escape / key /
+  pointer-down / pointer-up / pointer-move / wheel behavior each delegate to their owning
+  private seam instead of keeping event glue in one file.
 
 ### Deliverables
 
@@ -518,6 +521,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
