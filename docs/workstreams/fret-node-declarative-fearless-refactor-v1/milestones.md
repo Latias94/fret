@@ -517,6 +517,9 @@ real editors.
   sticky-wire activation, and pan-start branches through the private
   `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
   embedded in the retained pointer-down router.
+- `focus_nav.rs` now also routes edge / node / port traversal through the private
+  `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
+  node focus no longer stay embedded in the port-hint / activation file.
 
 ### Deliverables
 
@@ -568,6 +571,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

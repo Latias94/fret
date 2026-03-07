@@ -452,6 +452,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     arming, sticky-wire activation, and pan-start branches through the private
     `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
     embedded in the retained pointer-down router.
+  - Progress: `focus_nav.rs` now routes edge / node / port traversal through the private
+    `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
+    node focus no longer stay embedded in the port-hint / activation file.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
