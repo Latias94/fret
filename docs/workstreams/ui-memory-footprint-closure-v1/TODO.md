@@ -195,6 +195,11 @@
   - Result: the debug conclusion survives optimized binaries. Idle remains only about `+13–17 MiB` physical / `+5–8 MiB` graphics above GPUI, while active rows still leave Fret about `~+94–118 MiB` physical / `~+86–107 MiB` graphics higher on the same scene.
   - The old debug caveat is now closed: `paint-model full` is cadence-matched enough to trust in release (`GPUI≈583`, `Fret≈578` renders by `6s`).
 - [ ] Run the same matrix against an external same-backend `wgpu` UI framework once a suitable control exists, so framework-vs-framework active residency can be stated without the Blade/Metal backend mismatch.
+- [x] Run a same-backend active `Virtual Memory Trace + Metal Application` paired capture (local 2026-03-07) for control continuous redraw plus Fret `rerender-only` / `paint-model` / `layout-model`.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-apple-vm-metal-active-samebackend.md`.
+  - Base artifacts: `target/diag/apple-vm-metal-active-samebackend-20260307-r1/`
+  - Result: all four captures produce full bundles, but `metal-io-surface-access` and `metal-command-buffer-frame-assignment` still show `0` app-pid matches and remain dominated by WindowServer / GPU helpers. Visible surface/object-label volume stays in the same rough band between control and Fret, so this path still does not expose an obvious Fret-only compositor-surface explosion behind the active plateau.
+- [ ] Turn the same-backend active Apple path into a stronger attribution tool: either launch-mode `Game Memory` on the strong active rows, or add joins/parsers around `present-surface-id` / compositor stores / `Metal Resource Events`.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.
   - Continuous control is a good stress case here: `target/diag/wgpu-control-pid-audit-continuous-20260306-r2/summary.json` still collapsed into a partial `Trace1.run`-only bundle, while the same config in `target/diag/wgpu-control-pid-audit-continuous-20260306-r3/summary.json` produced a full bundle.
