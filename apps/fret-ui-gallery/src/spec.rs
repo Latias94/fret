@@ -1297,7 +1297,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_ATTACHMENTS_DEMO,
                 "AI Attachments (Demo)",
-                "AI Elements Attachments / Grid + Inline + List Demo",
+                "AI Elements Attachments",
                 "fret-ui-ai (attachments surface)",
                 CMD_NAV_AI_ATTACHMENTS_DEMO,
                 &["ai", "attachments", "remove", "hover", "demo"],

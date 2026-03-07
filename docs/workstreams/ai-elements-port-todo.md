@@ -124,7 +124,7 @@ Status legend:
 | `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
 | `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
 | `persona` | Prototype | `fret-ui-ai` | UI-only placeholder (upstream uses Rive/webgl2). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
-| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
+| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` + `AttachmentHoverCard*` surfaces exist; UI Gallery page now uses docs-aligned compound composition and the screenshot gate waits for the inline hover preview. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
 | `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces with deferred slot resolution for direct compound children, docs-aligned UI Gallery examples, and a diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
