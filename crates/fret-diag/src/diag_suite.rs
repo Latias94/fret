@@ -1105,6 +1105,225 @@ fn build_suite_core_default_post_run_checks(
     defaults
 }
 
+fn build_suite_editor_text_default_post_run_checks(
+    src: &Path,
+    user_checks: &SuiteChecks,
+) -> SuiteChecks {
+    let mut defaults = SuiteChecks::default();
+
+    defaults.check_ui_gallery_code_editor_torture_marker_present =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_torture_marker_present;
+    defaults.check_ui_gallery_code_editor_torture_undo_redo =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_undo_redo_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_torture_undo_redo;
+    defaults.check_ui_gallery_code_editor_torture_geom_fallbacks_low =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low;
+    defaults.check_ui_gallery_code_editor_torture_read_only_blocks_edits =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_read_only_blocks_edits_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits;
+    defaults.check_ui_gallery_markdown_editor_source_read_only_blocks_edits =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
+    defaults.check_ui_gallery_markdown_editor_source_disabled_blocks_edits =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
+    defaults.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
+    defaults.check_ui_gallery_markdown_editor_source_word_boundary =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(src)
+            && !user_checks.check_ui_gallery_markdown_editor_source_word_boundary;
+    defaults.check_ui_gallery_web_ime_bridge_enabled =
+        diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(src)
+            && !user_checks.check_ui_gallery_web_ime_bridge_enabled;
+    defaults.check_ui_gallery_markdown_editor_source_line_boundary_triple_click = diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
+    defaults.check_ui_gallery_markdown_editor_source_a11y_composition =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(src)
+            && !user_checks.check_ui_gallery_markdown_editor_source_a11y_composition;
+    defaults.check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap = diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap;
+    defaults.check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable = diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
+    defaults.check_ui_gallery_markdown_editor_source_folds_toggle_stable =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_markdown_editor_source_folds_toggle_stable;
+    defaults.check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds = diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_clamp_selection_out_of_folds_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds;
+    defaults.check_ui_gallery_markdown_editor_source_folds_placeholder_present = diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_folds_placeholder_present;
+    defaults.check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap = diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
+    defaults.check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit = diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
+    defaults.check_ui_gallery_markdown_editor_source_inlays_toggle_stable =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
+    defaults.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable = diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
+    defaults.check_ui_gallery_markdown_editor_source_inlays_present =
+        diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(src)
+            && !user_checks.check_ui_gallery_markdown_editor_source_inlays_present;
+    defaults.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap = diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
+    defaults.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit = diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(src) && !user_checks.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit = diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_inline_preedit_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped = diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations = diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed = diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
+    defaults.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed = diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
+    defaults.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed = diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
+    defaults.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll = diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
+    defaults.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection = diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_present;
+    defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap = diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_soft_wrap_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
+    defaults.check_ui_gallery_code_editor_torture_inlays_present =
+        diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_torture_inlays_present;
+    defaults.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit = diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_absent_under_inline_preedit_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
+    defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped = diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
+    defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations = diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
+    defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed = diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
+    defaults.check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap = diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(src) && !user_checks.check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
+    defaults.check_ui_gallery_code_editor_word_boundary =
+        diag_policy::ui_gallery_script_requires_code_editor_word_boundary_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_word_boundary;
+    defaults.check_ui_gallery_code_editor_a11y_selection =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_selection;
+    defaults.check_ui_gallery_code_editor_a11y_composition =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_composition;
+    defaults.check_ui_gallery_code_editor_a11y_selection_wrap =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_selection_wrap;
+    defaults.check_ui_gallery_code_editor_a11y_composition_wrap =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_composition_wrap;
+    defaults.check_ui_gallery_code_editor_a11y_composition_wrap_scroll =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
+    defaults.check_ui_gallery_code_editor_a11y_composition_drag =
+        diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(src)
+            && !user_checks.check_ui_gallery_code_editor_a11y_composition_drag;
+    defaults.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
+        diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
+    defaults.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change = diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(src) && !user_checks.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
+    defaults.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
+        diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
+    defaults.check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
+        diag_policy::ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
+            src,
+        ) && !user_checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
+
+    defaults
+}
+
+fn apply_suite_editor_text_default_post_run_checks(
+    checks: &mut SuiteChecks,
+    defaults: &SuiteChecks,
+) {
+    checks.check_ui_gallery_code_editor_torture_marker_present |=
+        defaults.check_ui_gallery_code_editor_torture_marker_present;
+    checks.check_ui_gallery_code_editor_torture_undo_redo |=
+        defaults.check_ui_gallery_code_editor_torture_undo_redo;
+    checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low |=
+        defaults.check_ui_gallery_code_editor_torture_geom_fallbacks_low;
+    checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits |=
+        defaults.check_ui_gallery_code_editor_torture_read_only_blocks_edits;
+    checks.check_ui_gallery_markdown_editor_source_read_only_blocks_edits |=
+        defaults.check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
+    checks.check_ui_gallery_markdown_editor_source_disabled_blocks_edits |=
+        defaults.check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
+    checks.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable |=
+        defaults.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
+    checks.check_ui_gallery_markdown_editor_source_word_boundary |=
+        defaults.check_ui_gallery_markdown_editor_source_word_boundary;
+    checks.check_ui_gallery_web_ime_bridge_enabled |=
+        defaults.check_ui_gallery_web_ime_bridge_enabled;
+    checks.check_ui_gallery_markdown_editor_source_line_boundary_triple_click |=
+        defaults.check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
+    checks.check_ui_gallery_markdown_editor_source_a11y_composition |=
+        defaults.check_ui_gallery_markdown_editor_source_a11y_composition;
+    checks.check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap |=
+        defaults.check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap;
+    checks.check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable |=
+        defaults.check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
+    checks.check_ui_gallery_markdown_editor_source_folds_toggle_stable |=
+        defaults.check_ui_gallery_markdown_editor_source_folds_toggle_stable;
+    checks.check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds |=
+        defaults.check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds;
+    checks.check_ui_gallery_markdown_editor_source_folds_placeholder_present |=
+        defaults.check_ui_gallery_markdown_editor_source_folds_placeholder_present;
+    checks.check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap |=
+        defaults.check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
+    checks.check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit |=
+        defaults
+            .check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
+    checks.check_ui_gallery_markdown_editor_source_inlays_toggle_stable |=
+        defaults.check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
+    checks.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable |=
+        defaults.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
+    checks.check_ui_gallery_markdown_editor_source_inlays_present |=
+        defaults.check_ui_gallery_markdown_editor_source_inlays_present;
+    checks.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap |=
+        defaults.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
+    checks.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit |=
+        defaults.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit |=
+        defaults.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped |= defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations |= defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed |= defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
+    checks.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed |= defaults.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
+    checks.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed |= defaults.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
+    checks.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll |=
+        defaults.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
+    checks.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection |=
+        defaults.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_present |=
+        defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present;
+    checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap |=
+        defaults.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
+    checks.check_ui_gallery_code_editor_torture_inlays_present |=
+        defaults.check_ui_gallery_code_editor_torture_inlays_present;
+    checks.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit |=
+        defaults.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped |=
+        defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations |= defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed |= defaults.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap |=
+        defaults.check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
+    checks.check_ui_gallery_code_editor_word_boundary |=
+        defaults.check_ui_gallery_code_editor_word_boundary;
+    checks.check_ui_gallery_code_editor_a11y_selection |=
+        defaults.check_ui_gallery_code_editor_a11y_selection;
+    checks.check_ui_gallery_code_editor_a11y_composition |=
+        defaults.check_ui_gallery_code_editor_a11y_composition;
+    checks.check_ui_gallery_code_editor_a11y_selection_wrap |=
+        defaults.check_ui_gallery_code_editor_a11y_selection_wrap;
+    checks.check_ui_gallery_code_editor_a11y_composition_wrap |=
+        defaults.check_ui_gallery_code_editor_a11y_composition_wrap;
+    checks.check_ui_gallery_code_editor_a11y_composition_wrap_scroll |=
+        defaults.check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
+    checks.check_ui_gallery_code_editor_a11y_composition_drag |=
+        defaults.check_ui_gallery_code_editor_a11y_composition_drag;
+    checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps |=
+        defaults.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
+    checks.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change |=
+        defaults.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
+    checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change |=
+        defaults.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
+    checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance |=
+        defaults.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
+}
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
@@ -1201,56 +1420,62 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_stale_paint_test_id,
         check_stale_scene_eps: _,
         check_stale_scene_test_id,
-        check_ui_gallery_code_editor_a11y_composition,
-        check_ui_gallery_code_editor_a11y_composition_drag,
-        check_ui_gallery_code_editor_a11y_composition_wrap,
-        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-        check_ui_gallery_code_editor_a11y_selection,
-        check_ui_gallery_code_editor_a11y_selection_wrap,
-        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
-        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
-        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
-        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
-        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
-        check_ui_gallery_code_editor_torture_geom_fallbacks_low,
-        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
-        check_ui_gallery_code_editor_torture_inlays_present,
-        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
-        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
-        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
-        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
-        check_ui_gallery_code_editor_torture_marker_present,
-        check_ui_gallery_code_editor_torture_read_only_blocks_edits,
-        check_ui_gallery_code_editor_torture_undo_redo,
-        check_ui_gallery_code_editor_word_boundary,
-        check_ui_gallery_markdown_editor_source_a11y_composition,
-        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
-        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
-        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
-        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
-        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
-        check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
-        check_ui_gallery_markdown_editor_source_inlays_present,
-        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
-        check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
-        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
-        check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
-        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
-        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
-        check_ui_gallery_markdown_editor_source_word_boundary,
-        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
-        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
-        check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
-        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
-        check_ui_gallery_web_ime_bridge_enabled,
+        check_ui_gallery_code_editor_a11y_composition: _,
+        check_ui_gallery_code_editor_a11y_composition_drag: _,
+        check_ui_gallery_code_editor_a11y_composition_wrap: _,
+        check_ui_gallery_code_editor_a11y_composition_wrap_scroll: _,
+        check_ui_gallery_code_editor_a11y_selection: _,
+        check_ui_gallery_code_editor_a11y_selection_wrap: _,
+        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: _,
+        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: _,
+        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed:
+            _,
+        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed:
+            _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present: _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped:
+            _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations:
+            _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed:
+            _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: _,
+        check_ui_gallery_code_editor_torture_geom_fallbacks_low: _,
+        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: _,
+        check_ui_gallery_code_editor_torture_inlays_present: _,
+        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: _,
+        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: _,
+        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed:
+            _,
+        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: _,
+        check_ui_gallery_code_editor_torture_marker_present: _,
+        check_ui_gallery_code_editor_torture_read_only_blocks_edits: _,
+        check_ui_gallery_code_editor_torture_undo_redo: _,
+        check_ui_gallery_code_editor_word_boundary: _,
+        check_ui_gallery_markdown_editor_source_a11y_composition: _,
+        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: _,
+        check_ui_gallery_markdown_editor_source_disabled_blocks_edits: _,
+        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_present: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: _,
+        check_ui_gallery_markdown_editor_source_folds_toggle_stable: _,
+        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: _,
+        check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable: _,
+        check_ui_gallery_markdown_editor_source_inlays_present: _,
+        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: _,
+        check_ui_gallery_markdown_editor_source_inlays_toggle_stable: _,
+        check_ui_gallery_markdown_editor_source_line_boundary_triple_click: _,
+        check_ui_gallery_markdown_editor_source_read_only_blocks_edits: _,
+        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: _,
+        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: _,
+        check_ui_gallery_markdown_editor_source_word_boundary: _,
+        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: _,
+        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: _,
+        check_ui_gallery_text_mixed_script_bundled_fallback_conformance: _,
+        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: _,
+        check_ui_gallery_web_ime_bridge_enabled: _,
         check_view_cache_reuse_min,
         check_view_cache_reuse_stable_min,
         check_viewport_capture_min,
@@ -2093,36 +2318,36 @@ hint: list suites via `fretboard diag list suites`"
             || check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
-            || check_ui_gallery_web_ime_bridge_enabled
-            || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
-            || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
-            || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
-            || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-            || check_ui_gallery_code_editor_torture_marker_present
-            || check_ui_gallery_code_editor_torture_undo_redo
-            || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-            || check_ui_gallery_code_editor_torture_read_only_blocks_edits
-            || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
-            || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-            || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
-            || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
-            || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present
-            || check_ui_gallery_code_editor_torture_inlays_present
-            || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
-            || check_ui_gallery_code_editor_word_boundary
-            || check_ui_gallery_code_editor_a11y_selection
-            || check_ui_gallery_code_editor_a11y_composition
-            || check_ui_gallery_code_editor_a11y_selection_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-            || check_ui_gallery_code_editor_a11y_composition_drag
+            || checks_for_post_run_template.check_ui_gallery_web_ime_bridge_enabled
+            || checks_for_post_run_template.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+            || checks_for_post_run_template.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+            || checks_for_post_run_template.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+            || checks_for_post_run_template.check_ui_gallery_text_mixed_script_bundled_fallback_conformance
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_marker_present
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_undo_redo
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_geom_fallbacks_low
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_read_only_blocks_edits
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
+            || checks_for_post_run_template.check_ui_gallery_code_editor_word_boundary
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_selection
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_selection_wrap
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_wrap
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_drag
             || check_semantics_changed_repainted
             || check_wheel_events_max_per_frame.is_some()
             || check_wheel_scroll_test_id.is_some()
@@ -2234,173 +2459,10 @@ hint: list suites via `fretboard diag list suites`"
                 &checks_for_post_run_template,
                 is_gc_liveness_script,
             );
-            let suite_ui_gallery_code_editor_torture_marker_present =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_torture_marker_present;
-            let suite_ui_gallery_code_editor_torture_undo_redo =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_undo_redo_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_undo_redo;
-            let suite_ui_gallery_code_editor_torture_geom_fallbacks_low =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_torture_geom_fallbacks_low;
-            let suite_ui_gallery_code_editor_torture_read_only_blocks_edits =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_read_only_blocks_edits_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_read_only_blocks_edits;
-            let suite_ui_gallery_markdown_editor_source_read_only_blocks_edits =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
-            let suite_ui_gallery_markdown_editor_source_disabled_blocks_edits =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
-            let suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
-            let suite_ui_gallery_markdown_editor_source_word_boundary =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_word_boundary;
-            let suite_ui_gallery_web_ime_bridge_enabled =
-                diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
-                    && !check_ui_gallery_web_ime_bridge_enabled;
-            let suite_ui_gallery_markdown_editor_source_line_boundary_triple_click =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
-            let suite_ui_gallery_markdown_editor_source_a11y_composition =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_a11y_composition;
-            let suite_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap;
-            let suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
-            let suite_ui_gallery_markdown_editor_source_folds_toggle_stable =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_folds_toggle_stable;
-            let suite_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_clamp_selection_out_of_folds_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds;
-            let suite_ui_gallery_markdown_editor_source_folds_placeholder_present =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_folds_placeholder_present;
-            let suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
-            let suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
-            let suite_ui_gallery_markdown_editor_source_inlays_toggle_stable =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
-            let suite_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
-            let suite_ui_gallery_markdown_editor_source_inlays_present =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(
-                    &src,
-                ) && !check_ui_gallery_markdown_editor_source_inlays_present;
-            let suite_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
-            let suite_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit =
-                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_inline_preedit_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
-            let suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
-            let suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
-            let suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
-            let suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
-            let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_soft_wrap_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
-            let suite_ui_gallery_code_editor_torture_inlays_present =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_torture_inlays_present;
-            let suite_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_absent_under_inline_preedit_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
-            let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
-            let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
-            let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
-            let suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap =
-                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
-            let suite_ui_gallery_code_editor_word_boundary =
-                diag_policy::ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
-                    && !check_ui_gallery_code_editor_word_boundary;
-            let suite_ui_gallery_code_editor_a11y_selection =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_selection;
-            let suite_ui_gallery_code_editor_a11y_composition =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_composition;
-            let suite_ui_gallery_code_editor_a11y_selection_wrap =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_selection_wrap;
-            let suite_ui_gallery_code_editor_a11y_composition_wrap =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_a11y_composition_wrap;
-            let suite_ui_gallery_code_editor_a11y_composition_wrap_scroll =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
-            let suite_ui_gallery_code_editor_a11y_composition_drag =
-                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(
-                    &src,
-                ) && !check_ui_gallery_code_editor_a11y_composition_drag;
-            let suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
-                diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(&src)
-                    && !check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
-            let suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
-                diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(
-                    &src,
-                ) && !check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
-            let suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
-                diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
-                    &src,
-                ) && !check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
-            let suite_ui_gallery_text_mixed_script_bundled_fallback_conformance =
-                diag_policy::ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
-                    &src,
-                ) && !check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-
+            let suite_editor_text_default_checks = build_suite_editor_text_default_post_run_checks(
+                &src,
+                &checks_for_post_run_template,
+            );
             let mut notify_hotspot_file_max_for_script = check_notify_hotspot_file_max.clone();
             if notify_hotspot_file_max_for_script.is_empty()
                 && builtin_suite == Some(BuiltinSuite::UiGallery)
@@ -2426,136 +2488,10 @@ hint: list suites via `fretboard diag list suites`"
                     .clone();
             }
 
-            checks_for_post_run.check_ui_gallery_code_editor_torture_marker_present |=
-                suite_ui_gallery_code_editor_torture_marker_present;
-            checks_for_post_run.check_ui_gallery_code_editor_torture_undo_redo |=
-                suite_ui_gallery_code_editor_torture_undo_redo;
-            checks_for_post_run.check_ui_gallery_code_editor_torture_geom_fallbacks_low |=
-                suite_ui_gallery_code_editor_torture_geom_fallbacks_low;
-            checks_for_post_run.check_ui_gallery_code_editor_torture_read_only_blocks_edits |=
-                suite_ui_gallery_code_editor_torture_read_only_blocks_edits;
-
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_read_only_blocks_edits |=
-                suite_ui_gallery_markdown_editor_source_read_only_blocks_edits;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_disabled_blocks_edits |=
-                suite_ui_gallery_markdown_editor_source_disabled_blocks_edits;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable |=
-                suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_word_boundary |=
-                suite_ui_gallery_markdown_editor_source_word_boundary;
-            checks_for_post_run.check_ui_gallery_web_ime_bridge_enabled |=
-                suite_ui_gallery_web_ime_bridge_enabled;
-
-            checks_for_post_run.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps |=
-                suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
-            checks_for_post_run
-                .check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change |=
-                suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
-            checks_for_post_run.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change |=
-                suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
-            checks_for_post_run.check_ui_gallery_text_mixed_script_bundled_fallback_conformance |=
-                suite_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_line_boundary_triple_click |=
-                suite_ui_gallery_markdown_editor_source_line_boundary_triple_click;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_a11y_composition |=
-                suite_ui_gallery_markdown_editor_source_a11y_composition;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap |=
-                suite_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable |=
-                suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_folds_toggle_stable |=
-                suite_ui_gallery_markdown_editor_source_folds_toggle_stable;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds |=
-                suite_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_folds_placeholder_present |=
-                suite_ui_gallery_markdown_editor_source_folds_placeholder_present;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap |=
-                suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit |=
-                suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_inlays_toggle_stable |=
-                suite_ui_gallery_markdown_editor_source_inlays_toggle_stable;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable |=
-                suite_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
-            checks_for_post_run.check_ui_gallery_markdown_editor_source_inlays_present |=
-                suite_ui_gallery_markdown_editor_source_inlays_present;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap |=
-                suite_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
-            checks_for_post_run
-                .check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit |=
-                suite_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
-
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed |=
-                suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed |=
-                suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll |=
-                suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection |=
-                suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
-            checks_for_post_run.check_ui_gallery_code_editor_torture_folds_placeholder_present |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_present;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap |=
-                suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
-            checks_for_post_run.check_ui_gallery_code_editor_torture_inlays_present |=
-                suite_ui_gallery_code_editor_torture_inlays_present;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit |=
-                suite_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped |=
-                suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations |=
-                suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed |=
-                suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
-            checks_for_post_run
-                .check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap |=
-                suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
-
-            checks_for_post_run.check_ui_gallery_code_editor_word_boundary |=
-                suite_ui_gallery_code_editor_word_boundary;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_selection |=
-                suite_ui_gallery_code_editor_a11y_selection;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_composition |=
-                suite_ui_gallery_code_editor_a11y_composition;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_selection_wrap |=
-                suite_ui_gallery_code_editor_a11y_selection_wrap;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_composition_wrap |=
-                suite_ui_gallery_code_editor_a11y_composition_wrap;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_composition_wrap_scroll |=
-                suite_ui_gallery_code_editor_a11y_composition_wrap_scroll;
-            checks_for_post_run.check_ui_gallery_code_editor_a11y_composition_drag |=
-                suite_ui_gallery_code_editor_a11y_composition_drag;
+            apply_suite_editor_text_default_post_run_checks(
+                &mut checks_for_post_run,
+                &suite_editor_text_default_checks,
+            );
 
             checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
                 .check_wheel_events_max_per_frame
@@ -2785,6 +2721,33 @@ mod tests {
         );
 
         assert!(defaults.check_pixels_changed_test_id.is_none());
+    }
+
+    #[test]
+    fn build_suite_editor_text_default_post_run_checks_sets_code_editor_baseline_flags() {
+        let defaults = build_suite_editor_text_default_post_run_checks(
+            std::path::Path::new("ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"),
+            &SuiteChecks::default(),
+        );
+
+        assert!(defaults.check_ui_gallery_code_editor_torture_marker_present);
+        assert!(defaults.check_ui_gallery_code_editor_torture_undo_redo);
+        assert!(!defaults.check_ui_gallery_markdown_editor_source_word_boundary);
+    }
+
+    #[test]
+    fn build_suite_editor_text_default_post_run_checks_respects_existing_user_gate() {
+        let mut user_checks = SuiteChecks::default();
+        user_checks.check_ui_gallery_web_ime_bridge_enabled = true;
+
+        let defaults = build_suite_editor_text_default_post_run_checks(
+            std::path::Path::new(
+                "ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json",
+            ),
+            &user_checks,
+        );
+
+        assert!(!defaults.check_ui_gallery_web_ime_bridge_enabled);
     }
 
     #[test]
