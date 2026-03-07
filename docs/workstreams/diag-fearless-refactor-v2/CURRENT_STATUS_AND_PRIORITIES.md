@@ -97,6 +97,8 @@ Concretely, the next doc slice should settle:
 Recommended landing target:
 
 - extend `M2` in `TODO.md` rather than starting a separate note family.
+- initial landing now exists in
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
 
 ### Priority 2. Extract the next 2-3 high-ROI seams in `crates/fret-diag`
 
@@ -120,6 +122,10 @@ Recommended next seam choices:
 
 Recent progress since this note was drafted:
 
+- the first repo-level artifact/evidence contract now exists in
+  `ARTIFACT_AND_EVIDENCE_MODEL_V1.md`, which names source-of-truth artifacts, derived/index
+  artifacts, optional evidence, presentation-facing projections, the bounded first-open set, and
+  consumer checklists for CLI / GUI / CI / share flows in one place,
 - artifact resolution/materialization now has shared seams for bundle input resolution and
   `script.result.json` discovery under `crates/fret-diag/src/commands/resolve.rs`,
 - run planning/context assembly now reuses `ResolvedScriptPaths` and a higher-level
@@ -143,6 +149,83 @@ Recent progress since this note was drafted:
 - `diag_campaign` run orchestration now uses an explicit `CampaignRunOutcome` seam for selection
   execution, aggregate counters, output rendering, and command-failure collection, which keeps
   `cmd_campaign_run` closer to a thin command adapter.
+- `diag_campaign` per-campaign execution now separates item dispatch, finalize/summarize/share
+  writing, and failed-item error formatting, reducing another orchestration blob in
+  `execute_campaign_inner`.
+- `diag_campaign` now also shares summarize/share timing through a small `CampaignSummaryArtifacts`
+  seam, and batch execution mirrors the same finalize staging instead of keeping a second inline
+  summarize/share/result block.
+- `diag_campaign` manifest/result writers now reuse shared JSON-fragment helpers for `run`,
+  `selection`, `aggregate`, and item-result payloads, reducing record-shape drift across the file
+  emitters.
+- `diag_campaign` now also routes `resolved` and `counters` payload assembly through named helpers,
+  so item/campaign totals are computed in one place instead of being re-derived across manifest and
+  result emitters.
+- `diag_campaign` report JSON shaping and share/failure text formatting now also live behind small
+  helpers, which reduces drift between run-output JSON, artifact JSON, and command-failure wording.
+- `diag_campaign` human-readable run output now flows through pure single-run and batch-run output
+  helpers, which keeps `print_campaign_run_output` thin and makes the CLI output shape easier to
+  regression-test without shell capture indirection.
+- `diag_campaign` run-selection JSON, explicit/filter selection, and run-flag parsing now also sit
+  behind dedicated helpers, which trims more command-adapter glue from the top-level orchestration
+  path and makes parse/selection edge cases cheaper to test directly.
+- `diag_campaign` top-level dispatch now also resolves subcommands through a small enum helper and
+  converts `CampaignCmdContext` into `CampaignRunContext` via a dedicated boundary, making the
+  command adapter more obviously separate from the run-time orchestration context.
+- `diag_campaign` execution result mapping now also runs through dedicated normalization and report
+  construction helpers, which removes another tuple-shaped conversion seam from the main execution
+  path.
+- `diag_campaign` now also builds per-campaign execution outcomes through dedicated outcome/error
+  helpers, so summarize-failure priority, failed-item wording, and failure-summary formatting no
+  longer stay inline inside `execute_campaign_inner`.
+- `diag_campaign` single-run and batch result writing now also flow through dedicated payload
+  builders that consume `plan + summary_artifacts`, which removes another pair of wide
+  `write_*result` signatures and keeps result JSON shaping testable without file IO.
+- `diag_campaign` now also builds final execution/batch outward artifacts through dedicated builder
+  helpers, so summarize/share outputs stop being manually re-spliced when finalization crosses from
+  summary generation into outward command-facing structs.
+- `diag_campaign` now also routes summary/index/share/summarize-error/share-error through a named
+  aggregate-artifact contract, which reduces field drift between batch artifacts, finalization,
+  and result JSON assembly.
+- `diag_campaign` now also stores per-campaign report artifact paths and share-export state through
+  the same aggregate contract, which removes another parallel path/error shape from
+  `CampaignExecutionReport` and keeps report JSON/output helpers aligned with batch/finalization.
+- `diag_campaign` now also routes report and batch JSON path projection through a shared aggregate
+  helper, so summary/index/share path visibility rules no longer drift between run-outcome JSON and
+  artifact-style JSON emitters.
+- `diag_campaign` now also routes run-outcome JSON through dedicated counters/batch/runs helpers,
+  which removes another inline payload blob from `campaign_run_outcome_to_json` and makes the top-
+  level CLI JSON projection cheaper to regression-test directly.
+- `diag_campaign` now also splits `campaign_report_json` into dedicated status/paths/counters
+  sections, so per-report JSON assembly no longer grows as one long field-insertion block and each
+  projection slice can be regression-tested in isolation.
+- `diag_campaign` now also splits `campaign_batch_to_json` into dedicated root/paths/status
+  sections, so batch JSON projection follows the same decomposition style as per-report JSON instead
+  of keeping one more inline emitter blob alive.
+- `diag_campaign` now also reuses dedicated `run` and `aggregate` helpers across single-run and
+  batch result payload assembly, which removes another repeated result-artifact section pair from
+  `campaign_result_payload` / `campaign_batch_result_payload`.
+- `diag_campaign` campaign and batch manifest writing now also flow through dedicated manifest
+  payload helpers, so `write_campaign_manifest` / `write_campaign_batch_manifest` mostly own path
+  resolution plus file IO while the manifest JSON shape gains direct regression coverage.
+- `diag_campaign` per-item execution now also splits item planning from suite-context assembly
+  through a small execution-plan seam, so item kind/path/script-input selection no longer grows in
+  the same helper that wires runtime flags and checks into `diag_suite::SuiteCmdContext`.
+- `diag_campaign` per-item execution now also routes `diag_suite` success/error mapping through a
+  dedicated item-result helper, so `run_campaign_item` no longer open-codes the same output-shape
+  projection inline after every suite execution.
+- `diag_campaign` per-item execution now also separates batch item planning from plan consumption,
+  so `execute_campaign_items` no longer mixes "enumerate campaign items" with "run planned items"
+  in the same loop body.
+- `diag_campaign` single-run and batch finalize paths now also build a shared summary-finalize plan
+  before summarize/share work begins, so finalize orchestration no longer re-derives summarize
+  inputs, output roots, and failure-share conditions inline in two separate places.
+- `diag_campaign` single-run and batch result writing now also build dedicated result-write plans,
+  so output-path resolution and payload shaping are decided before file IO and the writer layer no
+  longer duplicates the same "path + payload + write" pattern inline.
+- `diag_campaign` single-run and batch result payload assembly now also builds dedicated section
+  bundles before composing the final JSON object, so payload roots no longer open-code the same
+  run/counters/aggregate/list section planning inline.
 
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
@@ -176,8 +259,8 @@ These are meaningful follow-ups once the contract and seam story are more settle
 
 ## Recommended next implementation sequence
 
-1. write the canonical artifact/evidence contract update,
-2. continue from the new `diag_campaign` invocation + execution-plan + run-outcome seams into check planning/execution or the next shared report/output helpers,
+1. apply and cross-link the canonical artifact/evidence contract update across remaining diagnostics notes and consumers,
+2. continue from the new `diag_campaign` invocation + execution-plan + run-outcome + shared-finalize + shared-payload + outcome/error + result-payload + artifact-builder + aggregate-artifact + report-artifact + aggregate-projection + run-outcome-json + report-json-section + batch-json-section + result-section + manifest-payload + item-execution-plan + item-result + item-plan-list + summary-finalize-plan + result-write-plan + result-payload-sections seams into the remaining JSON consolidation or check planning/execution,
 3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 

@@ -14,6 +14,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md`
 - `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
@@ -38,7 +39,7 @@ Fret diagnostics has grown into a genuinely capable platform:
 
 That is good news for users, but it raises the cost of refactoring.
 
-The current challenge is no longer â€œcan diag do enough?â€?but rather:
+The current challenge is no longer "can diag do enough?" but rather:
 
 1. can we evolve the stack without regressions,
 2. can contributors find the right extension point quickly,
@@ -49,7 +50,7 @@ This workstream is the umbrella plan for the next phase of diagnostics refactori
 
 ## 1) Positioning
 
-This workstream intentionally does **not** frame diagnostics as an â€œAI featureâ€?
+This workstream intentionally does **not** frame diagnostics as an "AI feature".
 
 Diagnostics should be treated as a general-purpose **automation + debugging + evidence platform** for Fret.
 AI agents are only one consumer. Other consumers matter equally:
@@ -72,9 +73,9 @@ stack still feels fragmented when viewed as one product surface.
 Symptoms:
 
 - runtime, tooling, artifacts, and GUI notes are split across multiple workstreams,
-- there is still some overlap between â€œdiag architectureâ€? â€œdiag simplificationâ€? â€œDevTools GUIâ€? and
-  â€œbundle/script workflowâ€?mental models,
-- contributors can still end up asking â€œwhere should this change live?â€?before they can start,
+- there is still some overlap between "diag architecture", "diag simplification", "DevTools GUI", and
+  "bundle/script workflow" mental models,
+- contributors can still end up asking "where should this change live?" before they can start,
 - GUI/DevTools can accidentally become a second source of truth instead of a thin consumer of the same contracts,
 - some refactor steps are obvious locally but lack a single program-level sequence and exit criteria.
 
@@ -114,7 +115,7 @@ That means:
 - the source of truth remains the runtime export contracts and tooling artifact contracts,
 - GUI should reuse existing commands, artifact stores, and resource/event surfaces whenever possible,
 - GUI-specific polish should not block core runtime/tooling cleanup,
-- â€œlive inspect UXâ€?and â€œartifact browser UXâ€?are valid deliverables, but not reasons to widen core contracts casually.
+- "live inspect UX" and "artifact browser UX" are valid deliverables, but not reasons to widen core contracts casually.
 
 Practical rule:
 
@@ -185,9 +186,9 @@ GUI should reveal diagnostics state, not invent a parallel model of diagnostics 
 UI Gallery and demo-specific helpers are valuable proving grounds, but diagnostics contracts must stay usable by
 other ecosystem crates and external app surfaces.
 
-## 7) What â€œfearlessâ€?means here
+## 7) What "fearless" means here
 
-For this workstream, â€œfearless refactorâ€?means contributors can change internals while preserving:
+For this workstream, "fearless refactor" means contributors can change internals while preserving:
 
 - stable artifact entry points,
 - stable command/task workflows,
@@ -195,7 +196,7 @@ For this workstream, â€œfearless refactorâ€?means contributors can change intern
 - stable extension points,
 - stable mental model for where new features belong.
 
-It does **not** mean â€œlarge rewrites are cheapâ€? It means we deliberately build the seams and gates that make
+It does **not** mean "large rewrites are cheap". It means we deliberately build the seams and gates that make
 refactoring safe enough to perform continuously.
 
 ## 8) Target outcomes
@@ -212,18 +213,18 @@ By the end of this workstream, we should be able to say:
 
 The workstream already has a first end-to-end aggregate path in-tree:
 
-- diag suite, diag repeat, diag perf, and diag matrix can emit
-  egression.summary.json.
-- retboard diag summarize aggregates one or more summaries into:
-  - egression.summary.json as the canonical merged summary,
-  - egression.index.json as a lighter consumer-oriented index.
-- retboard diag dashboard is the first thin consumer over the aggregate index:
+- `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
+  `regression.summary.json`.
+- `fretboard diag summarize` aggregates one or more summaries into:
+  - `regression.summary.json` as the canonical merged summary,
+  - `regression.index.json` as a lighter consumer-oriented index.
+- `fretboard diag dashboard` is the first thin consumer over the aggregate index:
   - default output is a human-readable first-open summary,
-  - --json keeps machine-readable access to the full index payload.
-- pps/fret-devtools-mcp now exposes the same aggregate artifacts as MCP resources when they
+  - `--json` keeps machine-readable access to the full index payload.
+- `apps/fret-devtools-mcp` now exposes the same aggregate artifacts as MCP resources when they
   exist in the active artifacts root:
-  - egression.summary.json,
-  - egression.index.json.
+  - `regression.summary.json`,
+  - `regression.index.json`.
 
 This means the current question is no longer whether aggregate summaries are useful, but how
 presentation surfaces should reuse them without creating a second diagnostics model.
@@ -241,4 +242,5 @@ Recommended order for landable work:
 5. remove redundancy and close migration debt.
 
 See `TODO.md` and `MILESTONES.md` for the staged plan.
+
 

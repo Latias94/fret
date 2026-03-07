@@ -38,25 +38,52 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - third landing: `diag_campaign` now uses explicit execution-plan helpers for per-run and batch output roots
     - fourth landing: `diag_campaign` now uses a unified `CampaignItemInvocation` builder for suite/script item dispatch
     - fifth landing: `diag_campaign` now uses `CampaignRunOutcome` for aggregate counters, output rendering, and command-failure collection in `cmd_campaign_run`
+    - sixth landing: `diag_campaign` now separates item execution, finalize/summarize/share/result writing, and failed-item formatting inside `execute_campaign_inner`
+    - seventh landing: `diag_campaign` now shares summarize/share timing through `CampaignSummaryArtifacts`, and batch execution reuses a matching finalize stage plus shared aggregate counters
+    - eighth landing: `diag_campaign` now reuses shared `run`, `selection`, `aggregate`, and item-result JSON payload helpers across manifest/result writers
+    - ninth landing: `diag_campaign` now reuses shared `resolved` and `counters` payload helpers across manifest/result writers
+    - tenth landing: `diag_campaign` now reuses shared campaign-report JSON shaping and share/failure text helpers across run/result emitters and failure aggregation
+    - eleventh landing: `diag_campaign` now reuses pure single-run and batch-run CLI output helpers inside `print_campaign_run_output`
+    - twelfth landing: `diag_campaign` now reuses dedicated helpers for run-selection JSON, explicit/filter selection, and run-flag parsing
+    - thirteenth landing: `diag_campaign` now reuses a dedicated subcommand resolver and `CampaignCmdContext` -> `CampaignRunContext` conversion boundary
+    - fourteenth landing: `diag_campaign` now reuses dedicated normalization and report-construction helpers for `execute_campaign`
+    - fifteenth landing: `diag_campaign` now reuses dedicated execution outcome/error helpers for summarize-failure priority and failed-item wording inside `execute_campaign_inner`
+    - sixteenth landing: `diag_campaign` now reuses dedicated single-run and batch result payload helpers driven by `plan + summary_artifacts`, so result JSON assembly no longer depends on wide writer signatures
+    - seventeenth landing: `diag_campaign` now reuses dedicated execution/batch artifact builders, so finalization no longer re-splices summarize/share outputs into outward-facing structs inline
+    - eighteenth landing: `diag_campaign` now reuses a named aggregate-artifact contract for summary/index/share paths and summarize/share errors across finalization, batch artifacts, and result payload assembly
+    - nineteenth landing: `diag_campaign` now reuses the same aggregate-artifact contract inside `CampaignExecutionReport`, so per-campaign report paths/share-export state no longer travel as a parallel shape
+    - twentieth landing: `diag_campaign` now reuses a shared aggregate path-projection helper for report and batch JSON emitters, so summary/index/share visibility rules no longer drift across JSON output modes
+    - twenty-first landing: `diag_campaign` now reuses dedicated counters/batch/runs helpers for top-level run-outcome JSON, so `campaign_run_outcome_to_json` no longer grows as another inline payload blob
+    - twenty-second landing: `diag_campaign` now reuses dedicated status/paths/counters helpers for per-report JSON assembly, so `campaign_report_json` no longer grows as another long inline field-insertion block
+    - twenty-third landing: `diag_campaign` now reuses dedicated root/paths/status helpers for batch JSON assembly, so `campaign_batch_to_json` no longer remains a one-off inline emitter blob beside the report JSON helpers
+    - twenty-fourth landing: `diag_campaign` now reuses dedicated `run` and `aggregate` helpers across single-run and batch result payload assembly, so the two result payload writers no longer duplicate the same result-artifact section pair inline
+    - twenty-fifth landing: `diag_campaign` now reuses dedicated manifest payload helpers across single-run and batch manifest writing, so `write_campaign_manifest` / `write_campaign_batch_manifest` mainly own output-path resolution plus file IO while manifest JSON shaping gains direct regression coverage
+    - twenty-sixth landing: `diag_campaign` now separates per-item execution planning from suite-context assembly, so item kind/path/script-input selection no longer grows in the same helper that wires runtime flags and checks into `diag_suite::SuiteCmdContext`
+    - twenty-seventh landing: `diag_campaign` now routes per-item suite success/error mapping through a dedicated item-result helper, so `run_campaign_item` no longer open-codes the same `CampaignItemRunResult` projection inline after each `diag_suite` execution
+    - twenty-eighth landing: `diag_campaign` now separates batch item planning from plan consumption, so `execute_campaign_items` no longer mixes campaign-item enumeration with "run planned items" in the same loop body
+    - twenty-ninth landing: `diag_campaign` now builds a shared summary-finalize plan for single-run and batch finalize paths, so summarize inputs, output roots, timestamps, and failure-share conditions stop being re-derived inline in two separate finalize branches
+    - thirtieth landing: `diag_campaign` now builds dedicated result-write plans for single-run and batch result artifacts, so output-path resolution and payload shaping are settled before file IO and the write layer no longer duplicates the same "path + payload + write" pattern inline
+    - thirty-first landing: `diag_campaign` now builds dedicated result-payload section bundles for single-run and batch result artifacts, so payload roots no longer open-code the same run/counters/aggregate/list section planning inline before composing the final JSON object
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.
 
 ## M2 — Artifact and evidence consolidation
 
-- [ ] Document one canonical artifact model:
-  - [ ] bundle artifact,
-  - [ ] sidecars,
-  - [ ] `script.result.json`,
-  - [ ] `triage.json`,
-  - [ ] compact pack/AI packet style artifacts.
-- [ ] Define which artifacts are:
-  - [ ] source of truth,
-  - [ ] derived/cache-like,
-  - [ ] optional evidence,
-  - [ ] GUI-friendly projections.
-- [ ] Define a compatibility policy for artifact field additions/removals.
-- [ ] Define one bounded “first-open” artifact set for common triage.
+- [x] Document one canonical artifact model:
+  - [x] bundle artifact,
+  - [x] sidecars,
+  - [x] `script.result.json`,
+  - [x] `triage.json`,
+  - [x] compact pack/AI packet style artifacts.
+- [x] Define which artifacts are:
+  - [x] source of truth,
+  - [x] derived/cache-like,
+  - [x] optional evidence,
+  - [x] GUI-friendly projections.
+- [x] Define a compatibility policy for artifact field additions/removals.
+- [x] Define one bounded “first-open” artifact set for common triage.
+  - evidence: `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 
 ## M3 — Regression orchestration model
 

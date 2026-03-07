@@ -42,11 +42,21 @@ Outcome:
 
 - Diagnostics outputs are described as one coherent artifact system.
 
+Progress update:
+
+- The first consolidated artifact and evidence contract now exists in
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- The workstream now names source-of-truth artifacts, derived/index artifacts, optional evidence,
+  and presentation-facing projections explicitly.
+- The remaining gap in this milestone is adoption and enforcement across older notes and any future
+  artifact additions.
+
 Deliverables:
 
 - A canonical artifact taxonomy.
 - Compatibility and bounded-evidence policy.
 - A defined “first-open” artifact set for everyday triage.
+- Primary note: `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
 
 Exit criteria:
 
