@@ -8,9 +8,10 @@ use crate::core::{GroupId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::controller::NodeGraphController;
 use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::screen_space_placement::clamp_rect_to_bounds;
 use crate::ui::style::NodeGraphStyle;
 
-use super::{clamp_rect_to_bounds, layout_hidden_child_and_release_focus};
+use super::layout_hidden_child_and_release_focus;
 
 fn group_rename_size_at(style: &NodeGraphStyle) -> Size {
     let w = style.paint.context_menu_width.max(40.0);

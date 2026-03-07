@@ -10,8 +10,11 @@ use fret_ui::{UiHost, retained_bridge::*};
 use crate::core::{EdgeId, NodeId};
 use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphInternalsStore;
+use crate::ui::screen_space_placement::{
+    AdjacentPosition, AxisAlign, rect_adjacent_to_rect, rect_anchored_at_point,
+};
 
-use super::{clamp_rect_to_bounds, layout_hidden_child_and_release_focus};
+use super::layout_hidden_child_and_release_focus;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphToolbarPosition {
@@ -39,6 +42,23 @@ pub enum NodeGraphToolbarVisibility {
 impl Default for NodeGraphToolbarVisibility {
     fn default() -> Self {
         Self::WhenSelected
+    }
+}
+
+fn toolbar_align_axis(align: NodeGraphToolbarAlign) -> AxisAlign {
+    match align {
+        NodeGraphToolbarAlign::Start => AxisAlign::Start,
+        NodeGraphToolbarAlign::Center => AxisAlign::Center,
+        NodeGraphToolbarAlign::End => AxisAlign::End,
+    }
+}
+
+fn toolbar_position_to_adjacent(position: NodeGraphToolbarPosition) -> AdjacentPosition {
+    match position {
+        NodeGraphToolbarPosition::Top => AdjacentPosition::Top,
+        NodeGraphToolbarPosition::Right => AdjacentPosition::Right,
+        NodeGraphToolbarPosition::Bottom => AdjacentPosition::Bottom,
+        NodeGraphToolbarPosition::Left => AdjacentPosition::Left,
     }
 }
 
@@ -139,58 +159,15 @@ impl NodeGraphNodeToolbar {
         gap_px: f32,
         offset: Point,
     ) -> Rect {
-        let gap = gap_px.max(0.0);
-        let w = size.width.0.max(0.0);
-        let h = size.height.0.max(0.0);
-
-        let x_start = node.origin.x.0;
-        let x_center = node.origin.x.0 + 0.5 * (node.size.width.0 - w);
-        let x_end = node.origin.x.0 + (node.size.width.0 - w).max(0.0);
-
-        let y_start = node.origin.y.0;
-        let y_center = node.origin.y.0 + 0.5 * (node.size.height.0 - h);
-        let y_end = node.origin.y.0 + (node.size.height.0 - h).max(0.0);
-
-        let (x, y) = match position {
-            NodeGraphToolbarPosition::Top => {
-                let x = match align {
-                    NodeGraphToolbarAlign::Start => x_start,
-                    NodeGraphToolbarAlign::Center => x_center,
-                    NodeGraphToolbarAlign::End => x_end,
-                };
-                (x, node.origin.y.0 - gap - h)
-            }
-            NodeGraphToolbarPosition::Bottom => {
-                let x = match align {
-                    NodeGraphToolbarAlign::Start => x_start,
-                    NodeGraphToolbarAlign::Center => x_center,
-                    NodeGraphToolbarAlign::End => x_end,
-                };
-                (x, node.origin.y.0 + node.size.height.0 + gap)
-            }
-            NodeGraphToolbarPosition::Left => {
-                let y = match align {
-                    NodeGraphToolbarAlign::Start => y_start,
-                    NodeGraphToolbarAlign::Center => y_center,
-                    NodeGraphToolbarAlign::End => y_end,
-                };
-                (node.origin.x.0 - gap - w, y)
-            }
-            NodeGraphToolbarPosition::Right => {
-                let y = match align {
-                    NodeGraphToolbarAlign::Start => y_start,
-                    NodeGraphToolbarAlign::Center => y_center,
-                    NodeGraphToolbarAlign::End => y_end,
-                };
-                (node.origin.x.0 + node.size.width.0 + gap, y)
-            }
-        };
-
-        let rect = Rect::new(
-            Point::new(Px(x + offset.x.0), Px(y + offset.y.0)),
-            Size::new(Px(w), Px(h)),
-        );
-        clamp_rect_to_bounds(rect, bounds)
+        rect_adjacent_to_rect(
+            bounds,
+            node,
+            size,
+            toolbar_position_to_adjacent(position),
+            toolbar_align_axis(align),
+            gap_px,
+            offset,
+        )
     }
 
     fn resolve_child_size<H: UiHost>(
@@ -375,26 +352,14 @@ impl NodeGraphEdgeToolbar {
         align_y: NodeGraphToolbarAlign,
         offset: Point,
     ) -> Rect {
-        let w = size.width.0.max(0.0);
-        let h = size.height.0.max(0.0);
-
-        let x = match align_x {
-            NodeGraphToolbarAlign::Start => anchor.x.0,
-            NodeGraphToolbarAlign::Center => anchor.x.0 - 0.5 * w,
-            NodeGraphToolbarAlign::End => anchor.x.0 - w,
-        };
-
-        let y = match align_y {
-            NodeGraphToolbarAlign::Start => anchor.y.0,
-            NodeGraphToolbarAlign::Center => anchor.y.0 - 0.5 * h,
-            NodeGraphToolbarAlign::End => anchor.y.0 - h,
-        };
-
-        let rect = Rect::new(
-            Point::new(Px(x + offset.x.0), Px(y + offset.y.0)),
-            Size::new(Px(w), Px(h)),
-        );
-        clamp_rect_to_bounds(rect, bounds)
+        rect_anchored_at_point(
+            bounds,
+            anchor,
+            size,
+            toolbar_align_axis(align_x),
+            toolbar_align_axis(align_y),
+            offset,
+        )
     }
 
     fn resolve_child_size<H: UiHost>(

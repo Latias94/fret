@@ -335,6 +335,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: focused paint-only gates now lock tooltip flip-below fallback and marquee clamp
     behavior, giving the next toolbar/menu policy split a small correctness baseline before moving
     composition into broader overlay surfaces.
+  - Progress: compat-retained window-space placement math now routes through the shared
+    `ui/screen_space_placement.rs` seam, so toolbars, panel placement, blackboard, rename,
+    controls, and minimap all reuse the same clamp / anchor math instead of keeping subtly
+    duplicated per-widget geometry branches.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

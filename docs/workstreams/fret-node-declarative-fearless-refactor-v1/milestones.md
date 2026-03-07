@@ -400,6 +400,10 @@ real editors.
   `paint_only/overlay_elements.rs`, so paint-only overlay rendering keeps policy-shaped element
   assembly out of the main surface file while the next menu/toolbar boundary work can build on
   focused flip/clamp gates instead of large inline branches.
+- Compat-retained screen-space overlay placement now also has a shared private seam,
+  `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
+  geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
+  the owning overlay widgets.
 
 ### Deliverables
 
@@ -423,6 +427,7 @@ real editors.
 ### Evidence anchors
 
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/screen_space_placement.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`

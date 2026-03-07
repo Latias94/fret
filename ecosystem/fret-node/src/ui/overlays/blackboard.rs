@@ -20,11 +20,12 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
 use crate::ui::controller::NodeGraphController;
 use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::style::NodeGraphStyle;
 
 use super::NodeGraphOverlayState;
 
-use super::{SymbolRenameOverlay, clamp_rect_to_bounds};
+use super::SymbolRenameOverlay;
 
 const PANEL_MARGIN_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 6.0;
@@ -193,11 +194,14 @@ impl NodeGraphBlackboardOverlay {
         symbols: &BTreeMap<SymbolId, Symbol>,
     ) -> BlackboardLayout {
         let size = self.panel_size_px_for_rows(symbols.len());
-        let desired_origin = Point::new(
-            Px(bounds.origin.x.0 + PANEL_MARGIN_PX),
-            Px(bounds.origin.y.0 + PANEL_MARGIN_PX),
+        let panel = rect_in_bounds(
+            bounds,
+            size,
+            AxisAlign::Start,
+            AxisAlign::Start,
+            PANEL_MARGIN_PX,
+            Point::new(Px(0.0), Px(0.0)),
         );
-        let panel = clamp_rect_to_bounds(Rect::new(desired_origin, size), bounds);
 
         let pad = self.style.paint.context_menu_padding.max(0.0);
         let row_h = self.row_height_px();
