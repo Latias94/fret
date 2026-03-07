@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle, TextWrap};
+use fret_core::{Px, SemanticsRole, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
@@ -63,24 +63,6 @@ fn plan_base_chrome(theme: &Theme) -> ChromeRefinement {
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
         .py(Space::N6)
-}
-
-fn card_title_text_style(theme: &Theme) -> TextStyle {
-    let px = theme
-        .metric_by_key("component.card.title_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.card.title_line_height")
-        .unwrap_or(px);
-
-    TextStyle {
-        font: FontId::ui(),
-        size: px,
-        weight: FontWeight::SEMIBOLD,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
 }
 
 /// Collapsible plan container aligned with AI Elements `Plan`.
@@ -290,13 +272,17 @@ impl PlanTitle {
             .unwrap_or(false);
 
         let el = if is_streaming {
-            let style = card_title_text_style(Theme::global(&*cx.app));
-            super::Shimmer::new(self.text.clone())
-                .text_style(style)
-                .role(SemanticsRole::Text)
-                .wrap(TextWrap::Word)
-                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)
+            let theme = Theme::global(&*cx.app).snapshot();
+            fret_ui_kit::typography::scope_text_style_with_color(
+                super::Shimmer::new(self.text.clone())
+                    .use_resolved_passive_text()
+                    .role(SemanticsRole::Text)
+                    .wrap(TextWrap::Word)
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                fret_ui_kit::typography::title_text_refinement(&theme, "component.card.title"),
+                theme.color_token("card-foreground"),
+            )
         } else {
             CardTitle::new(self.text.clone()).into_element(cx)
         };
@@ -607,6 +593,50 @@ mod tests {
             .children
             .iter()
             .find_map(|child| find_text_by_content(child, content))
+    }
+
+    #[test]
+    fn plan_title_streaming_scopes_inherited_title_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            cx.with_state(PlanProviderState::default, |st| {
+                st.controller = Some(PlanController {
+                    open: open.clone(),
+                    is_streaming: true,
+                    disabled: false,
+                });
+            });
+            PlanTitle::new("Title").into_element(cx)
+        });
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::title_text_refinement(
+                &theme,
+                "component.card.title",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(theme.color_token("card-foreground"))
+        );
+
+        let text = find_text_by_content(&element, "Title")
+            .expect("expected shimmer base text child under the scoped root");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected shimmer title branch to render a text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
     }
 
     #[test]

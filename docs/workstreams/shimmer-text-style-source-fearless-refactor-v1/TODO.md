@@ -11,7 +11,7 @@ Primary contract references:
 
 | Surface | File | Current state | Desired end state | Why it matters | Priority | Status | Evidence / notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AI / plan | `PlanTitle` streaming path | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Manual `card_title_text_style(...)` + `Shimmer::text_style(...)` | Consume subtree-resolved style so streaming and non-streaming title share one semantic path | P0 | `[ ]` | `ecosystem/fret-ui-ai/src/elements/plan.rs:312` |
+| AI / plan | `PlanTitle` streaming path | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Shared title scope + `Shimmer::use_resolved_passive_text()` | Landed on subtree-resolved style so streaming and non-streaming title share one semantic path | P0 | `[x]` | `ecosystem/fret-ui-ai/src/elements/plan.rs`, `plan_title_streaming_scopes_inherited_title_typography_for_shimmer` |
 | AI / plan | `PlanDescription` streaming path | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Shared description scope + `Shimmer::use_resolved_passive_text()` | Landed on subtree-resolved style so streaming and non-streaming description copy share one semantic path | P0 | `[x]` | `ecosystem/fret-ui-ai/src/elements/plan.rs`, `plan_description_streaming_scopes_inherited_description_typography_for_shimmer` |
 | AI / reasoning | default thinking message | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Explicit `Sm` visual text via `Shimmer::text_style(...)` | Likely intentional visual ownership; audit after bridge lands | P2 | `[~]` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs:431` |
 | AI / transcription | segment override path | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Caller-owned explicit override propagated into shimmer | Must remain supported; this is an explicit-authoring compatibility case | P1 | `[~]` | `ecosystem/fret-ui-ai/src/elements/transcription.rs:489` |
@@ -50,7 +50,7 @@ Suggested review states:
 
 ## D. Semantic migration
 
-- [ ] SHIMMER-migrate-020 Migrate `PlanTitle` streaming path to the subtree-resolved mode.
+- [x] SHIMMER-migrate-020 Migrate `PlanTitle` streaming path to the subtree-resolved mode.
 - [x] SHIMMER-migrate-021 Migrate `PlanDescription` streaming path to the subtree-resolved mode.
 - [ ] SHIMMER-migrate-022 Re-audit `Reasoning` / `Terminal` / gallery demos after the bridge lands.
 - [ ] SHIMMER-migrate-023 Keep `Transcription` explicit override behavior intact.

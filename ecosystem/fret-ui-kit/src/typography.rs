@@ -1,6 +1,6 @@
 use fret_core::{
-    Color, FontId, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle, TextStyleRefinement,
-    TextVerticalPlacement,
+    Color, FontId, FontWeight, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle,
+    TextStyleRefinement, TextVerticalPlacement,
 };
 use fret_ui::element::AnyElement;
 
@@ -348,6 +348,42 @@ pub fn scope_text_style_with_color(
         .inherit_text_style(refinement)
 }
 
+pub fn title_text_refinement(
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+) -> TextStyleRefinement {
+    title_text_refinement_with_fallbacks(theme, metric_prefix, None, None)
+}
+
+pub fn title_text_refinement_with_fallbacks(
+    theme: &impl ThemeTokenRead,
+    metric_prefix: &str,
+    fallback_size_key: Option<&str>,
+    fallback_line_height_key: Option<&str>,
+) -> TextStyleRefinement {
+    let size_key = format!("{metric_prefix}_px");
+    let line_height_key = format!("{metric_prefix}_line_height");
+
+    let size = theme
+        .metric_by_key(&size_key)
+        .or_else(|| fallback_size_key.and_then(|key| theme.metric_by_key(key)))
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key(&line_height_key)
+        .or_else(|| fallback_line_height_key.and_then(|key| theme.metric_by_key(key)))
+        .unwrap_or(size);
+
+    TextStyleRefinement {
+        font: Some(FontId::ui()),
+        size: Some(size),
+        weight: Some(FontWeight::SEMIBOLD),
+        line_height: Some(line_height),
+        line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
+        ..Default::default()
+    }
+}
+
 pub fn description_text_refinement(
     theme: &impl ThemeTokenRead,
     metric_prefix: &str,
@@ -469,6 +505,33 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind};
     use fret_ui::elements::GlobalElementId;
     use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn title_text_refinement_uses_ui_semibold_and_tight_line_height_fallback() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([(
+                    "component.card.title_px".to_string(),
+                    18.0,
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+
+        let refinement = title_text_refinement(&theme, "component.card.title");
+        assert_eq!(refinement.font, Some(FontId::ui()));
+        assert_eq!(refinement.size, Some(Px(18.0)));
+        assert_eq!(refinement.weight, Some(FontWeight::SEMIBOLD));
+        assert_eq!(refinement.line_height, Some(Px(18.0)));
+        assert_eq!(
+            refinement.line_height_policy,
+            Some(TextLineHeightPolicy::FixedFromStyle)
+        );
+        assert_eq!(refinement.vertical_placement, None);
+    }
 
     #[test]
     fn description_text_refinement_uses_component_metrics_and_fixed_policy() {

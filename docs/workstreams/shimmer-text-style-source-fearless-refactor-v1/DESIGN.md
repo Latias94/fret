@@ -3,7 +3,7 @@
 Status: Draft (follow-on workstream note).
 
 This document is **non-normative**. It captures the follow-on design work needed to close the
-remaining `PlanTitle` / `PlanDescription` streaming gap left open by ADR 0314.
+initial `PlanTitle` / `PlanDescription` streaming gap left open by ADR 0314, plus the remaining post-plan `Shimmer` audit.
 
 Primary contract references:
 
@@ -23,33 +23,29 @@ That solved the main component-ecosystem pain:
 
 One important gap remains:
 
-- visual text recipes that render their own text **and** paint an additional overlay cannot consume
-  the inherited text-style cascade today without rebuilding typography at the call site.
+- after the `PlanTitle` / `PlanDescription` pilot closes, other visual text recipes that render
+  their own text **and** paint an additional overlay still need classification between semantic
+  subtree defaults and intentional explicit visual overrides.
 
 `Shimmer` is the first pressure point.
 
-In `PlanTitle` and `PlanDescription`, the non-streaming path now delegates to shared description /
-card helpers, while the streaming path still assembles a `TextStyle` explicitly and passes it into
-`Shimmer`.
+`PlanTitle` and `PlanDescription` now use shared subtree typography scopes for both streaming and
+non-streaming paths, but other `Shimmer` call sites still need the same decision.
 
-That means the repo currently has two parallel authoring stories for the same semantic surface:
-
-- non-streaming: subtree-local inherited refinement,
-- streaming: explicit recipe-owned `TextStyle` assembly.
-
-This workstream exists to remove that split before more AI / streaming surfaces copy it.
+This workstream now exists to keep the post-plan audit boring and prevent new manual typography
+assembly from sneaking back in.
 
 ## Local evidence anchors
 
-### Current gap
+### Pilot closure and remaining gap
 
 - `ecosystem/fret-ui-ai/src/elements/plan.rs`
   - `PlanTitle` streaming path
   - `PlanDescription` streaming path
+  - both now consume subtree-resolved shimmer typography
 - `ecosystem/fret-ui-ai/src/elements/shimmer.rs`
-  - `Shimmer::text_style(...)`
-  - explicit base `TextProps` style/color
-  - overlay canvas text measurement / paint using the same explicit `TextStyle`
+  - `Shimmer::text_style(...)` compatibility path remains
+  - resolved passive-text bridge path now feeds both base `TextProps` and overlay canvas paint
 
 ### Existing migration wins we want to extend to streaming surfaces
 
@@ -77,14 +73,16 @@ The missing piece is **not** another semantic preset helper.
 The missing piece is a mechanism for custom visual-text recipes to obtain the same effective text
 style / foreground that a passive text leaf would resolve under the current subtree.
 
-Today `Shimmer` cannot do that because:
+The pilot used to be blocked because:
 
 1. inherited text style is a runtime traversal concern for passive leaves,
 2. `Shimmer` needs the resolved style early enough to size and paint the overlay text,
-3. component authoring code does not have a public way to ask for “the current effective passive
+3. component authoring code did not have a public way to ask for “the current effective passive
    text style under this subtree”.
 
-As a result, `Shimmer` falls back to explicit `TextStyle` ownership.
+That mechanism gap is now closed for `Shimmer`, but the remaining call sites still need policy
+classification about whether they should consume subtree defaults or stay on explicit visual text
+ownership.
 
 ### Why `Shimmer` is special
 

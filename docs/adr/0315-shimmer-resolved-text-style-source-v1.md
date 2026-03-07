@@ -143,8 +143,8 @@ Recommended sequence:
 
 ### Remaining migration gaps
 
-- `ecosystem/fret-ui-ai/src/elements/plan.rs` (`PlanTitle` streaming path)
 - `ecosystem/fret-ui-ai/src/elements/{reasoning,transcription,terminal}.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs`
 
 ### Existing passive text contract
 

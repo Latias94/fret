@@ -1,6 +1,6 @@
 # Shimmer Text Style Source (Fearless Refactor v1) — Milestones
 
-Status: Draft.
+Status: In progress.
 
 Primary contract references:
 
@@ -23,7 +23,7 @@ Deliverables:
 
 Exit criteria:
 
-- the repo has one written explanation for why `PlanDescription` is still partial.
+- the repo has one written explanation for the remaining post-plan `Shimmer` call-site audit.
 
 ## Milestone 1 — Resolved passive text source contract
 
