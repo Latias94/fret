@@ -1,5 +1,7 @@
 # 2026-03-07 Fret vs GPUI same-scene active matrix (debug/debug)
 
+Release/release follow-up: `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-fret-vs-gpui-same-scene-active-matrix-release.md`.
+
 ## Goal
 
 Cross-check the current Fret `hello_world_compare_demo` active-memory story against a real GPU-first UI framework on the **same scene shape**, not just against the raw `wgpu` hello-world control.

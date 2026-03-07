@@ -186,7 +186,15 @@
     - `target/diag/fret-vs-gpui-hello-world-same-scene-debug-20260307-r2-layout-model/summary/summary.json`
   - Result: idle shrinks to about `+14 MiB` physical / `+5 MiB` graphics, but cadence-aligned active rows (`rerender-only`, `layout-model`) still leave Fret about `~+99–118 MiB` physical / `~+90–107 MiB` graphics above GPUI on the same scene.
   - Caveat: GPUI `paint-model full` only reached about `221` renders by `6s` in debug, so treat that cell as under-paced; `rerender-only` and `layout-model` are the cleaner apples-to-apples rows.
-- [ ] Run the same active-mode matrix against an external same-backend UI framework control (GPUI first) so Fret-vs-framework active residency can be stated apples-to-apples rather than only versus the raw `wgpu` control.
+- [x] Re-run the same-scene Fret-vs-GPUI active matrix in `release/release` (local 2026-03-07) so the framework-level comparison is not gated on debug-only cadence distortion.
+  - Final artifacts:
+    - `target/diag/fret-vs-gpui-hello-world-same-scene-release-20260307-r1-idle/summary/summary.json`
+    - `target/diag/fret-vs-gpui-hello-world-same-scene-release-20260307-r1-rerender-only/summary/summary.json`
+    - `target/diag/fret-vs-gpui-hello-world-same-scene-release-20260307-r1-paint-model/summary/summary.json`
+    - `target/diag/fret-vs-gpui-hello-world-same-scene-release-20260307-r1-layout-model/summary/summary.json`
+  - Result: the debug conclusion survives optimized binaries. Idle remains only about `+13–17 MiB` physical / `+5–8 MiB` graphics above GPUI, while active rows still leave Fret about `~+94–118 MiB` physical / `~+86–107 MiB` graphics higher on the same scene.
+  - The old debug caveat is now closed: `paint-model full` is cadence-matched enough to trust in release (`GPUI≈583`, `Fret≈578` renders by `6s`).
+- [ ] Run the same matrix against an external same-backend `wgpu` UI framework once a suitable control exists, so framework-vs-framework active residency can be stated without the Blade/Metal backend mismatch.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.
   - Continuous control is a good stress case here: `target/diag/wgpu-control-pid-audit-continuous-20260306-r2/summary.json` still collapsed into a partial `Trace1.run`-only bundle, while the same config in `target/diag/wgpu-control-pid-audit-continuous-20260306-r3/summary.json` produced a full bundle.
