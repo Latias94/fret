@@ -44,6 +44,8 @@ use crate::ui::{
 
 #[path = "paint_only/hover_anchor.rs"]
 mod hover_anchor;
+#[path = "paint_only/overlay_elements.rs"]
+mod overlay_elements;
 #[path = "paint_only/pointer_move.rs"]
 mod pointer_move;
 #[path = "paint_only/pointer_session.rs"]
@@ -52,8 +54,10 @@ mod pointer_session;
 mod portal_measurement;
 
 use self::hover_anchor::{
-    HoverAnchorStore, HoverTooltipAnchorSource, resolve_hover_tooltip_anchor,
-    sync_hover_anchor_store_in_models,
+    HoverAnchorStore, resolve_hover_tooltip_anchor, sync_hover_anchor_store_in_models,
+};
+use self::overlay_elements::{
+    build_hover_tooltip_overlay_spec, push_hover_tooltip_overlay, push_marquee_overlay,
 };
 use self::pointer_move::{
     MarqueePointerMoveOutcome, handle_marquee_pointer_move_action_host,
@@ -3639,123 +3643,52 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                             );
 
                             if let Some(tooltip_anchor) = tooltip_anchor {
-                                let origin_screen = tooltip_anchor.origin_screen;
-                                let width = tooltip_anchor.width_screen;
-                                let source = Arc::<str>::from(match tooltip_anchor.source {
-                                    HoverTooltipAnchorSource::PortalBoundsStore => {
-                                        "portal_bounds_store"
-                                    }
-                                    HoverTooltipAnchorSource::HoverAnchorStore => {
-                                        "hover_anchor_store"
-                                    }
-                                });
-                                let left = Px(origin_screen.x.0 - bounds.origin.x.0);
-                                let mut top = Px(origin_screen.y.0 - bounds.origin.y.0 - 30.0);
-                                if top.0 < 0.0 {
-                                    top = Px(origin_screen.y.0 - bounds.origin.y.0 + 6.0);
-                                }
+                                let hovered_label = cx
+                                    .read_model_ref(&graph, Invalidation::Paint, |g| {
+                                        g.nodes
+                                            .get(&hovered_id)
+                                            .map(|n| Arc::<str>::from(n.kind.0.as_str()))
+                                    })
+                                    .ok()
+                                    .flatten()
+                                    .unwrap_or_else(|| Arc::<str>::from("node"));
 
-                                if left.0.is_finite()
-                                    && top.0.is_finite()
-                                    && width.0.is_finite()
-                                    && width.0 > 0.0
-                                {
-                                    let hovered_label = cx
-                                        .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                            g.nodes
-                                                .get(&hovered_id)
-                                                .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-                                        })
-                                        .ok()
-                                        .flatten()
-                                        .unwrap_or_else(|| Arc::<str>::from("node"));
-
-                                    let (ports_in, ports_out) = cx
-                                        .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                            g.nodes.get(&hovered_id).map(|n| {
-                                                let mut ports_in = 0u32;
-                                                let mut ports_out = 0u32;
-                                                for pid in n.ports.iter() {
-                                                    let Some(port) = g.ports.get(pid) else {
-                                                        continue;
-                                                    };
-                                                    match port.dir {
-                                                        crate::core::PortDirection::In => {
-                                                            ports_in += 1
-                                                        }
-                                                        crate::core::PortDirection::Out => {
-                                                            ports_out += 1
-                                                        }
-                                                    }
+                                let (ports_in, ports_out) = cx
+                                    .read_model_ref(&graph, Invalidation::Paint, |g| {
+                                        g.nodes.get(&hovered_id).map(|n| {
+                                            let mut ports_in = 0u32;
+                                            let mut ports_out = 0u32;
+                                            for pid in n.ports.iter() {
+                                                let Some(port) = g.ports.get(pid) else {
+                                                    continue;
+                                                };
+                                                match port.dir {
+                                                    crate::core::PortDirection::In => ports_in += 1,
+                                                    crate::core::PortDirection::Out => ports_out += 1,
                                                 }
-                                                (ports_in, ports_out)
-                                            })
+                                            }
+                                            (ports_in, ports_out)
                                         })
-                                        .ok()
-                                        .flatten()
-                                        .unwrap_or((0, 0));
+                                    })
+                                    .ok()
+                                    .flatten()
+                                    .unwrap_or((0, 0));
 
-                                    let style_tokens = style_tokens.clone();
-                                    overlay_children.push(cx.keyed(
-                                        ("fret-node.portal.tooltip.v1", hovered_id),
-                                        move |cx| {
-                                            let mut p = ContainerProps::default();
-                                            p.layout.position = PositionStyle::Absolute;
-                                            p.layout.inset.left = Some(left).into();
-                                            p.layout.inset.top = Some(top).into();
-                                            p.layout.size.width = Length::Px(width);
-                                            p.layout.size.height = Length::Px(Px(30.0));
-                                            p.padding =
-                                                SpacingEdges::all(SpacingLength::Px(Px(4.0)));
-                                            p.snap_to_device_pixels = true;
-                                            p.background = Some(Color {
-                                                a: 0.26,
-                                                ..style_tokens.paint.node_background
-                                            });
-                                            p.border = fret_core::Edges::all(Px(1.0));
-                                            p.border_color = Some(Color {
-                                                a: 0.35,
-                                                ..style_tokens.paint.node_border
-                                            });
-
-                                            let source_for_text = source.clone();
-                                            cx.container(p, move |cx| {
-                                                let mut col = ColumnProps::default();
-                                                col.layout.size.width = Length::Fill;
-                                                col.layout.size.height = Length::Fill;
-                                                col.gap = SpacingLength::Px(Px(2.0));
-                                                vec![cx.column(col, move |cx| {
-                                                    let mut lines: Vec<AnyElement> = vec![
-                                                        cx.text(Arc::<str>::from(format!(
-                                                            "id:{}",
-                                                            hovered_id.0
-                                                        ))),
-                                                        cx.text(Arc::<str>::from(format!(
-                                                            "source:{source_for_text}"
-                                                        ))),
-                                                    ];
-
-                                                    // Only include the label/port summary when it won't read as
-                                                    // "duplicated text" over a hosted portal label.
-                                                    if !hovered_portal_hosted {
-                                                        lines.push(cx.text(hovered_label.clone()));
-                                                        lines.push(cx.text(Arc::<str>::from(
-                                                            format!("in:{} out:{}", ports_in, ports_out),
-                                                        )));
-                                                    }
-                                                    lines
-                                                })]
-                                            })
-                                            .attach_semantics(
-                                                SemanticsDecoration::default()
-                                                    .test_id("node_graph.portal.tooltip")
-                                                    .value(Arc::<str>::from(format!(
-                                                        "source={source}; node_id={}; ports_in={} ports_out={}",
-                                                        hovered_id.0, ports_in, ports_out
-                                                    ))),
-                                            )
-                                        },
-                                    ));
+                                if let Some(spec) = build_hover_tooltip_overlay_spec(
+                                    bounds,
+                                    hovered_id,
+                                    tooltip_anchor,
+                                    hovered_portal_hosted,
+                                    hovered_label,
+                                    ports_in,
+                                    ports_out,
+                                ) {
+                                    push_hover_tooltip_overlay(
+                                        cx,
+                                        &mut overlay_children,
+                                        spec,
+                                        style_tokens.clone(),
+                                    );
                                 }
                             }
                         }
@@ -3831,52 +3764,13 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 if let Some(marquee) = marquee_value.as_ref()
                     && marquee.active
                 {
-                    let bounds = grid_cache_value.bounds;
-                    let rect = marquee_rect_screen(marquee);
-                    if bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0
-                        && rect.size.width.0 > 0.0
-                        && rect.size.height.0 > 0.0
-                    {
-                        // Clamp to bounds to avoid accidental giant rects in scripted input.
-                        let x0 = rect.origin.x.0.max(bounds.origin.x.0);
-                        let y0 = rect.origin.y.0.max(bounds.origin.y.0);
-                        let x1 = (rect.origin.x.0 + rect.size.width.0)
-                            .min(bounds.origin.x.0 + bounds.size.width.0);
-                        let y1 = (rect.origin.y.0 + rect.size.height.0)
-                            .min(bounds.origin.y.0 + bounds.size.height.0);
-                        let rect = Rect::new(
-                            Point::new(Px(x0), Px(y0)),
-                            fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-                        );
-
-                        if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
-                            let left = Px(rect.origin.x.0 - bounds.origin.x.0);
-                            let top = Px(rect.origin.y.0 - bounds.origin.y.0);
-
-                            let mut p = ContainerProps::default();
-                            p.layout.position = PositionStyle::Absolute;
-                            p.layout.inset.left = Some(left).into();
-                            p.layout.inset.top = Some(top).into();
-                            p.layout.size.width = Length::Px(rect.size.width);
-                            p.layout.size.height = Length::Px(rect.size.height);
-                            p.background = Some(style_tokens.paint.marquee_fill);
-                            p.border = fret_core::Edges::all(Px(style_tokens
-                                .paint
-                                .marquee_border_width
-                                .max(0.0)));
-                            p.border_color = Some(style_tokens.paint.marquee_border);
-                            p.snap_to_device_pixels = true;
-
-                            overlay_children.push(
-                                cx.keyed("fret-node.marquee.overlay.v1", move |cx| {
-                                    cx.container(p, |_cx| std::iter::empty())
-                                }),
-                            );
-                        }
-                    }
+                    push_marquee_overlay(
+                        cx,
+                        &mut overlay_children,
+                        grid_cache_value.bounds,
+                        marquee_rect_screen(marquee),
+                        &style_tokens,
+                    );
                 }
 
                 if !overlay_children.is_empty() {
@@ -3914,15 +3808,18 @@ mod tests {
     };
     use fret_ui::action::UiActionHost;
 
-    use super::hover_anchor::hovered_canvas_anchor_rect_for_surface;
+    use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
 
+    use super::overlay_elements::{
+        build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
+    };
     use super::{
         AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
         DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
-        HoverTooltipAnchorSource, Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot,
-        LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
-        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, NodeRectDraw,
-        PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+        Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
+        MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
+        NodeDragReleaseOutcome, NodeDragState, NodeRectDraw, PendingSelectionState,
+        PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
         apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
         begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
         build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
@@ -6731,6 +6628,66 @@ mod tests {
                 Point::new(Px(30.0), Px(10.0)),
                 fret_core::Size::new(Px(120.0), Px(60.0)),
             ))
+        );
+    }
+
+    #[test]
+    fn build_hover_tooltip_overlay_spec_flips_below_anchor_when_needed() {
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let spec = build_hover_tooltip_overlay_spec(
+            bounds,
+            NodeId::from_u128(9410),
+            super::hover_anchor::HoverTooltipAnchor {
+                origin_screen: Point::new(Px(120.0), Px(205.0)),
+                width_screen: Px(240.0),
+                source: HoverTooltipAnchorSource::PortalBoundsStore,
+            },
+            true,
+            Arc::<str>::from("node"),
+            2,
+            3,
+        )
+        .expect("spec");
+
+        assert_eq!(spec.left, Px(20.0));
+        assert_eq!(spec.top, Px(11.0));
+        assert_eq!(spec.width, Px(240.0));
+        assert!(spec.hide_label_summary);
+    }
+
+    #[test]
+    fn clamp_marquee_overlay_rect_to_bounds_clamps_and_rejects_empty_rects() {
+        let bounds = Rect::new(
+            Point::new(Px(100.0), Px(100.0)),
+            fret_core::Size::new(Px(200.0), Px(160.0)),
+        );
+        let clamped = clamp_marquee_overlay_rect_to_bounds(
+            bounds,
+            Rect::new(
+                Point::new(Px(50.0), Px(80.0)),
+                fret_core::Size::new(Px(180.0), Px(90.0)),
+            ),
+        )
+        .expect("clamped");
+        assert_eq!(
+            clamped,
+            Rect::new(
+                Point::new(Px(100.0), Px(100.0)),
+                fret_core::Size::new(Px(130.0), Px(70.0)),
+            )
+        );
+        assert_eq!(
+            clamp_marquee_overlay_rect_to_bounds(
+                bounds,
+                Rect::new(
+                    Point::new(Px(10.0), Px(10.0)),
+                    fret_core::Size::new(Px(20.0), Px(20.0)),
+                ),
+            ),
+            None
         );
     }
 

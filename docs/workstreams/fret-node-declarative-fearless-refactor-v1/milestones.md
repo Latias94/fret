@@ -355,6 +355,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/ui/controller.rs`
 - `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
@@ -395,6 +396,10 @@ real editors.
   `paint_only/portal_measurement.rs` and `paint_only/hover_anchor.rs`, so the main paint-only
   surface file keeps orchestration responsibility while these contracts stay reviewable in named
   seams.
+- Diagnostics-only tooltip/marquee overlay composition now also has a named private seam,
+  `paint_only/overlay_elements.rs`, so paint-only overlay rendering keeps policy-shaped element
+  assembly out of the main surface file while the next menu/toolbar boundary work can build on
+  focused flip/clamp gates instead of large inline branches.
 
 ### Deliverables
 

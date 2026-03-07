@@ -329,6 +329,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     no longer exposes public queue transport props.
 - [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
       currently blurry.
+  - Progress: diagnostics-only tooltip + marquee overlay composition now routes through the private
+    `paint_only/overlay_elements.rs` seam, so the main declarative surface only computes overlay
+    specs / orchestration instead of re-embedding element composition inline.
+  - Progress: focused paint-only gates now lock tooltip flip-below fallback and marquee clamp
+    behavior, giving the next toolbar/menu policy split a small correctness baseline before moving
+    composition into broader overlay surfaces.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
