@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 GPUI_EXAMPLE_NAME = "fret_hello_world_compare"
@@ -58,6 +59,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--steady-offset-secs", type=float, default=6.0)
     parser.add_argument("--post-sample-wait-secs", type=float, default=0.25)
     parser.add_argument(
+        "--internal-report-wait-secs",
+        type=float,
+        default=2.0,
+        help="Grace period after the external sampler exits before treating a missing internal report as fatal.",
+    )
+    parser.add_argument(
         "--exit-after-secs",
         type=float,
         help="Override the auto-computed demo self-exit time.",
@@ -87,6 +94,16 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Env override forwarded only to GPUI runs (KEY=VALUE).",
     )
+    parser.add_argument(
+        "--capture-vmmap-regions",
+        action="store_true",
+        help="Also capture `vmmap -sortBySize -wide -interleaved -noCoalesce` artifacts for each sample.",
+    )
+    parser.add_argument(
+        "--capture-footprint-verbose",
+        action="store_true",
+        help="Also capture `footprint -v` artifacts for each sample.",
+    )
     return parser.parse_args()
 
 
@@ -108,6 +125,16 @@ def parse_sample_offsets(raw: str) -> list[float]:
 
 def auto_exit_after_secs(sample_offsets: list[float], post_sample_wait_secs: float) -> float:
     return max(sample_offsets) + max(post_sample_wait_secs, 0.0) + 1.0
+
+
+def wait_for_file(path: Path, timeout_secs: float) -> bool:
+    deadline = time.monotonic() + max(timeout_secs, 0.0)
+    while True:
+        if path.is_file():
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
 
 
 def materialize_gpui_example(repo_ref_zed: Path, template_path: Path) -> Path:
@@ -151,6 +178,9 @@ def run_external_sample(
     external_sampler: str,
     sample_at_secs: str,
     post_sample_wait_secs: float,
+    internal_report_wait_secs: float,
+    capture_vmmap_regions: bool,
+    capture_footprint_verbose: bool,
 ) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     external_summary_path = out_dir / "summary.json"
@@ -168,13 +198,19 @@ def run_external_sample(
         sample_at_secs,
         "--post-sample-wait-secs",
         str(post_sample_wait_secs),
+    ]
+    if capture_vmmap_regions:
+        command.append("--capture-vmmap-regions")
+    if capture_footprint_verbose:
+        command.append("--capture-footprint-verbose")
+    command.extend([
         "--",
         binary,
-    ]
+    ])
     subprocess.run(command, check=True, env=env)
     if not external_summary_path.is_file():
         raise FileNotFoundError(f"missing external summary: {external_summary_path}")
-    if not internal_report_path.is_file():
+    if not wait_for_file(internal_report_path, internal_report_wait_secs):
         raise FileNotFoundError(f"missing internal report: {internal_report_path}")
     return external_summary_path, internal_report_path
 
@@ -216,6 +252,9 @@ def main() -> int:
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
+        internal_report_wait_secs=args.internal_report_wait_secs,
+        capture_vmmap_regions=args.capture_vmmap_regions,
+        capture_footprint_verbose=args.capture_footprint_verbose,
         env_overrides={
             **shared_env,
             **gpui_env,
@@ -236,6 +275,9 @@ def main() -> int:
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
+        internal_report_wait_secs=args.internal_report_wait_secs,
+        capture_vmmap_regions=args.capture_vmmap_regions,
+        capture_footprint_verbose=args.capture_footprint_verbose,
         env_overrides={
             **shared_env,
             **gpui_env,
@@ -258,6 +300,9 @@ def main() -> int:
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
+        internal_report_wait_secs=args.internal_report_wait_secs,
+        capture_vmmap_regions=args.capture_vmmap_regions,
+        capture_footprint_verbose=args.capture_footprint_verbose,
         env_overrides={
             **shared_env,
             **fret_env,
@@ -265,6 +310,7 @@ def main() -> int:
                 runs_dir / "fret-compare-full" / "internal.gpu.json"
             ),
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_SAMPLE_AT_SECS": args.sample_at_secs,
+            "FRET_DIAG_RENDERER_PERF": "1",
             "FRET_HELLO_WORLD_COMPARE_EXIT_AFTER_SECS": f"{exit_after_secs:.3f}",
             "FRET_HELLO_WORLD_COMPARE_WINDOW_WIDTH": str(args.window_width),
             "FRET_HELLO_WORLD_COMPARE_WINDOW_HEIGHT": str(args.window_height),
@@ -278,6 +324,9 @@ def main() -> int:
         external_sampler=args.external_sampler,
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
+        internal_report_wait_secs=args.internal_report_wait_secs,
+        capture_vmmap_regions=args.capture_vmmap_regions,
+        capture_footprint_verbose=args.capture_footprint_verbose,
         env_overrides={
             **shared_env,
             **fret_env,
@@ -285,6 +334,7 @@ def main() -> int:
                 runs_dir / "fret-compare-empty" / "internal.gpu.json"
             ),
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_SAMPLE_AT_SECS": args.sample_at_secs,
+            "FRET_DIAG_RENDERER_PERF": "1",
             "FRET_HELLO_WORLD_COMPARE_EXIT_AFTER_SECS": f"{exit_after_secs:.3f}",
             "FRET_HELLO_WORLD_COMPARE_WINDOW_WIDTH": str(args.window_width),
             "FRET_HELLO_WORLD_COMPARE_WINDOW_HEIGHT": str(args.window_height),
@@ -331,6 +381,8 @@ def main() -> int:
         "sample_at_secs": args.sample_at_secs,
         "steady_offset_secs": args.steady_offset_secs,
         "post_sample_wait_secs": args.post_sample_wait_secs,
+        "capture_vmmap_regions": args.capture_vmmap_regions,
+        "capture_footprint_verbose": args.capture_footprint_verbose,
         "exit_after_secs": exit_after_secs,
         "window": {
             "width_px": args.window_width,

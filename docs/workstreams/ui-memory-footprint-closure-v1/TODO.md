@@ -217,10 +217,61 @@
   - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-present-uniform-dedupe-release.md`.
   - Experiment: `FRET_RENDER_WGPU_SKIP_REDUNDANT_UNIFORM_UPLOADS=1` skips redundant viewport/clip/mask/render-space `queue.write_buffer()` uploads.
   - Result: `Metal Resource Events` for `present-only empty` drops from thousands of post-attach app-owned rows to header-only zero-row stores, but steady `physical` / `graphics_total` / internal `metal_current_allocated_size` stay effectively unchanged. So this path is churn, not the main steady residency floor.
-- [ ] Shift the next bounded runtime experiment away from repeated upload churn and toward live-residency suspects.
-  - Keep text/glyph uploads as a secondary branch; current evidence says `GlyphAtlas::flush_uploads` is additive but not primary.
-  - Prioritize experiments that can reduce already-live resources or surface/drawable residency rather than just suppressing post-attach upload events.
-- [ ] Keep chasing the residual `~60–75 MiB` outside `metal-current-allocated-size` with another Apple-side category path rather than adding more redundant mode rows.
+- [x] Probe the strongest live-residency suspect directly: cadence-matched active `present-only` frame latency (`desired_maximum_frame_latency=1/2/3`) in `release/release`.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-active-present-frame-latency-sweep-release.md`.
+  - Base artifacts:
+    - `target/diag/wgpu-control-vs-fret-present-release-latency1-20260307-r1/summary/summary.json`
+    - `target/diag/wgpu-control-vs-fret-present-release-latency2-active-20260307-r1/summary/summary.json`
+    - `target/diag/wgpu-control-vs-fret-present-release-latency3-20260307-r1/summary/summary.json`
+  - Result: `latency=1` trims only the visible `IOSurface` / app-visible Metal slice (about `~3.9 MiB`) on both the cadence-matched control and Fret. On the most controlled `present-only empty` row, the hidden residual versus control stays effectively flat at `~66.0–66.1 MiB`, so frame latency / drawable count is not the main explanation for the remaining active bucket.
+- [x] Add bounded local `vmmap -sortBySize` attribution to the same-backend runner and use it on active `present-only`.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-active-vmmap-regions-attribution.md`.
+  - Tooling: `tools/sample_external_process_memory.py` now parses `vmmap -sortBySize -wide -interleaved -noCoalesce`, `tools/run_wgpu_hello_world_control_vs_fret.py` now exposes `--capture-vmmap-regions`, and regions capture is best-effort instead of fatal.
+  - Preferred artifact: `target/diag/wgpu-control-vs-fret-present-release-latency2-active-vmmap-regions-single6-20260307-r1/summary/summary.json`
+  - Result: the top dirty region is still one generic private `owned unmapped memory` block (`control≈115.5 MiB`, `empty≈208.5 MiB`, `full≈221.8 MiB`). The next rows are only the expected `IOSurface` drawables (`~3.92 MiB` each) plus small `MALLOC_SMALL` / `IOAccelerator` chunks. So local `vmmap` confirms the hidden bucket is real, but does not decompose it further.
+- [x] Follow the monolithic local `vmmap` bucket with bounded `footprint -v` object-size attribution on the same active `present-only` row.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-active-footprint-verbose-owned-unmapped-attribution.md`.
+  - Tooling: `tools/sample_external_process_memory.py` now supports `--capture-footprint-verbose`, stores raw `resource.footprint_verbose.txt`, and summarizes focus families plus bucket histograms; `tools/run_wgpu_hello_world_control_vs_fret.py` forwards the new flag; `tools/summarize_wgpu_hello_world_control_vs_fret.py` now prints a compact `footprint -v` focus table in `summary.md`.
+  - Preferred artifact: `target/diag/wgpu-control-vs-fret-present-release-latency2-active-footprint-verbose-single6-20260307-r1/summary/summary.json`
+  - Result: the hidden same-backend active gap is now narrowed to `Owned physical footprint (unmapped) (graphics)`, dominated by repeated `4 MiB` buckets rather than generic heap noise. At `6s`, the cadence-matched control carries `4.0 MiB × 28`, Fret `present-only empty` carries `4.0 MiB × 50`, and Fret `present-only full` carries `4.0 MiB × 52`, while visible `CAMetalLayer` drawables stay flat at `~11.8 MiB`.
+- [x] Use the new `4 MiB` graphics-object signature to drive the next apples-to-apples check rather than collecting more generic local sweeps.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-fret-vs-gpui-rerender-only-footprint-verbose-release.md`.
+  - Tooling: `tools/run_fret_vs_gpui_hello_world_compare.py` now supports `--capture-vmmap-regions` + `--capture-footprint-verbose`, and `tools/summarize_fret_vs_gpui_hello_world_compare.py` now carries the same `footprint -v` focus families into its bounded summary.
+  - Preferred artifact: `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r1/summary/summary.json`
+  - Result: GPUI also shows the repeated `4 MiB` `Owned physical footprint (unmapped) (graphics)` family, but only at `4.0 MiB × 28`; Fret lands at `×50` (`empty`) and `×52` (`full`). So the next question is object-count inflation, not signature existence.
+  - Post-optimization rebaseline: `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-fret-vs-gpui-rerender-only-post-path-intermediate-release.md` shows that after landing lazy `path_intermediate` allocation, Fret still sits about `~+100.5 MiB` physical / `~+92.2 MiB` graphics (`empty`) and `~+115.1 MiB` physical / `~+104.5 MiB` graphics (`full`) above GPUI, while Fret's own `metal_current_allocated_size_bytes` drops by `~20.16 MiB` and `renderer_path_intermediate_bytes_estimate` reaches `0`.
+- [ ] Use the new cross-check to narrow the remaining investigation from "what family is large?" to "why does Fret keep ~22–24 extra full-surface graphics objects?"
+  - Search `wgpu` / Metal primary sources for prior art on hidden full-surface private allocations or heaps that show up as repeated `4 MiB` graphics-owned unmapped objects on Apple platforms.
+  - Audit any Fret path that could keep extra full-surface private textures/heaps alive even when internal renderer counters still report zero imported images / render targets / intermediates.
+  - Keep using the same-backend `wgpu` control matrix plus this GPUI cross-check together when triaging candidates.
+- [x] Triage the strongest local full-surface renderer-owned suspect (`path_intermediate`) against the hidden bucket before broadening the search again.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-path-msaa-upstream-transient-triage.md`.
+  - Source-side audit: `crates/fret-render-wgpu/src/renderer/render_scene/frame_pipelines.rs` eagerly ensures `path_intermediate` whenever `path_msaa_samples > 1`; `crates/fret-render-wgpu/src/renderer/pipelines/path_intermediate.rs` allocates full-viewport resolved + MSAA textures; `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs` currently keeps `StoreOp::Store`, which blocks the straightforward `TextureUsages::TRANSIENT` path.
+  - Upstream clue: local `wgpu` 28 sources already expose `TextureUsages::TRANSIENT` and map it to Metal memoryless storage, and upstream `wgpu` issue `#8247` explicitly tracks transient textures on Metal/Vulkan.
+  - Runtime result: forcing `FRET_RENDER_WGPU_PATH_MSAA_SAMPLES=1` removes about `~20 MiB` of app-visible internal Metal on the same `present-only` row, but leaves the hidden `Owned physical footprint (unmapped) (graphics)` plateau and the repeated `4 MiB × 50/52` bucket effectively unchanged.
+- [x] Close the internal renderer-scratch blind spot so the same-backend active pair can distinguish visible retained scratch from the hidden dirty plateau.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-renderer-perf-persistent-scratch-attribution.md`.
+  - Tooling: `RenderPerfSnapshot` now exposes retained `path_intermediate` / `custom_effect_v3_pyramid_scratch` estimates; `hello_world_compare_demo` now writes those fields into `internal.gpu.json`; direct compare runners auto-set `FRET_DIAG_RENDERER_PERF=1`; same-backend / GPUI summarizers now surface the new scratch metrics.
+  - Preferred artifacts:
+    - `target/diag/wgpu-control-vs-fret-present-release-latency2-active-footprint-verbose-renderer-perf-scratch-single6-20260307-r1/summary/summary.json`
+    - `target/diag/wgpu-control-vs-fret-present-release-latency2-active-footprint-verbose-renderer-perf-scratch-pathmsaa1-single6-20260307-r1/summary/summary.json`
+  - Result: both `present-only` Fret rows report `path_draw_calls=0` but still retain `path_intermediate_bytes_estimate≈19.07 MiB`; `path_msaa=1` drops that estimate to `0` and lowers `metal_current_allocated_size_bytes` by about `~20 MiB`, while `Owned physical footprint (unmapped) (graphics)` dirty and the dominant `4 MiB × 50/52` bucket remain flat.
+  - Extra closure: the disappearing `footprint -v` rows are a `~16.1 MiB` + `~4.0 MiB` virtual-only pair inside `owned_unmapped_graphics`, so the new scratch estimate maps to app-visible / virtual reservation rows rather than the remaining dirty plateau.
+- [x] Turn the newly isolated `path_intermediate` overhead into a shipped optimization.
+  - Note: see `docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-path-intermediate-lazy-allocation.md`.
+  - Implementation: `frame_pipelines.rs` no longer eagerly allocates `path_intermediate`; `execute.rs` now syncs it against compiled `RenderPlanPass::PathMsaaBatch`; `config.rs` drops stale retained scratch on path-MSAA sample-count changes.
+  - Gate hardening: `tools/run_wgpu_hello_world_control_vs_fret.py` and `tools/run_fret_vs_gpui_hello_world_compare.py` now wait briefly for `internal.gpu.json`, removing a false-negative race that surfaced during validation.
+  - Preferred artifacts:
+    - `target/diag/wgpu-control-vs-fret-present-release-latency2-active-footprint-verbose-renderer-perf-scratch-lazy-path-intermediate-single6-20260307-r2/summary/summary.json`
+    - `target/diag/wgpu-control-vs-fret-present-release-latency2-active-footprint-verbose-renderer-perf-scratch-lazy-path-intermediate-single6-20260307-r3/summary/summary.json`
+  - Result: path-free hello-world rows now report `path_intermediate_bytes_estimate=0` with `path_msaa_samples_effective=4`, and active `metal_current_allocated_size_bytes` drops by about `~20.16 MiB` on both `present-only` rows while the hidden `4 MiB × 50/52` graphics dirty plateau remains.
+- [ ] Keep chasing the residual `~66–81 MiB` outside `metal-current-allocated-size` with a narrower attribution path rather than adding more redundant mode rows.
+  - `present-only empty` still anchors the smallest hidden same-backend active residual (`~66 MiB`).
+  - The GPUI rerender-only cross-check now shows that the repeated `4 MiB` graphics-owned unmapped family exists there too, but with a much lower object count (`×28` instead of `×50/×52`).
+  - The new `path_msaa=1` rerun removes a visible `~20 MiB` Metal slice but leaves that hidden `4 MiB × 50/52` plateau flat, so path-intermediate MSAA scratch is no longer the primary hidden-bucket suspect.
+  - That shifts the next Apple/upstream/source-side question from "which broad category is big?" to "which hidden full-surface-sized graphics objects are still over-retained on the Fret path after path MSAA is out of the way?".
+  - Current tooling note: `tools/sample_external_process_memory.py` now retries transient capture failures, but GPUI compare reruns on this machine still hit intermittent `footprint -v` exit `66`, so exact bucket refreshes remain a tooling subproblem rather than a new product-level explanation.
+- [ ] Stabilize `footprint -v` bucket capture for GPUI/Fret compare reruns (or add a fallback parser) so post-optimization cross-framework runs can refresh exact `4 MiB` row counts instead of relying on earlier successful captures.
 
 - [ ] Explain why `Game Memory` alternates between full bundles and partial `Trace1.run`-only bundles for both `wgpu_hello_world_control` and `hello_world_compare_demo`, then turn that finding into a stable same-backend control capture path.
   - Continuous control is a good stress case here: `target/diag/wgpu-control-pid-audit-continuous-20260306-r2/summary.json` still collapsed into a partial `Trace1.run`-only bundle, while the same config in `target/diag/wgpu-control-pid-audit-continuous-20260306-r3/summary.json` produced a full bundle.

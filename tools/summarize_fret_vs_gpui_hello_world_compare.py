@@ -8,6 +8,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+FOOTPRINT_VERBOSE_FAMILY_ALIASES = {
+    "Owned physical footprint (unmapped) (graphics)": "owned_unmapped_graphics",
+    "Owned physical footprint (unmapped)": "owned_unmapped",
+    "IOSurface CAMetalLayer Display Drawable": "iosurface_cametallayer_display_drawable",
+    "IOAccelerator (graphics)": "ioaccelerator_graphics",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -65,6 +72,31 @@ def peak_physical_bytes(summary: dict[str, Any]) -> int | None:
     return max(values)
 
 
+def select_footprint_verbose_focus(external_sample: dict[str, Any]) -> dict[str, Any]:
+    focus_families = (((external_sample.get("footprint_verbose") or {}).get("focus_families")) or {})
+    return {
+        alias: focus_families[family]
+        for family, alias in FOOTPRINT_VERBOSE_FAMILY_ALIASES.items()
+        if family in focus_families
+    }
+
+
+def focus_metric(focus: dict[str, Any], alias: str, key: str) -> int | None:
+    return (focus.get(alias) or {}).get(key)
+
+
+def format_bucket_signature(family_summary: dict[str, Any] | None) -> str:
+    if not family_summary:
+        return "n/a"
+    buckets = family_summary.get("dirty_page_buckets") or []
+    if not buckets:
+        buckets = family_summary.get("virtual_page_buckets") or []
+    if not buckets:
+        return "n/a"
+    top_bucket = buckets[0]
+    return f"{format_mib(top_bucket.get('bytes_per_row'))}×{top_bucket.get('rows_total', 0)}"
+
+
 def extract_case(
     *,
     label: str,
@@ -76,9 +108,11 @@ def extract_case(
 ) -> dict[str, Any]:
     external_sample = find_sample(external_summary.get("samples") or [], steady_offset_secs) or {}
     key_metrics = external_sample.get("key_metrics") or {}
+    footprint_verbose_focus = select_footprint_verbose_focus(external_sample)
     internal_sample = find_sample(internal_summary.get("samples") or [], steady_offset_secs) or {}
     runtime = internal_sample.get("runtime") or {}
     allocator = internal_sample.get("allocator") or {}
+    renderer_perf = internal_sample.get("renderer_perf") or {}
     scene = (internal_summary.get("requested_runtime") or {}).get("scene") or {}
     return {
         "label": label,
@@ -95,6 +129,36 @@ def extract_case(
         "render_count": runtime.get("render_count"),
         "frame_tick": runtime.get("frame_tick"),
         "metal_current_allocated_size_bytes": allocator.get("metal_current_allocated_size_bytes"),
+        "renderer_path_intermediate_bytes_estimate": renderer_perf.get("path_intermediate_bytes_estimate"),
+        "renderer_path_intermediate_msaa_bytes_estimate": renderer_perf.get("path_intermediate_msaa_bytes_estimate"),
+        "renderer_path_intermediate_resolved_bytes_estimate": renderer_perf.get("path_intermediate_resolved_bytes_estimate"),
+        "renderer_custom_effect_v3_pyramid_scratch_bytes_estimate": renderer_perf.get("custom_effect_v3_pyramid_scratch_bytes_estimate"),
+        "renderer_intermediate_pool_free_bytes": renderer_perf.get("intermediate_pool_free_bytes"),
+        "renderer_intermediate_pool_free_textures": renderer_perf.get("intermediate_pool_free_textures"),
+        "renderer_path_msaa_samples_effective": renderer_perf.get("path_msaa_samples_effective"),
+        "renderer_path_draw_calls": renderer_perf.get("path_draw_calls"),
+        "renderer_clip_path_mask_cache_bytes_live": renderer_perf.get("clip_path_mask_cache_bytes_live"),
+        "footprint_verbose_focus": footprint_verbose_focus,
+        "footprint_verbose_owned_unmapped_graphics_dirty_bytes": focus_metric(
+            footprint_verbose_focus, "owned_unmapped_graphics", "dirty_bytes_total"
+        ),
+        "footprint_verbose_owned_unmapped_graphics_rows_total": focus_metric(
+            footprint_verbose_focus, "owned_unmapped_graphics", "rows_total"
+        ),
+        "footprint_verbose_owned_unmapped_dirty_bytes": focus_metric(
+            footprint_verbose_focus, "owned_unmapped", "dirty_bytes_total"
+        ),
+        "footprint_verbose_owned_unmapped_rows_total": focus_metric(
+            footprint_verbose_focus, "owned_unmapped", "rows_total"
+        ),
+        "footprint_verbose_drawable_iosurface_dirty_bytes": focus_metric(
+            footprint_verbose_focus,
+            "iosurface_cametallayer_display_drawable",
+            "dirty_bytes_total",
+        ),
+        "footprint_verbose_ioaccelerator_graphics_dirty_bytes": focus_metric(
+            footprint_verbose_focus, "ioaccelerator_graphics", "dirty_bytes_total"
+        ),
         "external_summary": external_summary,
         "internal_summary": internal_summary,
     }
@@ -117,6 +181,21 @@ def delta_row(fret_row: dict[str, Any], gpui_row: dict[str, Any]) -> dict[str, A
         "io_surface_delta_bytes": delta("io_surface_dirty_bytes"),
         "io_accelerator_delta_bytes": delta("io_accelerator_dirty_bytes"),
         "render_delta": delta("render_count"),
+        "footprint_verbose_owned_unmapped_graphics_dirty_delta_bytes": delta(
+            "footprint_verbose_owned_unmapped_graphics_dirty_bytes"
+        ),
+        "footprint_verbose_owned_unmapped_graphics_rows_delta": delta(
+            "footprint_verbose_owned_unmapped_graphics_rows_total"
+        ),
+        "footprint_verbose_owned_unmapped_dirty_delta_bytes": delta(
+            "footprint_verbose_owned_unmapped_dirty_bytes"
+        ),
+        "footprint_verbose_drawable_iosurface_dirty_delta_bytes": delta(
+            "footprint_verbose_drawable_iosurface_dirty_bytes"
+        ),
+        "footprint_verbose_ioaccelerator_graphics_dirty_delta_bytes": delta(
+            "footprint_verbose_ioaccelerator_graphics_dirty_bytes"
+        ),
     }
 
 
@@ -141,14 +220,37 @@ def markdown_report(rows: list[dict[str, Any]], deltas: list[dict[str, Any]]) ->
                 renders=row.get("render_count", "n/a"),
             )
         )
+
+    if any(row.get("footprint_verbose_focus") for row in rows):
+        lines.extend([
+            "",
+            "| Framework | Case | Owned gfx MiB | Owned gfx rows | Owned gfx bucket | Owned plain MiB | Drawable MiB | IOAccel MiB |",
+            "| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |",
+        ])
+        for row in rows:
+            lines.append(
+                "| {framework} | {scene_kind} | {owned_gfx} | {owned_gfx_rows} | {owned_gfx_bucket} | {owned_plain} | {drawables} | {ioaccel} |".format(
+                    framework=row["framework"],
+                    scene_kind=row["scene_kind"],
+                    owned_gfx=format_mib(row.get("footprint_verbose_owned_unmapped_graphics_dirty_bytes")),
+                    owned_gfx_rows=row.get("footprint_verbose_owned_unmapped_graphics_rows_total", "n/a"),
+                    owned_gfx_bucket=format_bucket_signature(
+                        (row.get("footprint_verbose_focus") or {}).get("owned_unmapped_graphics")
+                    ),
+                    owned_plain=format_mib(row.get("footprint_verbose_owned_unmapped_dirty_bytes")),
+                    drawables=format_mib(row.get("footprint_verbose_drawable_iosurface_dirty_bytes")),
+                    ioaccel=format_mib(row.get("footprint_verbose_ioaccelerator_graphics_dirty_bytes")),
+                )
+            )
+
     lines.append("")
     lines.append("## Fret minus GPUI")
     lines.append("")
-    lines.append("| Case | Mode | Physical Δ MiB | Graphics Δ MiB | Owned Δ MiB | IOSurface Δ MiB | IOAccel Δ MiB | Render Δ |")
-    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    lines.append("| Case | Mode | Physical Δ MiB | Graphics Δ MiB | Owned Δ MiB | IOSurface Δ MiB | IOAccel Δ MiB | Render Δ | Owned gfx Δ MiB | Owned gfx rows Δ | Drawable Δ MiB |")
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in deltas:
         lines.append(
-            "| {scene_kind} | {active_mode} | {physical} | {graphics} | {owned} | {iosurface} | {ioaccel} | {render_delta} |".format(
+            "| {scene_kind} | {active_mode} | {physical} | {graphics} | {owned} | {iosurface} | {ioaccel} | {render_delta} | {owned_gfx} | {owned_gfx_rows} | {drawable} |".format(
                 scene_kind=row["scene_kind"],
                 active_mode=row["active_mode"],
                 physical=format_mib(row.get("physical_delta_bytes")),
@@ -157,6 +259,9 @@ def markdown_report(rows: list[dict[str, Any]], deltas: list[dict[str, Any]]) ->
                 iosurface=format_mib(row.get("io_surface_delta_bytes")),
                 ioaccel=format_mib(row.get("io_accelerator_delta_bytes")),
                 render_delta=row.get("render_delta", "n/a"),
+                owned_gfx=format_mib(row.get("footprint_verbose_owned_unmapped_graphics_dirty_delta_bytes")),
+                owned_gfx_rows=row.get("footprint_verbose_owned_unmapped_graphics_rows_delta", "n/a"),
+                drawable=format_mib(row.get("footprint_verbose_drawable_iosurface_dirty_delta_bytes")),
             )
         )
     return "\n".join(lines) + "\n"

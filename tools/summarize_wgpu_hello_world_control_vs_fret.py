@@ -8,6 +8,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+FOOTPRINT_VERBOSE_FAMILY_ALIASES = {
+    "Owned physical footprint (unmapped) (graphics)": "owned_unmapped_graphics",
+    "Owned physical footprint (unmapped)": "owned_unmapped",
+    "IOSurface CAMetalLayer Display Drawable": "iosurface_cametallayer_display_drawable",
+    "IOSurface": "iosurface",
+    "IOAccelerator (graphics)": "ioaccelerator_graphics",
+}
+
 
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text())
@@ -63,6 +71,31 @@ def format_surface_note(requested_surface: dict[str, Any], steady_surface: dict[
     return ",".join(parts) if parts else "n/a"
 
 
+def select_footprint_verbose_focus(external_sample: dict[str, Any]) -> dict[str, Any]:
+    focus_families = (((external_sample.get("footprint_verbose") or {}).get("focus_families")) or {})
+    return {
+        alias: focus_families[family]
+        for family, alias in FOOTPRINT_VERBOSE_FAMILY_ALIASES.items()
+        if family in focus_families
+    }
+
+
+def focus_metric(focus: dict[str, Any], alias: str, key: str) -> int | None:
+    return ((focus.get(alias) or {}).get(key))
+
+
+def format_bucket_signature(family_summary: dict[str, Any] | None) -> str:
+    if not family_summary:
+        return "n/a"
+    buckets = family_summary.get("dirty_page_buckets") or []
+    if not buckets:
+        buckets = family_summary.get("virtual_page_buckets") or []
+    if not buckets:
+        return "n/a"
+    top_bucket = buckets[0]
+    return f"{format_mib(top_bucket.get('bytes_per_row'))}×{top_bucket.get('rows_total', 0)}"
+
+
 def summarize_case(
     label: str,
     external_summary: dict[str, Any],
@@ -76,6 +109,7 @@ def summarize_case(
     for external_sample in external_samples:
         offset_secs = float(external_sample.get("offset_secs", 0.0))
         key_metrics = external_sample.get("key_metrics") or {}
+        footprint_verbose_focus = select_footprint_verbose_focus(external_sample)
         internal_sample = find_sample(internal_samples, offset_secs)
         allocator = (internal_sample or {}).get("allocator") or {}
         runtime = (internal_sample or {}).get("runtime") or {}
@@ -113,7 +147,43 @@ def summarize_case(
                 "renderer_gpu_images_bytes_estimate": renderer_perf.get("gpu_images_bytes_estimate"),
                 "renderer_gpu_render_targets_bytes_estimate": renderer_perf.get("gpu_render_targets_bytes_estimate"),
                 "renderer_intermediate_peak_in_use_bytes": renderer_perf.get("intermediate_peak_in_use_bytes"),
+                "renderer_intermediate_pool_free_bytes": renderer_perf.get("intermediate_pool_free_bytes"),
+                "renderer_intermediate_pool_free_textures": renderer_perf.get("intermediate_pool_free_textures"),
+                "renderer_path_intermediate_bytes_estimate": renderer_perf.get("path_intermediate_bytes_estimate"),
+                "renderer_path_intermediate_msaa_bytes_estimate": renderer_perf.get("path_intermediate_msaa_bytes_estimate"),
+                "renderer_path_intermediate_resolved_bytes_estimate": renderer_perf.get("path_intermediate_resolved_bytes_estimate"),
+                "renderer_custom_effect_v3_pyramid_scratch_bytes_estimate": renderer_perf.get("custom_effect_v3_pyramid_scratch_bytes_estimate"),
+                "renderer_clip_path_mask_cache_bytes_live": renderer_perf.get("clip_path_mask_cache_bytes_live"),
+                "renderer_path_msaa_samples_effective": renderer_perf.get("path_msaa_samples_effective"),
+                "renderer_path_draw_calls": renderer_perf.get("path_draw_calls"),
+                "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": renderer_perf.get("render_plan_custom_effect_chain_base_required_full_targets_max"),
+                "renderer_render_plan_effect_chain_other_live_max_bytes": renderer_perf.get("render_plan_effect_chain_other_live_max_bytes"),
                 "renderer_render_plan_estimated_peak_intermediate_bytes": renderer_perf.get("render_plan_estimated_peak_intermediate_bytes"),
+                "vmmap_regions_sorted_top_dirty_region_type": key_metrics.get("vmmap_regions_sorted_top_dirty_region_type"),
+                "vmmap_regions_sorted_top_dirty_detail": key_metrics.get("vmmap_regions_sorted_top_dirty_detail"),
+                "vmmap_regions_sorted_top_dirty_bytes": key_metrics.get("vmmap_regions_sorted_top_dirty_bytes"),
+                "footprint_verbose_focus": footprint_verbose_focus,
+                "footprint_verbose_owned_unmapped_graphics_dirty_bytes": focus_metric(
+                    footprint_verbose_focus, "owned_unmapped_graphics", "dirty_bytes_total"
+                ),
+                "footprint_verbose_owned_unmapped_graphics_virtual_bytes": focus_metric(
+                    footprint_verbose_focus, "owned_unmapped_graphics", "virtual_bytes_total"
+                ),
+                "footprint_verbose_owned_unmapped_graphics_rows_total": focus_metric(
+                    footprint_verbose_focus, "owned_unmapped_graphics", "rows_total"
+                ),
+                "footprint_verbose_owned_unmapped_dirty_bytes": focus_metric(
+                    footprint_verbose_focus, "owned_unmapped", "dirty_bytes_total"
+                ),
+                "footprint_verbose_owned_unmapped_rows_total": focus_metric(
+                    footprint_verbose_focus, "owned_unmapped", "rows_total"
+                ),
+                "footprint_verbose_drawable_iosurface_dirty_bytes": focus_metric(
+                    footprint_verbose_focus, "iosurface_cametallayer_display_drawable", "dirty_bytes_total"
+                ),
+                "footprint_verbose_ioaccelerator_graphics_dirty_bytes": focus_metric(
+                    footprint_verbose_focus, "ioaccelerator_graphics", "dirty_bytes_total"
+                ),
             }
         )
 
@@ -189,6 +259,71 @@ def markdown_report(rows: list[dict[str, Any]]) -> str:
                 presents=steady.get("present_count", "n/a"),
             )
         )
+
+    lines.extend([
+        "",
+        "| Case | Metal MiB | Residual MiB | Renderer images | Renderer RTs | Renderer interm peak | Path scratch | Pool free | Clip-mask cache | Owned gfx bucket |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+    ])
+    for row in rows:
+        steady = row["steady"]
+        lines.append(
+            "| {label} | {metal} | {residual} | {renderer_images} | {renderer_rts} | {renderer_intermediate} | {path_scratch} | {pool_free} | {clip_mask_cache} | {bucket} |".format(
+                label=row["label"],
+                metal=format_mib(steady.get("metal_current_allocated_size_bytes")),
+                residual=format_mib(steady.get("residual_bytes")),
+                renderer_images=format_mib(steady.get("renderer_gpu_images_bytes_estimate")),
+                renderer_rts=format_mib(steady.get("renderer_gpu_render_targets_bytes_estimate")),
+                renderer_intermediate=format_mib(steady.get("renderer_intermediate_peak_in_use_bytes")),
+                path_scratch=format_mib(steady.get("renderer_path_intermediate_bytes_estimate")),
+                pool_free=format_mib(steady.get("renderer_intermediate_pool_free_bytes")),
+                clip_mask_cache=format_mib(steady.get("renderer_clip_path_mask_cache_bytes_live")),
+                bucket=format_bucket_signature((steady.get("footprint_verbose_focus") or {}).get("owned_unmapped_graphics")),
+            )
+        )
+
+    lines.extend([
+        "",
+        "| Case | Path MSAA | Path draws | Path scratch MSAA | Path scratch resolved | Pyramid scratch | CustomEffect full-target max | Effect other-live max | Pool free textures |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ])
+    for row in rows:
+        steady = row["steady"]
+        lines.append(
+            "| {label} | {path_msaa} | {path_draws} | {path_msaa_bytes} | {path_resolved_bytes} | {pyramid} | {custom_full_targets} | {other_live} | {pool_free_textures} |".format(
+                label=row["label"],
+                path_msaa=steady.get("renderer_path_msaa_samples_effective", "n/a"),
+                path_draws=steady.get("renderer_path_draw_calls", "n/a"),
+                path_msaa_bytes=format_mib(steady.get("renderer_path_intermediate_msaa_bytes_estimate")),
+                path_resolved_bytes=format_mib(steady.get("renderer_path_intermediate_resolved_bytes_estimate")),
+                pyramid=format_mib(steady.get("renderer_custom_effect_v3_pyramid_scratch_bytes_estimate")),
+                custom_full_targets=steady.get("renderer_render_plan_custom_effect_chain_base_required_full_targets_max", "n/a"),
+                other_live=format_mib(steady.get("renderer_render_plan_effect_chain_other_live_max_bytes")),
+                pool_free_textures=steady.get("renderer_intermediate_pool_free_textures", "n/a"),
+            )
+        )
+
+    if any((row.get("steady") or {}).get("footprint_verbose_focus") for row in rows):
+        lines.extend([
+            "",
+            "| Case | Owned gfx MiB | Owned gfx rows | Owned gfx bucket | Owned plain MiB | Owned plain rows | Drawable MiB | IOAccel MiB |",
+            "| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |",
+        ])
+        for row in rows:
+            steady = row.get("steady") or {}
+            focus = steady.get("footprint_verbose_focus") or {}
+            lines.append(
+                "| {label} | {owned_gfx} | {owned_gfx_rows} | {owned_gfx_bucket} | {owned_plain} | {owned_plain_rows} | {drawables} | {ioaccel} |".format(
+                    label=row["label"],
+                    owned_gfx=format_mib(steady.get("footprint_verbose_owned_unmapped_graphics_dirty_bytes")),
+                    owned_gfx_rows=steady.get("footprint_verbose_owned_unmapped_graphics_rows_total", "n/a"),
+                    owned_gfx_bucket=format_bucket_signature(focus.get("owned_unmapped_graphics")),
+                    owned_plain=format_mib(steady.get("footprint_verbose_owned_unmapped_dirty_bytes")),
+                    owned_plain_rows=steady.get("footprint_verbose_owned_unmapped_rows_total", "n/a"),
+                    drawables=format_mib(steady.get("footprint_verbose_drawable_iosurface_dirty_bytes")),
+                    ioaccel=format_mib(steady.get("footprint_verbose_ioaccelerator_graphics_dirty_bytes")),
+                )
+            )
     return "\n".join(lines)
 
 
@@ -255,6 +390,26 @@ def main() -> int:
             "residual_delta_bytes_vs_control": delta_or_none(
                 steady.get("residual_bytes"),
                 control_steady.get("residual_bytes"),
+            ),
+            "footprint_verbose_owned_unmapped_graphics_dirty_delta_bytes_vs_control": delta_or_none(
+                steady.get("footprint_verbose_owned_unmapped_graphics_dirty_bytes"),
+                control_steady.get("footprint_verbose_owned_unmapped_graphics_dirty_bytes"),
+            ),
+            "footprint_verbose_owned_unmapped_graphics_rows_delta_vs_control": delta_or_none(
+                steady.get("footprint_verbose_owned_unmapped_graphics_rows_total"),
+                control_steady.get("footprint_verbose_owned_unmapped_graphics_rows_total"),
+            ),
+            "footprint_verbose_owned_unmapped_dirty_delta_bytes_vs_control": delta_or_none(
+                steady.get("footprint_verbose_owned_unmapped_dirty_bytes"),
+                control_steady.get("footprint_verbose_owned_unmapped_dirty_bytes"),
+            ),
+            "footprint_verbose_drawable_iosurface_dirty_delta_bytes_vs_control": delta_or_none(
+                steady.get("footprint_verbose_drawable_iosurface_dirty_bytes"),
+                control_steady.get("footprint_verbose_drawable_iosurface_dirty_bytes"),
+            ),
+            "footprint_verbose_ioaccelerator_graphics_dirty_delta_bytes_vs_control": delta_or_none(
+                steady.get("footprint_verbose_ioaccelerator_graphics_dirty_bytes"),
+                control_steady.get("footprint_verbose_ioaccelerator_graphics_dirty_bytes"),
             ),
         }
 

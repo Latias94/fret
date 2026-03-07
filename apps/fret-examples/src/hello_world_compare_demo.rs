@@ -87,7 +87,10 @@ impl CompareActiveMode {
     }
 
     fn uses_animation_frame_loop(self) -> bool {
-        matches!(self, Self::RerenderOnly | Self::PaintModel | Self::LayoutModel)
+        matches!(
+            self,
+            Self::RerenderOnly | Self::PaintModel | Self::LayoutModel
+        )
     }
 }
 
@@ -519,22 +522,84 @@ fn capture_renderer_perf_sample_json(
         });
     };
     let perf = snapshot.perf;
-    json!({
-        "present": true,
-        "window_known": true,
-        "tick_id": snapshot.tick_id,
-        "frame_id": snapshot.frame_id,
-        "frames": perf.frames,
-        "gpu_images_live": perf.gpu_images_live,
-        "gpu_images_bytes_estimate": perf.gpu_images_bytes_estimate,
-        "gpu_render_targets_live": perf.gpu_render_targets_live,
-        "gpu_render_targets_bytes_estimate": perf.gpu_render_targets_bytes_estimate,
-        "intermediate_budget_bytes": perf.intermediate_budget_bytes,
-        "intermediate_full_target_bytes": perf.intermediate_full_target_bytes,
-        "intermediate_peak_in_use_bytes": perf.intermediate_peak_in_use_bytes,
-        "render_plan_estimated_peak_intermediate_bytes": perf.render_plan_estimated_peak_intermediate_bytes,
-        "render_plan_degradations": perf.render_plan_degradations,
-    })
+    let mut out = serde_json::Map::new();
+    out.extend(
+        json!({
+            "present": true,
+            "window_known": true,
+            "tick_id": snapshot.tick_id,
+            "frame_id": snapshot.frame_id,
+            "frames": perf.frames,
+            "gpu_images_live": perf.gpu_images_live,
+            "gpu_images_bytes_estimate": perf.gpu_images_bytes_estimate,
+            "gpu_images_max_bytes_estimate": perf.gpu_images_max_bytes_estimate,
+            "gpu_render_targets_live": perf.gpu_render_targets_live,
+            "gpu_render_targets_bytes_estimate": perf.gpu_render_targets_bytes_estimate,
+            "gpu_render_targets_max_bytes_estimate": perf.gpu_render_targets_max_bytes_estimate,
+        })
+        .as_object()
+        .expect("renderer perf json object")
+        .clone(),
+    );
+    out.extend(
+        json!({
+            "intermediate_budget_bytes": perf.intermediate_budget_bytes,
+            "intermediate_full_target_bytes": perf.intermediate_full_target_bytes,
+            "intermediate_in_use_bytes": perf.intermediate_in_use_bytes,
+            "intermediate_peak_in_use_bytes": perf.intermediate_peak_in_use_bytes,
+            "intermediate_release_targets": perf.intermediate_release_targets,
+            "intermediate_pool_allocations": perf.intermediate_pool_allocations,
+            "intermediate_pool_reuses": perf.intermediate_pool_reuses,
+            "intermediate_pool_releases": perf.intermediate_pool_releases,
+            "intermediate_pool_evictions": perf.intermediate_pool_evictions,
+            "intermediate_pool_free_bytes": perf.intermediate_pool_free_bytes,
+            "intermediate_pool_free_textures": perf.intermediate_pool_free_textures,
+            "path_intermediate_bytes_estimate": perf.path_intermediate_bytes_estimate,
+            "path_intermediate_msaa_bytes_estimate": perf.path_intermediate_msaa_bytes_estimate,
+            "path_intermediate_resolved_bytes_estimate": perf.path_intermediate_resolved_bytes_estimate,
+            "custom_effect_v3_pyramid_scratch_bytes_estimate": perf.custom_effect_v3_pyramid_scratch_bytes_estimate,
+        })
+        .as_object()
+        .expect("renderer perf json object")
+        .clone(),
+    );
+    out.extend(
+        json!({
+            "render_plan_estimated_peak_intermediate_bytes": perf.render_plan_estimated_peak_intermediate_bytes,
+            "render_plan_segments": perf.render_plan_segments,
+            "render_plan_segments_changed": perf.render_plan_segments_changed,
+            "render_plan_segments_passes_increased": perf.render_plan_segments_passes_increased,
+            "render_plan_degradations": perf.render_plan_degradations,
+            "render_plan_effect_chain_budget_samples": perf.render_plan_effect_chain_budget_samples,
+            "render_plan_effect_chain_other_live_max_bytes": perf.render_plan_effect_chain_other_live_max_bytes,
+            "render_plan_custom_effect_chain_budget_samples": perf.render_plan_custom_effect_chain_budget_samples,
+            "render_plan_custom_effect_chain_other_live_max_bytes": perf.render_plan_custom_effect_chain_other_live_max_bytes,
+            "render_plan_custom_effect_chain_base_required_full_targets_max": perf.render_plan_custom_effect_chain_base_required_full_targets_max,
+            "render_plan_custom_effect_chain_optional_pyramid_max_bytes": perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+            "clip_path_mask_cache_bytes_live": perf.clip_path_mask_cache_bytes_live,
+            "clip_path_mask_cache_entries_live": perf.clip_path_mask_cache_entries_live,
+            "custom_effect_v3_pyramid_cache_hits": perf.custom_effect_v3_pyramid_cache_hits,
+            "custom_effect_v3_pyramid_cache_misses": perf.custom_effect_v3_pyramid_cache_misses,
+            "path_msaa_samples_requested": perf.path_msaa_samples_requested,
+            "path_msaa_samples_effective": perf.path_msaa_samples_effective,
+        })
+        .as_object()
+        .expect("renderer perf json object")
+        .clone(),
+    );
+    out.extend(
+        json!({
+            "draw_calls": perf.draw_calls,
+            "quad_draw_calls": perf.quad_draw_calls,
+            "text_draw_calls": perf.text_draw_calls,
+            "path_draw_calls": perf.path_draw_calls,
+            "fullscreen_draw_calls": perf.fullscreen_draw_calls,
+        })
+        .as_object()
+        .expect("renderer perf json object")
+        .clone(),
+    );
+    serde_json::Value::Object(out)
 }
 
 fn env_flag(name: &str) -> bool {
