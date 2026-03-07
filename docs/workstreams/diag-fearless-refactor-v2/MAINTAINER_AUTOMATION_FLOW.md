@@ -62,6 +62,12 @@ Important files:
 
 These files are the intended first-open contract for CLI, DevTools, and future GUI/MCP consumers.
 
+The canonical classification of that first-open set now lives in
+`ARTIFACT_AND_EVIDENCE_MODEL_V1.md`: manifests/results are the source-of-truth run records,
+summary/index files are the derived aggregate projections opened first, and per-item bundles,
+screenshot payloads, and share exports remain optional evidence that should usually stay closed until
+aggregate triage points at a failing slice.
+
 ### 3. Inspect aggregate results first
 
 Recommended order:

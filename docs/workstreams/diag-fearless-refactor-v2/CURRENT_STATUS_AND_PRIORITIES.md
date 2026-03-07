@@ -99,6 +99,9 @@ Recommended landing target:
 - extend `M2` in `TODO.md` rather than starting a separate note family.
 - initial landing now exists in
   `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- the next success condition is adoption rather than more drafting: cross-link the contract from
+  `docs/README.md`, `docs/ui-diagnostics-and-scripted-tests.md`, and maintainer-facing flow notes so
+  CLI / GUI / CI consumers inherit the same vocabulary.
 
 ### Priority 2. Extract the next 2-3 high-ROI seams in `crates/fret-diag`
 
