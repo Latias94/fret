@@ -10,6 +10,7 @@ mod key_navigation;
 mod opening;
 mod pointer;
 mod selection_activation;
+mod target_hit;
 mod target_selection;
 
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(

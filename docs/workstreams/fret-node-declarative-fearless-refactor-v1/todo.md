@@ -393,6 +393,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: split-edge reroute outcome handling now routes through the private
     `canvas/widget/split_edge_execution.rs` seam, so command-open, double-click, and edge context
     actions no longer duplicate the same outcome/toast/application branches.
+  - Progress: right-click group/edge target hit testing now routes through the private
+    `canvas/widget/context_menu/target_hit.rs` seam, so `right_click.rs` no longer owns the raw
+    group-header/group-resize/edge hit-test traversal inline.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
@@ -440,4 +443,3 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
