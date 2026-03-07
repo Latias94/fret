@@ -122,6 +122,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         .global::<RunnerWindowStyleDiagnosticsStore>()
         .and_then(|store| store.effective_snapshot(st.window));
     let root_background = effective_style
+        .as_ref()
         .map(|s| s.visual_transparent)
         .unwrap_or(false)
         .then_some(Color::TRANSPARENT)
@@ -299,13 +300,12 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
 }
 
 fn main() -> anyhow::Result<()> {
-    ui_app_with_hooks(
+    let builder = ui_app_with_hooks(
         "cookbook-utility-window-materials-windows",
         init_window,
         view,
         configure_driver,
     )
-    .with_default_diagnostics()
     .with_main_window("utility_window_materials_windows", (760.0, 520.0))
     .configure(|config| {
         let mut style = WindowStyleRequest {
@@ -355,7 +355,10 @@ fn main() -> anyhow::Result<()> {
         }
         app.commands_mut()
             .register(CommandId::from(CMD_QUIT), CommandMeta::new("Quit"));
-    })
-    .run()
-    .map_err(anyhow::Error::from)
+    });
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
+
+    builder.run().map_err(anyhow::Error::from)
 }
