@@ -283,6 +283,9 @@ points rather than direct graph mutation.
     replacement clears local pan / node-drag / marquee / pending-selection / hover / portal
     transient state, while selection-only authoritative changes clear selection-scoped previews
     without flushing pan/hover caches; focused tests lock this real editor-flow parity gate.
+  - Paint cache discipline is now explicit as a gate: selection-only authoritative updates keep
+    grid / derived / node / edge cache keys stable, while graph replacement invalidates only the
+    graph-dependent caches instead of churning viewport-only paint caches.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while

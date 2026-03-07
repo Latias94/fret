@@ -288,7 +288,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     hit-test scratch stay local to the declarative paint-only surface until commit/cancel.
   - Landed paint precedence helper: active marquee preview overrides pending selection preview,
     which overrides committed selection for paint/layout only.
-- [ ] Ensure new declarative interaction work does not regress cache discipline.
+- [x] Ensure new declarative interaction work does not regress cache discipline.
+  - Landed paint-cache key gates: selection-only authoritative updates keep grid / derived / node / edge
+    cache keys stable, while graph replacement invalidates only graph-dependent caches.
 - [x] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only
       counters.
   - Landed authoritative-boundary gate: when controlled-mode authority replaces the graph document,

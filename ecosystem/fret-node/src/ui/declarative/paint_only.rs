@@ -3898,16 +3898,17 @@ mod tests {
         commit_graph_transaction, commit_marquee_selection_action_host,
         commit_node_drag_transaction, commit_pending_selection_action_host,
         complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
-        effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
+        derived_geometry_cache_key, edges_cache_key, effective_selected_nodes_for_paint,
+        escape_cancel_declarative_interactions_action_host, grid_cache_key,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
         handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
         handle_node_drag_left_pointer_release_action_host,
         handle_node_drag_pointer_move_action_host,
         handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
-        pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
-        stable_hash_u64, sync_authoritative_surface_boundary_in_models,
-        update_hovered_node_pointer_move_action_host,
+        nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
+        pointer_crossed_threshold, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
+        update_hovered_node_pointer_move_action_host, view_from_state,
     };
     use crate::core::{
         CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group,
@@ -6501,6 +6502,171 @@ mod tests {
 
         assert_eq!(from_pending, vec![node_b]);
         assert_eq!(from_view, vec![node_a]);
+    }
+
+    #[test]
+    fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
+        let node_a = NodeId::from_u128(9014);
+        let node_b = NodeId::from_u128(9015);
+        let edge = EdgeId::from_u128(9016);
+        let group = GroupId::from_u128(9017);
+        let base_view = NodeGraphViewState {
+            pan: CanvasPoint { x: 120.0, y: -48.0 },
+            zoom: 1.75,
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            draw_order: vec![node_a, node_b],
+            ..NodeGraphViewState::default()
+        };
+        let selection_only_view = NodeGraphViewState {
+            selected_nodes: vec![node_b],
+            selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
+            ..base_view.clone()
+        };
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(1280.0), Px(720.0)),
+        );
+        let graph_rev = 41;
+
+        let grid_a = grid_cache_key(bounds, view_from_state(&base_view), &style);
+        let grid_b = grid_cache_key(bounds, view_from_state(&selection_only_view), &style);
+        let interaction_a = base_view.resolved_interaction_state();
+        let interaction_b = selection_only_view.resolved_interaction_state();
+        let derived_a = derived_geometry_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            &base_view.draw_order,
+            &interaction_a,
+            &style,
+            0,
+            0.0,
+        );
+        let derived_b = derived_geometry_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            &selection_only_view.draw_order,
+            &interaction_b,
+            &style,
+            0,
+            0.0,
+        );
+        let draw_order_hash_a = stable_hash_u64(2, &base_view.draw_order);
+        let draw_order_hash_b = stable_hash_u64(2, &selection_only_view.draw_order);
+        let nodes_a = nodes_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            draw_order_hash_a,
+            derived_a.0,
+        );
+        let nodes_b = nodes_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            draw_order_hash_b,
+            derived_b.0,
+        );
+        let edges_a = edges_cache_key(
+            graph_rev,
+            base_view.zoom,
+            base_view.interaction.node_origin,
+            draw_order_hash_a,
+            derived_a.0,
+        );
+        let edges_b = edges_cache_key(
+            graph_rev,
+            selection_only_view.zoom,
+            selection_only_view.interaction.node_origin,
+            draw_order_hash_b,
+            derived_b.0,
+        );
+
+        assert_eq!(grid_a, grid_b);
+        assert_eq!(derived_a, derived_b);
+        assert_eq!(nodes_a, nodes_b);
+        assert_eq!(edges_a, edges_b);
+    }
+
+    #[test]
+    fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_keys() {
+        let node_a = NodeId::from_u128(9018);
+        let node_b = NodeId::from_u128(9019);
+        let view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: -96.0, y: 24.0 },
+            zoom: 0.85,
+            draw_order: vec![node_a, node_b],
+            ..NodeGraphViewState::default()
+        };
+        let style = crate::ui::style::NodeGraphStyle::default();
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(1024.0), Px(768.0)),
+        );
+        let interaction = view_state.resolved_interaction_state();
+        let draw_order_hash = stable_hash_u64(2, &view_state.draw_order);
+
+        let grid_before = grid_cache_key(bounds, view_from_state(&view_state), &style);
+        let derived_before = derived_geometry_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            0,
+            0.0,
+        );
+        let nodes_before = nodes_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_before.0,
+        );
+        let edges_before = edges_cache_key(
+            73,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_before.0,
+        );
+
+        let grid_after = grid_cache_key(bounds, view_from_state(&view_state), &style);
+        let derived_after = derived_geometry_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            0,
+            0.0,
+        );
+        let nodes_after = nodes_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_after.0,
+        );
+        let edges_after = edges_cache_key(
+            74,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            draw_order_hash,
+            derived_after.0,
+        );
+
+        assert_eq!(grid_before, grid_after);
+        assert_ne!(derived_before, derived_after);
+        assert_ne!(nodes_before, nodes_after);
+        assert_ne!(edges_before, edges_after);
     }
 
     #[test]
