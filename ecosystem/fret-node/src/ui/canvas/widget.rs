@@ -179,6 +179,7 @@ mod split_edge_execution;
 mod sticky_wire;
 mod stores;
 mod threshold;
+mod timer_motion;
 mod toast;
 mod view_math;
 mod view_state;

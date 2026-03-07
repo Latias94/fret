@@ -468,6 +468,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     motion through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so
     viewport-motion cancellation, wheel pan math, and pinch zoom math no longer stay
     embedded in the retained wheel router.
+  - Progress: `event_timer.rs` now routes timer-driven viewport and auto-pan
+    motion through the private `canvas/widget/timer_motion.rs` seam, so pan inertia,
+    viewport animation, auto-pan replay, and move-end debounce no longer stay embedded
+    in the retained timer router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

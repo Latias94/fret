@@ -533,6 +533,10 @@ real editors.
   through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so viewport-motion
   cancellation, wheel pan math, and pinch zoom math no longer stay embedded in the retained
   wheel router.
+- `event_timer.rs` now routes timer-driven viewport and auto-pan motion
+  through the private `canvas/widget/timer_motion.rs` seam, so pan inertia, viewport
+  animation, auto-pan replay, and move-end debounce no longer stay embedded in the
+  retained timer router.
 
 ### Deliverables
 
@@ -591,6 +595,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
