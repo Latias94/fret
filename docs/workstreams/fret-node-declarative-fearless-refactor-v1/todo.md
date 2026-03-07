@@ -415,6 +415,12 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `searcher.rs` now acts as a thin retained event router, while escape / key /
     pointer-down / pointer-up / pointer-move / wheel behavior each delegate to their owning
     private seam instead of keeping event glue in one file.
+  - Progress: context-menu event glue now also routes through the private
+    `canvas/widget/context_menu/ui.rs` seam, so dismiss / restore / paint invalidation rules no
+    longer stay duplicated between `context_menu/input.rs` and `context_menu/pointer.rs`.
+  - Progress: `context_menu/input.rs` and `context_menu/pointer.rs` now act as thin retained event
+    routers, delegating key and pointer behavior to `key_navigation.rs` and
+    `selection_activation.rs` instead of keeping event glue inline.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

@@ -12,6 +12,7 @@ mod pointer;
 mod selection_activation;
 mod target_hit;
 mod target_selection;
+mod ui;
 
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

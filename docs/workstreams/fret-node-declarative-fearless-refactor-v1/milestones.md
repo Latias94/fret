@@ -480,6 +480,12 @@ real editors.
 - `searcher.rs` now also acts as a thin retained event router, while escape / key /
   pointer-down / pointer-up / pointer-move / wheel behavior each delegate to their owning
   private seam instead of keeping event glue in one file.
+- Context-menu event glue now also routes through the private
+  `canvas/widget/context_menu/ui.rs` seam, so dismiss / restore / paint invalidation rules no
+  longer stay duplicated between `context_menu/input.rs` and `context_menu/pointer.rs`.
+- `context_menu/input.rs` and `context_menu/pointer.rs` now also act as thin retained event
+  routers, delegating key and pointer behavior to `key_navigation.rs` and
+  `selection_activation.rs` instead of keeping event glue inline.
 
 ### Deliverables
 
@@ -522,6 +528,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

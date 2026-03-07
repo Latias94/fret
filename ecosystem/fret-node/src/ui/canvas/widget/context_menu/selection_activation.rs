@@ -1,3 +1,4 @@
+use super::ui;
 use crate::ui::canvas::widget::*;
 
 fn context_menu_activation_payload(
@@ -22,6 +23,15 @@ fn context_menu_activation_payload(
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(in crate::ui::canvas::widget) fn activate_context_menu_active_selection<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        menu: &ContextMenuState,
+    ) -> bool {
+        let index = menu.active_item.min(menu.items.len().saturating_sub(1));
+        self.activate_context_menu_selection(cx, menu, index)
+    }
+
     pub(in crate::ui::canvas::widget) fn activate_context_menu_selection<H: UiHost>(
         &mut self,
         cx: &mut EventCx<'_, H>,
@@ -35,6 +45,29 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
         self.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
         true
+    }
+}
+
+pub(super) fn handle_context_menu_pointer_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut EventCx<'_, H>,
+    position: Point,
+    button: MouseButton,
+    zoom: f32,
+) -> bool {
+    let Some(menu) = canvas.interaction.context_menu.take() else {
+        return false;
+    };
+
+    match button {
+        MouseButton::Left => {
+            if let Some(index) = hit_context_menu_item(&canvas.style, &menu, position, zoom) {
+                let _ = canvas.activate_context_menu_selection(cx, &menu, index);
+            }
+            ui::finish_context_menu_event(cx)
+        }
+        MouseButton::Right => false,
+        _ => ui::finish_context_menu_event(cx),
     }
 }
 
