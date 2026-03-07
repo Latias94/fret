@@ -649,6 +649,18 @@ def capture_sample(
     except Exception as exc:  # noqa: BLE001
         sample_errors.append(f'footprint:{exc!r}')
 
+    if capture_footprint_verbose:
+        try:
+            footprint_verbose_out = run_capture_command(
+                ['/usr/bin/footprint', '-v', '-p', str(pid)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            footprint_verbose_path.write_text(footprint_verbose_out.stdout)
+        except Exception as exc:  # noqa: BLE001
+            sample_errors.append(f'footprint-verbose:{exc!r}')
+
     try:
         vmmap_out = run_capture_command(
             ['/usr/bin/vmmap', '-summary', str(pid)],
@@ -671,18 +683,6 @@ def capture_sample(
             vmmap_regions_path.write_text(vmmap_regions_out.stdout)
         except Exception as exc:  # noqa: BLE001
             sample_errors.append(f'vmmap-regions:{exc!r}')
-
-    if capture_footprint_verbose:
-        try:
-            footprint_verbose_out = run_capture_command(
-                ['/usr/bin/footprint', '-v', '-p', str(pid)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            footprint_verbose_path.write_text(footprint_verbose_out.stdout)
-        except Exception as exc:  # noqa: BLE001
-            sample_errors.append(f'footprint-verbose:{exc!r}')
 
     footprint_summary = load_footprint_summary(footprint_json_path)
     vmmap_summary = None

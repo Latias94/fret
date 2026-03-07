@@ -123,8 +123,29 @@ def parse_sample_offsets(raw: str) -> list[float]:
     return out
 
 
-def auto_exit_after_secs(sample_offsets: list[float], post_sample_wait_secs: float) -> float:
-    return max(sample_offsets) + max(post_sample_wait_secs, 0.0) + 1.0
+def capture_exit_grace_secs(
+    capture_vmmap_regions: bool,
+    capture_footprint_verbose: bool,
+) -> float:
+    if capture_vmmap_regions:
+        return 3.0
+    if capture_footprint_verbose:
+        return 2.0
+    return 1.0
+
+
+def auto_exit_after_secs(
+    sample_offsets: list[float],
+    post_sample_wait_secs: float,
+    *,
+    capture_vmmap_regions: bool,
+    capture_footprint_verbose: bool,
+) -> float:
+    return (
+        max(sample_offsets)
+        + max(post_sample_wait_secs, 0.0)
+        + capture_exit_grace_secs(capture_vmmap_regions, capture_footprint_verbose)
+    )
 
 
 def wait_for_file(path: Path, timeout_secs: float) -> bool:
@@ -229,7 +250,10 @@ def main() -> int:
     args = parse_args()
     sample_offsets = parse_sample_offsets(args.sample_at_secs)
     exit_after_secs = args.exit_after_secs or auto_exit_after_secs(
-        sample_offsets, args.post_sample_wait_secs
+        sample_offsets,
+        args.post_sample_wait_secs,
+        capture_vmmap_regions=args.capture_vmmap_regions,
+        capture_footprint_verbose=args.capture_footprint_verbose,
     )
     shared_env = dict(parse_env_kv(raw) for raw in args.shared_env)
     fret_env = dict(parse_env_kv(raw) for raw in args.fret_env)

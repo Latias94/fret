@@ -17,24 +17,30 @@ This remains a cross-framework comparison. GPUI on macOS here is still Blade/Met
   - now waits briefly for `internal.gpu.json` before treating it as missing.
 - `tools/sample_external_process_memory.py`
   - now retries transient `footprint` / `vmmap` command failures a few times before surfacing an
-    error.
+    error,
+  - and now prioritizes `footprint -v` before the heavier `vmmap` captures so the exact bucket view
+    is collected while the target is definitely still alive.
+- `tools/run_fret_vs_gpui_hello_world_compare.py`
+  - now keeps the target process alive a bit longer when expensive capture flags are enabled
+    (`exit_after_secs` gains extra grace for `vmmap` / `footprint -v`).
 
-Even after retries, this machine still intermittently returns `footprint -v` exit code `66` during
-GPUI/Fret compare captures, so the exact row-bucket refresh is still not fully reliable. The coarse
-`footprint -j` / `vmmap` comparison is stable enough to rebaseline the remaining gap.
+The `r2`/`r3`/`r4` reruns showed that the earlier `footprint -v` failures were mostly a capture-order
+/ target-exit timing problem rather than missing attribution data. After prioritizing `footprint -v`
+and extending the target exit grace, the `r5` rerun recovers the exact bucket view again on all four
+rows.
 
 ## Validation runs
 
 ### Primary rebaseline artifact
 
-- `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r4/summary/summary.json`
-- `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r4/summary/summary.md`
+- `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r5/summary/summary.json`
+- `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r5/summary/summary.md`
 
 Command shape:
 
 ```sh
 python3 tools/run_fret_vs_gpui_hello_world_compare.py \
-  --out-dir target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r4 \
+  --out-dir target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r5 \
   --repo-ref-zed repo-ref/zed \
   --fret-binary target/release/hello_world_compare_demo \
   --gpui-profile release \
@@ -45,26 +51,27 @@ python3 tools/run_fret_vs_gpui_hello_world_compare.py \
   --capture-footprint-verbose
 ```
 
-### Partial corroboration reruns
+### Earlier corroboration reruns
 
 - `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r2/summary/summary.json`
 - `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r3/summary/summary.json`
+- `target/diag/fret-vs-gpui-hello-world-rerender-only-footprint-verbose-release-20260307-r4/summary/summary.json`
 
-These two runs hit the same `footprint -v` flake on multiple rows, but they agree on the important
-coarse deltas: Fret loses the visible `~20 MiB` Metal slice while the large framework-level hidden
-gap remains.
+These runs exposed the timing problem clearly: coarse deltas stayed stable, but `footprint -v` often
+failed on the last capture step. They are still useful as corroboration for the coarse numbers, while
+`r5` is now the preferred exact-bucket artifact.
 
 ## 6s steady snapshot (coarse but stable)
 
-The table below uses the stable coarse metrics from the `r4` artifact plus Fret internal renderer
-perf fields. `Owned ... (graphics)` is read from the top category in the raw `footprint -j` output.
+The table below uses the refreshed exact-bucket metrics from the `r5` artifact plus Fret internal
+renderer perf fields.
 
 | Framework | Case | Physical | Graphics total | `Owned ... (graphics)` | category regions | Metal current | `path_intermediate` | Renders |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `GPUI` | `empty` | `150.9 MiB` | `132.0 MiB` | `112.9 MiB` | `40` | `n/a` | `n/a` | `701` |
-| `GPUI` | `full` | `152.9 MiB` | `133.3 MiB` | `113.2 MiB` | `40` | `n/a` | `n/a` | `700` |
-| `Fret` | `empty` | `251.4 MiB` | `224.2 MiB` | `204.0 MiB` | `83` | `18.17 MiB` | `0` | `695` |
-| `Fret` | `full` | `268.0 MiB` | `237.9 MiB` | `217.3 MiB` | `86` | `22.30 MiB` | `0` | `696` |
+| `GPUI` | `empty` | `151.1 MiB` | `132.0 MiB` | `112.9 MiB` | `40` | `n/a` | `n/a` | `697` |
+| `GPUI` | `full` | `153.2 MiB` | `133.3 MiB` | `113.2 MiB` | `40` | `n/a` | `n/a` | `701` |
+| `Fret` | `empty` | `249.2 MiB` | `221.8 MiB` | `204.0 MiB` | `83` | `18.17 MiB` | `0` | `695` |
+| `Fret` | `full` | `266.7 MiB` | `236.6 MiB` | `217.3 MiB` | `86` | `22.30 MiB` | `0` | `692` |
 
 ## Findings
 
@@ -83,10 +90,10 @@ change is active on this path, not just in the same-backend control workflow.
 
 ### 2. But the framework-level gap barely moves where it matters
 
-The remaining `Fret - GPUI` deltas in `r4` are still large:
+The remaining `Fret - GPUI` deltas in `r5` are still large:
 
-- `empty`: about `+100.5 MiB` physical / `+92.2 MiB` graphics / `+91.1 MiB` owned-unmapped dirty
-- `full`: about `+115.1 MiB` physical / `+104.5 MiB` graphics / `+104.1 MiB` owned-unmapped dirty
+- `empty`: about `+98.1 MiB` physical / `+89.9 MiB` graphics / `+91.1 MiB` owned-unmapped dirty
+- `full`: about `+113.5 MiB` physical / `+103.3 MiB` graphics / `+104.1 MiB` owned-unmapped dirty
 
 Those numbers are effectively the same shape as the pre-optimization `r1` compare:
 
@@ -106,18 +113,16 @@ The coarse rebaseline keeps pointing to the same family:
 So the remaining framework-level delta is still concentrated in hidden graphics-owned unmapped
 memory, not in visible drawables or generic CPU-side heaps.
 
-### 4. Exact `4 MiB` bucket refresh is still blocked by Apple tooling flakiness, not by the product change
+### 4. Exact `4 MiB` bucket refresh is now restored, and it matches the earlier evidence
 
-The previous successful release cross-check
-`docs/workstreams/ui-memory-footprint-closure-v1/2026-03-07-fret-vs-gpui-rerender-only-footprint-verbose-release.md`
-still provides the clean exact-bucket evidence:
+The `r5` rerun refreshes the exact bucket counts directly:
 
 - GPUI: `4.0 MiB × 28`
 - Fret: `4.0 MiB × 50` (`empty`) / `4.0 MiB × 52` (`full`)
 
-The new same-backend post-optimization run also still shows Fret at `4.0 MiB × 50/52`, so the
-working interpretation remains stable: the path-MSAA scratch win removed a visible reservation slice,
-not the hidden `4 MiB` object-count inflation.
+So the earlier `r1` finding was not a one-off artifact. The post-optimization framework comparison
+lands on the same hidden object-count signature, which means the path-MSAA scratch win removed a
+visible reservation slice, not the hidden `4 MiB` object-count inflation.
 
 ## Conclusion
 
@@ -138,5 +143,5 @@ focus on the extra hidden full-surface graphics objects that Fret still appears 
    app cost”.
 3. Narrow source-side audits to the code paths that could keep extra hidden full-surface graphics
    objects alive after the `path_intermediate` win is removed.
-4. Stabilize `footprint -v` bucket capture further (or add a fallback path) so future GPUI reruns can
-   refresh exact `4 MiB` row counts instead of relying on prior successful captures.
+4. Reuse this improved capture ordering / exit-grace path for future GPUI reruns so exact `4 MiB` row
+   counts remain refreshable without manual babysitting.
