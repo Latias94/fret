@@ -440,6 +440,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     commit branches through the private `canvas/widget/pointer_up_commit.rs` seam, so graph-op
     commit assembly and drag-end outcome labeling no longer stay embedded in the retained pointer
     release router.
+  - Progress: `pointer_up.rs` now also routes pending group / node / wire release branches through
+    the private `canvas/widget/pointer_up_pending.rs` seam, so click-distance selection toggles,
+    click-connect wire re-arming, and pointer-capture release cleanup no longer stay embedded in
+    the retained pointer release router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

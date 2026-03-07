@@ -505,6 +505,10 @@ real editors.
   branches through the private `canvas/widget/pointer_up_commit.rs` seam, so graph-op commit
   assembly and drag-end outcome labeling no longer stay embedded in the retained pointer release
   router.
+- `pointer_up.rs` now also routes pending group / node / wire release branches through the private
+  `canvas/widget/pointer_up_pending.rs` seam, so click-distance selection toggles, click-connect
+  wire re-arming, and pointer-capture release cleanup no longer stay embedded in the retained
+  pointer release router.
 
 ### Deliverables
 
@@ -553,6 +557,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/connection_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
