@@ -33,6 +33,15 @@ Each TODO is labeled:
 
 ## Next up (recommended priority)
 
+- [x] AIEL-MVP0-audit-013 Record a docs-parity + text-infra migration matrix for `fret-ui-ai`.
+  - Evidence: `docs/workstreams/ai-elements-upstream-alignment.md` (`2026-03-07 closure audit`).
+- [x] AIEL-MVP1-chat-096 Reuse the `Conversation` compound inside `AiChat` so transcript scroll ownership stays single-source.
+  - Evidence: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs`
+  - Evidence: `ecosystem/fret-ui-ai/src/elements/conversation.rs`
+  - Gate: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs` (`ai_chat_reuses_conversation_without_nested_scroll_area`)
+- [ ] AIEL-MVP0-audit-014 Run the next passive-text cleanup batch for `fret-ui-ai` (`inline_citation`, `sources_block`, `agent`, `sandbox`, voice-family surfaces).
+  - Goal: replace local `text_*` helpers with shared typography helpers and remove duplicated style code.
+
 - [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
 - [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.
 - [x] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).

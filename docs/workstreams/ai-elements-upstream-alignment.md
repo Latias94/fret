@@ -157,6 +157,32 @@ was recipe-level width/stretch propagation in `fret-ui-shadcn::PopoverContent`, 
 - `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
 - `ecosystem/fret-ui-shadcn/src/popover.rs`
 
+## 2026-03-07 closure audit (docs parity + text infra)
+
+The upstream docs inventory is now fully represented in `fret-ui-ai` and in the AI UI Gallery when
+`fret-ui-gallery` is built with `--features gallery-dev`. The remaining closure work is now mostly
+**parity polish and text-infrastructure cleanup**, not missing-component work.
+
+| Family | Docs / Gallery status | Text infra status | Remaining closure work |
+| --- | --- | --- | --- |
+| `Conversation` / `AiChat` | Docs-aligned composition is present in `conversation_demo.rs` and `chat_demo.rs`. `AiChat` now reuses the `Conversation` compound instead of hand-rolling transcript overlays. | Stable enough for the current parity pass; not a text-cascade hotspot. | Write the long-transcript selection/search contract and finish the scroll-to-bottom token/styling polish. |
+| `Confirmation` | Docs-aligned compound examples exist in `confirmation_demo.rs`, `confirmation_request.rs`, `confirmation_accepted.rs`, and `confirmation_rejected.rs`. | Migrated to inherited description typography and covered by regression tests. | No immediate migration work beyond routine token cleanup. |
+| `SourcesBlock` / `InlineCitation` | Upstream docs page and Gallery demos exist (`sources_demo.rs`, `inline_citation_demo.rs`). | Still partly local-helper driven (`inline_citation.rs`) and still has open source-link / anchor behavior items. | Finish source open-url / stable anchor contracts and migrate remaining local text helpers to shared typography helpers. |
+| `Agent` / `Sandbox` | Docs pages and Gallery demos exist (`agent_demo.rs`, `sandbox_demo.rs`). | Still use local `text_*` helpers rather than the newer shared passive-text helpers. | Migrate labels / descriptions to shared typography helpers and then remove duplicated local style helpers. |
+| Voice surfaces (`AudioPlayer`, `MicSelector`, `VoiceSelector`, `Transcription`) | Docs pages and Gallery demos exist. | Still use local `text_sm` / `text_xs` helpers; this is the largest remaining AI-family text-style migration cluster. | Batch-migrate to shared typography helpers, then close the remaining token cleanup TODOs for voice UI. |
+| `Task` / `Persona` | Docs pages and Gallery demos exist (`task_demo.rs`, `persona_demo.rs` plus persona variants). | Still rely on local text helper functions. | Migrate to shared typography helpers and verify children/default-copy parity against upstream docs examples. |
+| `Artifact`, `Queue`, `Reasoning`, `Plan`, `EnvironmentVariables`, `PackageInfo`, `SchemaDisplay`, `Terminal`, `ConversationEmptyState`, `ChainOfThought` | Docs pages and Gallery demos exist. | Already migrated or guarded by inherited-typography regression tests / shared helper usage. | Keep parity polish focused on behavior/tokens, not on text-style infrastructure rewrites. |
+
+### Audit takeaway
+
+- The repo already has an alignment-document trail: `ai-elements-upstream-alignment`,
+  `ai-elements-port-todo`, `ai-elements-port-milestones`, and the text-style cascade workstream.
+- The next efficient migration batch is **not** another container/overlay refactor. It is the
+  **local text-helper cleanup batch**: `inline_citation`, `sources_block`, `agent`, `sandbox`, and
+  the voice-family surfaces.
+- `Conversation` and `Confirmation` should now be treated as reference examples for the desired
+  direction: compound children APIs + inherited typography + focused regression gates.
+
 ## Known upstream files not yet ported
 
 As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.

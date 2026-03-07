@@ -18,6 +18,12 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
 This document is a **one-screen milestone board** for the AI Elements port.
 
+Closure priority refresh (2026-03-07):
+
+- Keep `Conversation` / `AiChat` on the parity track by treating the compound `Conversation` surface as the canonical composition root.
+- Treat the next infrastructure batch as a **passive-text migration sweep** (`inline_citation`, `sources_block`, `agent`, `sandbox`, and the voice-family surfaces), not as another large container rewrite.
+- Use `Confirmation` and `Conversation` as the reference examples for docs-aligned compound children APIs + inherited typography + focused regression gates.
+
 Source of truth for detailed TODOs: `docs/workstreams/ai-elements-port-todo.md`.
 Narrative + contracts: `docs/workstreams/ai-elements-port.md`.
 Upstream inventory + mapping: `docs/workstreams/ai-elements-upstream-alignment.md`.
