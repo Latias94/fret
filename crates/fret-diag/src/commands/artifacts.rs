@@ -213,6 +213,351 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&root);
     }
+
+    #[test]
+    fn parse_triage_request_supports_metric_aliases() {
+        let workspace_root = Path::new("workspace-root");
+        let request = parse_triage_request(
+            &[
+                "--metric".to_string(),
+                "paint".to_string(),
+                "demo/bundle.json".to_string(),
+            ],
+            workspace_root,
+        )
+        .expect("parse triage request");
+
+        assert!(request.lite, "--metric should imply lite mode");
+        assert!(matches!(
+            request.metric,
+            crate::frames_index::TriageLiteMetric::PaintTimeUs
+        ));
+        assert_eq!(
+            request.source,
+            workspace_root.join(PathBuf::from("demo/bundle.json"))
+        );
+    }
+
+    #[test]
+    fn resolve_artifact_display_mode_rejects_meta_report_with_json() {
+        let err = resolve_artifact_display_mode(true, true).expect_err("expected invalid mode");
+        assert!(
+            err.contains("--meta-report cannot be combined with --json"),
+            "unexpected error: {err}"
+        );
+    }
+}
+
+#[derive(Debug)]
+struct ParsedTriageRequest {
+    source: PathBuf,
+    lite: bool,
+    metric: crate::frames_index::TriageLiteMetric,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ArtifactDisplayMode {
+    Path,
+    Json,
+    MetaReport,
+}
+
+#[derive(Debug)]
+struct ParsedMetaRequest {
+    source: PathBuf,
+    display_mode: ArtifactDisplayMode,
+}
+
+#[derive(Debug)]
+struct MetaArtifactPaths {
+    canonical_path: PathBuf,
+    default_out: PathBuf,
+}
+
+fn parse_triage_metric(raw: &str) -> Result<crate::frames_index::TriageLiteMetric, String> {
+    match raw {
+        "total" | "total_time_us" => Ok(crate::frames_index::TriageLiteMetric::TotalTimeUs),
+        "layout" | "layout_time_us" => Ok(crate::frames_index::TriageLiteMetric::LayoutTimeUs),
+        "paint" | "paint_time_us" => Ok(crate::frames_index::TriageLiteMetric::PaintTimeUs),
+        other => Err(format!(
+            "invalid value for --metric: {other} (expected total|layout|paint)"
+        )),
+    }
+}
+
+fn parse_triage_request(
+    rest: &[String],
+    workspace_root: &Path,
+) -> Result<ParsedTriageRequest, String> {
+    let mut lite = false;
+    let mut metric = crate::frames_index::TriageLiteMetric::TotalTimeUs;
+    let mut positionals: Vec<String> = Vec::new();
+
+    let mut index = 0usize;
+    while index < rest.len() {
+        match rest[index].as_str() {
+            "--lite" | "--frames-index" | "--from-frames-index" => {
+                lite = true;
+                index += 1;
+            }
+            "--metric" => {
+                lite = true;
+                index += 1;
+                let Some(value) = rest.get(index) else {
+                    return Err(
+                        "missing value for --metric (expected total|layout|paint)".to_string()
+                    );
+                };
+                metric = parse_triage_metric(value)?;
+                index += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag for triage: {other}"));
+            }
+            other => {
+                positionals.push(other.to_string());
+                index += 1;
+            }
+        }
+    }
+
+    let Some(source) = positionals.first() else {
+        return Err(
+            "missing bundle artifact path (try: fretboard diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
+                .to_string(),
+        );
+    };
+    if positionals.len() != 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    Ok(ParsedTriageRequest {
+        source: crate::resolve_path(workspace_root, PathBuf::from(source)),
+        lite,
+        metric,
+    })
+}
+
+fn build_triage_payload(
+    bundle_path: &Path,
+    lite: bool,
+    metric: crate::frames_index::TriageLiteMetric,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+) -> Result<serde_json::Value, String> {
+    let mut payload = if lite {
+        let index_path = crate::frames_index::default_frames_index_path(bundle_path);
+        let mut frames_index =
+            crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
+        if frames_index.is_none() {
+            let out = crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
+            frames_index = crate::frames_index::read_frames_index_json_v1(&out, warmup_frames);
+        }
+        let frames_index = frames_index.ok_or_else(|| {
+            format!(
+                "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
+                bundle_path.display(),
+                warmup_frames
+            )
+        })?;
+        crate::frames_index::triage_lite_json_from_frames_index(
+            bundle_path,
+            &index_path,
+            &frames_index,
+            warmup_frames,
+            stats_top,
+            metric,
+        )?
+    } else {
+        let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+        let report = bundle_stats_from_path(
+            bundle_path,
+            stats_top,
+            sort,
+            BundleStatsOptions { warmup_frames },
+        )?;
+        crate::triage_json_from_stats(bundle_path, &report, sort, warmup_frames)
+    };
+
+    if let Some(bundle_dir) = bundle_path.parent() {
+        let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+        if !warnings.is_empty()
+            && let Some(obj) = payload.as_object_mut()
+        {
+            obj.insert(
+                "tooling_warnings".to_string(),
+                serde_json::Value::Array(warnings),
+            );
+        }
+    }
+
+    Ok(payload)
+}
+
+fn default_triage_out_path(bundle_path: &Path, lite: bool) -> PathBuf {
+    if lite {
+        let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+        dir.join("triage.lite.json")
+    } else {
+        crate::default_triage_out_path(bundle_path)
+    }
+}
+
+fn write_json_artifact_output(
+    out: &Path,
+    payload: &serde_json::Value,
+    print_json: bool,
+) -> Result<(), String> {
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(payload).unwrap_or_else(|_| "{}".to_string());
+    std::fs::write(out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+    if print_json {
+        println!("{pretty}");
+    } else {
+        println!("{}", out.display());
+    }
+    Ok(())
+}
+
+fn resolve_artifact_display_mode(
+    stats_json: bool,
+    meta_report: bool,
+) -> Result<ArtifactDisplayMode, String> {
+    if stats_json && meta_report {
+        return Err("--meta-report cannot be combined with --json".to_string());
+    }
+
+    Ok(if stats_json {
+        ArtifactDisplayMode::Json
+    } else if meta_report {
+        ArtifactDisplayMode::MetaReport
+    } else {
+        ArtifactDisplayMode::Path
+    })
+}
+
+fn parse_meta_request(
+    rest: &[String],
+    workspace_root: &Path,
+    stats_json: bool,
+    meta_report: bool,
+) -> Result<ParsedMetaRequest, String> {
+    let display_mode = resolve_artifact_display_mode(stats_json, meta_report)?;
+    let Some(source) = rest.first() else {
+        return Err(
+            "missing bundle artifact path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
+                .to_string(),
+        );
+    };
+    if rest.len() != 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    Ok(ParsedMetaRequest {
+        source: crate::resolve_path(workspace_root, PathBuf::from(source)),
+        display_mode,
+    })
+}
+
+fn resolve_meta_artifact_paths(
+    src: &Path,
+    warmup_frames: u64,
+) -> Result<MetaArtifactPaths, String> {
+    let resolved = resolve::resolve_bundle_ref(src)?;
+    let src = resolved.bundle_dir;
+
+    let (canonical_path, default_out) = if src.is_file()
+        && src
+            .file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s == "bundle.meta.json")
+    {
+        if sidecars::try_read_sidecar_json_v1(&src, "bundle_meta", warmup_frames).is_some() {
+            (src.clone(), src.clone())
+        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
+            let canonical =
+                crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+            let out = crate::default_meta_out_path(&bundle_path);
+            (canonical, out)
+        } else {
+            return Err(format!(
+                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
+                src.display()
+            ));
+        }
+    } else if src.is_dir() {
+        let direct = src.join("bundle.meta.json");
+        if direct.is_file()
+            && sidecars::try_read_sidecar_json_v1(&direct, "bundle_meta", warmup_frames).is_some()
+        {
+            (direct.clone(), direct)
+        } else {
+            let root = src.join("_root").join("bundle.meta.json");
+            if root.is_file()
+                && sidecars::try_read_sidecar_json_v1(&root, "bundle_meta", warmup_frames).is_some()
+            {
+                (root.clone(), root)
+            } else {
+                let bundle_path = crate::resolve_bundle_artifact_path(&src);
+                let canonical =
+                    crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+                let out = crate::default_meta_out_path(&bundle_path);
+                (canonical, out)
+            }
+        }
+    } else {
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+        let out = crate::default_meta_out_path(&bundle_path);
+        (canonical, out)
+    };
+
+    Ok(MetaArtifactPaths {
+        canonical_path,
+        default_out,
+    })
+}
+
+fn materialize_meta_output(canonical_path: &Path, out: &Path) -> Result<(), String> {
+    if out.is_file() || out == canonical_path {
+        return Ok(());
+    }
+
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::copy(canonical_path, out).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn emit_artifact_output(out: &Path, display_mode: ArtifactDisplayMode) -> Result<(), String> {
+    match display_mode {
+        ArtifactDisplayMode::Path => {
+            println!("{}", out.display());
+            Ok(())
+        }
+        ArtifactDisplayMode::Json => {
+            println!(
+                "{}",
+                std::fs::read_to_string(out).map_err(|e| e.to_string())?
+            );
+            Ok(())
+        }
+        ArtifactDisplayMode::MetaReport => {
+            let meta: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(out).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
+            print_meta_report(&meta, out);
+            Ok(())
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -230,136 +575,21 @@ pub(crate) fn cmd_triage(
         return Err("--pack is only supported with `diag run`".to_string());
     }
 
-    let mut lite: bool = false;
-    let mut metric: crate::frames_index::TriageLiteMetric =
-        crate::frames_index::TriageLiteMetric::TotalTimeUs;
-    let mut positionals: Vec<String> = Vec::new();
-
-    let mut i: usize = 0;
-    while i < rest.len() {
-        match rest[i].as_str() {
-            "--lite" | "--frames-index" | "--from-frames-index" => {
-                lite = true;
-                i += 1;
-            }
-            "--metric" => {
-                lite = true;
-                i += 1;
-                let Some(v) = rest.get(i).cloned() else {
-                    return Err(
-                        "missing value for --metric (expected total|layout|paint)".to_string()
-                    );
-                };
-                metric = match v.as_str() {
-                    "total" | "total_time_us" => crate::frames_index::TriageLiteMetric::TotalTimeUs,
-                    "layout" | "layout_time_us" => {
-                        crate::frames_index::TriageLiteMetric::LayoutTimeUs
-                    }
-                    "paint" | "paint_time_us" => crate::frames_index::TriageLiteMetric::PaintTimeUs,
-                    other => {
-                        return Err(format!(
-                            "invalid value for --metric: {other} (expected total|layout|paint)"
-                        ));
-                    }
-                };
-                i += 1;
-            }
-            other if other.starts_with("--") => {
-                return Err(format!("unknown flag for triage: {other}"));
-            }
-            other => {
-                positionals.push(other.to_string());
-                i += 1;
-            }
-        }
-    }
-
-    let Some(src) = positionals.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if positionals.len() != 1 {
-        return Err(format!(
-            "unexpected arguments: {}",
-            positionals[1..].join(" ")
-        ));
-    }
-
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let request = parse_triage_request(rest, workspace_root)?;
+    let resolved = resolve::resolve_bundle_ref(&request.source)?;
     let bundle_path = resolved.bundle_artifact;
-
-    let mut payload = if lite {
-        let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
-        let mut v = crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
-        if v.is_none() {
-            let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
-            v = crate::frames_index::read_frames_index_json_v1(&out, warmup_frames);
-        }
-        let v = v.ok_or_else(|| {
-            format!(
-                "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
-                bundle_path.display(),
-                warmup_frames
-            )
-        })?;
-        crate::frames_index::triage_lite_json_from_frames_index(
-            &bundle_path,
-            &index_path,
-            &v,
-            warmup_frames,
-            stats_top,
-            metric,
-        )?
-    } else {
-        let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-        let report = bundle_stats_from_path(
-            &bundle_path,
-            stats_top,
-            sort,
-            BundleStatsOptions { warmup_frames },
-        )?;
-        crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames)
-    };
-
-    // Add bounded tooling warnings (concurrency footguns, etc) so triage artifacts are self-explanatory.
-    if let Some(bundle_dir) = bundle_path.parent() {
-        let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
-        if !warnings.is_empty()
-            && let Some(obj) = payload.as_object_mut()
-        {
-            obj.insert(
-                "tooling_warnings".to_string(),
-                serde_json::Value::Array(warnings),
-            );
-        }
-    }
-
+    let payload = build_triage_payload(
+        &bundle_path,
+        request.lite,
+        request.metric,
+        stats_top,
+        sort_override,
+        warmup_frames,
+    )?;
     let out = triage_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| {
-            if lite {
-                let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-                dir.join("triage.lite.json")
-            } else {
-                crate::default_triage_out_path(&bundle_path)
-            }
-        });
-
-    if let Some(parent) = out.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-    if stats_json {
-        println!("{pretty}");
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+        .unwrap_or_else(|| default_triage_out_path(&bundle_path, request.lite));
+    write_json_artifact_output(&out, &payload, stats_json)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -571,111 +801,14 @@ pub(crate) fn cmd_meta(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    if stats_json && meta_report {
-        return Err("--meta-report cannot be combined with --json".to_string());
-    }
-    let Some(src) = rest.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
 
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
-    let src = resolved.bundle_dir;
-
-    let (meta_path, default_out) = if src.is_file()
-        && src
-            .file_name()
-            .and_then(|s| s.to_str())
-            .is_some_and(|s| s == "bundle.meta.json")
-    {
-        if sidecars::try_read_sidecar_json_v1(&src, "bundle_meta", warmup_frames).is_some() {
-            (src.clone(), src.clone())
-        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
-            let canonical =
-                crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-            let out = crate::default_meta_out_path(&bundle_path);
-            (canonical, out)
-        } else {
-            return Err(format!(
-                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
-                src.display()
-            ));
-        }
-    } else if src.is_dir() {
-        let direct = src.join("bundle.meta.json");
-        if direct.is_file()
-            && sidecars::try_read_sidecar_json_v1(&direct, "bundle_meta", warmup_frames).is_some()
-        {
-            (direct.clone(), direct)
-        } else {
-            let root = src.join("_root").join("bundle.meta.json");
-            if root.is_file()
-                && sidecars::try_read_sidecar_json_v1(&root, "bundle_meta", warmup_frames).is_some()
-            {
-                (root.clone(), root)
-            } else {
-                let bundle_path = crate::resolve_bundle_artifact_path(&src);
-                let canonical =
-                    crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-                let out = crate::default_meta_out_path(&bundle_path);
-                (canonical, out)
-            }
-        }
-    } else {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
-        let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-        let out = crate::default_meta_out_path(&bundle_path);
-        (canonical, out)
-    };
-
+    let request = parse_meta_request(rest, workspace_root, stats_json, meta_report)?;
+    let paths = resolve_meta_artifact_paths(&request.source, warmup_frames)?;
     let out = meta_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or(default_out);
-
-    if out.is_file() {
-        if stats_json {
-            println!(
-                "{}",
-                std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-            );
-        } else if meta_report {
-            let meta: serde_json::Value =
-                serde_json::from_slice(&std::fs::read(&out).map_err(|e| e.to_string())?)
-                    .map_err(|e| e.to_string())?;
-            print_meta_report(&meta, &out);
-        } else {
-            println!("{}", out.display());
-        }
-        return Ok(());
-    }
-
-    if out != meta_path {
-        if let Some(parent) = out.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        std::fs::copy(&meta_path, &out).map_err(|e| e.to_string())?;
-    }
-
-    if stats_json {
-        println!(
-            "{}",
-            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-        );
-    } else if meta_report {
-        let meta: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&out).map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
-        print_meta_report(&meta, &out);
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+        .unwrap_or(paths.default_out);
+    materialize_meta_output(&paths.canonical_path, &out)?;
+    emit_artifact_output(&out, request.display_mode)
 }
 
 fn print_meta_report(meta: &serde_json::Value, meta_path: &Path) {
