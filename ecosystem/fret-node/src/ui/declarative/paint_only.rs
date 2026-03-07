@@ -28,7 +28,6 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, graph_diff, normalize_transaction};
-use crate::ui::NodeGraphController;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
@@ -38,6 +37,7 @@ use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{NodeGraphController, NodeGraphSurfaceBinding};
 
 #[path = "paint_only/pointer_move.rs"]
 mod pointer_move;
@@ -113,9 +113,7 @@ impl Default for NodeGraphWheelZoomConfig {
 
 #[derive(Clone)]
 pub struct NodeGraphSurfaceProps {
-    pub graph: Model<Graph>,
-    pub view_state: Model<NodeGraphViewState>,
-    pub controller: NodeGraphController,
+    binding: NodeGraphSurfaceBinding,
 
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
@@ -153,19 +151,13 @@ pub struct NodeGraphSurfaceProps {
 }
 
 impl NodeGraphSurfaceProps {
-    pub fn new(
-        graph: Model<Graph>,
-        view_state: Model<NodeGraphViewState>,
-        controller: NodeGraphController,
-    ) -> Self {
+    pub fn new(binding: NodeGraphSurfaceBinding) -> Self {
         let mut pointer_region = PointerRegionProps::default();
         pointer_region.layout.size.width = Length::Fill;
         pointer_region.layout.size.height = Length::Fill;
 
         Self {
-            graph,
-            view_state,
-            controller,
+            binding,
             pointer_region,
             canvas: CanvasProps::default(),
             geometry_overrides: None,
@@ -180,6 +172,10 @@ impl NodeGraphSurfaceProps {
             pinch_zoom_speed: 1.0,
             test_id: None,
         }
+    }
+
+    pub fn binding(&self) -> NodeGraphSurfaceBinding {
+        self.binding.clone()
     }
 }
 
@@ -2126,9 +2122,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     props: NodeGraphSurfaceProps,
 ) -> AnyElement {
     let NodeGraphSurfaceProps {
-        graph,
-        view_state,
-        controller,
+        binding,
         pointer_region,
         canvas,
         geometry_overrides,
@@ -2143,6 +2137,9 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         pinch_zoom_speed,
         test_id,
     } = props;
+    let graph = binding.graph_model();
+    let view_state = binding.view_state_model();
+    let controller = binding.controller();
 
     // Drag state is internal to the surface and stored in element state (uncontrolled model).
     let drag: Model<Option<DragState>> = use_uncontrolled_model(cx, || None);

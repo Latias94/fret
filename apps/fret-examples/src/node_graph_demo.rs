@@ -8,10 +8,9 @@ use fret_node::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use fret_node::io::NodeGraphViewState;
-use fret_node::runtime::store::NodeGraphStore;
 use fret_node::ui::{
-    EdgePaintOverrideV1, NodeGraphController, NodeGraphPaintOverridesMap,
-    NodeGraphPaintOverridesRef, NodeGraphSurfaceProps, node_graph_surface,
+    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
+    NodeGraphSurfaceBinding, NodeGraphSurfaceProps, node_graph_surface,
 };
 use serde_json::Value;
 
@@ -20,9 +19,7 @@ const TEST_ID_CANVAS: &str = "node_graph.canvas";
 
 #[derive(Clone)]
 struct NodeGraphDemoState {
-    graph: Model<Graph>,
-    view: Model<NodeGraphViewState>,
-    controller: NodeGraphController,
+    surface: NodeGraphSurfaceBinding,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
 }
 
@@ -35,29 +32,22 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
-    let graph_state = demo_graph();
-    let view_state = NodeGraphViewState::default();
-    let graph = app.models_mut().insert(graph_state.clone());
-    let view = app.models_mut().insert(view_state.clone());
-    let store = app
-        .models_mut()
-        .insert(NodeGraphStore::new(graph_state, view_state));
-    let controller = NodeGraphController::new(store);
+    let surface = NodeGraphSurfaceBinding::new(
+        app.models_mut(),
+        demo_graph(),
+        NodeGraphViewState::default(),
+    );
     let paint_overrides = demo_paint_overrides();
     NodeGraphDemoState {
-        graph,
-        view,
-        controller,
+        surface,
         paint_overrides,
     }
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::ViewElements {
-    cx.observe_model(&st.graph, Invalidation::Paint);
-    cx.observe_model(&st.view, Invalidation::Paint);
+    st.surface.observe(cx);
 
-    let mut props =
-        NodeGraphSurfaceProps::new(st.graph.clone(), st.view.clone(), st.controller.clone());
+    let mut props = NodeGraphSurfaceProps::new(st.surface.clone());
     props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
     props.paint_overrides = st.paint_overrides.clone();
     node_graph_surface(cx, props).into()

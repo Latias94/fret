@@ -113,15 +113,16 @@ update rather than an incidental refactor.
 ### Still unresolved
 
 - **Public posture is clearer, but editor-grade closure is still incomplete**
-  - The canonical declarative entrypoint is now `node_graph_surface(...)` with
-    `NodeGraphSurfaceProps` + `NodeGraphController`.
+  - The canonical declarative entrypoint is now `node_graph_surface(...)` with a
+    store-backed `NodeGraphSurfaceBinding` carried by `NodeGraphSurfaceProps`.
   - The remaining ambiguity is no longer naming; it is how much editor-grade behavior is already
     closed on the declarative path versus still landing.
 
 - **Transaction boundary ambiguity in the declarative path**
   - The first M3 slice is now landed: the paint-only node-drag commit builds a
     `GraphTransaction` and dispatches through `NodeGraphController` (store-backed).
-  - `NodeGraphSurfaceProps.controller` is now required; the no-controller fallback path is
+  - `NodeGraphSurfaceProps` now takes a single `NodeGraphSurfaceBinding`, and that binding
+    still requires the controller-backed store path; the no-controller fallback remains
     intentionally removed so the demo surface teaches the controller-first contract.
   - Broader declarative commit coverage is still unresolved: this pattern must extend to the rest of
     committed edit flows and converge behind a clearer controller/instance surface.
@@ -389,7 +390,7 @@ full interaction parity is still only available there.
 Concretely:
 
 - prefer declarative composition at the app boundary,
-- prefer controller-first declarative integration (`NodeGraphController` + `node_graph_surface(...)`),
+- prefer binding-first declarative integration (`NodeGraphSurfaceBinding` + `node_graph_surface(...)`),
 - prefer controller-driven commands and treat raw edit/view queues as transport or compatibility
   seams,
 - do not author directly against retained `NodeGraphCanvas` unless you are working inside
@@ -399,11 +400,10 @@ Concretely:
 
 For new editor surfaces, teach and copy this shape first:
 
-1. create `graph` / `view_state` models,
-2. create one `NodeGraphStore` from the same initial graph + view state,
-3. create one `NodeGraphController::new(store)`,
-4. render `node_graph_surface(cx, NodeGraphSurfaceProps::new(graph, view_state, controller))`,
-5. route app-facing viewport/query/edit operations through the controller.
+1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
+2. render `node_graph_surface(cx, NodeGraphSurfaceProps::new(binding.clone()))`,
+3. route app-facing viewport/query/edit operations through `binding.controller()`,
+4. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
 This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
 
@@ -428,7 +428,7 @@ Until then, the compatibility path should stay bounded to:
 The compatibility path can be deleted or permanently demoted only when all of the following are
 true:
 
-- `node_graph_surface(...)` + `NodeGraphController` is the default documented app-facing path,
+- `NodeGraphSurfaceBinding` + `node_graph_surface(...)` is the default documented app-facing path,
 - committed declarative edits and viewport changes stay transaction-safe and controller-driven,
 - declarative gates cover the editor-grade flows that still justify retained today,
 - no new public app-facing APIs depend on retained widget types or raw queue ownership,

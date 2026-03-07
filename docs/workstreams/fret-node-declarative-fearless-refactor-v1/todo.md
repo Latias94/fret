@@ -84,6 +84,8 @@ Execution companion: `design.md` (surface map + next worktree order).
   - canonical transaction-safe update entry points
 - [x] Wire the default declarative demo to use `NodeGraphController` instead of teaching raw store
       plumbing directly.
+- [x] Collapse declarative surface wiring to one app-facing bundle (`NodeGraphSurfaceBinding`) so
+      demos and docs stop teaching raw `graph + view_state + controller` triplets.
 - [x] Extend the controller surface with the first bounds-aware viewport helpers:
   - `set_center_in_bounds` / `set_center_in_bounds_with_options`
   - `fit_view_nodes_in_bounds` / `fit_view_nodes_in_bounds_with_options`
@@ -193,10 +195,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `GraphTransaction` instead of mutating `Graph` in place.
   - The commit now dispatches through `NodeGraphController` (store-backed) and syncs graph/view
     models back from store.
-  - `NodeGraphSurfaceProps.controller` is now required (controller-first).
-    `NodeGraphSurfaceProps.store` and the no-controller fallback path are removed.
-- [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphStore` so the default
-      declarative demo path exercises the transaction-safe architecture.
+  - `NodeGraphSurfaceProps` now takes a single `NodeGraphSurfaceBinding`.
+    `NodeGraphSurfaceProps.store` and the no-controller fallback path remain removed.
+- [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphSurfaceBinding` so
+      the default declarative demo path exercises the transaction-safe architecture without
+      teaching raw graph/view/controller plumbing.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.
 - [ ] Expand the same transaction-safe pattern to the rest of committed declarative edit paths,
       rather than stopping at node drag.

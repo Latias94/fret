@@ -26,21 +26,22 @@ Evidence anchors:
   - headless model: `Graph`, `Node`, `Edge`, `Port`, `Group`, `StickyNote`, `Symbol` and ID types (re-exported from `core`)
   - rules/diagnostics: `ConnectPlan`, `Diagnostic`, `DiagnosticSeverity`
   - typing: `TypeDesc`, `TypeVarId`
-  - UI (behind `fret-ui`): `NodeGraphController`, `node_graph_surface`, presenter/skin/style registry types
+  - UI (behind `fret-ui`): `NodeGraphController`, `NodeGraphSurfaceBinding`, `node_graph_surface`, presenter/skin/style registry types
     - `NodeGraphController` intentionally mirrors a subset of XYFlow-style “instance” affordances (`set_viewport*`, `fit_view_nodes*`, connection queries) without copying the React/DOM API.
 - Feature flags and intent:
   - default: `["fret-ui", "kit"]` (UI + convenience surfaces are on by default in-tree)
   - `headless`: explicitly builds without `fret-ui`
   - `compat-retained-canvas`: retained-bridge-backed UI surfaces (delete-planned escape hatch)
 - “Accidental” exports to consider removing (L0 hypothesis):
-  - (Resolved) `NodeGraphSurfaceProps` is now controller-first only:
-    `controller: NodeGraphController` is required and the `store` fallback is removed.
+  - (Resolved) `NodeGraphSurfaceProps` now takes one `NodeGraphSurfaceBinding`, and that binding
+    carries the required controller-backed store contract; the old `store` fallback remains removed.
 
 Evidence anchors:
 
 - `ecosystem/fret-node/src/lib.rs`
 - `ecosystem/fret-node/src/ui/mod.rs`
 - `ecosystem/fret-node/Cargo.toml`
+- `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 
 ## 3) Dependency posture
@@ -58,6 +59,7 @@ Evidence anchors:
 
 - `ecosystem/fret-node/Cargo.toml`
 - `python tools/audit_crate.py --crate fret-node`
+- `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 
 ## 4) Module ownership map (internal seams)
@@ -85,14 +87,15 @@ Evidence anchors:
   - Existing gates: retained conformance tests + paint-only focused gates.
   - Missing gate to add (L0): a minimal scripted repro that asserts stable anchoring under pan/zoom + portal throttling.
 - “Two canonical ways to integrate” drift (controller vs store)
-  - Failure mode: ecosystem/app code copies a store-first seam that later becomes delete-planned, while controller-first remains the intended teaching surface.
+  - Failure mode: ecosystem/app code copies a store-first seam that later becomes delete-planned, while binding-first declarative composition remains the intended teaching surface.
   - Existing gates: workstream docs + examples.
-  - Missing gate to add (L0): an explicit “golden path” example that only uses `NodeGraphController` + `node_graph_surface` (no raw store wiring in app code).
+  - Progress: `apps/fret-examples/src/node_graph_demo.rs` now teaches the golden path with `NodeGraphSurfaceBinding` + `node_graph_surface(...)`, so app code no longer needs raw store wiring at the default boundary.
 
 Evidence anchors:
 
 - `ecosystem/fret-node/src/ui/controller.rs`
 - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 
@@ -109,11 +112,11 @@ Evidence anchors:
 ## 7) Recommended refactor steps (small, gated)
 
 1. Publish a single “golden path” integration contract:
-   - prefer `NodeGraphController` + `node_graph_surface`, treat raw store/queue seams as advanced/compat only — gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
+   - prefer `NodeGraphSurfaceBinding` + `node_graph_surface`, treat raw store/queue seams as advanced/compat only - gate: `cargo nextest run -p fret-node --features compat-retained-canvas`
 2. Continue shrinking `paint_only.rs` by responsibility-based submodules:
    - keep pointer session reducers, pointer move, keydown, and portal hosting in separate files under `ui/declarative/paint_only/` — gate: existing `nextest` coverage for the declarative module.
 3. Collapse `NodeGraphSurfaceProps` to one canonical runtime binding input:
-   - (Done) controller-first only (avoid `controller + store` ambiguity) — gate: `cargo nextest run -p fret-node`.
+   - (Done) `NodeGraphSurfaceBinding` is now the single declarative surface input (avoid `graph + view_state + controller` triplets and the old `controller + store` ambiguity) - gate: `cargo nextest run -p fret-node`.
 4. Add at least one diagnostics-driven gate for portal/overlay anchoring:
    - capture a minimal scripted scenario to lock the cross-frame bounds/portal throttling behavior — gate: `fretboard diag` (plus existing unit tests).
 

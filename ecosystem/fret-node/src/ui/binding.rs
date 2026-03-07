@@ -1,0 +1,164 @@
+use fret_runtime::{Model, ModelStore};
+use fret_ui::action::UiActionHost;
+use fret_ui::{ElementContext, Invalidation, UiHost};
+
+use crate::core::Graph;
+use crate::io::NodeGraphViewState;
+use crate::runtime::store::NodeGraphStore;
+
+use super::controller::NodeGraphController;
+use super::declarative::NodeGraphSurfaceProps;
+
+/// Canonical app-facing binding bundle for the declarative node-graph surface.
+///
+/// This keeps the controller-first public story explicit while avoiding repeated
+/// `graph + view_state + controller` triplets in app code.
+#[derive(Debug, Clone)]
+pub struct NodeGraphSurfaceBinding {
+    graph: Model<Graph>,
+    view_state: Model<NodeGraphViewState>,
+    controller: NodeGraphController,
+}
+
+impl NodeGraphSurfaceBinding {
+    /// Creates the default store-backed binding for declarative node-graph surfaces.
+    pub fn new(models: &mut ModelStore, graph: Graph, view_state: NodeGraphViewState) -> Self {
+        let graph_model = models.insert(graph.clone());
+        let view_state_model = models.insert(view_state.clone());
+        let store = models.insert(NodeGraphStore::new(graph, view_state));
+        Self::from_models(
+            graph_model,
+            view_state_model,
+            NodeGraphController::new(store),
+        )
+    }
+
+    /// Creates a declarative surface binding from an already-configured store.
+    pub fn from_store(models: &mut ModelStore, store: NodeGraphStore) -> Self {
+        let graph = store.graph().clone();
+        let view_state = store.view_state().clone();
+        let store_model = models.insert(store);
+        let graph_model = models.insert(graph);
+        let view_state_model = models.insert(view_state);
+        Self::from_models(
+            graph_model,
+            view_state_model,
+            NodeGraphController::new(store_model),
+        )
+    }
+
+    /// Advanced seam for callers that already own explicit graph/view models.
+    pub fn from_models(
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        controller: NodeGraphController,
+    ) -> Self {
+        Self {
+            graph,
+            view_state,
+            controller,
+        }
+    }
+
+    pub fn graph_model(&self) -> Model<Graph> {
+        self.graph.clone()
+    }
+
+    pub fn view_state_model(&self) -> Model<NodeGraphViewState> {
+        self.view_state.clone()
+    }
+
+    pub fn controller(&self) -> NodeGraphController {
+        self.controller.clone()
+    }
+
+    pub fn store_model(&self) -> Model<NodeGraphStore> {
+        self.controller.store()
+    }
+
+    pub fn surface_props(&self) -> NodeGraphSurfaceProps {
+        NodeGraphSurfaceProps::new(self.clone())
+    }
+
+    /// Observes the external graph/view mirrors that the declarative surface keeps in sync.
+    pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
+        cx.observe_model(&self.graph, Invalidation::Paint);
+        cx.observe_model(&self.view_state, Invalidation::Paint);
+    }
+
+    /// Re-syncs the graph/view mirrors from the authoritative store.
+    pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
+        self.controller
+            .sync_models_from_store(host, &self.graph, &self.view_state)
+    }
+
+    /// Re-syncs the graph/view mirrors from the authoritative store.
+    pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
+        self.controller
+            .sync_models_from_store_action_host(host, &self.graph, &self.view_state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NodeGraphSurfaceBinding;
+    use crate::core::{CanvasPoint, Graph, GraphId};
+    use crate::io::NodeGraphViewState;
+    use crate::runtime::store::NodeGraphStore;
+    use fret_runtime::ModelStore;
+
+    #[test]
+    fn new_binding_seeds_graph_view_and_store_models() {
+        let mut models = ModelStore::default();
+        let graph = Graph::new(GraphId::from_u128(0x9001));
+        let view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: 12.0, y: 34.0 },
+            zoom: 1.5,
+            ..NodeGraphViewState::default()
+        };
+
+        let binding = NodeGraphSurfaceBinding::new(&mut models, graph.clone(), view_state.clone());
+
+        let graph_id = models
+            .read(&binding.graph_model(), |value| value.graph_id)
+            .unwrap();
+        let pan = models
+            .read(&binding.view_state_model(), |value| value.pan)
+            .unwrap();
+        let zoom = models
+            .read(&binding.store_model(), |store| store.view_state().zoom)
+            .unwrap();
+
+        assert_eq!(graph_id, graph.graph_id);
+        assert_eq!(pan, view_state.pan);
+        assert_eq!(zoom, view_state.zoom);
+    }
+
+    #[test]
+    fn from_store_clones_initial_store_state_into_surface_models() {
+        let mut models = ModelStore::default();
+        let graph = Graph::new(GraphId::from_u128(0x9002));
+        let view_state = NodeGraphViewState {
+            pan: CanvasPoint { x: 88.0, y: 55.0 },
+            zoom: 0.75,
+            ..NodeGraphViewState::default()
+        };
+        let store = NodeGraphStore::new(graph.clone(), view_state.clone());
+
+        let binding = NodeGraphSurfaceBinding::from_store(&mut models, store);
+
+        let graph_id = models
+            .read(&binding.graph_model(), |value| value.graph_id)
+            .unwrap();
+        let pan = models
+            .read(&binding.view_state_model(), |value| value.pan)
+            .unwrap();
+        let zoom = models
+            .read(&binding.store_model(), |store| store.view_state().zoom)
+            .unwrap();
+
+        assert_eq!(graph_id, graph.graph_id);
+        assert_eq!(pan, view_state.pan);
+        assert_eq!(zoom, view_state.zoom);
+    }
+}

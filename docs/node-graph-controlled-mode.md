@@ -22,10 +22,10 @@ Use controlled mode when:
 - you need to sync edits across multiple runtimes without giving any single store ownership.
 
 If you are building a typical editor UI with a single graph instance, prefer the
-**controller-first declarative** path: construct one `NodeGraphStore`, wrap it in
-`NodeGraphController`, and render `node_graph_surface(...)`. This keeps undo/redo, lookup caches,
-and editor interactions in the store/runtime while teaching the same declarative surface that app
-code should copy.
+**binding-first declarative** path: construct one store-backed `NodeGraphSurfaceBinding`, render
+`node_graph_surface(...)`, and use the binding's `NodeGraphController` for imperative viewport or
+query work. This keeps undo/redo, lookup caches, and editor interactions in the store/runtime
+while teaching the same declarative surface that app code should copy.
 
 ## Building blocks (headless-safe)
 
@@ -39,14 +39,14 @@ code should copy.
   - `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
 - Controller + declarative surface:
   - `ecosystem/fret-node/src/ui/controller.rs` (`NodeGraphController`)
+  - `ecosystem/fret-node/src/ui/binding.rs` (`NodeGraphSurfaceBinding`)
   - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`, `node_graph_surface`)
 
-## Pattern A - Controller-first declarative surface (recommended default)
+## Pattern A - Binding-first declarative surface (recommended default)
 
-- Create `graph` / `view_state` models from an initial `Graph` + `NodeGraphViewState`.
-- Create one `NodeGraphStore` from the same initial graph + view state.
-- Create one `NodeGraphController::new(store)`.
-- Render `node_graph_surface(cx, NodeGraphSurfaceProps::new(graph, view_state, controller))`.
+- Create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`.
+- Render `node_graph_surface(cx, NodeGraphSurfaceProps::new(binding.clone()))`.
+- Route app-facing viewport/query/edit operations through `binding.controller()`.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
   commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.

@@ -7,6 +7,7 @@
 //! `fret-ui/unstable-retained-bridge`.
 
 pub mod advanced;
+pub mod binding;
 pub mod canvas;
 pub mod commands;
 pub mod controller;
@@ -41,6 +42,7 @@ pub mod panel;
 #[cfg(feature = "compat-retained-canvas")]
 pub mod portal;
 
+pub use binding::NodeGraphSurfaceBinding;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvas;
 #[cfg(feature = "compat-retained-canvas")]

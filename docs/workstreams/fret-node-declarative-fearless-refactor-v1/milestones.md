@@ -161,8 +161,9 @@ points rather than direct graph mutation.
 
 - First landing slices are complete:
   - `node_graph_surface` node-drag commit now builds a `GraphTransaction`.
-  - `NodeGraphSurfaceProps` is now controller-first: `controller: NodeGraphController` is
-    required and the store/no-controller fallback path is removed.
+  - `NodeGraphSurfaceProps` now takes a single `NodeGraphSurfaceBinding`, so the
+    store-backed controller contract is bundled as one declarative surface input and the
+    store/no-controller fallback path stays removed.
   - The declarative path now dispatches committed edits through `NodeGraphController` and syncs
     graph / view models back from store.
   - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
@@ -248,8 +249,9 @@ points rather than direct graph mutation.
     no longer expands the main surface file.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
-  - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
-    surface so the recommended demo path exercises the transaction-safe commit architecture.
+  - `apps/fret-examples/src/node_graph_demo.rs` now builds a `NodeGraphSurfaceBinding` for the
+    declarative surface so the recommended demo path exercises the transaction-safe commit
+    architecture without teaching raw graph/view/controller triplets.
   - `apps/fret-examples/src/node_graph_domain_demo.rs` now acts as the retained-backed best-practice
     sample for controller-first canvas / overlay / portal composition.
   - `apps/fret-examples/src/node_graph_legacy_demo.rs` now also routes retained canvas / rename
