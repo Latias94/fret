@@ -434,10 +434,9 @@ fn view(
         );
 
     let info = ui::h_flex(|cx| {
-        [
-            ui::text(format!("target_px_size preset: {preset_label}"))
-                .text_xs()
-                .into_element(cx),
+        ui::children![
+            cx;
+            ui::text(format!("target_px_size preset: {preset_label}")).text_xs(),
             clicks_badge,
             uv_x_badge,
             uv_y_badge,
@@ -482,14 +481,26 @@ Input does not arrive as normal UI pointer events; it is forwarded as ViewportIn
         .h_px(Px(420.0))
         .into_element(cx);
 
-    let content = ui::v_flex(|_cx| vec![hint, viewport_panel])
+    let content = ui::v_flex(|cx| ui::children![cx; hint, viewport_panel])
         .gap(Space::N3)
         .into_element(cx);
 
-    let card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![header, size_controls, info]).into_element(cx),
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|_cx, out| {
+                out.push(header);
+                out.push(size_controls);
+                out.push(info);
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(content);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .max_w(Px(1100.0))

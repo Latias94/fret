@@ -234,6 +234,7 @@ ID format:
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
       - `apps/fret-cookbook/examples/customv1_basics.rs`
+    - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
@@ -302,6 +303,7 @@ ID format:
     - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
     - `apps/fret-cookbook/examples/virtual_list_basics.rs`
     - `apps/fret-cookbook/examples/customv1_basics.rs`
+    - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
 
 ---
 
