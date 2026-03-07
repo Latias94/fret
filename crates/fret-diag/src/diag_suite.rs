@@ -533,6 +533,56 @@ fn record_suite_tooling_failure_and_emit(
     message.to_string()
 }
 
+fn record_suite_script_outcome(
+    rows: &mut Vec<serde_json::Value>,
+    script_key: &str,
+    result: &crate::stats::ScriptResultSummary,
+    lint_summary: Option<&serde_json::Value>,
+    evidence_highlights: Option<&serde_json::Value>,
+) {
+    rows.push(build_suite_script_result_row(
+        script_key,
+        result,
+        lint_summary,
+        evidence_highlights,
+    ));
+}
+
+fn exit_for_suite_script_outcome(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &mut Vec<serde_json::Value>,
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    script_key: &str,
+    result: &crate::stats::ScriptResultSummary,
+    lint_summary: Option<&serde_json::Value>,
+    evidence_highlights: Option<&serde_json::Value>,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+) -> ! {
+    record_suite_script_outcome(rows, script_key, result, lint_summary, evidence_highlights);
+    finalize_suite_failure_and_exit(
+        child,
+        stop_demo,
+        resolved_exit_path,
+        poll_ms,
+        summary_ctx,
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        status,
+        error_reason_code,
+        failure_kind,
+    )
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2476,13 +2526,7 @@ hint: list suites via `fretboard diag list suites`"
                     result.reason.as_deref().unwrap_or("unknown"),
                     result.last_bundle_dir.as_deref().unwrap_or("")
                 );
-                suite_rows.push(build_suite_script_result_row(
-                    &script_key,
-                    &result,
-                    lint_summary.as_ref(),
-                    evidence_highlights.as_ref(),
-                ));
-                finalize_suite_failure_and_exit(
+                exit_for_suite_script_outcome(
                     &mut child,
                     !keep_open,
                     &resolved_exit_path,
@@ -2490,8 +2534,12 @@ hint: list suites via `fretboard diag list suites`"
                     &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
+                    &script_key,
+                    &result,
+                    lint_summary.as_ref(),
+                    evidence_highlights.as_ref(),
                     "failed",
                     None,
                     None,
@@ -2503,13 +2551,7 @@ hint: list suites via `fretboard diag list suites`"
                     src.display(),
                     result
                 );
-                suite_rows.push(build_suite_script_result_row(
-                    &script_key,
-                    &result,
-                    lint_summary.as_ref(),
-                    evidence_highlights.as_ref(),
-                ));
-                finalize_suite_failure_and_exit(
+                exit_for_suite_script_outcome(
                     &mut child,
                     !keep_open,
                     &resolved_exit_path,
@@ -2517,8 +2559,12 @@ hint: list suites via `fretboard diag list suites`"
                     &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
+                    &script_key,
+                    &result,
+                    lint_summary.as_ref(),
+                    evidence_highlights.as_ref(),
                     "failed",
                     None,
                     None,
@@ -2593,13 +2639,7 @@ hint: list suites via `fretboard diag list suites`"
                         report.error_issues,
                         out.display()
                     );
-                    suite_rows.push(build_suite_script_result_row(
-                        &script_key,
-                        &result,
-                        lint_summary.as_ref(),
-                        evidence_highlights.as_ref(),
-                    ));
-                    finalize_suite_failure_and_exit(
+                    exit_for_suite_script_outcome(
                         &mut child,
                         true,
                         &resolved_exit_path,
@@ -2607,8 +2647,12 @@ hint: list suites via `fretboard diag list suites`"
                         &summary_ctx,
                         &suite_stage_counts,
                         &suite_reason_code_counts,
-                        &suite_rows,
+                        &mut suite_rows,
                         &suite_evidence_agg,
+                        &script_key,
+                        &result,
+                        lint_summary.as_ref(),
+                        evidence_highlights.as_ref(),
                         "failed",
                         None,
                         Some("lint_failed"),
