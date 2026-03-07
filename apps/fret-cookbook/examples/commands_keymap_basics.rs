@@ -113,8 +113,7 @@ impl View for CommandsKeymapBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_allow = ui::h_flex(|cx| {
             ui::children![cx;
@@ -124,20 +123,23 @@ impl View for CommandsKeymapBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
             .action(act::TogglePanel)
             .a11y_role(SemanticsRole::Button)
-            .test_id(TEST_ID_DISPATCH)
-            .into_element(cx);
+            .test_id(TEST_ID_DISPATCH);
 
-        let left = ui::v_flex(|_cx| [row_shortcut, row_enabled, row_allow, dispatch_button])
-            .gap(Space::N3)
-            .w_full()
-            .into_element(cx);
+        let left = ui::v_flex_build(|cx, out| {
+            out.push_ui(cx, row_shortcut);
+            out.push_ui(cx, row_enabled);
+            out.push_ui(cx, row_allow);
+            out.push_ui(cx, dispatch_button);
+        })
+        .gap(Space::N3)
+        .w_full()
+        .into_element(cx);
 
         let panel_state_text = cx
             .text(format!(
@@ -167,8 +169,7 @@ impl View for CommandsKeymapBasicsView {
                 cx.text(desc),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -183,8 +184,8 @@ impl View for CommandsKeymapBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(panel_body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, panel_body);
                 }),
             );
         })
@@ -194,8 +195,7 @@ impl View for CommandsKeymapBasicsView {
 
         let body = ui::h_flex(|cx| ui::children![cx; left, panel])
             .gap(Space::N6)
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -212,8 +212,8 @@ impl View for CommandsKeymapBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })

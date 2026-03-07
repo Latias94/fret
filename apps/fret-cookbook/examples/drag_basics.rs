@@ -131,13 +131,11 @@ impl View for DragBasicsView {
                     "A tiny pointer-capture drag example using a pointer region.",
                 ),
             );
-        })
-        .into_element(cx);
+        });
 
         let pos = shadcn::Badge::new(pos_label)
             .variant(shadcn::BadgeVariant::Secondary)
-            .test_id(TEST_ID_POS)
-            .into_element(cx);
+            .test_id(TEST_ID_POS);
 
         let drag_count_badge = shadcn::Badge::new(format!("Drags: {drag_count}"))
             .variant(shadcn::BadgeVariant::Secondary)
@@ -181,7 +179,7 @@ impl View for DragBasicsView {
                 .w_px(offset_x)
                 .into_element(cx);
 
-            let row = ui::h_flex(|cx| ui::children![cx; left_spacer, box_el]).into_element(cx);
+            let row = ui::h_flex(|cx| ui::children![cx; left_spacer, box_el]);
             let col = ui::v_flex(|cx| ui::children![cx; top_spacer, row]).into_element(cx);
 
             let bounds = ui::container(|_cx| vec![col])
@@ -195,14 +193,14 @@ impl View for DragBasicsView {
         });
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(header);
+            out.push_ui(cx, header);
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; pos, drag_count_badge, draggable])
-                            .gap(Space::N3)
-                            .into_element(cx),
+                            .gap(Space::N3),
                     );
                 }),
             );

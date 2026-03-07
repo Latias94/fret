@@ -127,8 +127,7 @@ impl View for QueryBasicsView {
             "Mode: Ok"
         })
         .variant(shadcn::BadgeVariant::Secondary)
-        .test_id(TEST_ID_MODE_BADGE)
-        .into_element(cx);
+        .test_id(TEST_ID_MODE_BADGE);
 
         let status_badge = shadcn::Badge::new(status_label)
             .variant(match state.status {
@@ -136,8 +135,7 @@ impl View for QueryBasicsView {
                 QueryStatus::Error => shadcn::BadgeVariant::Destructive,
                 QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
             })
-            .test_id(TEST_ID_STATUS_BADGE)
-            .into_element(cx);
+            .test_id(TEST_ID_STATUS_BADGE);
 
         let data_line: Arc<str> = state
             .data
@@ -148,24 +146,20 @@ impl View for QueryBasicsView {
         let invalidate_btn = shadcn::Button::new("Invalidate")
             .variant(shadcn::ButtonVariant::Default)
             .action(act::Invalidate)
-            .test_id(TEST_ID_BTN_INVALIDATE)
-            .into_element(cx);
+            .test_id(TEST_ID_BTN_INVALIDATE);
         let invalidate_ns_btn = shadcn::Button::new("Invalidate namespace")
             .variant(shadcn::ButtonVariant::Ghost)
             .action(act::InvalidateNamespace)
-            .test_id(TEST_ID_BTN_INVALIDATE_NS)
-            .into_element(cx);
+            .test_id(TEST_ID_BTN_INVALIDATE_NS);
         let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::ToggleErrorMode)
-            .test_id(TEST_ID_BTN_TOGGLE_MODE)
-            .into_element(cx);
+            .test_id(TEST_ID_BTN_TOGGLE_MODE);
 
         let buttons =
             ui::h_flex(|cx| ui::children![cx; invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx);
+                .items_center();
 
         let lines = ui::v_flex(|cx| {
             let data = cx.text(data_line).test_id(TEST_ID_DATA_LINE);
@@ -175,8 +169,7 @@ impl View for QueryBasicsView {
             }
             out
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -189,22 +182,22 @@ impl View for QueryBasicsView {
                             "A tiny async resource example using fret-query (invalidate + error mode).",
                         ),
                     );
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::h_flex(|cx| ui::children![cx; status_badge, mode_badge])
                             .gap(Space::N2)
-                            .items_center()
-                            .into_element(cx),
+                            .items_center(),
                     );
                 }),
             );
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; buttons, lines])
                             .gap(Space::N4)
-                            .w_full()
-                            .into_element(cx),
+                            .w_full(),
                     );
                 }),
             );
