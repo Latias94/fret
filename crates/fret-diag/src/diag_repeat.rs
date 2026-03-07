@@ -284,6 +284,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         poll_ms,
     } = ctx;
 
+    let launch_fs_transport_cfg = resolved_paths.launch_fs_transport_cfg();
+
     let resolved_out_dir = resolved_paths.out_dir;
     let resolved_ready_path = resolved_paths.ready_path;
     let resolved_exit_path = resolved_paths.exit_path;
@@ -314,14 +316,6 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
 
     let repeat_launch_env = launch_env.clone();
     let reuse_process = launch.is_none() || reuse_launch;
-
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
-    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path =
-        resolved_script_result_trigger_path.clone();
 
     let mut child = if reuse_process {
         maybe_launch_demo(

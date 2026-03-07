@@ -4171,6 +4171,21 @@ pub(crate) struct ResolvedRunContext {
     pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
 }
 
+pub(crate) fn script_run_fs_transport_cfg(
+    out_dir: &Path,
+    script_path: &Path,
+    script_trigger_path: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_path = script_path.to_path_buf();
+    cfg.script_trigger_path = script_trigger_path.to_path_buf();
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
+}
+
 impl ResolvedScriptPaths {
     pub(crate) fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
         let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
@@ -4187,6 +4202,16 @@ impl ResolvedScriptPaths {
             ),
             out_dir,
         }
+    }
+
+    pub(crate) fn launch_fs_transport_cfg(&self) -> crate::transport::FsDiagTransportConfig {
+        script_run_fs_transport_cfg(
+            &self.out_dir,
+            &self.script_path,
+            &self.script_trigger_path,
+            &self.script_result_path,
+            &self.script_result_trigger_path,
+        )
     }
 }
 
@@ -4815,12 +4840,7 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(paths.out_dir.clone());
-    launch_fs_transport_cfg.script_path = paths.script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = paths.script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = paths.script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path = paths.script_result_trigger_path.clone();
+    let launch_fs_transport_cfg = paths.launch_fs_transport_cfg();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,

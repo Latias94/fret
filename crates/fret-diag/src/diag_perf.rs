@@ -720,13 +720,13 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         }
     }
 
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
-    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path =
-        resolved_script_result_trigger_path.clone();
+    let launch_fs_transport_cfg = crate::script_run_fs_transport_cfg(
+        &resolved_out_dir,
+        &resolved_script_path,
+        &resolved_script_trigger_path,
+        &resolved_script_result_path,
+        &resolved_script_result_trigger_path,
+    );
 
     let perf_wants_screenshots = check_pixels_changed_test_id.is_some()
         || check_pixels_unchanged_test_id.is_some()
