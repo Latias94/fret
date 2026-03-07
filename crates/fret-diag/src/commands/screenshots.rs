@@ -25,16 +25,31 @@ pub(crate) fn cmd_screenshots(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve_screenshots_manifest_path(&src).or_else(|| {
-        if src.is_dir() {
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(src.as_path(), None)
-                .ok()
-                .map(|(bundle_dir, _session_id, _source)| bundle_dir)
-                .and_then(|bundle_dir| resolve_screenshots_manifest_path(&bundle_dir))
-        } else {
-            None
-        }
-    });
+    let resolved = resolve_screenshots_manifest_path(&src)
+        .or_else(|| {
+            let start_dir = if src.is_dir() {
+                src.to_path_buf()
+            } else {
+                src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
+            };
+            let bundle_dir =
+                resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(&start_dir);
+            resolve_screenshots_manifest_path(&bundle_dir)
+        })
+        .or_else(|| {
+            let start = if src.is_dir() {
+                src.as_path()
+            } else {
+                src.parent().unwrap_or_else(|| Path::new("."))
+            };
+            let out_dir = resolve::find_nearest_script_result_json_preferring_evidence(start)
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))?;
+            let bundle_dir =
+                resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&out_dir, None)
+                    .ok()
+                    .map(|(bundle_dir, _session_id, _source)| bundle_dir)?;
+            resolve_screenshots_manifest_path(&bundle_dir)
+        });
 
     let Some((screenshots_dir, manifest_path)) = resolved else {
         return Err(format!(
