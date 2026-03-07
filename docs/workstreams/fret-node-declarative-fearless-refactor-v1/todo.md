@@ -432,6 +432,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/left_click/connection_hits.rs` seam, so connect-on-click resolution,
     reconnect drag arming, and edge-anchor selection sync no longer stay embedded in the main
     hit-dispatch match.
+  - Progress: `left_click/handlers.rs` now also routes resize / node / edge branches through the
+    private `canvas/widget/left_click/element_hits.rs` seam, so node selection sync, drag-handle
+    gating, resize arming, and edge alt-insert arming no longer stay embedded in the main
+    hit-dispatch match; the file now behaves as a thin retained hit router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
