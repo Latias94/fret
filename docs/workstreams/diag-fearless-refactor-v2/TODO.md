@@ -37,6 +37,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff
     - third landing: `diag_campaign` now uses explicit execution-plan helpers for per-run and batch output roots
     - fourth landing: `diag_campaign` now uses a unified `CampaignItemInvocation` builder for suite/script item dispatch
+    - fifth landing: `diag_campaign` now uses `CampaignRunOutcome` for aggregate counters, output rendering, and command-failure collection in `cmd_campaign_run`
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.

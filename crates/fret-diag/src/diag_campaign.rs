@@ -84,6 +84,25 @@ struct CampaignBatchArtifacts {
     share_error: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct CampaignRunCounters {
+    campaigns_total: usize,
+    campaigns_failed: usize,
+    campaigns_passed: usize,
+    items_total: usize,
+    items_failed: usize,
+    suites_total: usize,
+    scripts_total: usize,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignRunOutcome {
+    reports: Vec<CampaignExecutionReport>,
+    batch: Option<CampaignBatchArtifacts>,
+    counters: CampaignRunCounters,
+    command_failures: Vec<String>,
+}
+
 #[derive(Debug, Clone)]
 struct CampaignExecutionPlan {
     created_unix_ms: u64,
@@ -713,57 +732,127 @@ fn cmd_campaign_run(
     ctx: CampaignRunContext,
 ) -> Result<(), String> {
     let options = parse_campaign_run_options(rest)?;
-    let selected = select_campaigns_for_run(registry, &options)?;
+    let outcome = execute_campaign_run_selection(registry, &options, &ctx)?;
+    print_campaign_run_output(&options, &outcome, ctx.stats_json)?;
+    if !outcome.command_failures.is_empty() {
+        return Err(outcome.command_failures.join("; "));
+    }
+    Ok(())
+}
+
+fn execute_campaign_run_selection(
+    registry: &CampaignRegistry,
+    options: &CampaignRunOptions,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignRunOutcome, String> {
+    let selected = select_campaigns_for_run(registry, options)?;
 
     let mut reports = Vec::new();
     for campaign in selected {
-        reports.push(execute_campaign(campaign, &ctx));
+        reports.push(execute_campaign(campaign, ctx));
     }
 
     let batch = if reports.len() > 1 {
-        Some(write_campaign_batch_artifacts(&reports, &options, &ctx)?)
+        Some(write_campaign_batch_artifacts(&reports, options, ctx)?)
     } else {
         None
     };
+    let counters = build_campaign_run_counters(&reports);
+    let command_failures =
+        collect_campaign_run_failures(&reports, batch.as_ref(), counters.campaigns_failed);
 
-    let failed_runs = reports.iter().filter(|report| !report.ok).count();
-    if ctx.stats_json {
-        let payload = serde_json::json!({
-            "selection": {
-                "campaign_ids": &options.campaign_ids,
-                "filters": campaign_filter_to_json(&options.filter),
-            },
-            "counters": {
-                "campaigns_total": reports.len(),
-                "campaigns_failed": failed_runs,
-                "campaigns_passed": reports.len().saturating_sub(failed_runs),
-                "items_total": reports.iter().map(|report| report.items_total).sum::<usize>(),
-                "items_failed": reports.iter().map(|report| report.items_failed).sum::<usize>(),
-                "suites_total": reports.iter().map(|report| report.suites_total).sum::<usize>(),
-                "scripts_total": reports.iter().map(|report| report.scripts_total).sum::<usize>(),
-            },
-            "batch": batch.as_ref().map(campaign_batch_to_json),
-            "runs": reports.iter().map(|report| serde_json::json!({
-                "campaign_id": report.campaign_id,
-                "ok": report.ok,
-                "error": report.error,
-                "share_error": report.share_error,
-                "out_dir": report.out_dir.display().to_string(),
-                "summary_path": report.summary_path.display().to_string(),
-                "index_path": report.index_path.display().to_string(),
-                "share_manifest_path": report.share_manifest_path.as_ref().map(|path| path.display().to_string()),
-                "items_total": report.items_total,
-                "items_failed": report.items_failed,
-                "suites_total": report.suites_total,
-                "scripts_total": report.scripts_total,
-            })).collect::<Vec<_>>(),
-        });
+    Ok(CampaignRunOutcome {
+        reports,
+        batch,
+        counters,
+        command_failures,
+    })
+}
+
+fn build_campaign_run_counters(reports: &[CampaignExecutionReport]) -> CampaignRunCounters {
+    let campaigns_failed = reports.iter().filter(|report| !report.ok).count();
+    CampaignRunCounters {
+        campaigns_total: reports.len(),
+        campaigns_failed,
+        campaigns_passed: reports.len().saturating_sub(campaigns_failed),
+        items_total: reports.iter().map(|report| report.items_total).sum(),
+        items_failed: reports.iter().map(|report| report.items_failed).sum(),
+        suites_total: reports.iter().map(|report| report.suites_total).sum(),
+        scripts_total: reports.iter().map(|report| report.scripts_total).sum(),
+    }
+}
+
+fn collect_campaign_run_failures(
+    reports: &[CampaignExecutionReport],
+    batch: Option<&CampaignBatchArtifacts>,
+    campaigns_failed: usize,
+) -> Vec<String> {
+    let mut command_failures = Vec::new();
+    if campaigns_failed > 0 {
+        let failures = reports
+            .iter()
+            .filter(|report| !report.ok)
+            .map(|report| {
+                format!(
+                    "{}: {}",
+                    report.campaign_id,
+                    report.error.as_deref().unwrap_or("unknown error")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        command_failures.push(format!(
+            "campaign run completed with {} failed campaign(s): {}",
+            campaigns_failed, failures
+        ));
+    }
+    if let Some(batch) = batch
+        && let Some(error) = batch.summarize_error.as_deref()
+    {
+        command_failures.push(format!(
+            "campaign batch summarize failed under {}: {}",
+            batch.batch_root.display(),
+            error
+        ));
+    }
+    if let Some(batch) = batch
+        && let Some(error) = batch.share_error.as_deref()
+    {
+        command_failures.push(format!(
+            "campaign batch share export failed under {}: {}",
+            batch.batch_root.display(),
+            error
+        ));
+    }
+    command_failures.extend(reports.iter().filter_map(|report| {
+        report.share_error.as_deref().map(|error| {
+            format!(
+                "campaign `{}` share export failed under {}: {}",
+                report.campaign_id,
+                report.out_dir.display(),
+                error
+            )
+        })
+    }));
+    command_failures
+}
+
+fn print_campaign_run_output(
+    options: &CampaignRunOptions,
+    outcome: &CampaignRunOutcome,
+    stats_json: bool,
+) -> Result<(), String> {
+    if stats_json {
+        let payload = campaign_run_outcome_to_json(options, outcome);
         println!(
             "{}",
             serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
         );
-    } else if reports.len() == 1 {
-        let report = &reports[0];
+        return Ok(());
+    }
+
+    if outcome.reports.len() == 1 {
+        let report = &outcome.reports[0];
         if report.ok {
             println!(
                 "campaign: ok (id={}, items={}, suites={}, scripts={}, out_dir={})",
@@ -780,90 +869,81 @@ fn cmd_campaign_run(
                 share_manifest_path.display()
             );
         }
-    } else {
+        return Ok(());
+    }
+
+    println!(
+        "campaign batch: {} run(s), {} failed",
+        outcome.counters.campaigns_total, outcome.counters.campaigns_failed
+    );
+    if let Some(batch) = outcome.batch.as_ref() {
+        println!("  batch_root: {}", batch.batch_root.display());
+        if let Some(share_manifest_path) = batch.share_manifest_path.as_deref() {
+            println!("  share_manifest: {}", share_manifest_path.display());
+        }
+    }
+    for report in &outcome.reports {
+        let status = if report.ok { "ok" } else { "failed" };
         println!(
-            "campaign batch: {} run(s), {} failed",
-            reports.len(),
-            failed_runs
+            "  - {} [{}] items={} failed={} -> {}",
+            report.campaign_id,
+            status,
+            report.items_total,
+            report.items_failed,
+            report.out_dir.display()
         );
-        if let Some(batch) = &batch {
-            println!("  batch_root: {}", batch.batch_root.display());
-            if let Some(share_manifest_path) = batch.share_manifest_path.as_deref() {
-                println!("  share_manifest: {}", share_manifest_path.display());
-            }
-        }
-        for report in &reports {
-            let status = if report.ok { "ok" } else { "failed" };
-            println!(
-                "  - {} [{}] items={} failed={} -> {}",
-                report.campaign_id,
-                status,
-                report.items_total,
-                report.items_failed,
-                report.out_dir.display()
-            );
-            if let Some(share_manifest_path) = report.share_manifest_path.as_deref() {
-                println!("    share_manifest: {}", share_manifest_path.display());
-            }
+        if let Some(share_manifest_path) = report.share_manifest_path.as_deref() {
+            println!("    share_manifest: {}", share_manifest_path.display());
         }
     }
-
-    let mut command_failures = Vec::new();
-    if failed_runs > 0 {
-        let failures = reports
-            .iter()
-            .filter(|report| !report.ok)
-            .map(|report| {
-                format!(
-                    "{}: {}",
-                    report.campaign_id,
-                    report.error.as_deref().unwrap_or("unknown error")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("; ");
-        command_failures.push(format!(
-            "campaign run completed with {} failed campaign(s): {}",
-            failed_runs, failures
-        ));
-    }
-    if let Some(batch) = &batch
-        && let Some(error) = batch.summarize_error.as_deref()
-    {
-        command_failures.push(format!(
-            "campaign batch summarize failed under {}: {}",
-            batch.batch_root.display(),
-            error
-        ));
-    }
-    if let Some(batch) = &batch
-        && let Some(error) = batch.share_error.as_deref()
-    {
-        command_failures.push(format!(
-            "campaign batch share export failed under {}: {}",
-            batch.batch_root.display(),
-            error
-        ));
-    }
-    let report_share_failures = reports
-        .iter()
-        .filter_map(|report| {
-            report.share_error.as_deref().map(|error| {
-                format!(
-                    "campaign `{}` share export failed under {}: {}",
-                    report.campaign_id,
-                    report.out_dir.display(),
-                    error
-                )
-            })
-        })
-        .collect::<Vec<_>>();
-    command_failures.extend(report_share_failures);
-    if !command_failures.is_empty() {
-        return Err(command_failures.join("; "));
-    }
-
     Ok(())
+}
+
+fn campaign_run_outcome_to_json(
+    options: &CampaignRunOptions,
+    outcome: &CampaignRunOutcome,
+) -> serde_json::Value {
+    serde_json::json!({
+        "selection": {
+            "campaign_ids": &options.campaign_ids,
+            "filters": campaign_filter_to_json(&options.filter),
+        },
+        "counters": {
+            "campaigns_total": outcome.counters.campaigns_total,
+            "campaigns_failed": outcome.counters.campaigns_failed,
+            "campaigns_passed": outcome.counters.campaigns_passed,
+            "items_total": outcome.counters.items_total,
+            "items_failed": outcome.counters.items_failed,
+            "suites_total": outcome.counters.suites_total,
+            "scripts_total": outcome.counters.scripts_total,
+        },
+        "batch": outcome.batch.as_ref().map(campaign_batch_to_json),
+        "runs": outcome
+            .reports
+            .iter()
+            .map(campaign_run_report_to_json)
+            .collect::<Vec<_>>(),
+    })
+}
+
+fn campaign_run_report_to_json(report: &CampaignExecutionReport) -> serde_json::Value {
+    serde_json::json!({
+        "campaign_id": report.campaign_id,
+        "ok": report.ok,
+        "error": report.error,
+        "share_error": report.share_error,
+        "out_dir": report.out_dir.display().to_string(),
+        "summary_path": report.summary_path.display().to_string(),
+        "index_path": report.index_path.display().to_string(),
+        "share_manifest_path": report
+            .share_manifest_path
+            .as_ref()
+            .map(|path| path.display().to_string()),
+        "items_total": report.items_total,
+        "items_failed": report.items_failed,
+        "suites_total": report.suites_total,
+        "scripts_total": report.scripts_total,
+    })
 }
 
 fn select_campaigns_for_run<'a>(
@@ -2086,6 +2166,86 @@ mod tests {
             tags: vec!["ui-gallery".to_string()],
             source: crate::registry::campaigns::CampaignDefinitionSource::Builtin,
         }
+    }
+
+    fn sample_campaign_execution_report(
+        campaign_id: &str,
+        ok: bool,
+        items_total: usize,
+        items_failed: usize,
+    ) -> CampaignExecutionReport {
+        CampaignExecutionReport {
+            campaign_id: campaign_id.to_string(),
+            out_dir: PathBuf::from(format!("runs/{campaign_id}")),
+            summary_path: PathBuf::from(format!("runs/{campaign_id}/regression.summary.json")),
+            index_path: PathBuf::from(format!("runs/{campaign_id}/regression.index.json")),
+            share_manifest_path: None,
+            items_total,
+            items_failed,
+            suites_total: items_total,
+            scripts_total: usize::from(items_total > 0),
+            ok,
+            error: (!ok).then(|| format!("{campaign_id} failed")),
+            share_error: None,
+        }
+    }
+
+    #[test]
+    fn build_campaign_run_counters_accumulates_report_totals() {
+        let reports = vec![
+            sample_campaign_execution_report("ui-gallery-smoke", true, 3, 0),
+            sample_campaign_execution_report("docking-smoke", false, 5, 2),
+        ];
+
+        let counters = build_campaign_run_counters(&reports);
+
+        assert_eq!(
+            counters,
+            CampaignRunCounters {
+                campaigns_total: 2,
+                campaigns_failed: 1,
+                campaigns_passed: 1,
+                items_total: 8,
+                items_failed: 2,
+                suites_total: 8,
+                scripts_total: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn collect_campaign_run_failures_tracks_run_batch_and_share_errors() {
+        let mut failed_report = sample_campaign_execution_report("ui-gallery-smoke", false, 3, 1);
+        failed_report.share_error = Some("report share failed".to_string());
+        let reports = vec![failed_report];
+        let batch = CampaignBatchArtifacts {
+            batch_root: PathBuf::from("batch/root"),
+            summary_path: PathBuf::from("batch/root/regression.summary.json"),
+            index_path: PathBuf::from("batch/root/regression.index.json"),
+            share_manifest_path: None,
+            summarize_error: Some("batch summarize failed".to_string()),
+            share_error: Some("batch share failed".to_string()),
+        };
+
+        let failures = collect_campaign_run_failures(&reports, Some(&batch), 1);
+
+        assert_eq!(failures.len(), 4);
+        assert!(failures.iter().any(|failure| {
+            failure.contains("campaign run completed with 1 failed campaign(s)")
+                && failure.contains("ui-gallery-smoke: ui-gallery-smoke failed")
+        }));
+        assert!(failures.iter().any(|failure| {
+            failure.contains("campaign batch summarize failed under batch/root")
+                && failure.contains("batch summarize failed")
+        }));
+        assert!(failures.iter().any(|failure| {
+            failure.contains("campaign batch share export failed under batch/root")
+                && failure.contains("batch share failed")
+        }));
+        assert!(failures.iter().any(|failure| {
+            failure.contains("campaign `ui-gallery-smoke` share export failed")
+                && failure.contains("report share failed")
+        }));
     }
 
     #[test]

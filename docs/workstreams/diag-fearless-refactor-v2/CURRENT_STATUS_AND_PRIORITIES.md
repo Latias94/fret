@@ -140,6 +140,9 @@ Recent progress since this note was drafted:
 - `diag_campaign` item dispatch now uses a single `CampaignItemInvocation` builder, so suite
   items and script items share one `diag_suite` handoff path instead of duplicating nearly identical
   branch bodies.
+- `diag_campaign` run orchestration now uses an explicit `CampaignRunOutcome` seam for selection
+  execution, aggregate counters, output rendering, and command-failure collection, which keeps
+  `cmd_campaign_run` closer to a thin command adapter.
 
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
@@ -174,7 +177,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 ## Recommended next implementation sequence
 
 1. write the canonical artifact/evidence contract update,
-2. continue from the new `diag_campaign` invocation + execution-plan seams into campaign-level item expansion/selection extraction or move to check planning/execution,
+2. continue from the new `diag_campaign` invocation + execution-plan + run-outcome seams into check planning/execution or the next shared report/output helpers,
 3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 

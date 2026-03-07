@@ -262,6 +262,7 @@ Recommended PR slices:
    - eighth landing: `diag_campaign` now builds per-item `diag_suite::SuiteCmdContext` through a shared invocation builder, removing the duplicated suite/script handoff block and making item expansion/context extraction easier to continue
    - ninth landing: `diag_campaign` now computes per-run and batch output roots through explicit execution plans, shrinking the orchestration body around manifest/summarize/share wiring and giving the next item-expansion slice a stable home
    - tenth landing: `diag_campaign` now builds suite/script item execution through a single `CampaignItemInvocation` builder, so the item dispatcher no longer carries parallel suite/script branches around the same `diag_suite` handoff payload
+   - eleventh landing: `diag_campaign` now routes selection execution, aggregate counters, JSON/CLI rendering, and command-failure collection through an explicit `CampaignRunOutcome`, shrinking `cmd_campaign_run` into parse -> execute -> render -> fail orchestration
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
