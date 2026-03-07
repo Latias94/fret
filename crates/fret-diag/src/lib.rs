@@ -107,8 +107,9 @@ use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
     compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
-    normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file, resolve_threshold,
-    run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
+    maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
+    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    scan_perf_threshold_failures, stop_launched_demo,
     wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
@@ -547,7 +548,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
-    let check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
+    let mut check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
@@ -2194,6 +2195,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u32>()
                         .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-hello-world-compare-idle-present-max-delta" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string(),
+                    );
+                };
+                check_hello_world_compare_idle_present_max_delta =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string()
+                    })?);
                 i += 1;
             }
             "--check-gc-sweep-liveness" => {

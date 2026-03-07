@@ -652,7 +652,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 };
 
                 if let Err(err) = apply_post_run_checks(
-                    bundle_path,
+                    Some(bundle_path),
                     &resolved_out_dir,
                     &checks_for_post_run,
                     warmup_frames,

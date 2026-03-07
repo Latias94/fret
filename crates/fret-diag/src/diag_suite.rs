@@ -2143,7 +2143,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     .or(suite_retained_vlist_keep_alive_budget);
 
             apply_post_run_checks(
-                &bundle_path,
+                Some(&bundle_path),
                 &resolved_out_dir,
                 &checks_for_post_run,
                 warmup_frames,

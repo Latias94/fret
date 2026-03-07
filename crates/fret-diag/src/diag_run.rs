@@ -7,6 +7,106 @@ fn launched_demo_was_killed(footprint: &serde_json::Value) -> bool {
         .unwrap_or(false)
 }
 
+fn launch_command_timeout_ms(launch: &Option<Vec<String>>, timeout_ms: u64) -> u64 {
+    let min_timeout_ms = launch
+        .as_ref()
+        .and_then(|cmd| cmd.first())
+        .map(|exe| exe.to_ascii_lowercase())
+        .map(|exe_lower| {
+            if exe_lower == "cargo"
+                || exe_lower.ends_with("\\cargo.exe")
+                || exe_lower.ends_with("/cargo.exe")
+            {
+                600_000
+            } else {
+                30_000
+            }
+        })
+        .unwrap_or(30_000);
+    timeout_ms.max(min_timeout_ms)
+}
+
+fn wait_for_launched_demo_exit_without_signal(
+    child: &mut Option<LaunchedDemo>,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<(), String> {
+    let Some(demo) = child.as_mut() else {
+        return Ok(());
+    };
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+    loop {
+        match demo.child.try_wait() {
+            Ok(Some(_)) => return Ok(()),
+            Ok(None) => {}
+            Err(err) => {
+                return Err(format!(
+                    "failed to query launched demo status while waiting for clean self-exit: {err}"
+                ));
+            }
+        }
+
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "timeout waiting for launched demo to exit on its own (timeout_ms={timeout_ms})"
+            ));
+        }
+
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+}
+
+fn write_tool_owned_script_result(
+    out_dir: &Path,
+    script_result_path: &Path,
+    result: &crate::stats::ScriptResultSummary,
+    kind: &str,
+    note: Option<String>,
+) -> Result<(), String> {
+    let now = now_unix_ms();
+    let stage = match result.stage.as_deref() {
+        Some("passed") => UiScriptStageV1::Passed,
+        Some("queued") => UiScriptStageV1::Queued,
+        Some("running") => UiScriptStageV1::Running,
+        _ => UiScriptStageV1::Failed,
+    };
+    let step_index = result
+        .step_index
+        .and_then(|value| u32::try_from(value).ok());
+    let script_result = UiScriptResultV1 {
+        schema_version: 1,
+        run_id: result.run_id,
+        updated_unix_ms: now,
+        window: None,
+        stage,
+        step_index,
+        reason_code: result.reason_code.clone(),
+        reason: result.reason.clone(),
+        evidence: Some(UiScriptEvidenceV1 {
+            event_log: vec![UiScriptEventLogEntryV1 {
+                unix_ms: now,
+                kind: kind.to_string(),
+                step_index,
+                note,
+                bundle_dir: result.last_bundle_dir.clone(),
+                window: None,
+                tick_id: None,
+                frame_id: None,
+                window_snapshot_seq: None,
+            }],
+            ..UiScriptEvidenceV1::default()
+        }),
+        last_bundle_dir: result.last_bundle_dir.clone(),
+        last_bundle_artifact: None,
+    };
+
+    let value = serde_json::to_value(&script_result).map_err(|err| err.to_string())?;
+    write_json_value(script_result_path, &value)?;
+    RunArtifactStore::new(out_dir, script_result.run_id).write_script_result(&script_result);
+    Ok(())
+}
+
 fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf, String> {
     let raw = raw.trim();
     if raw.is_empty() {
@@ -517,6 +617,9 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
         .check_wheel_events_max_per_frame
         .or(policy_wheel_events_max_per_frame);
+    checks_for_post_run.check_hello_world_compare_idle_present_max_delta = checks_for_post_run
+        .check_hello_world_compare_idle_present_max_delta
+        .or(crate::diag_policy::hello_world_compare_script_idle_present_max_delta(&src));
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_post_run_checks = check_registry.wants_post_run_checks(&checks_for_post_run);
 
@@ -533,6 +636,17 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
+    let prefers_external_no_diag_post_run =
+        crate::diag_policy::hello_world_compare_script_prefers_external_no_diag_post_run(&src)
+            && launch.is_some()
+            && !reuse_launch
+            && !keep_open
+            && !use_devtools_ws
+            && !trace_chrome
+            && !launch_write_bundle_json
+            && bundle_doctor_mode == BundleDoctorMode::Off
+            && !wants_post_run_bundle
+            && !check_registry.wants_bundle_artifact(&checks_for_post_run);
     if use_devtools_ws {
         if launch.is_some() || reuse_launch {
             return Err(
@@ -660,7 +774,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 );
             };
             apply_post_run_checks(
-                bundle_path,
+                Some(bundle_path),
                 &resolved_out_dir,
                 &checks_for_post_run,
                 warmup_frames,
@@ -735,7 +849,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
 
         report_result_and_exit(&summary);
     }
-    let script_wants_screenshots = script_requests_screenshots(&src);
     let mut run_launch_env = launch_env.clone();
     // Tool-launched runs default to *not* redacting text to keep authoring/debugging ergonomic.
     //
@@ -745,6 +858,111 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     for (key, value) in script_env_defaults(&src) {
         push_env_if_missing(&mut run_launch_env, &key, &value);
     }
+
+    if prefers_external_no_diag_post_run {
+        std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
+        let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+            &src,
+            crate::script_execution::ScriptLoadPolicy {
+                tool_launched: true,
+                write_failure: write_tooling_failure_script_result_if_missing,
+                failure_note: Some(
+                    "external no-diagnostics post-run path still validates the script envelope"
+                        .to_string(),
+                ),
+                include_stage_in_note: true,
+            },
+            &resolved_script_result_path,
+        )?;
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
+        let _ = write_json_value(&resolved_script_path, &script_json);
+
+        let internal_report_path = resolved_out_dir.join("hello_world_compare.internal_gpu.json");
+        let internal_report_path_value = internal_report_path.display().to_string();
+        push_env_if_missing(
+            &mut run_launch_env,
+            "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH",
+            internal_report_path_value.as_str(),
+        );
+
+        let mut child = maybe_launch_demo_without_diagnostics(
+            &launch,
+            &run_launch_env,
+            &workspace_root,
+            &resolved_out_dir,
+            poll_ms,
+            launch_high_priority,
+        )
+        .inspect_err(|err| {
+            write_tooling_failure_script_result_if_missing(
+                &resolved_script_result_path,
+                "tooling.launch.failed",
+                err,
+                "tooling_error",
+                Some("maybe_launch_demo_without_diagnostics".to_string()),
+            );
+        })?;
+        let run_id = child
+            .as_ref()
+            .map(|demo| demo.launched_unix_ms)
+            .unwrap_or_else(now_unix_ms);
+        let wait_result = wait_for_launched_demo_exit_without_signal(
+            &mut child,
+            launch_command_timeout_ms(&launch, timeout_ms),
+            poll_ms,
+        );
+        let footprint = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+
+        let mut result = crate::stats::ScriptResultSummary {
+            run_id,
+            stage: Some("passed".to_string()),
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+
+        if let Err(err) = wait_result {
+            result.stage = Some("failed".to_string());
+            result.reason_code = Some("tooling.external_no_diagnostics.timeout".to_string());
+            result.reason = Some(err);
+        } else if footprint.as_ref().is_some_and(launched_demo_was_killed) {
+            result.stage = Some("failed".to_string());
+            result.reason_code = Some("tooling.demo_exit.killed".to_string());
+            result.reason = Some(
+                "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)"
+                    .to_string(),
+            );
+        } else if wants_post_run_checks
+            && let Err(err) =
+                apply_post_run_checks(None, &resolved_out_dir, &checks_for_post_run, warmup_frames)
+        {
+            result.stage = Some("failed".to_string());
+            result.reason_code = Some("tooling.post_run_checks.failed".to_string());
+            result.reason = Some(err);
+        }
+
+        if let Err(err) = write_tool_owned_script_result(
+            &resolved_out_dir,
+            &resolved_script_result_path,
+            &result,
+            "tooling_external_no_diagnostics",
+            Some("diag-run external no-diagnostics post-run path".to_string()),
+        ) {
+            eprintln!(
+                "WARN: failed to write tool-owned script.result.json for external no-diagnostics path: {err}"
+            );
+        }
+
+        report_result_and_exit(&result);
+    }
+
+    let script_wants_screenshots = script_requests_screenshots(&src);
     let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
     if check_view_cache_reuse_min.is_some_and(|v| v > 0)
         || check_view_cache_reuse_stable_min.is_some_and(|v| v > 0)
@@ -890,7 +1108,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         }
 
         apply_post_run_checks(
-            &bundle_path,
+            Some(&bundle_path),
             &resolved_out_dir,
             &checks_for_post_run,
             warmup_frames,
