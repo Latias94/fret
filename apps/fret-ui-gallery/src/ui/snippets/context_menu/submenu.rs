@@ -25,20 +25,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::ContextMenuItem::new("Open")
                             .test_id("ui-gallery-context-menu-submenu-open"),
                     ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("More tools")
-                            .test_id("ui-gallery-context-menu-submenu-more-tools")
-                            .submenu(vec![
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Rename")
-                                        .test_id("ui-gallery-context-menu-submenu-rename"),
-                                ),
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Duplicate")
-                                        .test_id("ui-gallery-context-menu-submenu-duplicate"),
-                                ),
-                            ]),
-                    ),
+                    shadcn::ContextMenuSub::new(
+                        shadcn::ContextMenuSubTrigger::new("More tools").refine(|item| {
+                            item.test_id("ui-gallery-context-menu-submenu-more-tools")
+                        }),
+                        shadcn::ContextMenuSubContent::new(vec![
+                            shadcn::ContextMenuItem::new("Rename")
+                                .test_id("ui-gallery-context-menu-submenu-rename")
+                                .into(),
+                            shadcn::ContextMenuItem::new("Duplicate")
+                                .test_id("ui-gallery-context-menu-submenu-duplicate")
+                                .into(),
+                        ]),
+                    )
+                    .into_entry(),
                 ]
             },
         )

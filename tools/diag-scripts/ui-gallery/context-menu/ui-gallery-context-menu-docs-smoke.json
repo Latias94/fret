@@ -36,28 +36,36 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-trigger" }
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-trigger" }
     },
     {
       "type": "click",
       "button": "right",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-trigger" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-back" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-back" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-demo-back" }
       },
       "timeout_frames": 240
     },
