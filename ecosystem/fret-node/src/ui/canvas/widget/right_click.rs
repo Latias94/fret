@@ -6,16 +6,12 @@ use fret_ui::UiHost;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_DELETE_SELECTION,
     CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_SELECT_ALL,
+    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_PASTE,
+    CMD_NODE_GRAPH_SELECT_ALL,
 };
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::{
-    HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
-    build_context_menu_state,
-};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::{ContextMenuTarget, ViewSnapshot};
 
 pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -94,24 +90,16 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
             },
         ];
 
-        canvas.interaction.context_menu = Some(build_context_menu_state(
-            canvas,
-            position,
-            cx.bounds,
+        canvas.select_group_context_target(cx.app, group_id);
+        return canvas.show_context_menu(
+            cx,
             snapshot,
+            position,
             ContextMenuTarget::Group(group_id),
             items,
             Vec::new(),
-        ));
-        canvas.interaction.hover_edge = None;
-        cx.request_focus(cx.node);
-
-        canvas.select_group_context_target(cx.app, group_id);
-
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+            true,
+        );
     }
 
     let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
@@ -171,80 +159,26 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
             },
         ];
 
-        canvas.interaction.context_menu = Some(build_context_menu_state(
-            canvas,
-            position,
-            cx.bounds,
+        return canvas.show_context_menu(
+            cx,
             snapshot,
+            position,
             ContextMenuTarget::Background,
             items,
             Vec::new(),
-        ));
-        cx.request_focus(cx.node);
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+            false,
+        );
     };
 
-    let items = {
-        let presenter = &mut *canvas.presenter;
-        let style = &canvas.style;
-        canvas
-            .graph
-            .read_ref(cx.app, |graph| {
-                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-                presenter.fill_edge_context_menu(graph, edge, style, &mut items);
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Insert Node..."),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-                    )),
-                });
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Insert Reroute"),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_INSERT_REROUTE,
-                    )),
-                });
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Delete"),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_DELETE_SELECTION,
-                    )),
-                });
-                items
-            })
-            .ok()
-            .unwrap_or_default()
-    };
-
-    canvas.interaction.context_menu = Some(build_context_menu_state(
-        canvas,
-        position,
-        cx.bounds,
+    let items = canvas.build_edge_context_menu_items(cx.app, edge);
+    canvas.select_edge_context_target(cx.app, edge);
+    canvas.show_context_menu(
+        cx,
         snapshot,
+        position,
         ContextMenuTarget::Edge(edge),
         items,
         Vec::new(),
-    ));
-    canvas.interaction.hover_edge = None;
-    cx.request_focus(cx.node);
-
-    canvas.update_view_state(cx.app, |s| {
-        s.selected_nodes.clear();
-        s.selected_groups.clear();
-        if !s.selected_edges.iter().any(|id| *id == edge) {
-            s.selected_edges.clear();
-            s.selected_edges.push(edge);
-        }
-    });
-
-    cx.stop_propagation();
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-    true
+        true,
+    )
 }

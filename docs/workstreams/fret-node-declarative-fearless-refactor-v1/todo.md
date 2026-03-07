@@ -384,6 +384,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: group bring-to-front / send-to-back command reducers now route through the private
     `canvas/widget/group_draw_order.rs` seam, so selected-group ordering and missing-group merge
     rules no longer stay duplicated inside `command_open.rs`.
+  - Progress: right-click menu presentation and edge-target selection now route through the private
+    `canvas/widget/context_menu/opening.rs` plus `context_menu/target_selection.rs` seams, so menu
+    state presentation and edge selection sync no longer stay duplicated in `right_click.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
@@ -431,7 +434,6 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 

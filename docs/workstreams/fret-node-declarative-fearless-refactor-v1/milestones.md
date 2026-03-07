@@ -449,6 +449,9 @@ real editors.
 - Group bring-to-front / send-to-back command reducers now also have a named private seam,
   `canvas/widget/group_draw_order.rs`, so selected-group ordering and missing-group merge rules no
   longer stay duplicated inside `command_open.rs`.
+- Right-click menu presentation and edge-target selection now also have named private seams,
+  `canvas/widget/context_menu/opening.rs` and `context_menu/target_selection.rs`, so menu state
+  presentation and edge selection sync no longer stay duplicated in `right_click.rs`.
 
 ### Deliverables
 
@@ -482,6 +485,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
