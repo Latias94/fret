@@ -513,6 +513,10 @@ real editors.
   branches through the private `canvas/widget/pointer_down_double_click.rs` seam, so repeated
   edge/background hit filtering and double-click orchestration no longer stay embedded in the
   retained pointer-down router.
+- `event_pointer_down.rs` now also routes close-button dispatch, pending right-click arming,
+  sticky-wire activation, and pan-start branches through the private
+  `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
+  embedded in the retained pointer-down router.
 
 ### Deliverables
 
@@ -563,6 +567,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

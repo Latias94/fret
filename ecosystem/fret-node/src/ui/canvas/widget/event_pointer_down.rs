@@ -37,15 +37,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        if button == MouseButton::Left {
-            if let Some(command) = self.close_command.clone() {
-                let rect = Self::close_button_rect(snapshot.pan, zoom);
-                if Self::rect_contains(rect, position) {
-                    cx.dispatch_command(command);
-                    cx.stop_propagation();
-                    return;
-                }
-            }
+        if pointer_down_gesture_start::handle_close_button_pointer_down(
+            self, cx, &snapshot, position, button, zoom,
+        ) {
+            return;
         }
 
         if button == MouseButton::Left
@@ -89,54 +84,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        if self.interaction.context_menu.is_some()
-            && context_menu::handle_context_menu_pointer_down(self, cx, position, button, zoom)
-        {
+        if pointer_down_gesture_start::handle_context_menu_pointer_down(
+            self, cx, position, button, zoom,
+        ) {
             return;
         }
 
-        if button == MouseButton::Right {
-            cancel::cancel_active_gestures(self, cx);
-            if snapshot.interaction.pan_on_drag.right {
-                self.interaction.pending_right_click =
-                    Some(crate::ui::canvas::state::PendingRightClick {
-                        start_pos: position,
-                    });
-                cx.capture_pointer(cx.node);
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-                return;
-            }
-        }
-
-        if sticky_wire::handle_sticky_wire_pointer_down(self, cx, &snapshot, position, button, zoom)
-        {
+        if pointer_down_gesture_start::handle_pending_right_click_start(
+            self, cx, &snapshot, position, button,
+        ) {
             return;
         }
 
-        if button == MouseButton::Left
-            && snapshot.interaction.space_to_pan
-            && self.interaction.pan_activation_key_held
-            && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
-        {
-            let _ = pan_zoom::begin_panning(
-                self,
-                cx,
-                &snapshot,
-                position,
-                fret_core::MouseButton::Left,
-            );
+        if pointer_down_gesture_start::handle_sticky_wire_pointer_down(
+            self, cx, &snapshot, position, button, zoom,
+        ) {
             return;
         }
 
-        if button == MouseButton::Middle && snapshot.interaction.pan_on_drag.middle {
-            let _ = pan_zoom::begin_panning(
-                self,
-                cx,
-                &snapshot,
-                position,
-                fret_core::MouseButton::Middle,
-            );
+        if pointer_down_gesture_start::handle_pan_start_pointer_down(
+            self, cx, &snapshot, position, button, modifiers,
+        ) {
             return;
         }
 

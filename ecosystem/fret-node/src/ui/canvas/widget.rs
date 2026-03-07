@@ -122,6 +122,7 @@ mod group_draw_order;
 mod group_resize;
 mod hit_test;
 mod pointer_down_double_click;
+mod pointer_down_gesture_start;
 use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_candidates;

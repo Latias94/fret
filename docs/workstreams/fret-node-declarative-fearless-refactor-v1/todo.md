@@ -448,6 +448,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     double-click branches through the private `canvas/widget/pointer_down_double_click.rs` seam,
     so repeated edge/background hit filtering and double-click orchestration no longer stay
     embedded in the retained pointer-down router.
+  - Progress: `event_pointer_down.rs` now also routes close-button dispatch, pending right-click
+    arming, sticky-wire activation, and pan-start branches through the private
+    `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
+    embedded in the retained pointer-down router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
