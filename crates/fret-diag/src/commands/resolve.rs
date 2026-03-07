@@ -166,6 +166,11 @@ pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(
     Ok(bundle_dir)
 }
 
+pub(crate) fn resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(path: &Path) -> PathBuf {
+    resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+}
+
 pub(crate) fn resolve_bundle_input_or_latest(
     src: &Path,
     default_out_dir: &Path,
