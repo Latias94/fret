@@ -189,56 +189,55 @@ fn view(
         _ => (DEFAULT_TARGET_PX_SIZE, "960×540"),
     };
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Tier A interop: external texture import (basics)").into_element(cx),
-        shadcn::CardDescription::new(
-            "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
-        )
-        .into_element(cx),
-    ])
+    let header = shadcn::CardHeader::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardTitle::new("Tier A interop: external texture import (basics)"),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardDescription::new(
+                "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
+            ),
+        );
+    })
     .into_element(cx);
 
     let controls = ui::h_flex(|cx| {
-        [
+        ui::children![
+            cx;
             shadcn::Button::new("640×360")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_640)
                 .disabled(preset == 0)
-                .test_id(TEST_ID_SIZE_640)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_640),
             shadcn::Button::new("960×540")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_960)
                 .disabled(preset == 1)
-                .test_id(TEST_ID_SIZE_960)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_960),
             shadcn::Button::new("1280×720")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_1280)
                 .disabled(preset == 2)
-                .test_id(TEST_ID_SIZE_1280)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .into_element(cx),
+                .orientation(shadcn::SeparatorOrientation::Vertical),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)
                 .disabled(fit == ViewportFit::Contain)
-                .test_id(TEST_ID_FIT_CONTAIN)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_CONTAIN),
             shadcn::Button::new("Cover")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_COVER)
                 .disabled(fit == ViewportFit::Cover)
-                .test_id(TEST_ID_FIT_COVER)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_COVER),
             shadcn::Button::new("Stretch")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_STRETCH)
                 .disabled(fit == ViewportFit::Stretch)
-                .test_id(TEST_ID_FIT_STRETCH)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_STRETCH),
         ]
     })
     .gap(Space::N2)
@@ -284,10 +283,9 @@ fn view(
         );
 
     let info = ui::h_flex(|cx| {
-        [
-            ui::text(format!("target_px_size preset: {preset_label}"))
-                .text_xs()
-                .into_element(cx),
+        ui::children![
+            cx;
+            ui::text(format!("target_px_size preset: {preset_label}")).text_xs(),
             target_w_badge,
             target_h_badge,
             fit_badge,
@@ -299,13 +297,12 @@ fn view(
     .wrap()
     .into_element(cx);
 
-    let hint = shadcn::Alert::new([
-        shadcn::AlertTitle::new("Key idea").into_element(cx),
+    let hint = shadcn::Alert::new(ui::children![
+        cx;
+        shadcn::AlertTitle::new("Key idea"),
         shadcn::AlertDescription::new(
-            "Instead of mutating the renderer's render target registry directly, this example emits explicit per-frame \
-EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps registry mutation staged through the runner.",
-        )
-        .into_element(cx),
+            "Instead of mutating the renderer's render target registry directly, this example emits explicit per-frame EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps registry mutation staged through the runner.",
+        ),
     ])
     .into_element(cx);
 
@@ -332,14 +329,19 @@ EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps regi
         .h_px(Px(420.0))
         .into_element(cx);
 
-    let content = ui::v_flex(|_cx| vec![controls, info, hint, surface_panel])
+    let content = ui::v_flex(|cx| ui::children![cx; controls, info, hint, surface_panel])
         .gap(Space::N3)
         .into_element(cx);
 
-    let card = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push(header);
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(content);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .h_full()
