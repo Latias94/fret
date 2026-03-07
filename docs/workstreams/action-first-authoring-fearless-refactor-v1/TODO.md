@@ -317,6 +317,8 @@ ID format:
     - `apps/fret-cookbook/examples/overlay_basics.rs`
     - `apps/fret-cookbook/examples/toast_basics.rs`
     - `apps/fret-cookbook/examples/query_basics.rs`
+    - `apps/fret-cookbook/examples/chart_interactions_basics.rs`
+    - `apps/fret-cookbook/examples/docking_basics.rs`
 
 ---
 
