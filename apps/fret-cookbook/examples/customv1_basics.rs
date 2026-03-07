@@ -133,11 +133,20 @@ fn panel_shell(cx: &mut ElementContext<'_, App>, title: &str, body: AnyElement) 
         .h_px(Px(320.0))
         .into_element(cx);
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![inner]).into_element(cx),
-    ])
+    shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new(title));
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(inner);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .into_element(cx)
@@ -155,12 +164,10 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
             .into_element(cx)
     };
 
-    let title = shadcn::Badge::new(label)
-        .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx);
+    let title = shadcn::Badge::new(label).variant(shadcn::BadgeVariant::Secondary);
 
     let row = ui::h_flex(|cx| {
-        [
+        ui::children![cx;
             swatch(cx, 0x0EA5E9),
             swatch(cx, 0xA855F7),
             swatch(cx, 0xF97316),
@@ -173,9 +180,9 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
     .into_element(cx);
 
     ui::v_flex(|cx| {
-        [
+        ui::children![cx;
             row,
-            ui::text()
+            ui::text("")
                 .text_sm()
                 .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                 .into_element(cx),
@@ -302,14 +309,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
 
     let toggle_label = if enabled { "Disable" } else { "Enable" };
     let toolbar = ui::h_flex(|cx| {
-        [
+        ui::children![cx;
             shadcn::Button::new(toggle_label)
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(CMD_TOGGLE)
                 .test_id(TEST_ID_TOGGLE)
                 .disabled(!caps_supported || effect_id.is_none())
-                .into_element(cx)
-                .test_id(TEST_ID_TOGGLE),
+                ,
             strength_low,
             strength_high,
             supported_badge,
@@ -360,12 +366,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
 
             panel_shell(cx, "CustomV1 (FilterContent)", layer)
         } else {
-            let alert = shadcn::Alert::new([
-                shadcn::AlertTitle::new("Effect not registered").into_element(cx),
+            let alert = shadcn::Alert::new(ui::children![cx;
+                shadcn::AlertTitle::new("Effect not registered"),
                 shadcn::AlertDescription::new(
                     "The WGSL program did not register (or GPU services are not ready).",
                 )
-                .into_element(cx),
+                ,
             ])
             .into_element(cx);
             panel_shell(cx, "CustomV1 (FilterContent)", alert)
@@ -375,33 +381,41 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
         panel_shell(cx, "CustomV1 (FilterContent)", disabled_body)
     };
 
-    let panels = ui::h_flex(|_cx| [plain, custom_panel])
+    let panels = ui::h_flex(|cx| ui::children![cx; plain, custom_panel])
         .gap(Space::N3)
         .items_stretch()
         .into_element(cx);
 
-    let body = ui::v_flex(|_cx| [toolbar, panels])
+    let body = ui::v_flex(|cx| ui::children![cx; toolbar, panels])
         .gap(Space::N4)
         .w_full()
         .into_element(cx);
 
-    let header = shadcn::CardHeader::new([
-        shadcn::CardTitle::new("CustomV1 basics").into_element(cx),
-        shadcn::CardDescription::new(
-            "Registers a bounded WGSL snippet at on_gpu_ready and applies EffectStep::CustomV1 (single pass).",
-        )
-        .into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new("CustomV1 basics"));
+                out.push_ui(
+                    cx,
+                    shadcn::CardDescription::new(
+                        "Registers a bounded WGSL snippet at on_gpu_ready and applies EffectStep::CustomV1 (single pass).",
+                    ),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|_cx, out| {
+                out.push(body);
+            }),
+        );
+    })
+    .ui()
+    .w_full()
+    .h_full()
+    .max_w(Px(1180.0))
     .into_element(cx);
-
-    let content = shadcn::CardContent::new([body]).into_element(cx);
-
-    let card = shadcn::Card::new([header, content])
-        .ui()
-        .w_full()
-        .h_full()
-        .max_w(Px(1180.0))
-        .into_element(cx);
 
     let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
@@ -423,8 +437,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(fret_cookbook::install_cookbook_defaults)
         .install_custom_effects(install_custom_effect)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }
