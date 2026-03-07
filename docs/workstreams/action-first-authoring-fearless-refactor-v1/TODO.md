@@ -322,6 +322,9 @@ ID format:
     - `apps/fret-cookbook/examples/hello_counter.rs`
     - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
     - `apps/fret-cookbook/examples/gizmo_basics.rs`
+    - `apps/fret-cookbook/examples/theme_switching_basics.rs`
+    - `apps/fret-cookbook/examples/simple_todo.rs`
+    - `apps/fret-cookbook/examples/drag_basics.rs`
 
 ---
 

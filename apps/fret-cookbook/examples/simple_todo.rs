@@ -96,10 +96,10 @@ impl View for SimpleTodoView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(done_count == 0)
             .action(act::ClearDone)
-            .into_element(cx)
-            .test_id(TEST_ID_CLEAR_DONE);
+            .test_id(TEST_ID_CLEAR_DONE)
+            .into_element(cx);
 
-        let header_actions = ui::h_flex(|_cx| [progress, clear_done_btn])
+        let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -107,17 +107,17 @@ impl View for SimpleTodoView {
         let add_btn = shadcn::Button::new("Add")
             .disabled(!add_enabled)
             .action(act::Add)
-            .into_element(cx)
-            .test_id(TEST_ID_ADD);
+            .test_id(TEST_ID_ADD)
+            .into_element(cx);
 
         let input = shadcn::Input::new(self.st.draft.clone())
             .a11y_label("New task")
-            .placeholder("Add a task…")
+            .placeholder("Add a task?")
             .submit_command(act::Add.into())
-            .into_element(cx)
-            .test_id(TEST_ID_DRAFT);
+            .test_id(TEST_ID_DRAFT)
+            .into_element(cx);
 
-        let input_row = ui::h_flex(|_cx| [input, add_btn])
+        let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
             .w_full()
@@ -133,23 +133,32 @@ impl View for SimpleTodoView {
         .into_element(cx)
         .test_id(TEST_ID_ROWS);
 
-        let content = ui::v_flex(|_cx| [input_row, rows])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx);
-
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Simple todo").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Model + typed actions + keyed lists (no selector/query).",
-                )
-                .into_element(cx),
-                header_actions,
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Simple todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Model + typed actions + keyed lists (no selector/query).",
+                        ),
+                    );
+                    out.push(header_actions);
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::v_flex(|cx| ui::children![cx; input_row, rows])
+                            .gap(Space::N4)
+                            .w_full()
+                            .into_element(cx),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
         .max_w(Px(560.0))
@@ -226,7 +235,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
         }))
         .into_element(cx);
 
-    ui::h_flex(|_cx| [checkbox, text])
+    ui::h_flex(|cx| ui::children![cx; checkbox, text])
         .gap(Space::N2)
         .items_center()
         .w_full()
