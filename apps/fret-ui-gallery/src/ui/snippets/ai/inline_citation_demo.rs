@@ -36,40 +36,49 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id("ui-ai-inline-citation-demo-selected");
 
     let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
-        ui_ai::SourceItem::new("src-0", "Example source A")
-            .url("https://example.com/a")
-            .excerpt("A short excerpt used for truncation and wrapping tests."),
-        ui_ai::SourceItem::new("src-1", "Example source B")
-            .url("https://example.com/b")
-            .excerpt("Another excerpt: this should wrap and remain readable."),
+        ui_ai::SourceItem::new("src-0", "Advances in Natural Language Processing")
+            .url("https://example.com/nlp-advances")
+            .description(
+                "A comprehensive study on recent developments in natural language processing technologies and their applications.",
+            )
+            .quote(
+                "The technology continues to evolve rapidly, with new breakthroughs being announced regularly.",
+            ),
+        ui_ai::SourceItem::new("src-1", "Breakthroughs in Machine Learning")
+            .url("https://mlnews.org/breakthroughs")
+            .description(
+                "An overview of the most significant machine learning breakthroughs in the past year.",
+            ),
+        ui_ai::SourceItem::new("src-2", "AI in Healthcare: Current Trends")
+            .url("https://healthai.com/trends")
+            .description(
+                "A report on how artificial intelligence is transforming healthcare and diagnostics.",
+            ),
     ]);
 
-    let c0 = ui_ai::InlineCitation::new("[1]")
-        .sources(sources.clone())
-        .source_id("src-0")
-        .select_source_model(selected_model.clone())
-        .test_id("ui-ai-inline-citation-demo-c0")
-        .into_element(cx);
-
-    let c1_ids: Arc<[Arc<str>]> =
-        Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]);
-    let c1 = ui_ai::InlineCitation::new("[2]")
+    let citation_text = cx.text(
+        "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
+    );
+    let citation_ids: Arc<[Arc<str>]> = Arc::from(vec![
+        Arc::<str>::from("src-0"),
+        Arc::<str>::from("src-1"),
+        Arc::<str>::from("src-2"),
+    ]);
+    let citation = ui_ai::InlineCitation::with_children([citation_text])
         .sources(sources)
-        .source_ids(c1_ids)
+        .source_ids(citation_ids)
         .select_source_model(selected_model)
-        .test_id("ui-ai-inline-citation-demo-c1")
+        .test_id("ui-ai-inline-citation-demo-citation")
         .into_element(cx);
 
-    let title = cx.text("InlineCitation (AI Elements): inline label + hover card + pager.");
-    let hint = cx.text("Hover the badge to preview sources; activation emits a selected source id. (Upstream composes InlineCitationText + HoverCard + Carousel header.)");
-    let row_label = cx.text("Citations:");
+    let intro = cx.text(
+        "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
+    );
+    let hint = cx.text(
+        "Hover the hostname badge to preview sources and page through them. Fret also exposes `select_source_model(...)` so apps can sync the citation with a nearby Sources block.",
+    );
 
-    let row = ui::h_flex(move |_cx| vec![row_label, c0, c1])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .gap(Space::N2)
-        .into_element(cx);
-
-    ui::v_flex(move |_cx| vec![title, marker, row, hint])
+    ui::v_flex(move |_cx| vec![intro, citation, marker, hint])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N4)
         .into_element(cx)

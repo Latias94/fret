@@ -121,60 +121,85 @@ fn inline_citation_source_body<H: UiHost>(
         _ => None,
     };
 
-    let quote = source.excerpt.clone().map(|excerpt| {
-        let style = typography::preset_text_style_with_overrides(
-            theme,
-            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-            Some(FontWeight::NORMAL),
-            Some(TextSlant::Italic),
-        );
-
-        let quote_text = cx.text_props(TextProps {
+    let description = source.description.clone().map(|description| {
+        cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
-            text: excerpt,
-            style: Some(style),
+            text: description,
+            style: Some(typography::preset_text_style_with_overrides(
+                theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Normal),
+            )),
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
             ink_overflow: Default::default(),
-        });
+        })
+    });
 
-        cx.container(
-            fret_ui::element::ContainerProps {
+    let quote = source
+        .quote
+        .clone()
+        .or_else(|| source.excerpt.clone())
+        .map(|quote| {
+            let style = typography::preset_text_style_with_overrides(
+                theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Italic),
+            );
+
+            let quote_text = cx.text_props(TextProps {
                 layout: decl_style::layout_style(
                     theme,
                     LayoutRefinement::default().w_full().min_w_0(),
                 ),
-                padding: fret_core::Edges {
-                    top: fret_core::Px(0.0),
-                    right: fret_core::Px(0.0),
-                    bottom: fret_core::Px(0.0),
-                    left: fret_core::Px(12.0),
-                }
-                .into(),
-                background: None,
-                background_paint: None,
-                shadow: None,
-                border: fret_core::Edges {
-                    top: fret_core::Px(0.0),
-                    right: fret_core::Px(0.0),
-                    bottom: fret_core::Px(0.0),
-                    left: fret_core::Px(2.0),
+                text: quote,
+                style: Some(style),
+                color: Some(theme.color_token("muted-foreground")),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            });
+
+            cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: decl_style::layout_style(
+                        theme,
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    ),
+                    padding: fret_core::Edges {
+                        top: fret_core::Px(0.0),
+                        right: fret_core::Px(0.0),
+                        bottom: fret_core::Px(0.0),
+                        left: fret_core::Px(12.0),
+                    }
+                    .into(),
+                    background: None,
+                    background_paint: None,
+                    shadow: None,
+                    border: fret_core::Edges {
+                        top: fret_core::Px(0.0),
+                        right: fret_core::Px(0.0),
+                        bottom: fret_core::Px(0.0),
+                        left: fret_core::Px(2.0),
+                    },
+                    border_color: Some(theme.color_token("muted")),
+                    border_paint: None,
+                    border_dash: None,
+                    focus_ring: None,
+                    focus_ring_always_paint: false,
+                    focus_border_color: None,
+                    focus_within: false,
+                    corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                    snap_to_device_pixels: false,
                 },
-                border_color: Some(theme.color_token("muted")),
-                border_paint: None,
-                border_dash: None,
-                focus_ring: None,
-                focus_ring_always_paint: false,
-                focus_border_color: None,
-                focus_within: false,
-                corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
-                snap_to_device_pixels: false,
-            },
-            move |_cx| vec![quote_text],
-        )
-    });
+                move |_cx| vec![quote_text],
+            )
+        });
 
     let source_block = ui::v_stack(move |_cx| {
         let mut out = Vec::new();
@@ -190,6 +215,9 @@ fn inline_citation_source_body<H: UiHost>(
 
     let body_inner = ui::v_stack(move |_cx| {
         let mut out = vec![source_block];
+        if let Some(description) = description {
+            out.push(description);
+        }
         if let Some(quote) = quote {
             out.push(quote);
         }
@@ -255,6 +283,13 @@ impl InlineCitation {
         }
     }
 
+    pub fn with_children<I>(children: I) -> InlineCitationWithChildren
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        Self::new(Arc::<str>::from("")).children(children)
+    }
+
     pub fn source_id(mut self, source_id: impl Into<Arc<str>>) -> Self {
         self.source_ids = vec![source_id.into()].into();
         self
@@ -309,12 +344,31 @@ impl InlineCitation {
         self
     }
 
+    pub fn children<I>(self, children: I) -> InlineCitationWithChildren
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        InlineCitationWithChildren {
+            root: self,
+            children: children.into_iter().collect(),
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let label = self.label.clone();
+        self.into_element_with_children(cx, move |cx| vec![cx.text(label.clone())])
+    }
+
+    fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement> + 'static,
+    ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         #[derive(Default)]
@@ -412,10 +466,22 @@ impl InlineCitation {
                 fallback: ColorFallback::ThemeHoverBackground,
             });
         }
-        let label = cx.text(self.label.clone());
+        let inline_children = children(cx);
+        let inline_label = match inline_children.len() {
+            0 => cx.text(self.label.clone()),
+            1 => inline_children
+                .into_iter()
+                .next()
+                .expect("inline citation inline child"),
+            _ => ui::h_row(move |_cx| inline_children)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .into_element(cx),
+        };
+
         let label = cx.container(
             decl_style::container_props(&theme, label_chrome, LayoutRefinement::default()),
-            move |_cx| vec![label],
+            move |_cx| vec![inline_label],
         );
         let label = if let Some(test_id) = label_test_id {
             cx.semantics(
@@ -698,6 +764,75 @@ impl InlineCitation {
     }
 }
 
+pub struct InlineCitationWithChildren {
+    root: InlineCitation,
+    children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for InlineCitationWithChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InlineCitationWithChildren")
+            .field("root", &self.root)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl InlineCitationWithChildren {
+    pub fn source_id(mut self, source_id: impl Into<Arc<str>>) -> Self {
+        self.root = self.root.source_id(source_id);
+        self
+    }
+
+    pub fn source_ids(mut self, source_ids: Arc<[Arc<str>]>) -> Self {
+        self.root = self.root.source_ids(source_ids);
+        self
+    }
+
+    pub fn sources(mut self, sources: Arc<[SourceItem]>) -> Self {
+        self.root = self.root.sources(sources);
+        self
+    }
+
+    pub fn on_open_url(mut self, on_open_url: fret_markdown::OnLinkActivate) -> Self {
+        self.root = self.root.on_open_url(on_open_url);
+        self
+    }
+
+    pub fn select_source_model(mut self, model: Model<Option<Arc<str>>>) -> Self {
+        self.root = self.root.select_source_model(model);
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.root = self.root.on_activate(on_activate);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.root = self.root.test_id(id);
+        self
+    }
+
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children.extend(children);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.root = self.root.refine_layout(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self { root, children } = self;
+        root.into_element_with_children(cx, move |_cx| children)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -857,5 +992,86 @@ mod tests {
                 Some(TextSlant::Italic),
             ))
         );
+    }
+
+    #[test]
+    fn inline_citation_source_body_renders_description_and_quote_separately() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let description =
+            "A comprehensive study on recent developments in natural language processing.";
+        let quote = "The technology continues to evolve rapidly.";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "citation-description-quote",
+            |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                inline_citation_source_body(
+                    cx,
+                    &theme,
+                    SourceItem::new("source-1", "Alpha source")
+                        .description(description)
+                        .quote(quote),
+                    None,
+                )
+            },
+        );
+
+        let theme = Theme::global(&app).clone();
+        let description_text =
+            find_text_by_content(&el, description).expect("inline citation description text");
+        let quote_text = find_text_by_content(&el, quote).expect("inline citation quote text");
+
+        assert_eq!(description_text.wrap, TextWrap::Word);
+        assert_eq!(description_text.overflow, TextOverflow::Clip);
+        assert_eq!(
+            description_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Normal),
+            ))
+        );
+        assert_eq!(
+            quote_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                Some(TextSlant::Italic),
+            ))
+        );
+    }
+
+    #[test]
+    fn inline_citation_with_children_renders_custom_inline_copy() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let inline_copy = "The technology continues to evolve rapidly, with new breakthroughs being announced regularly";
+        let sources: Arc<[SourceItem]> = Arc::from(vec![
+            SourceItem::new("source-1", "Advances in Natural Language Processing")
+                .url("https://example.com/nlp-advances"),
+        ]);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "citation-inline",
+            |cx| {
+                InlineCitation::with_children([cx.text(inline_copy)])
+                    .source_id("source-1")
+                    .sources(sources.clone())
+                    .into_element(cx)
+            },
+        );
+
+        let inline_text =
+            find_text_by_content(&el, inline_copy).expect("inline citation custom inline copy");
+        assert_eq!(inline_text.text.as_ref(), inline_copy);
     }
 }
