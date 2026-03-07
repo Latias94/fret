@@ -211,6 +211,14 @@ We need separate concepts for:
 - runtime tuning and cache behavior,
 - ephemeral widget-local interaction session state.
 
+Current landed boundary for the declarative paint-only path:
+
+- **store-backed**: committed graph document, undo/redo history, viewport, committed selection,
+  and draw order,
+- **local surface state**: active pan session, node-drag preview/arming, marquee preview/arming,
+  pending click-selection preview, hover target/anchor, and hit-test scratch/cache inputs,
+- **paint precedence**: active marquee preview > pending selection preview > committed selection.
+
 ### P4. The API surface needs a coherent controller facade
 
 The final reference architecture should let app authors ask for one clear surface for:

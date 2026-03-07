@@ -186,6 +186,7 @@ struct DragState {
 }
 
 #[derive(Debug, Clone)]
+/// Local surface-state for marquee preview/arming; never persisted into `NodeGraphViewState`.
 struct MarqueeDragState {
     start_screen: Point,
     current_screen: Point,
@@ -203,6 +204,8 @@ enum NodeDragPhase {
 }
 
 #[derive(Debug, Clone)]
+/// Local surface-state for node-drag preview/arming; committed graph edits still flow through
+/// controller/store transactions.
 struct NodeDragState {
     start_screen: Point,
     current_screen: Point,
@@ -250,6 +253,7 @@ impl NodeDragState {
 }
 
 #[derive(Debug, Clone)]
+/// Local click-selection preview that should only override paint until commit/cancel time.
 struct PendingSelectionState {
     nodes: Arc<[crate::core::NodeId]>,
     clear_edges: bool,
@@ -1045,6 +1049,24 @@ fn build_marquee_preview_selected_nodes(
     selected_nodes.sort();
     selected_nodes.dedup();
     Arc::from(selected_nodes.into_boxed_slice())
+}
+
+/// Resolves the effective node selection for paint/layout only.
+///
+/// Boundary contract:
+/// - committed selection lives in `NodeGraphViewState`,
+/// - local preview state may temporarily override it,
+/// - precedence is: active marquee preview > pending click-selection preview > committed selection.
+fn effective_selected_nodes_for_paint(
+    view_state: &NodeGraphViewState,
+    marquee: Option<&MarqueeDragState>,
+    pending_selection: Option<&PendingSelectionState>,
+) -> Vec<crate::core::NodeId> {
+    marquee
+        .filter(|marquee| marquee.active)
+        .map(|marquee| marquee.preview_selected_nodes.to_vec())
+        .or_else(|| pending_selection.map(|pending| pending.nodes.to_vec()))
+        .unwrap_or_else(|| view_state.selected_nodes.clone())
 }
 
 fn build_click_selection_preview_nodes(
@@ -2451,16 +2473,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         .get_model_copied(&hovered_node, Invalidation::Paint)
         .unwrap_or(None);
     let hovered = hovered_node_value.is_some();
-    let effective_selected_nodes = marquee_value
-        .as_ref()
-        .filter(|marquee| marquee.active)
-        .map(|marquee| marquee.preview_selected_nodes.to_vec())
-        .or_else(|| {
-            pending_selection_value
-                .as_ref()
-                .map(|pending| pending.nodes.to_vec())
-        })
-        .unwrap_or_else(|| view_value.selected_nodes.clone());
+    let effective_selected_nodes = effective_selected_nodes_for_paint(
+        &view_value,
+        marquee_value.as_ref(),
+        pending_selection_value.as_ref(),
+    );
     let selected_nodes_len = effective_selected_nodes.len();
     let portal_fit_count = cx
         .app
@@ -3780,7 +3797,8 @@ mod tests {
         build_node_drag_transaction, commit_graph_transaction,
         commit_marquee_selection_action_host, commit_node_drag_transaction,
         commit_pending_selection_action_host, complete_left_pointer_release_action_host,
-        complete_node_drag_release_action_host, escape_cancel_declarative_interactions_action_host,
+        complete_node_drag_release_action_host, effective_selected_nodes_for_paint,
+        escape_cancel_declarative_interactions_action_host,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
         handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
@@ -6320,6 +6338,68 @@ mod tests {
         );
 
         assert_eq!(preview.as_ref(), &[node_b]);
+    }
+
+    #[test]
+    fn effective_selected_nodes_for_paint_prefers_active_marquee_preview() {
+        let node_a = NodeId::from_u128(9001);
+        let node_b = NodeId::from_u128(9002);
+        let node_c = NodeId::from_u128(9003);
+        let view_state = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: true,
+            clear_groups: true,
+        };
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(10.0), Px(10.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([node_c]),
+        };
+
+        let effective =
+            effective_selected_nodes_for_paint(&view_state, Some(&marquee), Some(&pending));
+
+        assert_eq!(effective, vec![node_c]);
+    }
+
+    #[test]
+    fn effective_selected_nodes_for_paint_falls_back_from_inactive_marquee_to_pending_then_view() {
+        let node_a = NodeId::from_u128(9011);
+        let node_b = NodeId::from_u128(9012);
+        let view_state = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..NodeGraphViewState::default()
+        };
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+        let inactive_marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(10.0), Px(10.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([NodeId::from_u128(9013)]),
+        };
+
+        let from_pending = effective_selected_nodes_for_paint(
+            &view_state,
+            Some(&inactive_marquee),
+            Some(&pending),
+        );
+        let from_view = effective_selected_nodes_for_paint(&view_state, None, None);
+
+        assert_eq!(from_pending, vec![node_b]);
+        assert_eq!(from_view, vec![node_a]);
     }
 
     #[test]

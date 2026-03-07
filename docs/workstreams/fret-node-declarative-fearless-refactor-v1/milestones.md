@@ -234,6 +234,9 @@ points rather than direct graph mutation.
   - Declarative pointer-move now dispatches through explicit node-drag, marquee, and hover
     helpers, with focused tests covering drag activation, canceled drag cleanup, marquee
     preview/cancel, and hover hit updates.
+  - The local-vs-store boundary is now explicit for selection paint/layout: active marquee preview
+    overrides pending click-selection preview, which overrides committed store-backed selection;
+    pan/node/marquee/hover sessions remain local until commit/cancel time.
   - Declarative left-button pointer-up now dispatches through explicit node-drag,
     pending-selection, and marquee release helpers, with focused tests covering branch
     cleanup and commit semantics.

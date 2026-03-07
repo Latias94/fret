@@ -282,7 +282,12 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.
-- [ ] Decide which interaction pieces remain local surface state vs store-backed editor state.
+- [x] Decide which interaction pieces remain local surface state vs store-backed editor state.
+  - Landed boundary: committed graph edits + viewport/selection/draw-order stay store-backed,
+    while pan-drag / node-drag preview / marquee preview / pending click-selection / hover /
+    hit-test scratch stay local to the declarative paint-only surface until commit/cancel.
+  - Landed paint precedence helper: active marquee preview overrides pending selection preview,
+    which overrides committed selection for paint/layout only.
 - [ ] Ensure new declarative interaction work does not regress cache discipline.
 - [ ] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only
       counters.

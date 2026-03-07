@@ -54,6 +54,9 @@ copy.
   `incomers`, `connected_edges`, `port_connections`, `node_connections`, `undo`, and `redo`.
 - Treat `binding.controller()` as the advanced escape hatch for helpers that are not yet surfaced on
   the binding or for retained/compat wiring.
+- Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
+  pending click-selection preview, hover targets, and live drag arming/preview are not persisted
+  into `NodeGraphViewState` until commit/cancel time.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
   commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.
