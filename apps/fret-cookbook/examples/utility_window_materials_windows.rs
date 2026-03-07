@@ -170,35 +170,29 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     let header = shadcn::CardHeader::build(|cx, out| {
         out.push_ui(cx, shadcn::CardTitle::new(title));
         out.push_ui(cx, shadcn::CardDescription::new(description));
-    })
-    .into_element(cx);
+    });
 
     let content = ui::v_flex(|cx| {
         let platform_line = ui::text(platform_text)
             .font_monospace()
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
-            .into_element(cx)
             .test_id(TEST_ID_PLATFORM_TEXT);
         let style_line = ui::text(style_text)
             .font_monospace()
             .text_sm()
-            .into_element(cx)
             .test_id(TEST_ID_STYLE_TEXT);
         let caps_line = ui::text(caps_text)
             .font_monospace()
             .text_sm()
-            .text_color(ColorRef::Color(color_muted_foreground))
-            .into_element(cx);
+            .text_color(ColorRef::Color(color_muted_foreground));
         let wgpu_line = ui::text(wgpu_text)
             .font_monospace()
             .text_sm()
-            .text_color(ColorRef::Color(color_muted_foreground))
-            .into_element(cx);
+            .text_color(ColorRef::Color(color_muted_foreground));
         let status_line = ui::text(status)
             .text_sm()
-            .text_color(ColorRef::Color(color_muted_foreground))
-            .into_element(cx);
+            .text_color(ColorRef::Color(color_muted_foreground));
 
         let buttons_children = if is_windows {
             ui::children![
@@ -251,9 +245,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             ]
         };
 
-        let buttons = ui::h_flex(|_cx| buttons_children)
-            .gap(Space::N2)
-            .into_element(cx);
+        let buttons = ui::h_flex(|_cx| buttons_children).gap(Space::N2);
 
         ui::children![
             cx;
@@ -265,15 +257,14 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             buttons,
         ]
     })
-    .gap(Space::N3)
-    .into_element(cx);
+    .gap(Space::N3);
 
     let surface = shadcn::Card::build(|cx, out| {
-        out.push(header);
+        out.push_ui(cx, header);
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(content);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, content);
             }),
         );
     })

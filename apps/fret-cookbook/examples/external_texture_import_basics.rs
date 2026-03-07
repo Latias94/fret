@@ -200,8 +200,7 @@ fn view(
                 "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
             ),
         );
-    })
-    .into_element(cx);
+    });
 
     let controls = ui::h_flex(|cx| {
         ui::children![
@@ -242,8 +241,7 @@ fn view(
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
     let target_w_badge = shadcn::Badge::new(format!("target.w: {target_w:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
@@ -294,8 +292,7 @@ fn view(
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
     let hint = shadcn::Alert::new(ui::children![
         cx;
@@ -303,8 +300,7 @@ fn view(
         shadcn::AlertDescription::new(
             "Instead of mutating the renderer's render target registry directly, this example emits explicit per-frame EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps registry mutation staged through the runner.",
         ),
-    ])
-    .into_element(cx);
+    ]);
 
     let mut surface_style = LayoutStyle::default();
     surface_style.size.width = Length::Fill;
@@ -326,19 +322,17 @@ fn view(
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
-        .h_px(Px(420.0))
-        .into_element(cx);
+        .h_px(Px(420.0));
 
-    let content = ui::v_flex(|cx| ui::children![cx; controls, info, hint, surface_panel])
-        .gap(Space::N3)
-        .into_element(cx);
+    let content =
+        ui::v_flex(|cx| ui::children![cx; controls, info, hint, surface_panel]).gap(Space::N3);
 
     let card = shadcn::Card::build(|cx, out| {
-        out.push(header);
+        out.push_ui(cx, header);
         out.push_ui(
             cx,
-            shadcn::CardContent::build(|_cx, out| {
-                out.push(content);
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, content);
             }),
         );
     })

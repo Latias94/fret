@@ -332,6 +332,7 @@ ID format:
   - Additional 2026-03-07 follow-up: `icons_and_assets_basics` now keeps the page header, card shells, image/svg status rows, and the final content stack on the late-landing builder path, while `customv1_basics` folds `panel_shell(...)`, the preview/body stacks, and the top-level card body into `push_ui()` so only semantics-driven controls and the final scaffold boundary still land eagerly.
   - Additional 2026-03-07 follow-up: `simple_todo`, `assets_reload_epoch_basics`, and `embedded_viewport_basics` now keep their toolbar/header rows, card content stacks, and most panel shells on the builder path too; the remaining eager landings are largely the final scaffold/card boundaries plus semantics- or host-bound nodes (progress/meter badges, viewport surfaces, and inline asset error text).
   - Additional 2026-03-07 follow-up: `undo_basics`, `hello_counter`, and `drop_shadow_basics` now keep most shortcut/action rows, header/content stacks, and staged grid composition on the late-landing path as well; their remaining eager boundaries are mostly semantics-heavy value badges, effect-layer/card footer boundaries, and the final scaffold surface.
+  - Additional 2026-03-07 follow-up: `external_texture_import_basics` and `utility_window_materials_windows` now keep their card headers, control/content stacks, and most inline status text/buttons on the builder path too; their remaining eager boundaries are mainly semantics meters, viewport/material root surfaces, and final scaffold/card shells.
 
 ---
 
