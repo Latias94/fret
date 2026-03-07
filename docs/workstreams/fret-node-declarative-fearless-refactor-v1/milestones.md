@@ -408,6 +408,10 @@ real editors.
   `canvas/widget/menu_session.rs`, and `SearcherState` now records explicit `SearcherRowsMode`
   policy so flat-vs-catalog presentation is no longer inferred indirectly from
   `ContextMenuTarget` variants when opening or rebuilding overlay state.
+- Insert-node candidate sourcing now also has a named private seam,
+  `canvas/widget/insert_candidates.rs`, so background / connection / edge pickers all share the
+  same `Reroute` prepend contract and candidate-to-context-menu mapping instead of keeping those
+  list-building rules scattered across searcher and edge-insert openers.
 
 ### Deliverables
 
@@ -434,6 +438,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/screen_space_placement.rs`
 - `ecosystem/fret-node/src/ui/canvas/state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_candidates.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`

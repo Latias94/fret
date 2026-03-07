@@ -98,23 +98,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     pub(super) fn open_insert_node_picker<H: UiHost>(&mut self, host: &mut H, at: CanvasPoint) {
-        let candidates: Vec<InsertNodeCandidate> = {
-            let presenter = &mut *self.presenter;
-            self.graph
-                .read_ref(host, |graph| presenter.list_insertable_nodes(graph))
-                .ok()
-                .unwrap_or_default()
-        };
-
-        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
-        menu_candidates.push(InsertNodeCandidate {
-            kind: NodeKindKey::new(REROUTE_KIND),
-            label: Arc::<str>::from("Reroute"),
-            enabled: true,
-            template: None,
-            payload: serde_json::Value::Null,
-        });
-        menu_candidates.extend(candidates);
+        let menu_candidates = self.list_background_insert_candidates(host);
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
@@ -139,25 +123,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         from: PortId,
         at: CanvasPoint,
     ) {
-        let candidates: Vec<InsertNodeCandidate> = {
-            let presenter = &mut *self.presenter;
-            self.graph
-                .read_ref(host, |graph| {
-                    presenter.list_insertable_nodes_for_connection(graph, from)
-                })
-                .ok()
-                .unwrap_or_default()
-        };
-
-        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
-        menu_candidates.push(InsertNodeCandidate {
-            kind: NodeKindKey::new(REROUTE_KIND),
-            label: Arc::<str>::from("Reroute"),
-            enabled: true,
-            template: None,
-            payload: serde_json::Value::Null,
-        });
-        menu_candidates.extend(candidates);
+        let menu_candidates = self.list_connection_insert_candidates(host, from);
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();

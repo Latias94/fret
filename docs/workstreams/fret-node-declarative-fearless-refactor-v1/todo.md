@@ -343,6 +343,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/menu_session.rs` seam, and `SearcherState` now carries explicit
     `SearcherRowsMode` policy instead of inferring flat-vs-catalog row building from
     `ContextMenuTarget` branches.
+  - Progress: insert-node family candidate sourcing now routes through the private
+    `canvas/widget/insert_candidates.rs` seam, so background / connection / edge pickers share the
+    same `Reroute` prepend rule and edge-insert menus reuse one candidate-to-menu-item mapping
+    instead of rebuilding those lists in each opener.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

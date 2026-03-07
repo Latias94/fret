@@ -5,13 +5,10 @@ pub(super) use fret_ui::UiHost;
 pub(super) use fret_ui::retained_bridge::EventCx;
 
 pub(super) use crate::REROUTE_KIND;
-pub(super) use crate::core::{CanvasPoint, EdgeId, NodeKindKey};
+pub(super) use crate::core::{CanvasPoint, EdgeId};
 pub(super) use crate::ops::GraphOp;
 pub(super) use crate::rules::{ConnectDecision, DiagnosticSeverity};
-pub(super) use crate::ui::presenter::{
-    InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
-};
-
 pub(super) use crate::ui::canvas::state::ContextMenuTarget;
+pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
 pub(super) use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};

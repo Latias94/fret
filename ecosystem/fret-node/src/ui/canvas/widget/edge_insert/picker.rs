@@ -7,26 +7,7 @@ pub(in super::super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanv
     edge: EdgeId,
     invoked_at: Point,
 ) {
-    let candidates: Vec<InsertNodeCandidate> = {
-        let presenter = &mut *canvas.presenter;
-        canvas
-            .graph
-            .read_ref(host, |graph| {
-                presenter.list_insertable_nodes_for_edge(graph, edge)
-            })
-            .ok()
-            .unwrap_or_default()
-    };
-
-    let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
-    menu_candidates.push(InsertNodeCandidate {
-        kind: NodeKindKey::new(REROUTE_KIND),
-        label: Arc::<str>::from("Reroute"),
-        enabled: true,
-        template: None,
-        payload: serde_json::Value::Null,
-    });
-    menu_candidates.extend(candidates);
+    let menu_candidates = canvas.list_edge_insert_candidates(host, edge);
 
     let snapshot = canvas.sync_view_state(host);
     let bounds = canvas.interaction.last_bounds.unwrap_or_default();
