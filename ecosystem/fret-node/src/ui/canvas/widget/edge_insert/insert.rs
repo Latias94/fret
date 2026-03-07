@@ -15,34 +15,18 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
 
     canvas.record_recent_kind(&candidate.kind);
 
-    let outcome = {
-        let at = insert_candidate_canvas_point(canvas, &candidate, invoked_at);
-
-        let presenter = &mut *canvas.presenter;
-        canvas
-            .graph
-            .read_ref(cx.app, |graph| {
-                let plan = presenter.plan_split_edge_candidate(graph, edge, &candidate, at);
-                match plan.decision {
-                    ConnectDecision::Accept => Outcome::Apply(plan.ops),
-                    ConnectDecision::Reject => {
-                        NodeGraphCanvasWith::<M>::toast_from_diagnostics(&plan.diagnostics)
-                            .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                            .unwrap_or_else(|| {
-                                Outcome::Reject(
-                                    DiagnosticSeverity::Error,
-                                    Arc::<str>::from(format!(
-                                        "node insertion was rejected: {}",
-                                        candidate.kind.0
-                                    )),
-                                )
-                            })
-                    }
-                }
-            })
-            .ok()
-            .unwrap_or(Outcome::Ignore)
-    };
+    let outcome = canvas
+        .plan_canvas_split_edge_insert_candidate(cx.app, edge, &candidate, invoked_at)
+        .map(|result| match result {
+            Ok(ops) => Outcome::Apply(ops),
+            Err(diags) => {
+                let (sev, msg) = NodeGraphCanvasWith::<M>::split_edge_candidate_rejection_toast(
+                    &candidate, &diags,
+                );
+                Outcome::Reject(sev, msg)
+            }
+        })
+        .unwrap_or(Outcome::Ignore);
 
     match outcome {
         Outcome::Apply(ops) => {

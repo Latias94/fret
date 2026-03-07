@@ -30,19 +30,8 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let mut applied = false;
 
     if let Some(edge_id) = edge_hit {
-        let at = insert_candidate_canvas_point(canvas, &candidate, pos);
-        let planned = canvas
-            .graph
-            .read_ref(cx.app, |graph| {
-                let presenter = &mut *canvas.presenter;
-                let plan = presenter.plan_split_edge_candidate(graph, edge_id, &candidate, at);
-                match plan.decision {
-                    ConnectDecision::Accept => Some(Ok(plan.ops)),
-                    ConnectDecision::Reject => Some(Err(plan.diagnostics)),
-                }
-            })
-            .ok()
-            .flatten();
+        let planned =
+            canvas.plan_canvas_split_edge_insert_candidate(cx.app, edge_id, &candidate, pos);
 
         if let Some(Ok(ops)) = planned {
             let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
@@ -51,9 +40,9 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 canvas.select_inserted_node(cx.app, node_id);
             }
         } else if let Some(Err(diags)) = planned {
-            if let Some((sev, msg)) = NodeGraphCanvasWith::<M>::toast_from_diagnostics(&diags) {
-                canvas.show_toast(cx.app, cx.window, sev, msg);
-            }
+            let (sev, msg) =
+                NodeGraphCanvasWith::<M>::split_edge_candidate_rejection_toast(&candidate, &diags);
+            canvas.show_toast(cx.app, cx.window, sev, msg);
         }
     }
 

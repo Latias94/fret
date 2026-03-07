@@ -56,6 +56,61 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .ok()
     }
 
+    pub(super) fn plan_split_edge_insert_candidate_with_graph(
+        presenter: &mut dyn NodeGraphPresenter,
+        graph: &Graph,
+        edge_id: EdgeId,
+        candidate: &InsertNodeCandidate,
+        at: CanvasPoint,
+    ) -> Result<Vec<GraphOp>, Vec<Diagnostic>> {
+        let plan = presenter.plan_split_edge_candidate(graph, edge_id, candidate, at);
+        match plan.decision {
+            ConnectDecision::Accept => Ok(plan.ops),
+            ConnectDecision::Reject => Err(plan.diagnostics),
+        }
+    }
+
+    pub(super) fn plan_canvas_split_edge_insert_candidate<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        edge_id: EdgeId,
+        candidate: &InsertNodeCandidate,
+        invoked_at: Point,
+    ) -> Option<Result<Vec<GraphOp>, Vec<Diagnostic>>> {
+        let at = insert_candidate_canvas_point(self, candidate, invoked_at);
+        let presenter = &mut *self.presenter;
+        self.graph
+            .read_ref(host, |graph| {
+                Self::plan_split_edge_insert_candidate_with_graph(
+                    presenter, graph, edge_id, candidate, at,
+                )
+            })
+            .ok()
+    }
+
+    pub(super) fn can_split_edge_insert_candidate<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        edge_id: EdgeId,
+        candidate: &InsertNodeCandidate,
+        invoked_at: Point,
+    ) -> Option<bool> {
+        self.plan_canvas_split_edge_insert_candidate(host, edge_id, candidate, invoked_at)
+            .map(|result| result.is_ok())
+    }
+
+    pub(super) fn split_edge_candidate_rejection_toast(
+        candidate: &InsertNodeCandidate,
+        diags: &[Diagnostic],
+    ) -> (DiagnosticSeverity, Arc<str>) {
+        Self::toast_from_diagnostics(diags).unwrap_or_else(|| {
+            (
+                DiagnosticSeverity::Error,
+                Arc::<str>::from(format!("node insertion was rejected: {}", candidate.kind.0)),
+            )
+        })
+    }
+
     pub(super) fn select_inserted_node<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -74,6 +129,7 @@ mod tests {
     use super::super::insert_candidates::reroute_insert_candidate;
     use super::*;
     use crate::core::{EdgeId, GroupId, NodeKindKey};
+    use crate::rules::{DiagnosticSeverity, DiagnosticTarget};
     use serde_json::Value;
 
     fn regular_candidate() -> InsertNodeCandidate {
@@ -120,5 +176,41 @@ mod tests {
         select_inserted_node_in_view_state(&mut view_state, node_id);
 
         assert_eq!(view_state.draw_order, vec![other, node_id]);
+    }
+
+    #[test]
+    fn split_edge_candidate_rejection_toast_uses_first_diagnostic_message() {
+        let candidate = regular_candidate();
+        let toast = NodeGraphCanvasWith::<NoopNodeGraphCanvasMiddleware>::split_edge_candidate_rejection_toast(
+            &candidate,
+            &[Diagnostic {
+                key: "insert_rejected".into(),
+                severity: DiagnosticSeverity::Warning,
+                target: DiagnosticTarget::Graph,
+                message: "insert was rejected".into(),
+                fixes: Vec::new(),
+            }],
+        );
+
+        assert_eq!(toast.0, DiagnosticSeverity::Warning);
+        assert_eq!(&*toast.1, "insert was rejected");
+    }
+
+    #[test]
+    fn split_edge_candidate_rejection_toast_falls_back_to_candidate_kind() {
+        let candidate = regular_candidate();
+        let toast = NodeGraphCanvasWith::<NoopNodeGraphCanvasMiddleware>::split_edge_candidate_rejection_toast(
+            &candidate,
+            &[Diagnostic {
+                key: "insert_rejected".into(),
+                severity: DiagnosticSeverity::Info,
+                target: DiagnosticTarget::Graph,
+                message: String::new(),
+                fixes: Vec::new(),
+            }],
+        );
+
+        assert_eq!(toast.0, DiagnosticSeverity::Error);
+        assert_eq!(&*toast.1, "node insertion was rejected: regular");
     }
 }

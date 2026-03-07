@@ -174,7 +174,7 @@ mod wire_math;
 
 use edge_path_ctx::EdgePathContext;
 use insert_candidates::build_insert_candidate_menu_items;
-use insert_execution::{insert_candidate_canvas_point, is_reroute_insert_candidate};
+use insert_execution::is_reroute_insert_candidate;
 use menu_session::{build_context_menu_state, build_searcher_rows, build_searcher_state};
 use overlay_hit::{
     context_menu_rect_at, context_menu_size_at_zoom, hit_context_menu_item, hit_searcher_row,

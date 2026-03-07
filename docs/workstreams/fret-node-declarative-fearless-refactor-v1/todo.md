@@ -355,6 +355,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/split_edge_execution.rs` seam, so edge context actions, double-click gestures, and
     command-open flows share one reroute split planner, one rejection-toast fallback, and one
     post-commit selection path instead of repeating that edge-specific transaction wiring inline.
+  - Progress: the private `canvas/widget/insert_execution.rs` seam now also owns split-edge
+    candidate preview/plan helpers, so edge-insert direct actions and insert-node drag preview/drop
+    reuse one candidate-aware split planner and one rejection-toast fallback instead of re-deriving
+    reroute positions and `plan_split_edge_candidate` branches in each entrypoint.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

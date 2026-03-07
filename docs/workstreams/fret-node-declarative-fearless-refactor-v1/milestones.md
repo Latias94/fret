@@ -420,6 +420,10 @@ real editors.
   `canvas/widget/split_edge_execution.rs`, so edge context actions, double-click gestures, and
   command-open flows all share one reroute split planner, one rejection-toast fallback, and one
   post-commit selection path instead of keeping that edge transaction wiring repeated inline.
+- The private insert execution seam now also owns split-edge candidate preview/plan helpers,
+  `canvas/widget/insert_execution.rs`, so edge-insert direct actions plus insert-node drag preview
+  and drop flows reuse one candidate-aware split planner and one rejection-toast fallback instead of
+  re-deriving reroute positions and `plan_split_edge_candidate` branches per entrypoint.
 
 ### Deliverables
 
