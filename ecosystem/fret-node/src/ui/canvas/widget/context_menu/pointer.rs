@@ -12,15 +12,7 @@ pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMidd
     match button {
         MouseButton::Left => {
             if let Some(ix) = hit_context_menu_item(&canvas.style, &menu, position, zoom) {
-                let item = menu.items.get(ix).cloned();
-                let target = menu.target.clone();
-                let invoked_at = menu.invoked_at;
-                let candidates = menu.candidates.clone();
-                if let Some(item) = item
-                    && item.enabled
-                {
-                    canvas.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
-                }
+                canvas.activate_context_menu_selection(cx, &menu, ix);
             } else {
             }
             cx.stop_propagation();

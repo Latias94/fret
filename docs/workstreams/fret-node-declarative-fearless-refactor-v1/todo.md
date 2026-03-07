@@ -374,6 +374,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: edge-insert picker activation now also routes through the `canvas/widget/edge_insert`
     seam, so `context_menu/activate.rs` no longer owns candidate lookup plus handoff for the
     edge-insert searcher target.
+  - Progress: keyboard and pointer menu-item activation now route through the private
+    `canvas/widget/context_menu/selection_activation.rs` seam, so enabled-item lookup and payload
+    cloning no longer stay duplicated between `context_menu/input.rs` and
+    `context_menu/pointer.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
@@ -421,7 +425,6 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 

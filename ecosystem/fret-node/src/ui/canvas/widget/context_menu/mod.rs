@@ -6,6 +6,7 @@ mod connection_execution;
 mod edge_execution;
 mod input;
 mod pointer;
+mod selection_activation;
 mod target_selection;
 
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(

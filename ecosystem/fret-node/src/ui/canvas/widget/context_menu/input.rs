@@ -64,15 +64,7 @@ pub(super) fn handle_context_menu_key_down<H: UiHost, M: NodeGraphCanvasMiddlewa
         }
         fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
             let ix = menu.active_item.min(menu.items.len().saturating_sub(1));
-            let item = menu.items.get(ix).cloned();
-            let target = menu.target.clone();
-            let invoked_at = menu.invoked_at;
-            let candidates = menu.candidates.clone();
-            if let Some(item) = item
-                && item.enabled
-            {
-                canvas.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
-            }
+            canvas.activate_context_menu_selection(cx, &menu, ix);
             cx.stop_propagation();
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
