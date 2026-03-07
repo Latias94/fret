@@ -20,6 +20,80 @@ fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) 
     env.push((key.to_string(), value.to_string()));
 }
 
+fn maybe_expand_suite_manifest_input(
+    workspace_root: &Path,
+    input: &Path,
+) -> Result<Option<Vec<PathBuf>>, String> {
+    #[derive(Debug, serde::Deserialize)]
+    struct SuiteManifestV1 {
+        schema_version: u64,
+        kind: String,
+        scripts: Vec<String>,
+    }
+
+    let manifest_path = if input.is_dir() {
+        ["suite.json", "_suite.json"]
+            .into_iter()
+            .map(|name| input.join(name))
+            .find(|path| path.is_file())
+    } else if input
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| matches!(name, "suite.json" | "_suite.json"))
+    {
+        Some(input.to_path_buf())
+    } else {
+        None
+    };
+
+    let Some(manifest_path) = manifest_path else {
+        return Ok(None);
+    };
+
+    let bytes = std::fs::read(&manifest_path).map_err(|e| e.to_string())?;
+    let manifest: SuiteManifestV1 = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    if manifest.schema_version != 1 {
+        return Err(format!(
+            "invalid suite manifest schema_version (expected 1): {}",
+            manifest.schema_version
+        ));
+    }
+    if manifest.kind != "diag_script_suite_manifest" {
+        return Err(format!(
+            "invalid suite manifest kind (expected diag_script_suite_manifest): {:?}",
+            manifest.kind
+        ));
+    }
+    if manifest.scripts.is_empty() {
+        return Err(format!(
+            "suite manifest contains no scripts: {}",
+            manifest_path.display()
+        ));
+    }
+
+    let mut out = Vec::with_capacity(manifest.scripts.len());
+    for raw in manifest.scripts {
+        if raw.trim().is_empty() {
+            return Err(format!(
+                "suite manifest contains an empty script path: {}",
+                manifest_path.display()
+            ));
+        }
+        let resolved = resolve_path(workspace_root, PathBuf::from(raw));
+        if !resolved.exists() {
+            return Err(format!(
+                "suite manifest script path does not exist: {} (manifest: {})",
+                resolved.display(),
+                manifest_path.display()
+            ));
+        }
+        out.push(resolved);
+    }
+    out.sort();
+    out.dedup();
+    Ok(Some(out))
+}
+
 fn resolve_builtin_suite_scripts(
     workspace_root: &Path,
     suite_name: &str,
@@ -567,6 +641,18 @@ hint: list suites via `fretboard diag list suites`"
         scripts.dedup();
     }
 
+    let mut expanded_suite_manifest_inputs: Vec<PathBuf> = Vec::new();
+    for path in scripts {
+        if let Some(expanded) = maybe_expand_suite_manifest_input(&workspace_root, &path)? {
+            expanded_suite_manifest_inputs.extend(expanded);
+        } else {
+            expanded_suite_manifest_inputs.push(path);
+        }
+    }
+    let mut scripts = expanded_suite_manifest_inputs;
+    scripts.sort();
+    scripts.dedup();
+
     if scripts.is_empty() {
         return Err("suite produced no scripts".to_string());
     }
@@ -727,6 +813,200 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         .into_iter()
         .map(|p| resolve_path(&workspace_root, p))
         .collect();
+
+    if let [single_src] = scripts.as_slice() {
+        let mut external_no_diag_checks = checks_for_post_run_template.clone();
+        external_no_diag_checks.check_hello_world_compare_idle_present_max_delta =
+            external_no_diag_checks
+                .check_hello_world_compare_idle_present_max_delta
+                .or(diag_policy::hello_world_compare_script_idle_present_max_delta(single_src));
+        let use_external_no_diag_single_script_suite = launch.is_some()
+            && !reuse_launch
+            && !keep_open
+            && !use_devtools_ws
+            && !suite_wants_screenshots
+            && !launch_write_bundle_json
+            && bundle_doctor_mode == BundleDoctorMode::Off
+            && resolved_suite_prewarm_scripts.is_empty()
+            && resolved_suite_prelude_scripts.is_empty()
+            && diag_policy::hello_world_compare_script_prefers_external_no_diag_post_run(
+                single_src,
+            )
+            && !crate::registry::checks::CheckRegistry::builtin()
+                .wants_bundle_artifact(&external_no_diag_checks);
+
+        if use_external_no_diag_single_script_suite {
+            let script_key = normalize_repo_relative_path(&workspace_root, single_src);
+            let resolved_script_path = resolved_out_dir.join("script.json");
+            let mut external_no_diag_launch_env: Vec<(String, String)> = launch_env
+                .iter()
+                .filter(|(key, _)| key != "FRET_DIAG_RENDERER_PERF")
+                .cloned()
+                .collect();
+            for (key, value) in script_env_defaults(single_src) {
+                push_env_if_missing(&mut external_no_diag_launch_env, &key, &value);
+            }
+            let result = match crate::diag_run::run_external_no_diagnostics_post_run(
+                crate::diag_run::ExternalNoDiagnosticsPostRunContext {
+                    src: single_src,
+                    launch: &launch,
+                    launch_env: &external_no_diag_launch_env,
+                    workspace_root: &workspace_root,
+                    resolved_out_dir: &resolved_out_dir,
+                    resolved_exit_path: &resolved_exit_path,
+                    resolved_script_path: &resolved_script_path,
+                    resolved_script_result_path: &resolved_script_result_path,
+                    timeout_ms,
+                    poll_ms,
+                    launch_high_priority,
+                    warmup_frames,
+                    checks_for_post_run: &external_no_diag_checks,
+                    tooling_event_kind: "tooling_external_no_diagnostics",
+                    tooling_event_note: Some(
+                        "diag-suite external no-diagnostics post-run path".to_string(),
+                    ),
+                },
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    let tooling_reason_code = read_json_value(&resolved_script_result_path)
+                        .and_then(|v| {
+                            v.get("reason_code")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string())
+                        });
+                    suite_rows.push(serde_json::json!({
+                        "script": script_key,
+                        "error_code": "tooling.suite.error",
+                        "reason_code": tooling_reason_code,
+                        "error": e,
+                    }));
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": suite_summary_generated_unix_ms,
+                        "kind": "suite_summary",
+                        "status": "error",
+                        "error_reason_code": tooling_reason_code
+                            .clone()
+                            .unwrap_or_else(|| "tooling.suite.error".to_string()),
+                        "suite": suite_summary_suite,
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "warmup_frames": warmup_frames,
+                        "reuse_launch": reuse_launch,
+                        "wants_screenshots": suite_wants_screenshots,
+                        "stage_counts": suite_stage_counts,
+                        "reason_code_counts": suite_reason_code_counts,
+                        "evidence_aggregate": suite_evidence_agg.as_json(),
+                        "rows": suite_rows,
+                    });
+                    let _ = write_json_value(&suite_summary_path, &payload);
+                    return Err("suite run failed (see suite.summary.json)".to_string());
+                }
+            };
+
+            if let Some(stage) = result.stage.as_deref() {
+                *suite_stage_counts.entry(stage.to_string()).or_default() += 1;
+            }
+            if let Some(code) = result.reason_code.as_deref()
+                && !code.trim().is_empty()
+            {
+                *suite_reason_code_counts
+                    .entry(code.to_string())
+                    .or_default() += 1;
+            }
+
+            let lint_summary: Option<serde_json::Value> = None;
+            let evidence_highlights = suite_summary::evidence_highlights_from_script_result_path(
+                &resolved_script_result_path,
+                &mut suite_evidence_agg,
+            );
+            suite_rows.push(serde_json::json!({
+                "script": script_key,
+                "run_id": result.run_id,
+                "stage": result.stage,
+                "step_index": result.step_index,
+                "reason_code": result.reason_code,
+                "reason": result.reason,
+                "last_bundle_dir": result.last_bundle_dir,
+                "lint": lint_summary,
+                "evidence_highlights": evidence_highlights,
+            }));
+
+            match result.stage.as_deref() {
+                Some("passed") => {
+                    println!("PASS {} (run_id={})", single_src.display(), result.run_id);
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": suite_summary_generated_unix_ms,
+                        "kind": "suite_summary",
+                        "status": "passed",
+                        "suite": suite_summary_suite,
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "warmup_frames": warmup_frames,
+                        "reuse_launch": reuse_launch,
+                        "wants_screenshots": suite_wants_screenshots,
+                        "stage_counts": suite_stage_counts,
+                        "reason_code_counts": suite_reason_code_counts,
+                        "evidence_aggregate": suite_evidence_agg.as_json(),
+                        "rows": suite_rows,
+                    });
+                    let _ = write_json_value(&suite_summary_path, &payload);
+                    return Ok(());
+                }
+                Some("failed") => {
+                    eprintln!(
+                        "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                        single_src.display(),
+                        result.run_id,
+                        result.step_index.unwrap_or(0),
+                        result.reason.as_deref().unwrap_or("unknown"),
+                        result.last_bundle_dir.as_deref().unwrap_or(""),
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": suite_summary_generated_unix_ms,
+                        "kind": "suite_summary",
+                        "status": "failed",
+                        "suite": suite_summary_suite,
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "warmup_frames": warmup_frames,
+                        "reuse_launch": reuse_launch,
+                        "wants_screenshots": suite_wants_screenshots,
+                        "stage_counts": suite_stage_counts,
+                        "reason_code_counts": suite_reason_code_counts,
+                        "evidence_aggregate": suite_evidence_agg.as_json(),
+                        "rows": suite_rows,
+                    });
+                    let _ = write_json_value(&suite_summary_path, &payload);
+                    std::process::exit(1);
+                }
+                _ => {
+                    eprintln!(
+                        "unexpected script stage for {}: {:?}",
+                        single_src.display(),
+                        result,
+                    );
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "generated_unix_ms": suite_summary_generated_unix_ms,
+                        "kind": "suite_summary",
+                        "status": "failed",
+                        "suite": suite_summary_suite,
+                        "out_dir": resolved_out_dir.display().to_string(),
+                        "warmup_frames": warmup_frames,
+                        "reuse_launch": reuse_launch,
+                        "wants_screenshots": suite_wants_screenshots,
+                        "stage_counts": suite_stage_counts,
+                        "reason_code_counts": suite_reason_code_counts,
+                        "evidence_aggregate": suite_evidence_agg.as_json(),
+                        "rows": suite_rows,
+                    });
+                    let _ = write_json_value(&suite_summary_path, &payload);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
 
     let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
         if launch.is_some() || reuse_launch {

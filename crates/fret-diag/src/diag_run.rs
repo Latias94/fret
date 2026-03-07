@@ -107,6 +107,148 @@ fn write_tool_owned_script_result(
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ExternalNoDiagnosticsPostRunContext<'a> {
+    pub src: &'a Path,
+    pub launch: &'a Option<Vec<String>>,
+    pub launch_env: &'a [(String, String)],
+    pub workspace_root: &'a Path,
+    pub resolved_out_dir: &'a Path,
+    pub resolved_exit_path: &'a Path,
+    pub resolved_script_path: &'a Path,
+    pub resolved_script_result_path: &'a Path,
+    pub timeout_ms: u64,
+    pub poll_ms: u64,
+    pub launch_high_priority: bool,
+    pub warmup_frames: u64,
+    pub checks_for_post_run: &'a RunChecks,
+    pub tooling_event_kind: &'a str,
+    pub tooling_event_note: Option<String>,
+}
+
+pub(crate) fn run_external_no_diagnostics_post_run(
+    ctx: ExternalNoDiagnosticsPostRunContext<'_>,
+) -> Result<crate::stats::ScriptResultSummary, String> {
+    let ExternalNoDiagnosticsPostRunContext {
+        src,
+        launch,
+        launch_env,
+        workspace_root,
+        resolved_out_dir,
+        resolved_exit_path,
+        resolved_script_path,
+        resolved_script_result_path,
+        timeout_ms,
+        poll_ms,
+        launch_high_priority,
+        warmup_frames,
+        checks_for_post_run,
+        tooling_event_kind,
+        tooling_event_note,
+    } = ctx;
+
+    std::fs::create_dir_all(resolved_out_dir).map_err(|e| e.to_string())?;
+    let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+        src,
+        crate::script_execution::ScriptLoadPolicy {
+            tool_launched: true,
+            write_failure: write_tooling_failure_script_result_if_missing,
+            failure_note: Some(
+                "external no-diagnostics post-run path still validates the script envelope"
+                    .to_string(),
+            ),
+            include_stage_in_note: true,
+        },
+        resolved_script_result_path,
+    )?;
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
+    let _ = write_json_value(resolved_script_path, &script_json);
+
+    let mut run_launch_env = launch_env.to_vec();
+    let internal_report_path = resolved_out_dir.join("hello_world_compare.internal_gpu.json");
+    let internal_report_path_value = internal_report_path.display().to_string();
+    let _ = ensure_env_var(
+        &mut run_launch_env,
+        "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH",
+        internal_report_path_value.as_str(),
+    );
+
+    let mut child = maybe_launch_demo_without_diagnostics(
+        launch,
+        &run_launch_env,
+        workspace_root,
+        resolved_out_dir,
+        poll_ms,
+        launch_high_priority,
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            resolved_script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo_without_diagnostics".to_string()),
+        );
+    })?;
+    let run_id = child
+        .as_ref()
+        .map(|demo| demo.launched_unix_ms)
+        .unwrap_or_else(now_unix_ms);
+    let wait_result = wait_for_launched_demo_exit_without_signal(
+        &mut child,
+        launch_command_timeout_ms(launch, timeout_ms),
+        poll_ms,
+    );
+    let footprint = stop_launched_demo(&mut child, resolved_exit_path, poll_ms);
+
+    let mut result = crate::stats::ScriptResultSummary {
+        run_id,
+        stage: Some("passed".to_string()),
+        step_index: None,
+        reason_code: None,
+        reason: None,
+        last_bundle_dir: None,
+    };
+
+    if let Err(err) = wait_result {
+        result.stage = Some("failed".to_string());
+        result.reason_code = Some("tooling.external_no_diagnostics.timeout".to_string());
+        result.reason = Some(err);
+    } else if footprint.as_ref().is_some_and(launched_demo_was_killed) {
+        result.stage = Some("failed".to_string());
+        result.reason_code = Some("tooling.demo_exit.killed".to_string());
+        result.reason = Some(
+            "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)"
+                .to_string(),
+        );
+    } else if let Err(err) =
+        apply_post_run_checks(None, resolved_out_dir, checks_for_post_run, warmup_frames)
+    {
+        result.stage = Some("failed".to_string());
+        result.reason_code = Some("tooling.post_run_checks.failed".to_string());
+        result.reason = Some(err);
+    }
+
+    if let Err(err) = write_tool_owned_script_result(
+        resolved_out_dir,
+        resolved_script_result_path,
+        &result,
+        tooling_event_kind,
+        tooling_event_note,
+    ) {
+        eprintln!(
+            "WARN: failed to write tool-owned script.result.json for external no-diagnostics path: {err}"
+        );
+    }
+
+    Ok(result)
+}
+
 fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf, String> {
     let raw = raw.trim();
     if raw.is_empty() {
@@ -860,104 +1002,23 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
 
     if prefers_external_no_diag_post_run {
-        std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-        let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
-            &src,
-            crate::script_execution::ScriptLoadPolicy {
-                tool_launched: true,
-                write_failure: write_tooling_failure_script_result_if_missing,
-                failure_note: Some(
-                    "external no-diagnostics post-run path still validates the script envelope"
-                        .to_string(),
-                ),
-                include_stage_in_note: true,
-            },
-            &resolved_script_result_path,
-        )?;
-        if upgraded {
-            eprintln!(
-                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
-                src.display()
-            );
-        }
-        let _ = write_json_value(&resolved_script_path, &script_json);
-
-        let internal_report_path = resolved_out_dir.join("hello_world_compare.internal_gpu.json");
-        let internal_report_path_value = internal_report_path.display().to_string();
-        push_env_if_missing(
-            &mut run_launch_env,
-            "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH",
-            internal_report_path_value.as_str(),
-        );
-
-        let mut child = maybe_launch_demo_without_diagnostics(
-            &launch,
-            &run_launch_env,
-            &workspace_root,
-            &resolved_out_dir,
+        let result = run_external_no_diagnostics_post_run(ExternalNoDiagnosticsPostRunContext {
+            src: &src,
+            launch: &launch,
+            launch_env: &run_launch_env,
+            workspace_root: &workspace_root,
+            resolved_out_dir: &resolved_out_dir,
+            resolved_exit_path: &resolved_exit_path,
+            resolved_script_path: &resolved_script_path,
+            resolved_script_result_path: &resolved_script_result_path,
+            timeout_ms,
             poll_ms,
             launch_high_priority,
-        )
-        .inspect_err(|err| {
-            write_tooling_failure_script_result_if_missing(
-                &resolved_script_result_path,
-                "tooling.launch.failed",
-                err,
-                "tooling_error",
-                Some("maybe_launch_demo_without_diagnostics".to_string()),
-            );
+            warmup_frames,
+            checks_for_post_run: &checks_for_post_run,
+            tooling_event_kind: "tooling_external_no_diagnostics",
+            tooling_event_note: Some("diag-run external no-diagnostics post-run path".to_string()),
         })?;
-        let run_id = child
-            .as_ref()
-            .map(|demo| demo.launched_unix_ms)
-            .unwrap_or_else(now_unix_ms);
-        let wait_result = wait_for_launched_demo_exit_without_signal(
-            &mut child,
-            launch_command_timeout_ms(&launch, timeout_ms),
-            poll_ms,
-        );
-        let footprint = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-
-        let mut result = crate::stats::ScriptResultSummary {
-            run_id,
-            stage: Some("passed".to_string()),
-            step_index: None,
-            reason_code: None,
-            reason: None,
-            last_bundle_dir: None,
-        };
-
-        if let Err(err) = wait_result {
-            result.stage = Some("failed".to_string());
-            result.reason_code = Some("tooling.external_no_diagnostics.timeout".to_string());
-            result.reason = Some(err);
-        } else if footprint.as_ref().is_some_and(launched_demo_was_killed) {
-            result.stage = Some("failed".to_string());
-            result.reason_code = Some("tooling.demo_exit.killed".to_string());
-            result.reason = Some(
-                "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)"
-                    .to_string(),
-            );
-        } else if wants_post_run_checks
-            && let Err(err) =
-                apply_post_run_checks(None, &resolved_out_dir, &checks_for_post_run, warmup_frames)
-        {
-            result.stage = Some("failed".to_string());
-            result.reason_code = Some("tooling.post_run_checks.failed".to_string());
-            result.reason = Some(err);
-        }
-
-        if let Err(err) = write_tool_owned_script_result(
-            &resolved_out_dir,
-            &resolved_script_result_path,
-            &result,
-            "tooling_external_no_diagnostics",
-            Some("diag-run external no-diagnostics post-run path".to_string()),
-        ) {
-            eprintln!(
-                "WARN: failed to write tool-owned script.result.json for external no-diagnostics path: {err}"
-            );
-        }
 
         report_result_and_exit(&result);
     }
