@@ -47,6 +47,8 @@ patterns.
   - `docs/workstreams/ui-typography-presets-v1.md`
 - Existing foreground migration workstream:
   - `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
+- Follow-on visual-text recipe gap (`Shimmer` / streaming plan text):
+  - `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/DESIGN.md`
 
 ## Problem statement
 
