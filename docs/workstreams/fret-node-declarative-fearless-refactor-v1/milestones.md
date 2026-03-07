@@ -382,6 +382,12 @@ real editors.
   app-facing examples need to teach raw `edit_queue` mutation.
 - The retained widget test harness is back in sync with the latest `fret-ui` retained bridge
   contracts, so controller-first rename / portal retained conformance gates run again.
+- Declarative portal measurement now has a contract-shaped bridge into derived geometry:
+  `NodeGraphSurfaceProps.measured_geometry` exposes the shared `MeasuredGeometryStore` seam,
+  `record_portal_measured_node_size_in_state(...)` /
+  `flush_portal_measured_geometry_state(...)` stage `LayoutQueryRegion` measurements, and derived
+  geometry cache keys now include presenter revision so measured node-size publication rebuilds
+  geometry/index caches deterministically.
 
 ### Deliverables
 

@@ -28,16 +28,20 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, graph_diff, normalize_transaction};
-use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
+use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived, node_ports, node_size_default_px};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     view_from_state,
 };
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
+use crate::ui::measured::{MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryBatch};
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
-use crate::ui::{NodeGraphController, NodeGraphSurfaceBinding};
+use crate::ui::{
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphController, NodeGraphPresenter,
+    NodeGraphSurfaceBinding,
+};
 
 #[path = "paint_only/pointer_move.rs"]
 mod pointer_move;
@@ -74,6 +78,20 @@ struct PortalBoundsStore {
     /// Diagnostics-only: when true, a Ctrl+9 fit-to-portals request is armed and will be applied
     /// once portal bounds arrive via `LayoutQueryRegion` (frame-lagged by contract).
     pending_fit_to_portals: bool,
+}
+
+#[derive(Debug, Default, Clone)]
+struct PortalMeasuredGeometryState {
+    /// Frame-local pending subtree measurements harvested from `LayoutQueryRegion`.
+    pending_node_sizes_px: std::collections::BTreeMap<crate::core::NodeId, (f32, f32)>,
+    /// Nodes previously published into the shared measured-geometry store.
+    published_nodes: Vec<crate::core::NodeId>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct PortalMeasuredGeometryFlushOutcome {
+    state_changed: bool,
+    store_changed: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -179,6 +197,12 @@ pub struct NodeGraphSurfaceProps {
     /// Changes must bump `revision()` on the provider (see `ui/paint_overrides.rs`).
     pub paint_overrides: Option<NodeGraphPaintOverridesRef>,
 
+    /// Optional measured geometry store shared with declarative portal subtrees.
+    ///
+    /// When present, derived geometry is built through `MeasuredNodeGraphPresenter`, and hosted
+    /// portal subtrees may publish measured node sizes back into the same store.
+    pub measured_geometry: Option<Arc<MeasuredGeometryStore>>,
+
     /// When true, host a lightweight portal layer that renders node labels as normal element
     /// subtrees positioned in screen space (semantic zoom).
     ///
@@ -213,6 +237,7 @@ impl NodeGraphSurfaceProps {
             canvas: CanvasProps::default(),
             geometry_overrides: None,
             paint_overrides: None,
+            measured_geometry: None,
             portals_enabled: true,
             portal_max_nodes: 32,
             cull_margin_screen_px: 256.0,
@@ -577,6 +602,7 @@ struct DerivedGeometryCacheKeyV2 {
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    presenter_rev: u64,
     geometry_tokens_fingerprint: u64,
     geometry_overrides_rev: u64,
     cell_size_screen_bits: u32,
@@ -586,6 +612,15 @@ struct DerivedGeometryCacheKeyV2 {
     wire_width_bits: u32,
 }
 
+fn declarative_presenter_revision(measured_geometry: Option<&Arc<MeasuredGeometryStore>>) -> u64 {
+    measured_geometry
+        .map(|measured| {
+            MeasuredNodeGraphPresenter::new(DefaultNodeGraphPresenter::default(), measured.clone())
+                .geometry_revision()
+        })
+        .unwrap_or(0)
+}
+
 fn derived_geometry_cache_key(
     graph_rev: u64,
     zoom: f32,
@@ -593,6 +628,7 @@ fn derived_geometry_cache_key(
     draw_order: &[crate::core::NodeId],
     interaction: &crate::io::NodeGraphInteractionState,
     style: &NodeGraphStyle,
+    presenter_rev: u64,
     geometry_overrides_rev: u64,
     max_edge_interaction_width_override_px: f32,
 ) -> CanvasKey {
@@ -621,6 +657,7 @@ fn derived_geometry_cache_key(
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash: stable_hash_u64(1, &draw_order),
+        presenter_rev,
         geometry_tokens_fingerprint: style.geometry.fingerprint(),
         geometry_overrides_rev,
         cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
@@ -630,7 +667,7 @@ fn derived_geometry_cache_key(
         wire_width_bits: style.geometry.wire_width.to_bits(),
     };
 
-    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v2", v))
+    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v3", v))
 }
 
 fn build_debug_grid_ops(
@@ -984,6 +1021,103 @@ fn sync_portal_canvas_bounds_in_models(
         st.nodes_canvas_bounds.insert(node_id, canvas_bounds);
     });
     true
+}
+
+fn record_portal_measured_node_size_in_state(
+    models: &mut fret_runtime::ModelStore,
+    state: &Model<PortalMeasuredGeometryState>,
+    node_id: crate::core::NodeId,
+    size_px: (f32, f32),
+) -> bool {
+    if !size_px.0.is_finite() || !size_px.1.is_finite() || size_px.0 <= 0.0 || size_px.1 <= 0.0 {
+        return false;
+    }
+
+    let should_update = models
+        .read(state, |st| {
+            let Some(prev) = st.pending_node_sizes_px.get(&node_id) else {
+                return true;
+            };
+            (prev.0 - size_px.0).abs() > MEASURED_GEOMETRY_EPSILON_PX
+                || (prev.1 - size_px.1).abs() > MEASURED_GEOMETRY_EPSILON_PX
+        })
+        .unwrap_or(true);
+    if !should_update {
+        return false;
+    }
+
+    let _ = models.update(state, |st| {
+        st.pending_node_sizes_px.insert(node_id, size_px);
+    });
+    true
+}
+
+fn flush_portal_measured_geometry_state(
+    graph: &Graph,
+    style: &NodeGraphStyle,
+    measured_geometry: &MeasuredGeometryStore,
+    state: &mut PortalMeasuredGeometryState,
+) -> PortalMeasuredGeometryFlushOutcome {
+    let pending_before = state.pending_node_sizes_px.len();
+    let published_before = state.published_nodes.clone();
+    let graph_nodes: std::collections::BTreeSet<crate::core::NodeId> =
+        graph.nodes.keys().copied().collect();
+
+    let mut publish: Vec<(crate::core::NodeId, (f32, f32))> = Vec::new();
+    for (node_id, measured_px) in state.pending_node_sizes_px.iter() {
+        let Some(node) = graph.nodes.get(node_id) else {
+            continue;
+        };
+        if node.size.is_some() {
+            continue;
+        }
+
+        let (inputs, outputs) = node_ports(graph, *node_id);
+        let min = node_size_default_px(inputs.len(), outputs.len(), style);
+        let prev_px = measured_geometry.node_size_px(*node_id).unwrap_or(min);
+        publish.push((
+            *node_id,
+            (
+                measured_px.0.max(min.0).max(prev_px.0),
+                measured_px.1.max(min.1).max(prev_px.1),
+            ),
+        ));
+    }
+
+    let remove_nodes: Vec<crate::core::NodeId> = published_before
+        .iter()
+        .copied()
+        .filter(|id| !graph_nodes.contains(id))
+        .collect();
+
+    let store_changed = measured_geometry
+        .apply_batch_if_changed(
+            MeasuredGeometryBatch {
+                node_sizes_px: publish.clone(),
+                port_anchors_px: Vec::new(),
+                remove_nodes,
+                remove_ports: Vec::new(),
+            },
+            Default::default(),
+        )
+        .is_some();
+
+    let mut next_published = published_before;
+    for (node_id, _) in &publish {
+        if !next_published.contains(node_id) {
+            next_published.push(*node_id);
+        }
+    }
+    next_published.retain(|id| graph_nodes.contains(id));
+
+    state.pending_node_sizes_px.clear();
+    let state_changed = pending_before > 0 || next_published != state.published_nodes;
+    state.published_nodes = next_published;
+
+    PortalMeasuredGeometryFlushOutcome {
+        state_changed,
+        store_changed,
+    }
 }
 
 fn rect_contains_point(rect: Rect, p: Point) -> bool {
@@ -2406,6 +2540,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         canvas,
         geometry_overrides,
         paint_overrides,
+        measured_geometry,
         portals_enabled,
         portal_max_nodes,
         cull_margin_screen_px,
@@ -2468,6 +2603,8 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     // declarative surface strategy.
     let portal_bounds_store: Model<PortalBoundsStore> =
         use_uncontrolled_model(cx, PortalBoundsStore::default);
+    let portal_measured_geometry_state: Model<PortalMeasuredGeometryState> =
+        use_uncontrolled_model(cx, PortalMeasuredGeometryState::default);
 
     // Diagnostics-only toggles for portal hosting.
     let portal_debug_flags: Model<PortalDebugFlags> =
@@ -2559,6 +2696,35 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let node_origin = view_value.interaction.node_origin;
     let resolved_interaction = view_value.resolved_interaction_state();
 
+    let mut portal_measured_geometry_state_value = cx
+        .get_model_cloned(&portal_measured_geometry_state, Invalidation::Paint)
+        .unwrap_or_default();
+    let portal_measured_flush_outcome = if let Some(measured_geometry) = measured_geometry.as_ref()
+    {
+        cx.read_model_ref(&graph, Invalidation::Paint, |graph_value| {
+            flush_portal_measured_geometry_state(
+                graph_value,
+                &style_tokens,
+                measured_geometry.as_ref(),
+                &mut portal_measured_geometry_state_value,
+            )
+        })
+        .unwrap_or_default()
+    } else {
+        PortalMeasuredGeometryFlushOutcome::default()
+    };
+    if portal_measured_flush_outcome.state_changed {
+        let next_state = portal_measured_geometry_state_value.clone();
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&portal_measured_geometry_state, |st| *st = next_state);
+    }
+    if portal_measured_flush_outcome.store_changed {
+        cx.request_frame();
+    }
+    let presenter_rev = declarative_presenter_revision(measured_geometry.as_ref());
+
     // Attempt to rebuild the cached grid ops when the view/bounds key changes.
     // Bounds are initially learned from pointer hooks (and optionally from `last_bounds_for_element`).
     let mut grid_cache_value = cx
@@ -2598,6 +2764,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
             &view_value.draw_order,
             &resolved_interaction,
             &style_tokens,
+            presenter_rev,
             geometry_overrides_rev,
             max_edge_interaction_width_override_px,
         );
@@ -2608,16 +2775,32 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     let zoom = PanZoom2D::sanitize_zoom(view_for_paint.zoom, 1.0);
                     let z = zoom.max(1.0e-6);
 
-                    let mut presenter = DefaultNodeGraphPresenter::default();
-                    let geom = CanvasGeometry::build_with_presenter(
-                        graph_value,
-                        &view_value.draw_order,
-                        &style_tokens,
-                        zoom,
-                        node_origin,
-                        &mut presenter,
-                        geometry_overrides,
-                    );
+                    let geom = if let Some(measured_geometry) = measured_geometry.as_ref() {
+                        let mut presenter = MeasuredNodeGraphPresenter::new(
+                            DefaultNodeGraphPresenter::default(),
+                            measured_geometry.clone(),
+                        );
+                        CanvasGeometry::build_with_presenter(
+                            graph_value,
+                            &view_value.draw_order,
+                            &style_tokens,
+                            zoom,
+                            node_origin,
+                            &mut presenter,
+                            geometry_overrides,
+                        )
+                    } else {
+                        let mut presenter = DefaultNodeGraphPresenter::default();
+                        CanvasGeometry::build_with_presenter(
+                            graph_value,
+                            &view_value.draw_order,
+                            &style_tokens,
+                            zoom,
+                            node_origin,
+                            &mut presenter,
+                            geometry_overrides,
+                        )
+                    };
 
                     let tuning = view_value.runtime_tuning.spatial_index;
                     let edge_aabb_pad_screen_px = tuning
@@ -3447,6 +3630,9 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                                 let style_tokens = style_tokens.clone();
                                 let theme = theme.clone();
                                 let portal_bounds_store = portal_bounds_store.clone();
+                                let portal_measured_geometry_state =
+                                    portal_measured_geometry_state.clone();
+                                let measured_geometry_enabled = measured_geometry.is_some();
                                 overlay_children.push(cx.keyed(
                                     ("fret-node.portal-label.v1", info.id),
                                     move |cx| {
@@ -3477,12 +3663,24 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                                                     visual_bounds,
                                                 );
 
-                                                if sync_portal_canvas_bounds_in_models(
+                                                let mut request_frame = sync_portal_canvas_bounds_in_models(
                                                     cx.app.models_mut(),
                                                     &portal_bounds_store,
                                                     info.id,
                                                     canvas_bounds,
-                                                ) {
+                                                );
+                                                if measured_geometry_enabled {
+                                                    request_frame |= record_portal_measured_node_size_in_state(
+                                                        cx.app.models_mut(),
+                                                        &portal_measured_geometry_state,
+                                                        info.id,
+                                                        (
+                                                            visual_bounds.size.width.0,
+                                                            visual_bounds.size.height.0,
+                                                        ),
+                                                    );
+                                                }
+                                                if request_frame {
                                                     cx.request_frame();
                                                 }
                                             }
@@ -3963,7 +4161,7 @@ mod tests {
         HoverTooltipAnchorSource, Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot,
         LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
         NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, NodeRectDraw,
-        PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
+        PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
         apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
         begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
         build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
@@ -3973,15 +4171,17 @@ mod tests {
         commit_node_drag_transaction, commit_pending_selection_action_host,
         complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
         derived_geometry_cache_key, edges_cache_key, effective_selected_nodes_for_paint,
-        escape_cancel_declarative_interactions_action_host, grid_cache_key,
-        handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
+        escape_cancel_declarative_interactions_action_host, flush_portal_measured_geometry_state,
+        grid_cache_key, handle_declarative_diag_key_action_host,
+        handle_declarative_keyboard_zoom_action_host,
         handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
         handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
         handle_node_drag_left_pointer_release_action_host,
         handle_node_drag_pointer_move_action_host,
         handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
         nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
-        pointer_crossed_threshold, resolve_hover_tooltip_anchor, stable_hash_u64,
+        pointer_crossed_threshold, record_portal_measured_node_size_in_state,
+        resolve_hover_tooltip_anchor, stable_hash_u64,
         sync_authoritative_surface_boundary_in_models, sync_portal_canvas_bounds_in_models,
         update_hovered_node_pointer_move_action_host, view_from_state,
     };
@@ -3998,8 +4198,9 @@ mod tests {
     };
     use crate::runtime::changes::NodeGraphChanges;
     use crate::runtime::store::NodeGraphStore;
-    use crate::ui::NodeGraphController;
+    use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
     use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
+    use crate::ui::{MeasuredGeometryStore, NodeGraphController};
     use serde_json::Value;
 
     #[derive(Default)]
@@ -6807,6 +7008,144 @@ mod tests {
     }
 
     #[test]
+    fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
+        let node = NodeId::from_u128(9401);
+        let view_state = NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        };
+        let interaction = view_state.resolved_interaction_state();
+        let style = crate::ui::style::NodeGraphStyle::default();
+
+        let derived_a = derived_geometry_cache_key(
+            91,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            7,
+            0,
+            0.0,
+        );
+        let derived_b = derived_geometry_cache_key(
+            91,
+            view_state.zoom,
+            view_state.interaction.node_origin,
+            &view_state.draw_order,
+            &interaction,
+            &style,
+            8,
+            0,
+            0.0,
+        );
+
+        assert_ne!(derived_a, derived_b);
+    }
+
+    #[test]
+    fn record_portal_measured_node_size_in_state_ignores_epsilon_churn() {
+        let mut models = ModelStore::default();
+        let state = models.insert(PortalMeasuredGeometryState::default());
+        let node = NodeId::from_u128(9402);
+
+        assert!(record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (200.0, 120.0),
+        ));
+        assert!(!record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.5,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.5,
+            ),
+        ));
+        assert!(record_portal_measured_node_size_in_state(
+            &mut models,
+            &state,
+            node,
+            (
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+            ),
+        ));
+
+        let pending = models
+            .read(&state, |st| st.pending_node_sizes_px.get(&node).copied())
+            .unwrap();
+        assert_eq!(
+            pending,
+            Some((
+                200.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+                120.0 + MEASURED_GEOMETRY_EPSILON_PX * 2.0,
+            ))
+        );
+    }
+
+    #[test]
+    fn flush_portal_measured_geometry_state_publishes_pending_node_size_to_store() {
+        let mut graph = Graph::new(GraphId::from_u128(9403));
+        let node = NodeId::from_u128(9404);
+        graph
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+
+        let measured = MeasuredGeometryStore::new();
+        let initial_revision = measured.revision();
+        let mut state = PortalMeasuredGeometryState::default();
+        state.pending_node_sizes_px.insert(node, (320.0, 180.0));
+
+        let outcome = flush_portal_measured_geometry_state(
+            &graph,
+            &crate::ui::style::NodeGraphStyle::default(),
+            &measured,
+            &mut state,
+        );
+
+        assert!(outcome.store_changed);
+        assert!(outcome.state_changed);
+        assert!(measured.revision() > initial_revision);
+        assert_eq!(measured.node_size_px(node), Some((320.0, 180.0)));
+        assert_eq!(state.published_nodes, vec![node]);
+        assert!(state.pending_node_sizes_px.is_empty());
+    }
+
+    #[test]
+    fn flush_portal_measured_geometry_state_skips_explicit_size_nodes() {
+        let mut graph = Graph::new(GraphId::from_u128(9405));
+        let node = NodeId::from_u128(9406);
+        let mut value = test_node(CanvasPoint { x: 0.0, y: 0.0 });
+        value.size = Some(CanvasSize {
+            width: 160.0,
+            height: 90.0,
+        });
+        graph.nodes.insert(node, value);
+
+        let measured = MeasuredGeometryStore::new();
+        let initial_revision = measured.revision();
+        let mut state = PortalMeasuredGeometryState::default();
+        state.pending_node_sizes_px.insert(node, (320.0, 180.0));
+
+        let outcome = flush_portal_measured_geometry_state(
+            &graph,
+            &crate::ui::style::NodeGraphStyle::default(),
+            &measured,
+            &mut state,
+        );
+
+        assert!(!outcome.store_changed);
+        assert!(outcome.state_changed);
+        assert_eq!(measured.revision(), initial_revision);
+        assert_eq!(measured.node_size_px(node), None);
+        assert!(state.published_nodes.is_empty());
+        assert!(state.pending_node_sizes_px.is_empty());
+    }
+
+    #[test]
     fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         let node_a = NodeId::from_u128(9014);
         let node_b = NodeId::from_u128(9015);
@@ -6846,6 +7185,7 @@ mod tests {
             &interaction_a,
             &style,
             0,
+            0,
             0.0,
         );
         let derived_b = derived_geometry_cache_key(
@@ -6855,6 +7195,7 @@ mod tests {
             &selection_only_view.draw_order,
             &interaction_b,
             &style,
+            0,
             0,
             0.0,
         );
@@ -6922,6 +7263,7 @@ mod tests {
             &interaction,
             &style,
             0,
+            0,
             0.0,
         );
         let nodes_before = nodes_cache_key(
@@ -6947,6 +7289,7 @@ mod tests {
             &view_state.draw_order,
             &interaction,
             &style,
+            0,
             0,
             0.0,
         );

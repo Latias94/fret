@@ -305,10 +305,17 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: declarative portal hosting now routes visible-subset selection through
     `collect_portal_label_infos_for_visible_subset(...)`, which locks draw-order/cap semantics and
     uses dragged node rects (not stale pre-drag rects) for viewport culling.
-- [ ] Clarify how node content subtrees publish measured geometry into derived stores.
+- [x] Clarify how node content subtrees publish measured geometry into derived stores.
   - Progress: portal subtree bounds harvest now routes through
     `sync_portal_canvas_bounds_in_models(...)`, giving `LayoutQueryRegion` publish semantics an
     explicit epsilon-filtered seam instead of ad-hoc inline store writes.
+  - Progress: declarative surfaces can now opt into a shared `MeasuredGeometryStore` through
+    `NodeGraphSurfaceProps.measured_geometry`, while portal subtree measurement publication routes
+    through `record_portal_measured_node_size_in_state(...)` +
+    `flush_portal_measured_geometry_state(...)` instead of inline ad-hoc store writes.
+  - Progress: derived geometry cache keys now include presenter revision, and the declarative
+    geometry build path uses `MeasuredNodeGraphPresenter` when measured geometry is present, so
+    measured node-size updates invalidate geometry/index caches deterministically.
 - [x] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
   - `NodeGraphPortalHost::with_controller` now prefers
     `NodeGraphController::submit_transaction_and_sync_models`.
