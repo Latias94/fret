@@ -931,10 +931,11 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         resolve_path(&workspace_root, raw)
     };
 
-    let mut fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
-    fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
-    fs_transport_cfg.script_result_trigger_path = resolved_script_result_trigger_path.clone();
+    let fs_transport_cfg = crate::script_result_fs_transport_cfg(
+        &resolved_out_dir,
+        &resolved_script_result_path,
+        &resolved_script_result_trigger_path,
+    );
 
     let trace_chrome = false;
 

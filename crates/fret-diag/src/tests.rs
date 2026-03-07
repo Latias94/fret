@@ -899,6 +899,45 @@ fn script_run_fs_transport_cfg_overrides_script_paths_but_keeps_out_dir_artifact
 }
 
 #[test]
+fn script_result_fs_transport_cfg_overrides_result_paths_only() {
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-script-result-fs-transport-cfg-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let out_dir = root.join("diag-out");
+    std::fs::create_dir_all(&out_dir).expect("create out dir");
+
+    let script_result_path = root.join("suite.script.result.json");
+    let script_result_trigger_path = root.join("suite.script.result.touch");
+
+    let cfg = crate::script_result_fs_transport_cfg(
+        &out_dir,
+        &script_result_path,
+        &script_result_trigger_path,
+    );
+
+    assert_eq!(cfg.out_dir, out_dir);
+    assert_eq!(cfg.script_result_path, script_result_path);
+    assert_eq!(cfg.script_result_trigger_path, script_result_trigger_path);
+    assert_eq!(cfg.script_path, root.join("diag-out").join("script.json"));
+    assert_eq!(
+        cfg.script_trigger_path,
+        root.join("diag-out").join("script.touch")
+    );
+    assert_eq!(
+        cfg.pick_result_path,
+        root.join("diag-out").join("pick.result.json")
+    );
+}
+
+#[test]
 fn run_script_over_transport_dump_bundle_writes_run_id_bundle_json() {
     let root = std::env::temp_dir().join(format!(
         "fret-diag-run-dump-runid-{}-{}",

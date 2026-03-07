@@ -118,6 +118,17 @@ Recommended next seam choices:
 2. run planning/context assembly,
 3. suite/campaign resolution and item expansion.
 
+Recent progress since this note was drafted:
+
+- artifact resolution/materialization now has shared seams for bundle input resolution and
+  `script.result.json` discovery under `crates/fret-diag/src/commands/resolve.rs`,
+- run planning/context assembly now reuses `ResolvedScriptPaths` and a higher-level
+  `ResolvedRunContext` instead of re-threading parallel path and transport arguments,
+- transport dispatch for the main script-driven launch flows now reuses shared filesystem transport
+  helpers instead of repeating path override assembly inline,
+- `diag_suite` now reuses a dedicated result-only helper, which closes the last duplicated
+  `script.result` override path among the main orchestration commands.
+
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
 ### Priority 3. Stabilize suite/campaign metadata and evidence vocabulary
@@ -151,8 +162,8 @@ These are meaningful follow-ups once the contract and seam story are more settle
 ## Recommended next implementation sequence
 
 1. write the canonical artifact/evidence contract update,
-2. choose and land one seam extraction from artifact resolution/materialization,
-3. choose and land one seam extraction from run planning/context assembly,
+2. choose the next seam from suite/campaign resolution or check planning/execution,
+3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 
 ## Bottom line

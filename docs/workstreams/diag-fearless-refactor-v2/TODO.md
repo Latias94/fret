@@ -28,12 +28,13 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [ ] Audit `crates/fret-diag` orchestration entry points and list duplication hotspots.
 - [x] Write a phased implementation roadmap that maps design docs to code landing order:
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
-- [ ] Choose the next 2–3 high-ROI seam extractions for landable follow-up PRs:
-  - [ ] run planning/context,
-  - [ ] artifact resolution/materialization,
+- [x] Choose the next 2?3 high-ROI seam extractions for landable follow-up PRs:
+  - [x] run planning/context,
+  - [x] artifact resolution/materialization,
   - [ ] check planning/execution,
   - [ ] suite/campaign resolution,
-  - [ ] transport dispatch.
+  - [x] transport dispatch.
+  - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.
 
 ## M2 — Artifact and evidence consolidation

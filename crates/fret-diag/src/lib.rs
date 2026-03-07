@@ -4186,6 +4186,17 @@ pub(crate) fn script_run_fs_transport_cfg(
     cfg
 }
 
+pub(crate) fn script_result_fs_transport_cfg(
+    out_dir: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
+}
+
 impl ResolvedScriptPaths {
     pub(crate) fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
         let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
