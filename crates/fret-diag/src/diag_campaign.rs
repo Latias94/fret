@@ -85,6 +85,26 @@ struct CampaignBatchArtifacts {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignExecutionPlan {
+    created_unix_ms: u64,
+    run_id: String,
+    campaign_root: PathBuf,
+    suite_results_root: PathBuf,
+    script_results_root: PathBuf,
+    summary_path: PathBuf,
+    index_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignBatchPlan {
+    created_unix_ms: u64,
+    run_id: String,
+    batch_root: PathBuf,
+    summary_path: PathBuf,
+    index_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignShareOptions {
     source: String,
     include_passed: bool,
@@ -138,7 +158,7 @@ struct CampaignItemRunResult {
 }
 
 #[derive(Debug, Clone)]
-struct CampaignSuiteInvocation {
+struct CampaignItemInvocation {
     kind: CampaignItemKind,
     item_id: String,
     out_dir: PathBuf,
@@ -146,25 +166,116 @@ struct CampaignSuiteInvocation {
     suite_ctx: diag_suite::SuiteCmdContext,
 }
 
-fn build_campaign_suite_invocation(
-    index: usize,
-    kind: CampaignItemKind,
-    value: &str,
-    results_root: &Path,
+fn build_campaign_execution_plan_at(
+    campaign: &CampaignDefinition,
     ctx: &CampaignRunContext,
-) -> Result<CampaignSuiteInvocation, String> {
-    let (label, item_id, rest, suite_script_inputs) = match kind {
+    created_unix_ms: u64,
+) -> CampaignExecutionPlan {
+    let run_id = created_unix_ms.to_string();
+    let campaign_root = ctx
+        .resolved_out_dir
+        .join("campaigns")
+        .join(zip_safe_component(&campaign.id))
+        .join(&run_id);
+    let summary_path =
+        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let index_path =
+        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let suite_results_root = campaign_root.join("suite-results");
+    let script_results_root = campaign_root.join("script-results");
+    CampaignExecutionPlan {
+        created_unix_ms,
+        run_id,
+        campaign_root,
+        suite_results_root,
+        script_results_root,
+        summary_path,
+        index_path,
+    }
+}
+
+fn build_campaign_execution_plan(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+) -> CampaignExecutionPlan {
+    build_campaign_execution_plan_at(campaign, ctx, now_unix_ms())
+}
+
+fn ensure_campaign_execution_dirs(plan: &CampaignExecutionPlan) -> Result<(), String> {
+    std::fs::create_dir_all(&plan.suite_results_root).map_err(|e| {
+        format!(
+            "failed to create suite results dir {}: {}",
+            plan.suite_results_root.display(),
+            e
+        )
+    })?;
+    std::fs::create_dir_all(&plan.script_results_root).map_err(|e| {
+        format!(
+            "failed to create script results dir {}: {}",
+            plan.script_results_root.display(),
+            e
+        )
+    })?;
+    Ok(())
+}
+
+fn build_campaign_batch_plan_at(
+    options: &CampaignRunOptions,
+    selected_count: usize,
+    ctx: &CampaignRunContext,
+    created_unix_ms: u64,
+) -> CampaignBatchPlan {
+    let run_id = created_unix_ms.to_string();
+    let batch_root = ctx
+        .resolved_out_dir
+        .join("campaign-batches")
+        .join(campaign_batch_selection_slug(options, selected_count))
+        .join(&run_id);
+    let summary_path =
+        batch_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let index_path = batch_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    CampaignBatchPlan {
+        created_unix_ms,
+        run_id,
+        batch_root,
+        summary_path,
+        index_path,
+    }
+}
+
+fn build_campaign_batch_plan(
+    options: &CampaignRunOptions,
+    selected_count: usize,
+    ctx: &CampaignRunContext,
+) -> CampaignBatchPlan {
+    build_campaign_batch_plan_at(options, selected_count, ctx, now_unix_ms())
+}
+
+fn build_campaign_item_invocation(
+    index: usize,
+    item: &CampaignItemDefinition,
+    suite_results_root: &Path,
+    script_results_root: &Path,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignItemInvocation, String> {
+    let (label, results_root, kind, value, item_id, rest, suite_script_inputs) = match item.kind {
         CampaignItemKind::Suite => (
             "suite",
-            value.to_string(),
-            vec![value.to_string()],
+            suite_results_root,
+            CampaignItemKind::Suite,
+            item.value.as_str(),
+            item.value.clone(),
+            vec![item.value.clone()],
             ctx.suite_script_inputs.clone(),
         ),
         CampaignItemKind::Script => (
             "script",
-            value.to_string(),
+            script_results_root,
+            CampaignItemKind::Script,
+            item.value.as_str(),
+            item.value.clone(),
             Vec::new(),
-            vec![value.to_string()],
+            vec![item.value.clone()],
         ),
     };
 
@@ -211,7 +322,7 @@ fn build_campaign_suite_invocation(
         checks: ctx.checks.clone(),
     };
 
-    Ok(CampaignSuiteInvocation {
+    Ok(CampaignItemInvocation {
         kind,
         item_id,
         out_dir,
@@ -794,20 +905,10 @@ fn execute_campaign(
     campaign: &CampaignDefinition,
     ctx: &CampaignRunContext,
 ) -> CampaignExecutionReport {
-    let created_unix_ms = now_unix_ms();
-    let run_id = created_unix_ms.to_string();
-    let campaign_root = ctx
-        .resolved_out_dir
-        .join("campaigns")
-        .join(zip_safe_component(&campaign.id))
-        .join(&run_id);
-    let summary_path =
-        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
-    let index_path =
-        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let plan = build_campaign_execution_plan(campaign, ctx);
 
     let (items_failed, report_error, share_manifest_path, share_error) =
-        match execute_campaign_inner(campaign, ctx, &campaign_root, created_unix_ms, &run_id) {
+        match execute_campaign_inner(campaign, ctx, &plan) {
             Ok(outcome) => (
                 outcome.items_failed,
                 outcome.error,
@@ -819,9 +920,9 @@ fn execute_campaign(
 
     CampaignExecutionReport {
         campaign_id: campaign.id.clone(),
-        out_dir: campaign_root,
-        summary_path,
-        index_path,
+        out_dir: plan.campaign_root,
+        summary_path: plan.summary_path,
+        index_path: plan.index_path,
         share_manifest_path,
         items_total: campaign.items.len(),
         items_failed,
@@ -836,36 +937,25 @@ fn execute_campaign(
 fn execute_campaign_inner(
     campaign: &CampaignDefinition,
     ctx: &CampaignRunContext,
-    campaign_root: &Path,
-    created_unix_ms: u64,
-    run_id: &str,
+    plan: &CampaignExecutionPlan,
 ) -> Result<CampaignExecutionOutcome, String> {
-    let suite_results_root = campaign_root.join("suite-results");
-    let script_results_root = campaign_root.join("script-results");
-    std::fs::create_dir_all(&suite_results_root).map_err(|e| {
-        format!(
-            "failed to create suite results dir {}: {}",
-            suite_results_root.display(),
-            e
-        )
-    })?;
-    std::fs::create_dir_all(&script_results_root).map_err(|e| {
-        format!(
-            "failed to create script results dir {}: {}",
-            script_results_root.display(),
-            e
-        )
-    })?;
+    ensure_campaign_execution_dirs(plan)?;
 
-    write_campaign_manifest(campaign_root, campaign, run_id, created_unix_ms, ctx)?;
+    write_campaign_manifest(
+        &plan.campaign_root,
+        campaign,
+        &plan.run_id,
+        plan.created_unix_ms,
+        ctx,
+    )?;
 
     let mut item_results: Vec<CampaignItemRunResult> = Vec::new();
     for (index, item) in campaign.items.iter().enumerate() {
         item_results.push(run_campaign_item(
             index,
             item,
-            &suite_results_root,
-            &script_results_root,
+            &plan.suite_results_root,
+            &plan.script_results_root,
             ctx,
         )?);
     }
@@ -873,36 +963,32 @@ fn execute_campaign_inner(
     let summarize_result = diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
         rest: Vec::new(),
         workspace_root: ctx.workspace_root.clone(),
-        resolved_out_dir: campaign_root.to_path_buf(),
+        resolved_out_dir: plan.campaign_root.clone(),
         stats_json: false,
     });
 
     let finished_unix_ms = now_unix_ms();
-    let duration_ms = finished_unix_ms.saturating_sub(created_unix_ms);
-    let summary_path =
-        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
-    let index_path =
-        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let duration_ms = finished_unix_ms.saturating_sub(plan.created_unix_ms);
     let items_failed = item_results.iter().filter(|entry| !entry.ok).count();
     let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
-        campaign_root,
-        &summary_path,
+        &plan.campaign_root,
+        &plan.summary_path,
         &ctx.workspace_root,
         items_failed > 0,
         ctx.stats_top,
         ctx.warmup_frames,
     );
     write_campaign_result(
-        campaign_root,
+        &plan.campaign_root,
         campaign,
-        run_id,
-        created_unix_ms,
+        &plan.run_id,
+        plan.created_unix_ms,
         finished_unix_ms,
         duration_ms,
         &item_results,
         summarize_result.as_ref().err(),
-        &summary_path,
-        &index_path,
+        &plan.summary_path,
+        &plan.index_path,
         share_manifest_path.as_deref(),
         share_error.as_ref(),
         ctx,
@@ -936,7 +1022,7 @@ fn execute_campaign_inner(
                 "campaign `{}` completed with {} failed item(s) under {}: {}",
                 campaign.id,
                 items_failed,
-                campaign_root.display(),
+                plan.campaign_root.display(),
                 failing
             )),
             share_manifest_path,
@@ -957,19 +1043,16 @@ fn write_campaign_batch_artifacts(
     options: &CampaignRunOptions,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignBatchArtifacts, String> {
-    let created_unix_ms = now_unix_ms();
-    let run_id = created_unix_ms.to_string();
-    let selection_slug = campaign_batch_selection_slug(options, reports.len());
-    let batch_root = ctx
-        .resolved_out_dir
-        .join("campaign-batches")
-        .join(selection_slug)
-        .join(&run_id);
-    let summary_path =
-        batch_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
-    let index_path = batch_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let plan = build_campaign_batch_plan(options, reports.len(), ctx);
 
-    write_campaign_batch_manifest(&batch_root, &run_id, created_unix_ms, reports, options, ctx)?;
+    write_campaign_batch_manifest(
+        &plan.batch_root,
+        &plan.run_id,
+        plan.created_unix_ms,
+        reports,
+        options,
+        ctx,
+    )?;
 
     let summarize_result = diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
         rest: reports
@@ -977,14 +1060,14 @@ fn write_campaign_batch_artifacts(
             .map(|report| report.out_dir.display().to_string())
             .collect(),
         workspace_root: ctx.workspace_root.clone(),
-        resolved_out_dir: batch_root.clone(),
+        resolved_out_dir: plan.batch_root.clone(),
         stats_json: false,
     });
     let summarize_error = summarize_result.err();
     let failed_runs = reports.iter().filter(|report| !report.ok).count();
     let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
-        &batch_root,
-        &summary_path,
+        &plan.batch_root,
+        &plan.summary_path,
         &ctx.workspace_root,
         failed_runs > 0,
         ctx.stats_top,
@@ -992,27 +1075,27 @@ fn write_campaign_batch_artifacts(
     );
 
     let finished_unix_ms = now_unix_ms();
-    let duration_ms = finished_unix_ms.saturating_sub(created_unix_ms);
+    let duration_ms = finished_unix_ms.saturating_sub(plan.created_unix_ms);
     write_campaign_batch_result(
-        &batch_root,
-        &run_id,
-        created_unix_ms,
+        &plan.batch_root,
+        &plan.run_id,
+        plan.created_unix_ms,
         finished_unix_ms,
         duration_ms,
         reports,
         options,
         summarize_error.as_ref(),
-        &summary_path,
-        &index_path,
+        &plan.summary_path,
+        &plan.index_path,
         share_manifest_path.as_deref(),
         share_error.as_ref(),
         ctx,
     )?;
 
     Ok(CampaignBatchArtifacts {
-        batch_root,
-        summary_path,
-        index_path,
+        batch_root: plan.batch_root,
+        summary_path: plan.summary_path,
+        index_path: plan.index_path,
         share_manifest_path,
         summarize_error,
         share_error,
@@ -1026,54 +1109,8 @@ fn run_campaign_item(
     script_results_root: &Path,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignItemRunResult, String> {
-    match item.kind {
-        CampaignItemKind::Suite => {
-            run_campaign_suite_item(index, &item.value, suite_results_root, ctx)
-        }
-        CampaignItemKind::Script => {
-            run_campaign_script_item(index, &item.value, script_results_root, ctx)
-        }
-    }
-}
-
-fn run_campaign_suite_item(
-    index: usize,
-    suite_id: &str,
-    suite_results_root: &Path,
-    ctx: &CampaignRunContext,
-) -> Result<CampaignItemRunResult, String> {
-    let invocation = build_campaign_suite_invocation(
-        index,
-        CampaignItemKind::Suite,
-        suite_id,
-        suite_results_root,
-        ctx,
-    )?;
-    let result = diag_suite::cmd_suite(invocation.suite_ctx);
-
-    Ok(CampaignItemRunResult {
-        kind: invocation.kind,
-        item_id: invocation.item_id,
-        out_dir: invocation.out_dir,
-        regression_summary_path: invocation.regression_summary_path,
-        ok: result.is_ok(),
-        error: result.err(),
-    })
-}
-
-fn run_campaign_script_item(
-    index: usize,
-    script_path: &str,
-    script_results_root: &Path,
-    ctx: &CampaignRunContext,
-) -> Result<CampaignItemRunResult, String> {
-    let invocation = build_campaign_suite_invocation(
-        index,
-        CampaignItemKind::Script,
-        script_path,
-        script_results_root,
-        ctx,
-    )?;
+    let invocation =
+        build_campaign_item_invocation(index, item, suite_results_root, script_results_root, ctx)?;
     let result = diag_suite::cmd_suite(invocation.suite_ctx);
 
     Ok(CampaignItemRunResult {
@@ -1916,7 +1953,7 @@ mod tests {
     }
 
     #[test]
-    fn build_campaign_suite_invocation_maps_suite_and_script_items() {
+    fn build_campaign_item_invocation_maps_suite_and_script_items() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-campaign-invocation-{}-{}",
             crate::util::now_unix_ms(),
@@ -1955,11 +1992,14 @@ mod tests {
             checks: diag_suite::SuiteChecks::default(),
         };
 
-        let suite_invocation = build_campaign_suite_invocation(
+        let suite_invocation = build_campaign_item_invocation(
             0,
-            CampaignItemKind::Suite,
-            "ui-gallery-smoke",
+            &CampaignItemDefinition {
+                kind: CampaignItemKind::Suite,
+                value: "ui-gallery-smoke".to_string(),
+            },
             &root.join("suites"),
+            &root.join("scripts"),
             &ctx,
         )
         .unwrap();
@@ -1974,10 +2014,13 @@ mod tests {
             vec!["shared-input.json".to_string()]
         );
 
-        let script_invocation = build_campaign_suite_invocation(
+        let script_invocation = build_campaign_item_invocation(
             1,
-            CampaignItemKind::Script,
-            "tools/diag-scripts/demo.json",
+            &CampaignItemDefinition {
+                kind: CampaignItemKind::Script,
+                value: "tools/diag-scripts/demo.json".to_string(),
+            },
+            &root.join("suites"),
             &root.join("scripts"),
             &ctx,
         )
@@ -1991,6 +2034,122 @@ mod tests {
         assert_eq!(
             script_invocation.suite_ctx.launch_env,
             vec![("BASE".to_string(), "1".to_string())]
+        );
+    }
+
+    fn sample_campaign_run_context(root: &Path) -> CampaignRunContext {
+        CampaignRunContext {
+            pack_after_run: false,
+            suite_script_inputs: vec!["shared-input.json".to_string()],
+            suite_prewarm_scripts: vec![PathBuf::from("prewarm.json")],
+            suite_prelude_scripts: vec![PathBuf::from("prelude.json")],
+            suite_prelude_each_run: true,
+            workspace_root: root.to_path_buf(),
+            resolved_out_dir: root.join("diag-out"),
+            devtools_ws_url: None,
+            devtools_token: None,
+            devtools_session_id: None,
+            timeout_ms: 1000,
+            poll_ms: 5,
+            stats_top: 20,
+            stats_json: false,
+            warmup_frames: 4,
+            max_test_ids: 100,
+            lint_all_test_ids_bounds: false,
+            lint_eps_px: 0.5,
+            suite_lint: false,
+            pack_include_screenshots: false,
+            reuse_launch: false,
+            launch: None,
+            launch_env: vec![("BASE".to_string(), "1".to_string())],
+            launch_high_priority: false,
+            launch_write_bundle_json: false,
+            keep_open: false,
+            checks: diag_suite::SuiteChecks::default(),
+        }
+    }
+
+    fn sample_campaign_definition() -> CampaignDefinition {
+        CampaignDefinition {
+            id: "ui-gallery-smoke".to_string(),
+            description: "sample".to_string(),
+            lane: crate::regression_summary::RegressionLaneV1::Smoke,
+            profile: Some("bounded".to_string()),
+            items: vec![CampaignItemDefinition {
+                kind: CampaignItemKind::Suite,
+                value: "ui-gallery-lite-smoke".to_string(),
+            }],
+            owner: None,
+            platforms: vec!["native".to_string()],
+            tier: Some("smoke".to_string()),
+            expected_duration_ms: None,
+            tags: vec!["ui-gallery".to_string()],
+            source: crate::registry::campaigns::CampaignDefinitionSource::Builtin,
+        }
+    }
+
+    #[test]
+    fn build_campaign_execution_plan_uses_campaign_root_and_run_id() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-campaign-plan-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let ctx = sample_campaign_run_context(&root);
+        let campaign = sample_campaign_definition();
+
+        let plan = build_campaign_execution_plan_at(&campaign, &ctx, 42);
+
+        assert_eq!(plan.run_id, "42");
+        assert_eq!(
+            plan.campaign_root,
+            root.join("diag-out")
+                .join("campaigns")
+                .join("ui-gallery-smoke")
+                .join("42")
+        );
+        assert_eq!(
+            plan.suite_results_root,
+            plan.campaign_root.join("suite-results")
+        );
+        assert_eq!(
+            plan.script_results_root,
+            plan.campaign_root.join("script-results")
+        );
+        assert_eq!(
+            plan.summary_path,
+            plan.campaign_root
+                .join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1)
+        );
+    }
+
+    #[test]
+    fn build_campaign_batch_plan_uses_selection_slug_and_run_id() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-campaign-batch-plan-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let ctx = sample_campaign_run_context(&root);
+        let options = CampaignRunOptions {
+            campaign_ids: vec!["ui-gallery-smoke".to_string()],
+            filter: CampaignFilterOptions::default(),
+        };
+
+        let plan = build_campaign_batch_plan_at(&options, 1, &ctx, 77);
+
+        assert_eq!(plan.run_id, "77");
+        assert_eq!(
+            plan.batch_root,
+            root.join("diag-out")
+                .join("campaign-batches")
+                .join("ids-ui-gallery-smoke")
+                .join("77")
+        );
+        assert_eq!(
+            plan.index_path,
+            plan.batch_root
+                .join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1)
         );
     }
 

@@ -134,6 +134,12 @@ Recent progress since this note was drafted:
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.
+- `diag_campaign` now also routes campaign roots, batch roots, and summary/index destinations
+  through explicit execution-plan helpers, so manifest/summarize/share wiring no longer re-derives
+  those paths inline.
+- `diag_campaign` item dispatch now uses a single `CampaignItemInvocation` builder, so suite
+  items and script items share one `diag_suite` handoff path instead of duplicating nearly identical
+  branch bodies.
 
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
@@ -168,7 +174,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 ## Recommended next implementation sequence
 
 1. write the canonical artifact/evidence contract update,
-2. continue from the new `diag_campaign` invocation builder into item expansion/context extraction or move to check planning/execution,
+2. continue from the new `diag_campaign` invocation + execution-plan seams into campaign-level item expansion/selection extraction or move to check planning/execution,
 3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 
