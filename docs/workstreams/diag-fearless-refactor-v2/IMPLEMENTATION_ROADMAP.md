@@ -258,6 +258,7 @@ Recommended PR slices:
    - fourth landing: `diag run` and `diag repro` now share a higher-level `ResolvedRunContext`, so transport wiring no longer travels as a separate parallel argument beside resolved script paths
    - fifth landing: repeated launch-time filesystem transport config assembly is now centralized for the main script-driven flows, with `ResolvedScriptPaths` exposing a convenience method and the remaining callers reusing the same helper
    - sixth landing: `diag_suite` now reuses a dedicated result-only filesystem transport helper, closing the last duplicated `script.result` override path in the main orchestration commands
+   - seventh landing: `diag_suite` now resolves suite script inputs, reuse-process env defaults, and prewarm/prelude path normalization through `ResolvedSuiteRunInputs`, reducing the size of the main orchestration body and preparing the next `diag_campaign` extraction
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

@@ -541,6 +541,177 @@ fn resolve_builtin_suite_scripts(
 }
 
 #[derive(Debug, Clone)]
+struct ResolvedSuiteRunInputs {
+    scripts: Vec<PathBuf>,
+    builtin_suite: Option<BuiltinSuite>,
+    suite_launch_env: Vec<(String, String)>,
+    resolved_suite_prewarm_scripts: Vec<PathBuf>,
+    resolved_suite_prelude_scripts: Vec<PathBuf>,
+}
+
+fn resolve_suite_run_inputs(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    suite_args: &[String],
+    suite_script_inputs: &[String],
+    suite_prewarm_scripts: &[PathBuf],
+    suite_prelude_scripts: &[PathBuf],
+    reuse_process: bool,
+    mut launch_env: Vec<(String, String)>,
+    strict_termination: bool,
+) -> Result<ResolvedSuiteRunInputs, String> {
+    let suite_resolver = SuiteResolver::try_load_from_workspace_root(workspace_root)?;
+
+    let mut used_fallback_paths = false;
+    let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+        if suite_args.is_empty() {
+            (Vec::new(), None)
+        } else if suite_args.len() == 1 {
+            let suite_name = suite_args[0].as_str();
+            if let Some(resolved) =
+                resolve_builtin_suite_scripts(workspace_root, suite_name, &mut launch_env)?
+            {
+                resolved
+            } else if let Some(scripts) =
+                suite_resolver.resolve_suite_scripts(workspace_root, suite_name)?
+            {
+                (scripts, None)
+            } else {
+                used_fallback_paths = true;
+                (
+                    suite_args
+                        .iter()
+                        .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    None,
+                )
+            }
+        } else {
+            used_fallback_paths = true;
+            (
+                suite_args
+                    .iter()
+                    .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                    .collect(),
+                None,
+            )
+        };
+
+    if !suite_script_inputs.is_empty() {
+        scripts.extend(expand_script_inputs(workspace_root, suite_script_inputs)?);
+        scripts.sort();
+        scripts.dedup();
+    }
+
+    if scripts.is_empty() {
+        return Err("suite produced no scripts".to_string());
+    }
+    if strict_termination {
+        let issues = crate::script_tooling::preflight_strict_termination_issues(&scripts)?;
+        if !issues.is_empty() {
+            let out = resolved_out_dir.join("check.script_termination.json");
+            let payload = serde_json::json!({
+                "schema_version": 1,
+                "kind": "diag_script_termination_preflight",
+                "status": "failed",
+                "issue_count": issues.len(),
+                "issues": issues,
+            });
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            let _ = std::fs::create_dir_all(resolved_out_dir);
+            let _ = std::fs::write(&out, pretty.as_bytes());
+
+            return Err(format!(
+                "suite script termination preflight failed (issue_count={}) (see: {})
+\
+hint: smoke/gate suites require deterministic termination; avoid trailing wait_frames/wait_ms and avoid wait_frames/wait_ms after the final capture_bundle",
+                payload["issue_count"].as_u64().unwrap_or(0),
+                out.display()
+            ));
+        }
+    }
+
+    if used_fallback_paths
+        && suite_script_inputs.is_empty()
+        && suite_args.len() == 1
+        && scripts.len() == 1
+        && !scripts[0].exists()
+    {
+        let name = suite_args[0].as_str();
+        let looks_like_suite_name = !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
+        if looks_like_suite_name {
+            return Err(format!(
+                "unknown suite or script path: {name:?}
+\
+hint: list suites via `fretboard diag list suites --contains {name}`
+\
+hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+            ));
+        }
+        return Err(format!(
+            "script path does not exist: {}",
+            scripts[0].display()
+        ));
+    }
+
+    if reuse_process {
+        let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
+            std::collections::BTreeMap::new();
+        let mut suite_env_conflicts: Vec<String> = Vec::new();
+        for src in &scripts {
+            for (key, value) in script_env_defaults(src) {
+                if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
+                    && prev != value
+                {
+                    suite_env_conflicts.push(format!(
+                        "{} wants {}={}, but another script requested {}={}",
+                        src.display(),
+                        key,
+                        value,
+                        key,
+                        prev
+                    ));
+                }
+            }
+        }
+        if !suite_env_conflicts.is_empty() {
+            suite_env_conflicts.sort();
+            return Err(format!(
+                "conflicting script meta.env_defaults in suite:
+- {}",
+                suite_env_conflicts.join(
+                    "
+- "
+                )
+            ));
+        }
+        for (key, value) in suite_script_env_defaults {
+            push_env_if_missing(&mut launch_env, &key, &value);
+        }
+    }
+
+    let resolved_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
+        .iter()
+        .cloned()
+        .map(|p| resolve_path(workspace_root, p))
+        .collect();
+    let resolved_suite_prelude_scripts: Vec<PathBuf> = suite_prelude_scripts
+        .iter()
+        .cloned()
+        .map(|p| resolve_path(workspace_root, p))
+        .collect();
+
+    Ok(ResolvedSuiteRunInputs {
+        scripts,
+        builtin_suite,
+        suite_launch_env: launch_env,
+        resolved_suite_prewarm_scripts,
+        resolved_suite_prelude_scripts,
+    })
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
     pub rest: Vec<String>,
@@ -754,97 +925,27 @@ hint: list suites via `fretboard diag list suites`"
     let is_components_gallery_table_keep_alive_suite =
         is_suite("components-gallery-table-keep-alive");
 
-    let suite_resolver = SuiteResolver::try_load_from_workspace_root(&workspace_root)?;
+    let use_devtools_ws =
+        devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
+    let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
 
-    let mut used_fallback_paths = false;
-    let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
-        if suite_args.is_empty() {
-            (Vec::new(), None)
-        } else if suite_args.len() == 1 {
-            let suite_name = suite_args[0].as_str();
-            if let Some(resolved) =
-                resolve_builtin_suite_scripts(&workspace_root, suite_name, &mut launch_env)?
-            {
-                resolved
-            } else if let Some(scripts) =
-                suite_resolver.resolve_suite_scripts(&workspace_root, suite_name)?
-            {
-                (scripts, None)
-            } else {
-                used_fallback_paths = true;
-                (
-                    suite_args
-                        .into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    None,
-                )
-            }
-        } else {
-            used_fallback_paths = true;
-            (
-                suite_args
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect(),
-                None,
-            )
-        };
-
-    if !suite_script_inputs.is_empty() {
-        scripts.extend(expand_script_inputs(&workspace_root, &suite_script_inputs)?);
-        scripts.sort();
-        scripts.dedup();
-    }
-
-    if scripts.is_empty() {
-        return Err("suite produced no scripts".to_string());
-    }
-    if strict_termination {
-        let issues = crate::script_tooling::preflight_strict_termination_issues(&scripts)?;
-        if !issues.is_empty() {
-            let out = resolved_out_dir.join("check.script_termination.json");
-            let payload = serde_json::json!({
-                "schema_version": 1,
-                "kind": "diag_script_termination_preflight",
-                "status": "failed",
-                "issue_count": issues.len(),
-                "issues": issues,
-            });
-            let pretty =
-                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-            let _ = std::fs::create_dir_all(&resolved_out_dir);
-            let _ = std::fs::write(&out, pretty.as_bytes());
-
-            return Err(format!(
-                "suite script termination preflight failed (issue_count={}) (see: {})\n\
-hint: smoke/gate suites require deterministic termination; avoid trailing wait_frames/wait_ms and avoid wait_frames/wait_ms after the final capture_bundle",
-                payload["issue_count"].as_u64().unwrap_or(0),
-                out.display()
-            ));
-        }
-    }
-
-    if used_fallback_paths
-        && suite_script_inputs.is_empty()
-        && rest.len() == 1
-        && scripts.len() == 1
-        && !scripts[0].exists()
-    {
-        let name = rest[0].as_str();
-        let looks_like_suite_name = !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
-        if looks_like_suite_name {
-            return Err(format!(
-                "unknown suite or script path: {name:?}\n\
-hint: list suites via `fretboard diag list suites --contains {name}`\n\
-hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
-            ));
-        }
-        return Err(format!(
-            "script path does not exist: {}",
-            scripts[0].display()
-        ));
-    }
+    let ResolvedSuiteRunInputs {
+        scripts,
+        builtin_suite,
+        suite_launch_env,
+        resolved_suite_prewarm_scripts,
+        resolved_suite_prelude_scripts,
+    } = resolve_suite_run_inputs(
+        &workspace_root,
+        &resolved_out_dir,
+        &suite_args,
+        &suite_script_inputs,
+        &suite_prewarm_scripts,
+        &suite_prelude_scripts,
+        reuse_process,
+        launch_env,
+        strict_termination,
+    )?;
 
     let suite_wants_screenshots = pack_include_screenshots
         || crate::registry::checks::CheckRegistry::builtin()
@@ -874,46 +975,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         warmup_frames = 5;
     }
 
-    let use_devtools_ws =
-        devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
-    let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
     let tool_launched = launch.is_some() || reuse_launch;
-
-    if reuse_process {
-        // If the suite reuses a single process, we must pick a single launch env for the whole run.
-        // We treat `meta.env_defaults` as "suite-affecting" in this mode (and reject conflicts).
-        let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
-            std::collections::BTreeMap::new();
-        let mut suite_env_conflicts: Vec<String> = Vec::new();
-        for src in scripts.iter() {
-            for (key, value) in script_env_defaults(src) {
-                if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
-                    && prev != value
-                {
-                    suite_env_conflicts.push(format!(
-                        "{} wants {}={}, but another script requested {}={}",
-                        src.display(),
-                        key,
-                        value,
-                        key,
-                        prev
-                    ));
-                }
-            }
-        }
-        if !suite_env_conflicts.is_empty() {
-            suite_env_conflicts.sort();
-            return Err(format!(
-                "conflicting script meta.env_defaults in suite:\n- {}",
-                suite_env_conflicts.join("\n- ")
-            ));
-        }
-        for (key, value) in suite_script_env_defaults {
-            push_env_if_missing(&mut launch_env, &key, &value);
-        }
-    }
-
-    let suite_launch_env = launch_env.clone();
 
     let resolved_exit_path = {
         let raw = std::env::var_os("FRET_DIAG_EXIT_PATH")
@@ -951,14 +1013,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
 
     let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
-    let resolved_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
-        .into_iter()
-        .map(|p| resolve_path(&workspace_root, p))
-        .collect();
-    let resolved_suite_prelude_scripts: Vec<PathBuf> = suite_prelude_scripts
-        .into_iter()
-        .map(|p| resolve_path(&workspace_root, p))
-        .collect();
 
     let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
         if launch.is_some() || reuse_launch {
@@ -2497,4 +2551,75 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         println!("SUITE-SUMMARY {}", suite_summary_path.display());
     }
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_suite_run_inputs_merges_script_inputs_and_reuse_process_env_defaults() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-suite-run-inputs-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let script_path = root.join("script.json");
+        std::fs::write(
+            &script_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "meta": {
+                    "env_defaults": {
+                        "FRET_SUITE_TEST_FLAG": "1"
+                    }
+                },
+                "steps": []
+            }))
+            .expect("serialize script"),
+        )
+        .expect("write script");
+
+        let prewarm_path = PathBuf::from("prewarm.json");
+        let prelude_path = PathBuf::from("prelude.json");
+        let resolved = resolve_suite_run_inputs(
+            &root,
+            &root.join("out"),
+            &[],
+            &[script_path.to_string_lossy().to_string()],
+            &[prewarm_path.clone()],
+            &[prelude_path.clone()],
+            true,
+            vec![("EXISTING".to_string(), "1".to_string())],
+            false,
+        )
+        .expect("resolve suite run inputs");
+
+        assert_eq!(resolved.scripts, vec![script_path]);
+        assert!(resolved.builtin_suite.is_none());
+        assert!(
+            resolved
+                .suite_launch_env
+                .contains(&("EXISTING".to_string(), "1".to_string()))
+        );
+        assert!(
+            resolved
+                .suite_launch_env
+                .contains(&("FRET_SUITE_TEST_FLAG".to_string(), "1".to_string()))
+        );
+        assert_eq!(
+            resolved.resolved_suite_prewarm_scripts,
+            vec![root.join(prewarm_path)]
+        );
+        assert_eq!(
+            resolved.resolved_suite_prelude_scripts,
+            vec![root.join(prelude_path)]
+        );
+    }
 }

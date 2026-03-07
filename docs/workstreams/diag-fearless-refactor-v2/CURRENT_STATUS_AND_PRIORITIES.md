@@ -128,6 +128,9 @@ Recent progress since this note was drafted:
   helpers instead of repeating path override assembly inline,
 - `diag_suite` now reuses a dedicated result-only helper, which closes the last duplicated
   `script.result` override path among the main orchestration commands.
+- `diag_suite` also now routes suite input expansion, reuse-process env-default merging, and
+  prewarm/prelude normalization through `ResolvedSuiteRunInputs`, turning a large inline block into
+  a named seam that future `diag_campaign` work can reuse or mirror intentionally.
 
 These choices align with the biggest orchestration churn surfaces while avoiding a premature rewrite.
 
@@ -162,7 +165,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 ## Recommended next implementation sequence
 
 1. write the canonical artifact/evidence contract update,
-2. choose the next seam from suite/campaign resolution or check planning/execution,
+2. continue with `diag_campaign` item expansion/context extraction or move to check planning/execution,
 3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
 4. only then revisit optional output projections or larger packaging policies.
 
