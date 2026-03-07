@@ -54,21 +54,42 @@ impl Checkpoint {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            children,
+            test_id,
+            layout,
+            chrome,
+        } = self;
+        Self {
+            children: Vec::new(),
+            test_id,
+            layout,
+            chrome,
+        }
+        .into_element_with_children(cx, move |_cx| children)
+    }
+
+    pub fn into_element_with_children<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let muted_fg = theme.color_token("muted-foreground");
         let separator = Separator::new()
             .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
             .into_element(cx);
 
-        let children = self.children;
-        let row = ui::h_row(move |_cx| {
-            let mut out = children;
+        let row = ui::h_row(move |cx| {
+            let mut out = children(cx);
             out.push(separator);
             out
         })
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N0p5)
         .items(Items::Center)
-        .into_element(cx);
+        .into_element(cx)
+        .inherit_foreground(muted_fg);
         let row = cx.container(
             decl_style::container_props(&theme, self.chrome, self.layout),
             move |_cx| vec![row],
@@ -88,7 +109,7 @@ impl Checkpoint {
 /// Default icon aligned with AI Elements `CheckpointIcon` (Bookmark).
 #[derive(Debug)]
 pub struct CheckpointIcon {
-    children: Option<AnyElement>,
+    children: Vec<AnyElement>,
     icon: fret_icons::IconId,
     size: Px,
     color: Option<ColorRef>,
@@ -98,7 +119,7 @@ pub struct CheckpointIcon {
 impl Default for CheckpointIcon {
     fn default() -> Self {
         Self {
-            children: None,
+            children: Vec::new(),
             icon: fret_icons::IconId::new_static("lucide.bookmark"),
             size: Px(16.0),
             color: None,
@@ -109,7 +130,12 @@ impl Default for CheckpointIcon {
 
 impl CheckpointIcon {
     pub fn children(mut self, child: AnyElement) -> Self {
-        self.children = Some(child);
+        self.children = vec![child];
+        self
+    }
+
+    pub fn children_many(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -135,12 +161,17 @@ impl CheckpointIcon {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let icon = if let Some(children) = self.children {
-            children
-        } else {
+        let children = if self.children.is_empty() {
             let fg = theme.color_token("muted-foreground");
             let color = self.color.unwrap_or(ColorRef::Color(fg));
-            decl_icon::icon_with(cx, self.icon, Some(self.size), Some(color))
+            vec![decl_icon::icon_with(
+                cx,
+                self.icon,
+                Some(self.size),
+                Some(color),
+            )]
+        } else {
+            self.children
         };
         let layout = decl_style::layout_style(&theme, self.layout);
         cx.container(
@@ -148,8 +179,16 @@ impl CheckpointIcon {
                 layout,
                 ..Default::default()
             },
-            move |_cx| vec![icon],
+            move |_cx| children,
         )
+    }
+
+    pub fn into_element_with_children<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children_many(children(cx)).into_element(cx)
     }
 }
 
@@ -295,7 +334,21 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -344,5 +397,93 @@ mod tests {
         assert!(matches!(element.kind, ElementKind::Container(_)));
         assert_eq!(element.children.len(), 1);
         assert!(matches!(element.children[0].kind, ElementKind::Text(_)));
+    }
+
+    #[test]
+    fn checkpoint_icon_accepts_multiple_custom_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                CheckpointIcon::default()
+                    .children_many([cx.text("A"), cx.text("B")])
+                    .into_element(cx)
+            });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert_eq!(element.children.len(), 2);
+        assert!(matches!(element.children[0].kind, ElementKind::Text(_)));
+        assert!(matches!(element.children[1].kind, ElementKind::Text(_)));
+    }
+
+    #[test]
+    fn checkpoint_root_inherits_muted_foreground_for_custom_children_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let expected_fg = theme.color_token("muted-foreground");
+
+            let element = Checkpoint::new([
+                CheckpointIcon::default()
+                    .children(cx.text("Custom icon"))
+                    .into_element(cx),
+                CheckpointTrigger::new([cx.text("Restore checkpoint")]).into_element(cx),
+            ])
+            .into_element(cx);
+
+            let inherited = find_first_inherited_foreground_node(&element)
+                .expect("expected checkpoint subtree to carry inherited foreground");
+
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&element),
+                "expected checkpoint root to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
+    }
+
+    #[test]
+    fn checkpoint_into_element_with_children_preserves_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                let expected_fg = theme.color_token("muted-foreground");
+
+                let element = Checkpoint::new(Vec::<AnyElement>::new())
+                    .test_id("ui-ai-checkpoint-row")
+                    .into_element_with_children(cx, |cx| {
+                        vec![
+                            CheckpointIcon::default().into_element_with_children(cx, |cx| {
+                                vec![cx.text("⟲"), cx.text("•")]
+                            }),
+                            CheckpointTrigger::new([cx.text("Restore checkpoint")])
+                                .into_element(cx),
+                        ]
+                    });
+
+                assert_eq!(
+                    element.semantics_decoration.as_ref().and_then(|d| d.role),
+                    Some(SemanticsRole::Group)
+                );
+                assert_eq!(
+                    element
+                        .semantics_decoration
+                        .as_ref()
+                        .and_then(|d| d.test_id.as_deref()),
+                    Some("ui-ai-checkpoint-row")
+                );
+                let inherited = find_first_inherited_foreground_node(&element)
+                    .expect("expected checkpoint subtree to carry inherited foreground");
+                assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+                element
+            });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
     }
 }
