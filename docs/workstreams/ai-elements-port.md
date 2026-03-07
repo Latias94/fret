@@ -155,7 +155,7 @@ an interactive chat demo:
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
-  - `AI code block (demo)` (`ai_code_block_demo`): `CodeBlock` + `Snippet` demo + gate:
+  - `AI code block (demo)` (`ai_code_block_demo`): docs-aligned `CodeBlock` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
   - `AI commit (demo)` (`ai_commit_demo`): `Commit` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`

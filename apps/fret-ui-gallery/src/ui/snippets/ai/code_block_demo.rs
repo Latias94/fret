@@ -83,23 +83,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ),
     };
 
-    let title = ui::h_row(|cx| {
-        vec![
-            decl_icon::icon_with(
-                cx,
-                FILE_CODE,
-                Some(Px(14.0)),
-                Some(ColorRef::Color(muted_fg)),
-            ),
-            ui_ai::CodeBlockFilename::new(filename.clone())
-                .into_element(cx)
-                .test_id("ui-ai-code-block-filename"),
-        ]
-    })
-    .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
-
     let language_select = Select::new(language.clone(), language_open.clone())
         .trigger_test_id("ui-ai-code-block-language-trigger")
         .on_value_change({
@@ -143,33 +126,32 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let code_block = ui_ai::CodeBlock::new(code.clone())
         .language(language_value.clone())
-        .show_language(false)
         .show_line_numbers(false)
-        .header_left([title])
-        .header_right([
-            language_select,
-            ui_ai::CodeBlockCopyButton::new(code.clone())
-                .test_id("ui-ai-code-block-copy")
-                .copied_marker_test_id("ui-ai-code-block-copied-marker")
-                .into_element(cx),
-        ])
         .test_id("ui-ai-code-block-root")
-        .into_element(cx);
-
-    let snippet_code: Arc<str> = Arc::from("cargo run -p fret-ui-gallery --release");
-    let snippet = ui_ai::Snippet::with_code(snippet_code)
-        .test_id("ui-ai-code-block-snippet-root")
-        .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
         .into_element_with_children(cx, |cx| {
             vec![
-                ui_ai::SnippetAddon::new([ui_ai::SnippetText::new("$").into_element(cx)])
+                ui_ai::CodeBlockHeader::new([
+                    ui_ai::CodeBlockTitle::new([
+                        decl_icon::icon_with(
+                            cx,
+                            FILE_CODE,
+                            Some(Px(14.0)),
+                            Some(ColorRef::Color(muted_fg)),
+                        ),
+                        ui_ai::CodeBlockFilename::new(filename.clone())
+                            .into_element(cx)
+                            .test_id("ui-ai-code-block-filename"),
+                    ])
                     .into_element(cx),
-                ui_ai::SnippetInput::from_context().into_element(cx),
-                ui_ai::SnippetAddon::new([ui_ai::SnippetCopyButton::from_context()
-                    .test_id("ui-ai-code-block-snippet-copy")
-                    .copied_marker_test_id("ui-ai-code-block-snippet-copied-marker")
-                    .into_element(cx)])
-                .align(ui_ai::SnippetAddonAlign::InlineEnd)
+                    ui_ai::CodeBlockActions::new([
+                        language_select,
+                        ui_ai::CodeBlockCopyButton::from_context()
+                            .test_id("ui-ai-code-block-copy")
+                            .copied_marker_test_id("ui-ai-code-block-copied-marker")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
                 .into_element(cx),
             ]
         });
@@ -177,9 +159,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     ui::v_flex(|cx| {
         vec![
             cx.text("CodeBlock (AI Elements)"),
-            cx.text("Docs-aligned parts composition: filename + language picker + copy."),
+            cx.text("Composable header/title/actions composition aligned with the official AI Elements example."),
             code_block,
-            snippet,
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

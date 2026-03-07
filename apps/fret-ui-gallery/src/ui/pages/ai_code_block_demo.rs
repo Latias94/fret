@@ -1,6 +1,6 @@
 use super::super::*;
 
-use crate::ui::doc_layout::DocSection;
+use crate::ui::doc_layout::{DocSection, DocTabsSizing};
 use crate::ui::snippets::ai as snippets;
 
 pub(super) fn preview_ai_code_block_demo(
@@ -11,13 +11,23 @@ pub(super) fn preview_ai_code_block_demo(
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
-        Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
+        Some(
+            "Provides syntax highlighting, line numbers, and copy-to-clipboard ergonomics for code blocks. The Fret surface keeps rendering and scrolling in `fret-code-view`, while the AI layer owns the composable header/actions API.",
+        ),
         vec![
             DocSection::new("CodeBlock", demo)
+                .tabs_sizing(DocTabsSizing::FillRemaining)
+                .max_w(Px(680.0))
+                .descriptions([
+                    "Composable header/title/actions structure aligned with the official AI Elements docs example.",
+                    "Language switching reuses shadcn-style Select composition in the policy layer.",
+                    "Copy affordance consumes the nearest CodeBlock context instead of duplicating code props.",
+                    "Use the gallery theme preset switcher to inspect the same chrome under dark mode.",
+                ])
                 .test_id_prefix("ui-gallery-ai-code-block-demo")
                 .code_rust_from_file_region(snippets::code_block_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-page-ai-code-block-demo")]
 }
