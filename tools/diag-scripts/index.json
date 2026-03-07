@@ -2251,6 +2251,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-artifact-docs-run-action",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-artifact-docs-run-action.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-checkpoint-restore-tooltip",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
