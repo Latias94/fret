@@ -154,6 +154,7 @@ mod pending_group_resize;
 mod pending_resize;
 mod pending_wire_drag;
 mod pointer_up;
+mod pointer_up_commit;
 mod preview;
 mod reconnect;
 mod rect_math;

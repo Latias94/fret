@@ -436,6 +436,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/left_click/element_hits.rs` seam, so node selection sync, drag-handle
     gating, resize arming, and edge alt-insert arming no longer stay embedded in the main
     hit-dispatch match; the file now behaves as a thin retained hit router.
+  - Progress: `pointer_up.rs` now routes node-resize / group-resize / group-drag / node-drag
+    commit branches through the private `canvas/widget/pointer_up_commit.rs` seam, so graph-op
+    commit assembly and drag-end outcome labeling no longer stay embedded in the retained pointer
+    release router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
