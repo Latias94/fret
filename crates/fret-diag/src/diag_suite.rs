@@ -1324,6 +1324,133 @@ fn apply_suite_editor_text_default_post_run_checks(
     checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance |=
         defaults.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
 }
+
+fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &SuiteChecks) -> bool {
+    let wants_registered_post_run_checks =
+        crate::registry::checks::CheckRegistry::builtin().wants_post_run_checks(checks);
+    let retained_vlist_gate_for_script = checks
+        .check_retained_vlist_reconcile_no_notify_min
+        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
+    let retained_vlist_attach_detach_max_for_script = checks
+        .check_retained_vlist_attach_detach_max
+        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
+    let retained_vlist_keep_alive_reuse_min_for_script = checks
+        .check_retained_vlist_keep_alive_reuse_min
+        .filter(|_| {
+            diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src)
+        });
+    let retained_vlist_keep_alive_budget_for_script =
+        checks.check_retained_vlist_keep_alive_budget.filter(|_| {
+            diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(src)
+        });
+    let vlist_window_shifts_non_retained_max_for_script = checks
+        .check_vlist_window_shifts_non_retained_max
+        .filter(|_| diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src));
+
+    wants_registered_post_run_checks
+        || checks.check_stale_paint_test_id.is_some()
+        || checks.check_stale_scene_test_id.is_some()
+        || checks.check_idle_no_paint_min.is_some()
+        || checks.check_ui_gallery_web_ime_bridge_enabled
+        || checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+        || checks.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+        || checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+        || checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance
+        || checks.check_ui_gallery_code_editor_torture_marker_present
+        || checks.check_ui_gallery_code_editor_torture_undo_redo
+        || checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low
+        || checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits
+        || checks.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
+        || checks
+            .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+        || checks
+            .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+        || checks
+            .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+        || checks
+            .check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+        || checks
+            .check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+        || checks.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+        || checks.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
+        || checks.check_ui_gallery_code_editor_torture_folds_placeholder_present
+        || checks.check_ui_gallery_code_editor_torture_inlays_present
+        || checks.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
+        || checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+        || checks
+            .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+        || checks
+            .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
+        || checks.check_ui_gallery_code_editor_word_boundary
+        || checks.check_ui_gallery_code_editor_a11y_selection
+        || checks.check_ui_gallery_code_editor_a11y_composition
+        || checks.check_ui_gallery_code_editor_a11y_selection_wrap
+        || checks.check_ui_gallery_code_editor_a11y_composition_wrap
+        || checks.check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+        || checks.check_ui_gallery_code_editor_a11y_composition_drag
+        || checks.check_semantics_changed_repainted
+        || checks.check_wheel_events_max_per_frame.is_some()
+        || checks.check_wheel_scroll_test_id.is_some()
+        || checks.check_wheel_scroll_hit_changes_test_id.is_some()
+        || checks.check_prepaint_actions_min.is_some()
+        || checks.check_chart_sampling_window_shifts_min.is_some()
+        || checks.check_node_graph_cull_window_shifts_min.is_some()
+        || checks.check_node_graph_cull_window_shifts_max.is_some()
+        || checks.check_vlist_visible_range_refreshes_min.is_some()
+        || checks.check_vlist_visible_range_refreshes_max.is_some()
+        || checks.check_vlist_window_shifts_explainable
+        || checks.check_drag_cache_root_paint_only_test_id.is_some()
+        || checks.check_vlist_policy_key_stable
+        || checks.check_windowed_rows_offset_changes_min.is_some()
+        || checks.check_windowed_rows_visible_start_changes_repainted
+        || checks.check_layout_fast_path_min.is_some()
+        || checks.check_hover_layout_max.is_some()
+        || checks.check_view_cache_reuse_min.is_some()
+        || checks.check_view_cache_reuse_stable_min.is_some()
+        || checks.check_overlay_synthesis_min.is_some()
+        || checks.check_viewport_input_min.is_some()
+        || checks.check_dock_drag_min.is_some()
+        || checks.check_viewport_capture_min.is_some()
+        || retained_vlist_gate_for_script.is_some()
+        || retained_vlist_attach_detach_max_for_script.is_some()
+        || retained_vlist_keep_alive_reuse_min_for_script.is_some()
+        || retained_vlist_keep_alive_budget_for_script.is_some()
+        || vlist_window_shifts_non_retained_max_for_script.is_some()
+        || diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(src)
+        || diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(src)
+        || diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(src)
+        || diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(src)
+        || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(src)
+        || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(src)
+        || diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(src).is_some()
+        || diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(src)
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
@@ -1396,30 +1523,30 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     let checks_for_post_run_template = checks.clone();
 
     let SuiteChecks {
-        check_chart_sampling_window_shifts_min,
-        check_dock_drag_min,
-        check_drag_cache_root_paint_only_test_id,
+        check_chart_sampling_window_shifts_min: _,
+        check_dock_drag_min: _,
+        check_drag_cache_root_paint_only_test_id: _,
         check_gc_sweep_liveness: _,
-        check_hover_layout_max,
-        check_idle_no_paint_min,
-        check_layout_fast_path_min,
-        check_node_graph_cull_window_shifts_max,
-        check_node_graph_cull_window_shifts_min,
+        check_hover_layout_max: _,
+        check_idle_no_paint_min: _,
+        check_layout_fast_path_min: _,
+        check_node_graph_cull_window_shifts_max: _,
+        check_node_graph_cull_window_shifts_min: _,
         check_notify_hotspot_file_max,
         check_triage_hint_absent_codes: _,
-        check_overlay_synthesis_min,
+        check_overlay_synthesis_min: _,
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
-        check_prepaint_actions_min,
+        check_prepaint_actions_min: _,
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_budget,
         check_retained_vlist_keep_alive_reuse_min,
         check_retained_vlist_reconcile_no_notify_min,
-        check_semantics_changed_repainted,
+        check_semantics_changed_repainted: _,
         check_stale_paint_eps: _,
-        check_stale_paint_test_id,
+        check_stale_paint_test_id: _,
         check_stale_scene_eps: _,
-        check_stale_scene_test_id,
+        check_stale_scene_test_id: _,
         check_ui_gallery_code_editor_a11y_composition: _,
         check_ui_gallery_code_editor_a11y_composition_drag: _,
         check_ui_gallery_code_editor_a11y_composition_wrap: _,
@@ -1476,29 +1603,26 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_ui_gallery_text_mixed_script_bundled_fallback_conformance: _,
         check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: _,
         check_ui_gallery_web_ime_bridge_enabled: _,
-        check_view_cache_reuse_min,
-        check_view_cache_reuse_stable_min,
-        check_viewport_capture_min,
-        check_viewport_input_min,
-        check_vlist_policy_key_stable,
-        check_vlist_visible_range_refreshes_max,
-        check_vlist_visible_range_refreshes_min,
+        check_view_cache_reuse_min: _,
+        check_view_cache_reuse_stable_min: _,
+        check_viewport_capture_min: _,
+        check_viewport_input_min: _,
+        check_vlist_policy_key_stable: _,
+        check_vlist_visible_range_refreshes_max: _,
+        check_vlist_visible_range_refreshes_min: _,
         check_vlist_window_shifts_escape_max: _,
-        check_vlist_window_shifts_explainable,
+        check_vlist_window_shifts_explainable: _,
         check_vlist_window_shifts_have_prepaint_actions: _,
         check_vlist_window_shifts_non_retained_max,
         check_vlist_window_shifts_prefetch_max: _,
-        check_wheel_events_max_per_frame,
-        check_wheel_scroll_hit_changes_test_id,
-        check_wheel_scroll_test_id,
+        check_wheel_events_max_per_frame: _,
+        check_wheel_scroll_hit_changes_test_id: _,
+        check_wheel_scroll_test_id: _,
         check_windowed_rows_offset_changes_eps: _,
-        check_windowed_rows_offset_changes_min,
-        check_windowed_rows_visible_start_changes_repainted,
+        check_windowed_rows_offset_changes_min: _,
+        check_windowed_rows_visible_start_changes_repainted: _,
         dump_semantics_changed_repainted_json: _,
     } = checks;
-
-    let wants_registered_post_run_checks = crate::registry::checks::CheckRegistry::builtin()
-        .wants_post_run_checks(&checks_for_post_run_template);
 
     // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.
     //
@@ -2314,115 +2438,10 @@ hint: list suites via `fretboard diag list suites`"
             check_vlist_window_shifts_non_retained_max.filter(|_| {
                 diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
             });
-        let wants_post_run_checks_for_script = wants_registered_post_run_checks
-            || check_stale_paint_test_id.is_some()
-            || check_stale_scene_test_id.is_some()
-            || check_idle_no_paint_min.is_some()
-            || checks_for_post_run_template.check_ui_gallery_web_ime_bridge_enabled
-            || checks_for_post_run_template.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
-            || checks_for_post_run_template.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
-            || checks_for_post_run_template.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
-            || checks_for_post_run_template.check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_marker_present
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_undo_redo
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_geom_fallbacks_low
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_read_only_blocks_edits
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_folds_placeholder_present
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
-            || checks_for_post_run_template.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
-            || checks_for_post_run_template.check_ui_gallery_code_editor_word_boundary
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_selection
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_selection_wrap
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_wrap
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-            || checks_for_post_run_template.check_ui_gallery_code_editor_a11y_composition_drag
-            || check_semantics_changed_repainted
-            || check_wheel_events_max_per_frame.is_some()
-            || check_wheel_scroll_test_id.is_some()
-            || check_wheel_scroll_hit_changes_test_id.is_some()
-            || check_prepaint_actions_min.is_some()
-            || check_chart_sampling_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_max.is_some()
-            || check_vlist_visible_range_refreshes_min.is_some()
-            || check_vlist_visible_range_refreshes_max.is_some()
-            || check_vlist_window_shifts_explainable
-            || check_drag_cache_root_paint_only_test_id.is_some()
-            || check_vlist_policy_key_stable
-            || check_windowed_rows_offset_changes_min.is_some()
-            || check_windowed_rows_visible_start_changes_repainted
-            || check_layout_fast_path_min.is_some()
-            || check_hover_layout_max.is_some()
-            || check_view_cache_reuse_min.is_some()
-            || check_view_cache_reuse_stable_min.is_some()
-            || check_overlay_synthesis_min.is_some()
-            || check_viewport_input_min.is_some()
-            || check_dock_drag_min.is_some()
-            || check_viewport_capture_min.is_some()
-            || retained_vlist_gate_for_script.is_some()
-            || retained_vlist_attach_detach_max_for_script.is_some()
-            || retained_vlist_keep_alive_reuse_min_for_script.is_some()
-            || retained_vlist_keep_alive_budget_for_script.is_some()
-            || vlist_window_shifts_non_retained_max_for_script.is_some()
-            || diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
-            || diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
-            || diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
-                &src,
-            )
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
-            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
-            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
-            || diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
-            || diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
+        let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
+            &src,
+            &checks_for_post_run_template,
+        );
 
         let is_gc_liveness_script = src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
             n == "ui-gallery-overlay-torture.json" || n == "ui-gallery-sidebar-scroll-refresh.json"
@@ -2748,6 +2767,25 @@ mod tests {
         );
 
         assert!(!defaults.check_ui_gallery_web_ime_bridge_enabled);
+    }
+
+    #[test]
+    fn wants_explicit_or_policy_post_run_checks_for_script_detects_explicit_template_gate() {
+        let mut checks = SuiteChecks::default();
+        checks.check_ui_gallery_web_ime_bridge_enabled = true;
+
+        assert!(wants_explicit_or_policy_post_run_checks_for_script(
+            std::path::Path::new("unrelated.json"),
+            &checks,
+        ));
+    }
+
+    #[test]
+    fn wants_explicit_or_policy_post_run_checks_for_script_detects_script_policy_gate() {
+        assert!(wants_explicit_or_policy_post_run_checks_for_script(
+            std::path::Path::new("ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"),
+            &SuiteChecks::default(),
+        ));
     }
 
     #[test]
