@@ -389,11 +389,23 @@ full interaction parity is still only available there.
 Concretely:
 
 - prefer declarative composition at the app boundary,
-- prefer store-driven integration,
+- prefer controller-first declarative integration (`NodeGraphController` + `node_graph_surface(...)`),
 - prefer controller-driven commands and treat raw edit/view queues as transport or compatibility
   seams,
 - do not author directly against retained `NodeGraphCanvas` unless you are working inside
   `fret-node` internals, tests, or temporary compatibility harnesses.
+
+### Golden path for new app code
+
+For new editor surfaces, teach and copy this shape first:
+
+1. create `graph` / `view_state` models,
+2. create one `NodeGraphStore` from the same initial graph + view state,
+3. create one `NodeGraphController::new(store)`,
+4. render `node_graph_surface(cx, NodeGraphSurfaceProps::new(graph, view_state, controller))`,
+5. route app-facing viewport/query/edit operations through the controller.
+
+This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
 
 ### Recommended target posture
 
@@ -405,6 +417,42 @@ whose node content progressively moves toward portal-based declarative compositi
 `node_graph_surface_compat_retained` is acceptable as the transition path when the fully
 declarative editor-grade surface is not yet ready.
 
+Until then, the compatibility path should stay bounded to:
+
+- the legacy demo as a compatibility harness,
+- focused retained conformance tests,
+- temporary parity investigations where declarative evidence is still missing.
+
+### Exit criteria for `compat-retained-canvas`
+
+The compatibility path can be deleted or permanently demoted only when all of the following are
+true:
+
+- `node_graph_surface(...)` + `NodeGraphController` is the default documented app-facing path,
+- committed declarative edits and viewport changes stay transaction-safe and controller-driven,
+- declarative gates cover the editor-grade flows that still justify retained today,
+- no new public app-facing APIs depend on retained widget types or raw queue ownership,
+- the legacy demo remains only a harness and is no longer needed to teach the recommended posture.
+
+### Current deprecation blockers
+
+The remaining blockers should be tracked explicitly rather than hand-waved as "retained for now":
+
+- declarative parity evidence for retained-backed editor chrome flows,
+- declarative parity evidence for portal/overlay lifecycle flows that still rely on retained
+  conformance coverage,
+- a stable review checklist comparing the flows that matter most for editor-grade usage.
+
+### Comparison checklist: declarative vs compatibility retained
+
+Review these flows whenever a change claims declarative parity or adds retained-only work:
+
+- viewport interactions: pan / wheel zoom / pinch / fit-view,
+- transaction-safe node drag and committed selection / marquee flows,
+- portal bounds, hover anchors, and fit-to-portals behavior,
+- rename / blackboard / toolbar / minimap editor chrome,
+- diagnostics and conformance coverage for the same user-visible behavior.
+
 ### API red lines
 
 Do not add or normalize any of the following as long-term best practice:
@@ -413,6 +461,12 @@ Do not add or normalize any of the following as long-term best practice:
 - editor-grade interactions that commit by mutating `Graph` directly,
 - new UI-policy defaults hidden in mechanism code,
 - tutorial/demo guidance that implies retained authoring is the normal downstream path.
+
+Any new retained-only addition should document:
+
+- why `node_graph_surface(...)` cannot host it yet,
+- which gate or parity test will track the gap,
+- what the exit path is back to the declarative teaching surface.
 
 ## Reviewer checklist
 

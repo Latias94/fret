@@ -21,9 +21,11 @@ Use controlled mode when:
 - you want to treat `NodeGraphStore` as a *derived cache* / interaction layer, or
 - you need to sync edits across multiple runtimes without giving any single store ownership.
 
-If you are building a typical editor UI with a single graph instance, prefer **store-driven**
-integration (`NodeGraphCanvas::with_store`) because it also provides undo/redo, lookup caches, and a
-single place to attach middleware/callbacks.
+If you are building a typical editor UI with a single graph instance, prefer the
+**controller-first declarative** path: construct one `NodeGraphStore`, wrap it in
+`NodeGraphController`, and render `node_graph_surface(...)`. This keeps undo/redo, lookup caches,
+and editor interactions in the store/runtime while teaching the same declarative surface that app
+code should copy.
 
 ## Building blocks (headless-safe)
 
@@ -33,16 +35,22 @@ single place to attach middleware/callbacks.
   - `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
 - Callback adapter:
   - `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`, `NodeGraphCallbacks`, `install_callbacks`)
-- Store (optional, but recommended as the interaction surface):
+- Store (recommended runtime interaction surface):
   - `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
+- Controller + declarative surface:
+  - `ecosystem/fret-node/src/ui/controller.rs` (`NodeGraphController`)
+  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`, `node_graph_surface`)
 
-## Pattern A — “Store drives UI” (recommended default)
+## Pattern A - Controller-first declarative surface (recommended default)
 
-- Create a `NodeGraphStore` from an initial `Graph` + `NodeGraphViewState`.
-- Pass the store to `NodeGraphCanvas::with_store` (UI) or drive it headlessly (tooling).
-- Optionally attach callbacks (`NodeGraphCanvas::with_callbacks` or `install_callbacks`).
+- Create `graph` / `view_state` models from an initial `Graph` + `NodeGraphViewState`.
+- Create one `NodeGraphStore` from the same initial graph + view state.
+- Create one `NodeGraphController::new(store)`.
+- Render `node_graph_surface(cx, NodeGraphSurfaceProps::new(graph, view_state, controller))`.
+- Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
+  commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.
-  - Retained UI glue owns `NodeGraphGestureCallbacks` when transient gesture lifecycle matters.
+  - Retained UI glue owns `NodeGraphGestureCallbacks` only when transient gesture lifecycle matters.
 
 This is the default used by `apps/fret-examples/src/node_graph_demo.rs`.
 

@@ -299,11 +299,11 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 ## M5 - Compatibility retained convergence
 
-- [ ] Write explicit exit criteria for `compat-retained-canvas`.
-- [ ] Decide which retained-only behaviors still block deprecation.
-- [ ] Keep the legacy demo as a compatibility harness, not the default teaching surface.
-- [ ] Prevent new retained-only surface area from growing without a documented justification.
-- [ ] Add a comparison checklist for declarative vs compat-retained behavior on the flows that matter
+- [x] Write explicit exit criteria for `compat-retained-canvas`.
+- [x] Decide which retained-only behavior categories still block deprecation.
+- [x] Keep the legacy demo documented as a compatibility harness, not the default teaching surface.
+- [x] Prevent new retained-only surface area from growing without a documented justification.
+- [x] Add a comparison checklist for declarative vs compat-retained behavior on the flows that matter
       most to editor-grade usage.
 
 ## Existing evidence and gates to keep alive

@@ -403,7 +403,10 @@ removed or permanently demoted.
 
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `docs/node-graph-controlled-mode.md`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 
 ## Suggested milestone order
 
