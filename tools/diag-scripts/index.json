@@ -2523,6 +2523,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-link-activation",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert",
+        "links",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
       "required_capabilities": [

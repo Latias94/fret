@@ -28,7 +28,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::AlertDialog::new(open).into_element(
         cx,
         move |cx| {
-            shadcn::Button::new("Show Dialog")
+            shadcn::Button::new("Open")
                 .variant(shadcn::ButtonVariant::Outline)
                 .toggle_model(open_for_trigger.clone())
                 .test_id("ui-gallery-alert-dialog-basic-trigger")
@@ -38,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             let header = shadcn::AlertDialogHeader::new(vec![
                 shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
                 shadcn::AlertDialogDescription::new(
-                    "This action cannot be undone. This will permanently delete your account from our servers.",
+                    "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
                 )
                 .into_element(cx),
             ])
