@@ -12,6 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
 };
@@ -702,34 +703,25 @@ impl ItemDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app);
-            let fg = theme
-                .color_by_key("muted.foreground")
-                .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or_else(|| theme.color_token("muted.foreground"));
-            let px = theme
-                .metric_by_key("component.item.description_px")
-                .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_token("font.size"));
-            let line_height = theme
-                .metric_by_key("component.item.description_line_height")
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            (fg, px, line_height)
-        };
+        let theme = Theme::global(&*cx.app).snapshot();
+        let line_height = fret_ui_kit::typography::description_text_refinement(
+            &theme,
+            "component.item.description",
+        )
+        .line_height
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
         let max_h = Px(line_height.0 * 2.0);
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .max_h(max_h)
-            .overflow_hidden()
-            .into_element(cx)
+        scope_description_text(
+            ui::raw_text(self.text)
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .max_h(max_h)
+                .overflow_hidden()
+                .into_element(cx),
+            &theme,
+            "component.item.description",
+        )
     }
 }
 
@@ -1239,6 +1231,38 @@ mod tests {
         assert_eq!(chrome.padding.right, SpacingLength::Px(px));
         assert_eq!(chrome.padding.top, SpacingLength::Px(py));
         assert_eq!(chrome.padding.bottom, SpacingLength::Px(py));
+    }
+
+    #[test]
+    fn item_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected ItemDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.item.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
