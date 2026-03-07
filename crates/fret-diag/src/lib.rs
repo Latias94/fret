@@ -2943,6 +2943,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
     };
 
+    let resolved_paths = ResolvedScriptPaths {
+        out_dir: resolved_out_dir.clone(),
+        trigger_path: resolved_trigger_path.clone(),
+        ready_path: resolved_ready_path.clone(),
+        exit_path: resolved_exit_path.clone(),
+        script_path: resolved_script_path.clone(),
+        script_trigger_path: resolved_script_trigger_path.clone(),
+        script_result_path: resolved_script_result_path.clone(),
+        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+    };
+
     if let Some(res) = diag_simple_dispatch::dispatch_simple(
         sub.as_str(),
         &rest,
@@ -3167,12 +3178,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 ensure_ai_packet,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_trigger_path: resolved_trigger_path.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 fs_transport_cfg: fs_transport_cfg.clone(),
                 pack_out: pack_out.clone(),
                 pack_include_root_artifacts,
@@ -3284,9 +3290,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 suite_prelude_scripts: suite_prelude_scripts.clone(),
                 suite_prelude_each_run,
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 devtools_ws_url: devtools_ws_url.clone(),
                 devtools_token: devtools_token.clone(),
                 devtools_session_id: devtools_session_id.clone(),
@@ -4160,20 +4164,22 @@ mod capability_tests {
 }
 
 #[derive(Debug, Clone)]
-struct ResolvedScriptPaths {
-    out_dir: PathBuf,
-    ready_path: PathBuf,
-    exit_path: PathBuf,
-    script_path: PathBuf,
-    script_trigger_path: PathBuf,
-    script_result_path: PathBuf,
-    script_result_trigger_path: PathBuf,
+pub(crate) struct ResolvedScriptPaths {
+    pub(crate) out_dir: PathBuf,
+    pub(crate) trigger_path: PathBuf,
+    pub(crate) ready_path: PathBuf,
+    pub(crate) exit_path: PathBuf,
+    pub(crate) script_path: PathBuf,
+    pub(crate) script_trigger_path: PathBuf,
+    pub(crate) script_result_path: PathBuf,
+    pub(crate) script_result_trigger_path: PathBuf,
 }
 
 impl ResolvedScriptPaths {
-    fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
+    pub(crate) fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
         let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
         Self {
+            trigger_path: resolve_path(workspace_root, out_dir.join("trigger.touch")),
             ready_path: resolve_path(workspace_root, out_dir.join("ready.touch")),
             exit_path: resolve_path(workspace_root, out_dir.join("exit.touch")),
             script_path: resolve_path(workspace_root, out_dir.join("script.json")),

@@ -248,6 +248,11 @@ Recommended PR slices:
      - `diag query overlay-placement-trace`
      - `diag screenshots`
      - `diag doctor` (script result discovery for report generation)
+   - third landing: shared run-path context now reuses `ResolvedScriptPaths` across the main orchestration flows instead of re-threading parallel path fields:
+     - `diag run`
+     - `diag suite`
+     - `diag campaign` (suite/script item dispatch)
+     - `diag matrix`
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

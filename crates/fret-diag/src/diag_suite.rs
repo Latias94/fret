@@ -549,9 +549,7 @@ pub(crate) struct SuiteCmdContext {
     pub suite_prelude_scripts: Vec<PathBuf>,
     pub suite_prelude_each_run: bool,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
+    pub resolved_paths: ResolvedScriptPaths,
     pub devtools_ws_url: Option<String>,
     pub devtools_token: Option<String>,
     pub devtools_session_id: Option<String>,
@@ -584,9 +582,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         suite_prelude_scripts,
         suite_prelude_each_run,
         workspace_root,
-        resolved_out_dir,
-        resolved_ready_path,
-        resolved_script_result_path,
+        resolved_paths,
         devtools_ws_url,
         devtools_token,
         devtools_session_id,
@@ -608,6 +604,10 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         keep_open,
         checks,
     } = ctx;
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
 
     let checks_for_post_run_template = checks.clone();
 
