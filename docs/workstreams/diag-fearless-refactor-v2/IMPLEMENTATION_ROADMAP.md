@@ -251,6 +251,8 @@ Recommended PR slices:
    - third landing: shared run-path context now reuses `ResolvedScriptPaths` across the main orchestration flows instead of re-threading parallel path fields:
      - `diag run`
      - `diag suite`
+     - `diag repeat`
+     - `diag repro`
      - `diag campaign` (suite/script item dispatch)
      - `diag matrix`
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,

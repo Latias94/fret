@@ -10,13 +10,7 @@ mod util;
 pub(crate) struct ReproCmdContext {
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_exit_path: PathBuf,
-    pub resolved_script_path: PathBuf,
-    pub resolved_script_trigger_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
-    pub resolved_script_result_trigger_path: PathBuf,
+    pub resolved_paths: ResolvedScriptPaths,
     pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
     pub pack_out: Option<PathBuf>,
     pub ensure_ai_packet: bool,
@@ -55,13 +49,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
         workspace_root,
-        resolved_out_dir,
-        resolved_ready_path,
-        resolved_exit_path,
-        resolved_script_path: _resolved_script_path,
-        resolved_script_trigger_path: _resolved_script_trigger_path,
-        resolved_script_result_path,
-        resolved_script_result_trigger_path: _resolved_script_result_trigger_path,
+        resolved_paths,
         fs_transport_cfg,
         pack_out,
         ensure_ai_packet,
@@ -95,6 +83,14 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_redraw_hitches_max_total_ms_threshold,
         checks,
     } = ctx;
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_exit_path = resolved_paths.exit_path;
+    let _resolved_script_path = resolved_paths.script_path;
+    let _resolved_script_trigger_path = resolved_paths.script_trigger_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
+    let _resolved_script_result_trigger_path = resolved_paths.script_result_trigger_path;
 
     let checks_for_post_run = checks.clone();
 

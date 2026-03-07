@@ -236,13 +236,7 @@ pub(crate) struct RepeatCmdContext {
     pub pack_after_run: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_exit_path: PathBuf,
-    pub resolved_script_path: PathBuf,
-    pub resolved_script_trigger_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
-    pub resolved_script_result_trigger_path: PathBuf,
+    pub resolved_paths: ResolvedScriptPaths,
     pub pack_include_screenshots: bool,
     pub check_pixels_changed_test_id: Option<String>,
     pub check_pixels_unchanged_test_id: Option<String>,
@@ -269,13 +263,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         pack_after_run,
         rest,
         workspace_root,
-        resolved_out_dir,
-        resolved_ready_path,
-        resolved_exit_path,
-        resolved_script_path,
-        resolved_script_trigger_path,
-        resolved_script_result_path,
-        resolved_script_result_trigger_path,
+        resolved_paths,
         pack_include_screenshots,
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
@@ -295,6 +283,14 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         timeout_ms,
         poll_ms,
     } = ctx;
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_exit_path = resolved_paths.exit_path;
+    let resolved_script_path = resolved_paths.script_path;
+    let resolved_script_trigger_path = resolved_paths.script_trigger_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
+    let resolved_script_result_trigger_path = resolved_paths.script_result_trigger_path;
 
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
