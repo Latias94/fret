@@ -1,6 +1,7 @@
 use fret_core::{Modifiers, Point, Rect};
 use fret_ui::UiHost;
 
+mod group_background;
 mod handlers;
 mod hit;
 

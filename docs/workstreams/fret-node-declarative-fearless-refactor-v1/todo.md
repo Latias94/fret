@@ -424,6 +424,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `right_click.rs` now also acts as a thin retained event router, while pending
     right-click click-vs-drag threshold checks are shared between `event_pointer_move.rs` and
     `event_pointer_up.rs`, and context-menu opening delegates into `context_menu/opening.rs`.
+  - Progress: `left_click/handlers.rs` now routes group-resize / group-header / background
+    branches through the private `canvas/widget/left_click/group_background.rs` seam, so group
+    selection sync, pending drag/resize arming, and background marquee/pan fallback no longer stay
+    embedded in the main hit-dispatch match.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

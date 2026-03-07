@@ -489,6 +489,10 @@ real editors.
 - `right_click.rs` now also acts as a thin retained event router, while pending right-click
   click-vs-drag threshold checks are shared between `event_pointer_move.rs` and
   `event_pointer_up.rs`, and context-menu opening delegates into `context_menu/opening.rs`.
+- `left_click/handlers.rs` now also routes group-resize / group-header / background branches
+  through the private `canvas/widget/left_click/group_background.rs` seam, so group selection
+  sync, pending drag/resize arming, and background marquee/pan fallback no longer stay embedded
+  in the main hit-dispatch match.
 
 ### Deliverables
 
@@ -533,6 +537,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/left_click/group_background.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
