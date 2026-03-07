@@ -7,9 +7,9 @@ use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::{AnyElement, ElementContext, UiHost};
@@ -156,13 +156,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .refine_layout(LayoutRefinement::default().w_full().flex_1().min_h_0())
         .into_element_with_children(cx, |cx| {
             let content_children: Vec<AnyElement> = if messages_empty {
-                vec![
-                    ui_ai::ConversationEmptyState::new("Start a conversation")
-                        .description("Type a message below to begin chatting.")
-                        .icon(icon::icon(cx, IconId::new_static("lucide.message-square")))
-                        .test_id("ui-ai-conversation-demo-empty")
-                        .into_element(cx),
-                ]
+                vec![ui_ai::ConversationEmptyState::new("Start a conversation")
+                    .description("Type a message below to begin chatting.")
+                    .icon(icon::icon(cx, IconId::new_static("lucide.message-square")))
+                    .test_id("ui-ai-conversation-demo-empty")
+                    .into_element(cx)]
             } else {
                 messages
                     .iter()

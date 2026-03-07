@@ -4,9 +4,9 @@ pub const SOURCE: &str = include_str!("attachments_inline.rs");
 use crate::ui::snippets::aspect_ratio::landscape_image_id;
 use fret_core::Px;
 use fret_runtime::Model;
+use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
-use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
@@ -189,12 +189,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .collect::<Vec<_>>();
 
     ui::h_flex(move |cx| {
-        vec![
-            ui_ai::Attachments::new(children)
-                .variant(ui_ai::AttachmentVariant::Inline)
-                .test_id("ui-ai-attachments-inline-root")
-                .into_element(cx),
-        ]
+        vec![ui_ai::Attachments::new(children)
+            .variant(ui_ai::AttachmentVariant::Inline)
+            .test_id("ui-ai-attachments-inline-root")
+            .into_element(cx)]
     })
     .layout(LayoutRefinement::default().w_full())
     .justify_center()

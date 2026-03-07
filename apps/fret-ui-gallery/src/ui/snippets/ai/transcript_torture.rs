@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("transcript_torture.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};

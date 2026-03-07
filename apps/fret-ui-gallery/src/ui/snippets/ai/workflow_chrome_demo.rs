@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("workflow_chrome_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
@@ -11,7 +11,7 @@ use fret_ui_kit::{
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    use fret_canvas::ui::{CanvasInputExemptRegionProps, canvas_input_exempt_region};
+    use fret_canvas::ui::{canvas_input_exempt_region, CanvasInputExemptRegionProps};
     use fret_core::Point;
     use fret_core::Px;
     use fret_icons::IconId;

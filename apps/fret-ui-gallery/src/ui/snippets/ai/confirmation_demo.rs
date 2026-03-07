@@ -5,11 +5,11 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
+use fret_ui_kit::ColorRef;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{self as shadcn, prelude::*, Button, ButtonSize, ButtonVariant};
 use std::sync::Arc;
 
 #[derive(Default)]

@@ -4,12 +4,12 @@ pub const SOURCE: &str = include_str!("attachments_grid.rs");
 use crate::ui::snippets::aspect_ratio::{landscape_image_id, portrait_image_id};
 use fret_core::Px;
 use fret_runtime::Model;
+use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
-use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::ui;
+use fret_ui_kit::LayoutRefinement;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
@@ -143,12 +143,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .collect::<Vec<_>>();
 
     ui::h_flex(move |cx| {
-        vec![
-            ui_ai::Attachments::new(children)
-                .variant(ui_ai::AttachmentVariant::Grid)
-                .test_id("ui-ai-attachments-grid-root")
-                .into_element(cx),
-        ]
+        vec![ui_ai::Attachments::new(children)
+            .variant(ui_ai::AttachmentVariant::Grid)
+            .test_id("ui-ai-attachments-grid-root")
+            .into_element(cx)]
     })
     .layout(LayoutRefinement::default().w_full())
     .justify_center()

@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("canvas_world_layer_spike.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn as shadcn;
@@ -13,13 +13,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use std::sync::Arc;
 
     use fret_canvas::ui::{
+        canvas_input_exempt_region, canvas_world_bounds_item, canvas_world_fit_view_to_keys,
+        canvas_world_surface_panel_with_marquee_selection, use_controllable_model,
         CanvasInputExemptRegionProps, CanvasMarqueeSelectionProps, CanvasWorldBoundsStore,
         CanvasWorldScaleMode, CanvasWorldSurfacePanelProps, OnCanvasMarqueeCommit,
-        OnCanvasMarqueeStart, PanZoomInputPreset, canvas_input_exempt_region,
-        canvas_world_bounds_item, canvas_world_fit_view_to_keys,
-        canvas_world_surface_panel_with_marquee_selection, use_controllable_model,
+        OnCanvasMarqueeStart, PanZoomInputPreset,
     };
-    use fret_canvas::view::{FitViewOptions2D, PanZoom2D, visible_canvas_rect};
+    use fret_canvas::view::{visible_canvas_rect, FitViewOptions2D, PanZoom2D};
     use fret_core::scene::Paint;
     use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size};
     use fret_ui::action::OnActivate;

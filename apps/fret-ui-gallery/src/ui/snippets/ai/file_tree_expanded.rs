@@ -5,7 +5,7 @@ use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_kit::{ui, LayoutRefinement, Space};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui_ai::FileTree::new([ui_ai::FileTreeFolder::new("src", "src")

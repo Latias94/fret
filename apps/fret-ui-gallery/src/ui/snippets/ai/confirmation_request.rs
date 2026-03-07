@@ -7,7 +7,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{ButtonVariant, prelude::*};
+use fret_ui_shadcn::{prelude::*, ButtonVariant};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();

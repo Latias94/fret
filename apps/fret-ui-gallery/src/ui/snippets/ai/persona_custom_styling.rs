@@ -9,27 +9,25 @@ use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(move |cx| {
-        vec![
-            ui_ai::Persona::new(ui_ai::PersonaState::Thinking)
-                .variant(ui_ai::PersonaVariant::Halo)
-                .size(Px(112.0))
-                .show_label(true)
-                .refine_layout(LayoutRefinement::default().w_px(Px(112.0)).min_w_0())
-                .refine_style(
-                    ChromeRefinement::default()
-                        .rounded(Radius::Full)
-                        .border_1()
-                        .border_color(ColorRef::Token {
-                            key: "ring",
-                            fallback: ColorFallback::ThemeFocusRing,
-                        })
-                        .bg(ColorRef::Token {
-                            key: "accent",
-                            fallback: ColorFallback::ThemeHoverBackground,
-                        }),
-                )
-                .into_element(cx),
-        ]
+        vec![ui_ai::Persona::new(ui_ai::PersonaState::Thinking)
+            .variant(ui_ai::PersonaVariant::Halo)
+            .size(Px(112.0))
+            .show_label(true)
+            .refine_layout(LayoutRefinement::default().w_px(Px(112.0)).min_w_0())
+            .refine_style(
+                ChromeRefinement::default()
+                    .rounded(Radius::Full)
+                    .border_1()
+                    .border_color(ColorRef::Token {
+                        key: "ring",
+                        fallback: ColorFallback::ThemeFocusRing,
+                    })
+                    .bg(ColorRef::Token {
+                        key: "accent",
+                        fallback: ColorFallback::ThemeHoverBackground,
+                    }),
+            )
+            .into_element(cx)]
     })
     .gap(Space::N4)
     .items_center()

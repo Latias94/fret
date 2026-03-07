@@ -125,11 +125,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     props.corner_radii = Corners::all(theme.metric_token("metric.radius.sm"));
 
                     vec![cx.container(props, move |cx| {
-                        vec![
-                            ui::text(add_external_label.clone())
-                                .text_color(ColorRef::Color(fg))
-                                .into_element(cx),
-                        ]
+                        vec![ui::text(add_external_label.clone())
+                            .text_color(ColorRef::Color(fg))
+                            .into_element(cx)]
                     })]
                 },
             );
@@ -145,27 +143,25 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .test_id("ui-gallery-ai-prompt-input-provider-sent-count-1")
                 });
 
-            vec![
-                ui::v_stack(move |cx| {
-                    let mut children = Vec::new();
-                    children.push(add_external);
-                    children.push(
-                        ui_ai::PromptInput::new(controller.text)
-                            .on_send(on_send)
-                            .test_id_root("ui-gallery-ai-prompt-input-provider")
-                            .test_id_textarea("ui-gallery-ai-prompt-input-provider-textarea")
-                            .test_id_send("ui-gallery-ai-prompt-input-provider-send")
-                            .test_id_attachments("ui-gallery-ai-prompt-input-provider-attachments")
-                            .into_element(cx),
-                    );
-                    if let Some(marker) = sent_marker {
-                        children.push(marker);
-                    }
-                    children
-                })
-                .gap(Space::N4)
-                .into_element(cx),
-            ]
+            vec![ui::v_stack(move |cx| {
+                let mut children = Vec::new();
+                children.push(add_external);
+                children.push(
+                    ui_ai::PromptInput::new(controller.text)
+                        .on_send(on_send)
+                        .test_id_root("ui-gallery-ai-prompt-input-provider")
+                        .test_id_textarea("ui-gallery-ai-prompt-input-provider-textarea")
+                        .test_id_send("ui-gallery-ai-prompt-input-provider-send")
+                        .test_id_attachments("ui-gallery-ai-prompt-input-provider-attachments")
+                        .into_element(cx),
+                );
+                if let Some(marker) = sent_marker {
+                    children.push(marker);
+                }
+                children
+            })
+            .gap(Space::N4)
+            .into_element(cx)]
         });
 
     ui::v_flex(move |cx| {

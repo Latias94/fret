@@ -6,12 +6,12 @@ use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::{self as shadcn, ButtonSize, ButtonVariant, Radius, prelude::*};
+use fret_ui_shadcn::{self as shadcn, prelude::*, ButtonSize, ButtonVariant, Radius};
 use std::sync::Arc;
 
 #[derive(Default)]

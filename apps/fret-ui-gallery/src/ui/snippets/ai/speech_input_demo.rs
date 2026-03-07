@@ -16,7 +16,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::{ButtonSize, ButtonVariant, Card, CardContent, CardSize, prelude::*};
+use fret_ui_shadcn::{prelude::*, ButtonSize, ButtonVariant, Card, CardContent, CardSize};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -380,28 +380,26 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .into_element(cx)
                 };
 
-                vec![
-                    ui::v_flex(move |cx| {
-                        let row = ui::h_flex(move |_cx| control_row)
-                            .gap(Space::N2)
-                            .items_center()
-                            .justify_center()
-                            .layout(LayoutRefinement::default().min_w_0())
-                            .into_element(cx);
+                vec![ui::v_flex(move |cx| {
+                    let row = ui::h_flex(move |_cx| control_row)
+                        .gap(Space::N2)
+                        .items_center()
+                        .justify_center()
+                        .layout(LayoutRefinement::default().min_w_0())
+                        .into_element(cx);
 
-                        vec![row, transcript_surface]
-                    })
-                    .gap(Space::N4)
-                    .items_center()
-                    .justify_center()
-                    .layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .min_w_0()
-                            .min_h(Px(280.0)),
-                    )
-                    .into_element(cx),
-                ]
+                    vec![row, transcript_surface]
+                })
+                .gap(Space::N4)
+                .items_center()
+                .justify_center()
+                .layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .min_h(Px(280.0)),
+                )
+                .into_element(cx)]
             },
         )
     })

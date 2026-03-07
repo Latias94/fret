@@ -5,7 +5,7 @@ use fret_core::ImageId;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
+use fret_ui_assets::{ui::ImageSourceElementContextExt as _, ImageSource};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};

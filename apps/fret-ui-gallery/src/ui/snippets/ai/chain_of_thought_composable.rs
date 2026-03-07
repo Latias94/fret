@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("chain_of_thought_composable.rs");
 // region: example
 use fret_core::FontWeight;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
+use fret_ui_kit::{ui, Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {

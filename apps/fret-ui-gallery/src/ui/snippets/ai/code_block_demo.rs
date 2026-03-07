@@ -4,8 +4,8 @@ pub const SOURCE: &str = include_str!("code_block_demo.rs");
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
@@ -129,31 +129,29 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .show_line_numbers(false)
         .test_id("ui-ai-code-block-root")
         .into_element_with_children(cx, |cx| {
-            vec![
-                ui_ai::CodeBlockHeader::new([
-                    ui_ai::CodeBlockTitle::new([
-                        decl_icon::icon_with(
-                            cx,
-                            FILE_CODE,
-                            Some(Px(14.0)),
-                            Some(ColorRef::Color(muted_fg)),
-                        ),
-                        ui_ai::CodeBlockFilename::new(filename.clone())
-                            .into_element(cx)
-                            .test_id("ui-ai-code-block-filename"),
-                    ])
-                    .into_element(cx),
-                    ui_ai::CodeBlockActions::new([
-                        language_select,
-                        ui_ai::CodeBlockCopyButton::from_context()
-                            .test_id("ui-ai-code-block-copy")
-                            .copied_marker_test_id("ui-ai-code-block-copied-marker")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
+            vec![ui_ai::CodeBlockHeader::new([
+                ui_ai::CodeBlockTitle::new([
+                    decl_icon::icon_with(
+                        cx,
+                        FILE_CODE,
+                        Some(Px(14.0)),
+                        Some(ColorRef::Color(muted_fg)),
+                    ),
+                    ui_ai::CodeBlockFilename::new(filename.clone())
+                        .into_element(cx)
+                        .test_id("ui-ai-code-block-filename"),
                 ])
                 .into_element(cx),
-            ]
+                ui_ai::CodeBlockActions::new([
+                    language_select,
+                    ui_ai::CodeBlockCopyButton::from_context()
+                        .test_id("ui-ai-code-block-copy")
+                        .copied_marker_test_id("ui-ai-code-block-copied-marker")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)]
         });
 
     ui::v_flex(|cx| {

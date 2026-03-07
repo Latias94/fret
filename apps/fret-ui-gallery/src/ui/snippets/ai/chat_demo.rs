@@ -9,8 +9,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use std::sync::Arc;
 
     use fret_runtime::Model;
-    use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
+    use fret_ui::Invalidation;
     use fret_ui_kit::ui;
     use fret_ui_kit::{LayoutRefinement, Space};
 

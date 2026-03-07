@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("mic_selector_demo.rs");
 
 // region: example
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};

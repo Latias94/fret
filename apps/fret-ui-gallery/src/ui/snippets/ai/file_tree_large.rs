@@ -8,7 +8,7 @@ use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextP
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_kit::{ui, LayoutRefinement, Space};
 use std::sync::Arc;
 
 #[derive(Default)]
