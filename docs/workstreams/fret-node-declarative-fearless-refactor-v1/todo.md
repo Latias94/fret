@@ -399,6 +399,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: command-open UI orchestration now routes through the private
     `canvas/widget/command_ui.rs` seam, so transient dismissal, invoked-at fallback, and common
     paint invalidation no longer stay repeated across `command_open.rs` entrypoints.
+  - Progress: searcher overlay UI orchestration now routes through the private
+    `canvas/widget/searcher_ui.rs` seam, so overlay install/open/dismiss handling and shared
+    event-finish paint invalidation no longer stay repeated across `searcher.rs`,
+    `searcher_logic.rs`, `command_open.rs`, and `edge_insert/picker.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

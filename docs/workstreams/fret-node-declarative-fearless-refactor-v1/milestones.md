@@ -464,6 +464,10 @@ real editors.
 - Command-open UI orchestration now also routes through the private
   `canvas/widget/command_ui.rs` seam, so transient dismissal, invoked-at fallback, and common
   paint invalidation no longer stay repeated across `command_open.rs` entrypoints.
+- Searcher overlay UI orchestration now also routes through the private
+  `canvas/widget/searcher_ui.rs` seam, so overlay install/open/dismiss handling and shared
+  event-finish paint invalidation no longer stay repeated across `searcher.rs`,
+  `searcher_logic.rs`, `command_open.rs`, and `edge_insert/picker.rs`.
 
 ### Deliverables
 
@@ -501,6 +505,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_hit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

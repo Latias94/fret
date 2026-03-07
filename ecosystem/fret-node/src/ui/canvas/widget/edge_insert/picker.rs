@@ -31,6 +31,5 @@ pub(in super::super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanv
         return;
     }
 
-    canvas.interaction.context_menu = None;
-    canvas.interaction.searcher = Some(searcher);
+    canvas.install_searcher_overlay(searcher);
 }

@@ -104,17 +104,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let invoked_at = Point::new(Px(at.x), Px(at.y));
 
-        self.interaction.context_menu = None;
-        self.interaction.searcher = Some(build_searcher_state(
-            self,
+        self.open_searcher_overlay(
             invoked_at,
             bounds,
             &snapshot,
             ContextMenuTarget::BackgroundInsertNodePicker { at },
             menu_candidates,
-            self.interaction.recent_kinds.clone(),
             SearcherRowsMode::Catalog,
-        ));
+        );
     }
 
     pub(super) fn open_connection_insert_node_picker<H: UiHost>(
@@ -129,17 +126,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let invoked_at = Point::new(Px(at.x), Px(at.y));
 
-        self.interaction.context_menu = None;
-        self.interaction.searcher = Some(build_searcher_state(
-            self,
+        self.open_searcher_overlay(
             invoked_at,
             bounds,
             &snapshot,
             ContextMenuTarget::ConnectionInsertNodePicker { from, at },
             menu_candidates,
-            self.interaction.recent_kinds.clone(),
             SearcherRowsMode::Catalog,
-        ));
+        );
     }
 
     pub(super) fn open_edge_insert_node_picker<H: UiHost>(

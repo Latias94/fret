@@ -1,6 +1,7 @@
 use fret_core::{Modifiers, MouseButton, Point, PointerId};
 use fret_ui::UiHost;
 
+use super::searcher_ui::{finish_searcher_event, invalidate_searcher_paint};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::searcher::SearcherRowKind;
 use crate::ui::canvas::state::PendingInsertNodeDrag;
@@ -9,13 +10,9 @@ pub(super) fn handle_searcher_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    if canvas.interaction.searcher.take().is_some() {
-        canvas.interaction.pending_insert_node_drag = None;
-        cx.release_pointer_capture();
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+    if canvas.interaction.searcher.is_some() {
+        canvas.dismiss_searcher_overlay(cx);
+        return finish_searcher_event(cx);
     }
     false
 }
@@ -38,10 +35,7 @@ pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .map(|s| s.active_row)
             .unwrap_or(0);
         if canvas.try_activate_searcher_row(cx, row_ix) {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
+            return finish_searcher_event(cx);
         }
     }
 
@@ -67,10 +61,7 @@ pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 }
                 NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
             }
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
+            return finish_searcher_event(cx);
         }
         fret_core::KeyCode::ArrowUp => {
             let n = searcher.rows.len();
@@ -93,19 +84,13 @@ pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 }
                 NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
             }
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
+            return finish_searcher_event(cx);
         }
         fret_core::KeyCode::Backspace => {
             if !searcher.query.is_empty() {
                 searcher.query.pop();
                 NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
-                cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-                return true;
+                return finish_searcher_event(cx);
             }
         }
         _ => {}
@@ -117,10 +102,7 @@ pub(super) fn handle_searcher_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     {
         searcher.query.push(ch);
         NodeGraphCanvasWith::<M>::rebuild_searcher_rows(searcher);
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+        return finish_searcher_event(cx);
     }
 
     false
@@ -186,32 +168,17 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost, M: NodeGraphCanvasMiddlewa
                     NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
                 }
             } else if !inside {
-                canvas.interaction.searcher = None;
-                canvas.interaction.pending_insert_node_drag = None;
-                cx.release_pointer_capture();
+                canvas.dismiss_searcher_overlay(cx);
             }
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            true
+            finish_searcher_event(cx)
         }
         MouseButton::Right => {
-            canvas.interaction.searcher = None;
-            canvas.interaction.pending_insert_node_drag = None;
-            cx.release_pointer_capture();
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            true
+            canvas.dismiss_searcher_overlay(cx);
+            finish_searcher_event(cx)
         }
         _ => {
-            canvas.interaction.searcher = None;
-            canvas.interaction.pending_insert_node_drag = None;
-            cx.release_pointer_capture();
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            true
+            canvas.dismiss_searcher_overlay(cx);
+            finish_searcher_event(cx)
         }
     }
 }
@@ -248,10 +215,7 @@ pub(super) fn handle_searcher_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware
         } else if !inside {
             canvas.interaction.searcher = None;
         }
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+        return finish_searcher_event(cx);
     }
 
     false
@@ -279,8 +243,7 @@ pub(super) fn handle_searcher_pointer_move<H: UiHost, M: NodeGraphCanvasMiddlewa
             searcher.active_row = ix;
             NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
         }
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        invalidate_searcher_paint(cx);
     }
     true
 }
@@ -314,7 +277,6 @@ pub(super) fn handle_searcher_wheel<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    invalidate_searcher_paint(cx);
     true
 }

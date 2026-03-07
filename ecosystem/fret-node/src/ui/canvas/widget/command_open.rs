@@ -142,8 +142,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let invoked_at = Point::new(Px(ctx0.at.x), Px(ctx0.at.y));
 
         self.dismiss_command_context_menu();
-        self.interaction.searcher = Some(build_searcher_state(
-            self,
+        self.open_searcher_overlay(
             invoked_at,
             bounds,
             snapshot,
@@ -153,9 +152,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 at: ctx0.at,
             },
             ctx0.candidates,
-            self.interaction.recent_kinds.clone(),
             SearcherRowsMode::Flat,
-        ));
+        );
 
         finish_command_paint(cx)
     }

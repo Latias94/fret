@@ -161,6 +161,7 @@ mod retained_widget;
 mod right_click;
 mod searcher;
 mod searcher_logic;
+mod searcher_ui;
 mod selection;
 mod split_edge_execution;
 mod sticky_wire;
