@@ -194,8 +194,9 @@ The repo should now prefer one boring authoring path:
 3. For description/helper-copy surfaces, prefer `scope_description_text(...)` (or the fallback-key
    variant) instead of rebuilding metric lookup logic per component.
 4. If a component already has a `TypographyPreset`, bridge it through
-   `fret_ui_kit::typography::preset_text_refinement(...)` rather than re-encoding the same policy
-   as ad hoc `TextStyleRefinement` literals.
+   `fret_ui_kit::typography::preset_text_refinement(...)` for full semantic overrides, or
+   `fret_ui_kit::typography::composable_preset_text_refinement(...)` when the subtree should keep
+   composing with parent defaults.
 5. Foundation passive-text helpers should prefer composable refinements (for example
    `fret_ui_kit::typography::composable_refinement_from_style(...)`) so they keep semantic
    size/line-height intent while leaving default-equivalent family/emphasis fields unset for parent

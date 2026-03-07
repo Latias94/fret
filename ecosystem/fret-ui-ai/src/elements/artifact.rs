@@ -40,13 +40,6 @@ fn token_color_with_alpha(
     alpha_mul(base, alpha)
 }
 
-fn resolve_muted_fg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"))
-}
-
 fn action_button_style() -> ButtonStyle {
     let muted = Some(ColorRef::Token {
         key: "muted-foreground",
@@ -325,28 +318,23 @@ impl ArtifactDescription {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let muted_fg = resolve_muted_fg(&theme);
 
-        let mut text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.text,
-            style: Some(typography::as_control_text(TextStyle {
-                font: FontId::default(),
-                size: theme
-                    .metric_by_key("component.artifact.description_text_px")
-                    .unwrap_or_else(|| theme.metric_token("font.size")),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("font.line_height")),
-                letter_spacing_em: None,
-                ..Default::default()
-            })),
-            color: Some(muted_fg),
-            wrap: fret_core::TextWrap::None,
-            overflow: fret_core::TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let mut text = typography::scope_description_text_with_fallbacks(
+            cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: self.text,
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+            &theme,
+            "component.artifact.description_text",
+            Some("font.size"),
+            Some("font.line_height"),
+        );
 
         if let Some(test_id) = self.test_id {
             text = text.attach_semantics(
@@ -713,6 +701,8 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use fret_ui::{Theme, ThemeConfig};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -775,5 +765,62 @@ mod tests {
             });
 
         assert!(has_test_id(&element, "custom-close-label"));
+    }
+
+    #[test]
+    fn artifact_description_scopes_inherited_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Artifact Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    ("component.artifact.description_text_px".to_string(), 12.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#778899".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ArtifactDescription::new("Artifact summary")
+                    .test_id("artifact-description")
+                    .into_element(cx)
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected ArtifactDescription to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("artifact-description")
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(
+            element.inherited_text_style,
+            Some(typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.artifact.description_text",
+                Some("font.size"),
+                Some("font.line_height"),
+            ))
+        );
     }
 }

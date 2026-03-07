@@ -456,6 +456,13 @@ pub fn preset_text_refinement(
     refinement_from_style(&preset.resolve(theme))
 }
 
+pub fn composable_preset_text_refinement(
+    theme: &impl ThemeTokenRead,
+    preset: TypographyPreset,
+) -> TextStyleRefinement {
+    composable_refinement_from_style(&preset.resolve(theme))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -587,6 +594,37 @@ mod tests {
         assert_eq!(
             refinement.vertical_placement,
             Some(TextVerticalPlacement::BoundsAsLineBox)
+        );
+    }
+
+    #[test]
+    fn composable_preset_refinement_matches_composable_resolved_preset() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 14.0),
+                    ("font.line_height".to_string(), 20.0),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_XS_PX.to_string(),
+                        12.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT.to_string(),
+                        16.0,
+                    ),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+        let preset = TypographyPreset::control_ui(UiTextSize::Xs);
+        let style = preset.resolve(&theme);
+
+        assert_eq!(
+            composable_preset_text_refinement(&theme, preset),
+            composable_refinement_from_style(&style)
         );
     }
 
