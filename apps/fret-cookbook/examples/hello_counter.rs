@@ -129,11 +129,11 @@ impl View for HelloCounterView {
         .w_px(Px(48.0))
         .h_px(Px(48.0))
         .items_center()
-        .justify_center()
-        .into_element(cx);
+        .justify_center();
 
         let header = shadcn::CardHeader::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 ui::v_flex(|cx| {
                     ui::children![
                         cx;
@@ -145,8 +145,7 @@ impl View for HelloCounterView {
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
             );
         });
 
@@ -211,8 +210,7 @@ impl View for HelloCounterView {
             .placeholder("Step (e.g. 1)")
             .submit_command(act::Inc.into())
             .a11y_role(SemanticsRole::TextField)
-            .test_id(TEST_ID_STEP_INPUT)
-            .into_element(cx);
+            .test_id(TEST_ID_STEP_INPUT);
 
         let presets = ui::h_flex(|cx| {
             ui::children![
@@ -235,14 +233,12 @@ impl View for HelloCounterView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let step_row = ui::v_flex(|cx| ui::children![cx; step_input, presets])
             .gap(Space::N2)
             .w_full()
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let actions = ui::h_flex(|cx| {
             ui::children![
@@ -274,31 +270,32 @@ impl View for HelloCounterView {
             ]
         })
         .gap(Space::N4)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let content_body = ui::v_flex(|cx| {
             ui::children![
                 cx;
                 ui::v_flex(|cx| ui::children![cx; count_text, status_line, step_badge])
                     .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
+                    .items_center(),
                 ui::v_flex(|cx| ui::children![cx; step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
-                    .items_center()
-                    .into_element(cx),
+                    .items_center(),
             ]
         })
         .gap(Space::N6)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(cx, header);
-            out.push_ui(cx, shadcn::CardContent::new([content_body]));
-            out.push(shadcn::CardFooter::new([actions]).into_element(cx));
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content_body);
+                }),
+            );
+            out.push(shadcn::CardFooter::new([actions.into_element(cx)]).into_element(cx));
         })
         .refine_style(ChromeRefinement::default().shadow_lg())
         .ui()

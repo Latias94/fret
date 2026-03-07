@@ -65,8 +65,7 @@ impl View for DropShadowBasicsView {
                 ]
             })
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
             let row_stress = ui::h_flex(|cx| {
                 ui::children![
@@ -76,8 +75,7 @@ impl View for DropShadowBasicsView {
                 ]
             })
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
             ui::children![
                 cx;
@@ -92,8 +90,7 @@ impl View for DropShadowBasicsView {
                 row_stress,
             ]
         })
-        .gap(Space::N3)
-        .into_element(cx);
+        .gap(Space::N3);
 
         let chain = shadow_chain();
 
@@ -112,14 +109,10 @@ impl View for DropShadowBasicsView {
             .border_1()
             .border_color(ColorRef::Color(theme.color_token("border")))
             .rounded_md()
-            .size_full()
-            .into_element(cx);
+            .size_full();
 
             // Keep a fixed-size effect layer and pad inside it so the shadow has space.
-            let padded = ui::container(|_cx| [surface])
-                .p(Space::N5)
-                .size_full()
-                .into_element(cx);
+            let padded = ui::container(|_cx| [surface]).p(Space::N5).size_full();
 
             let bounds = ui::container(|_cx| [padded])
                 .w_px(Px(260.0))
@@ -141,27 +134,26 @@ impl View for DropShadowBasicsView {
         } else {
             (2usize, 3usize)
         };
-        let mut grid_rows: Vec<AnyElement> = Vec::with_capacity(rows);
-        for r in 0..rows {
-            grid_rows.push(
-                ui::h_flex(|cx| {
-                    let mut out: Vec<AnyElement> = Vec::with_capacity(cols);
-                    for c in 0..cols {
-                        let i = r * cols + c;
-                        out.push(card(cx, format!("Card {i}")));
-                    }
-                    out
-                })
-                .gap(Space::N4)
-                .into_element(cx),
-            );
-        }
-
-        let stage = ui::v_flex(|_cx| grid_rows)
-            .gap(Space::N4)
-            .items_center()
-            .into_element(cx)
-            .test_id(TEST_ID_STAGE);
+        let stage = ui::v_flex_build(|cx, out| {
+            for r in 0..rows {
+                out.push_ui(
+                    cx,
+                    ui::h_flex(|cx| {
+                        let mut row: Vec<AnyElement> = Vec::with_capacity(cols);
+                        for c in 0..cols {
+                            let i = r * cols + c;
+                            row.push(card(cx, format!("Card {i}")));
+                        }
+                        row
+                    })
+                    .gap(Space::N4),
+                );
+            }
+        })
+        .gap(Space::N4)
+        .items_center()
+        .test_id(TEST_ID_STAGE)
+        .into_element(cx);
 
         let header = shadcn::CardHeader::build(|cx, out| {
             out.push_ui(cx, shadcn::CardTitle::new("Drop shadow basics"));
@@ -171,19 +163,16 @@ impl View for DropShadowBasicsView {
                     "A small, deterministic surface for DropShadowV1 renderer semantics (toggle + screenshot baseline).",
                 ),
             );
-        })
-        .into_element(cx);
+        });
 
-        let content = ui::v_flex(|cx| ui::children![cx; toolbar, stage])
-            .gap(Space::N5)
-            .into_element(cx);
+        let content = ui::v_flex(|cx| ui::children![cx; toolbar, stage]).gap(Space::N5);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(header);
+            out.push_ui(cx, header);
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(content);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
                 }),
             );
         })

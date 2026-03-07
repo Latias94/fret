@@ -231,8 +231,7 @@ impl View for UndoBasicsView {
                 .items_center(),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let value_el = ui::text(format!("{value}"))
             .text_base()
@@ -247,8 +246,7 @@ impl View for UndoBasicsView {
             );
 
         let row_value = ui::v_flex(|cx| ui::children![cx; shadcn::Label::new("Value"), value_el])
-            .gap(Space::N1)
-            .into_element(cx);
+            .gap(Space::N1);
 
         let row_edits = ui::h_flex(|cx| {
             ui::children![cx;
@@ -267,8 +265,7 @@ impl View for UndoBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_undo = ui::h_flex(|cx| {
             ui::children![cx;
@@ -285,8 +282,7 @@ impl View for UndoBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_coalesce = ui::h_flex(|cx| {
             ui::children![
@@ -297,31 +293,26 @@ impl View for UndoBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_next = ui::v_flex(|cx| {
             ui::children![cx;
                 ui::text(format!("Next undo: {next_undo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .test_id(TEST_ID_NEXT_UNDO)
-                    .into_element(cx),
+                    .test_id(TEST_ID_NEXT_UNDO),
                 ui::text(format!("Next redo: {next_redo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .test_id(TEST_ID_NEXT_REDO)
-                    .into_element(cx),
+                    .test_id(TEST_ID_NEXT_REDO),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
         let content = ui::v_flex(|cx| {
             ui::children![cx; row_shortcuts, row_value, row_edits, row_undo, row_coalesce, row_next]
         })
-        .gap(Space::N4)
-        .into_element(cx);
+        .gap(Space::N4);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -338,8 +329,8 @@ impl View for UndoBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(content);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
                 }),
             );
         })
