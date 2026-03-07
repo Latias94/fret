@@ -226,7 +226,8 @@ fn resolve_session_root_for_resource_footprint(src: &Path) -> PathBuf {
     if src.is_dir() {
         // Common case: user provided a base out dir or session out dir; resolve to the latest bundle
         // dir and then climb back to the session root (which holds `resource.footprint.json`).
-        let bundle_dir = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(src);
+        let bundle_dir = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(src)
+            .unwrap_or_else(|_| src.to_path_buf());
         if let Some(session_root) = bundle_dir.parent() {
             if session_root.join("resource.footprint.json").is_file() {
                 return session_root.to_path_buf();

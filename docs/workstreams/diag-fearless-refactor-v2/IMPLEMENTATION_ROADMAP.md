@@ -244,11 +244,11 @@ Recommended PR slices:
      - `diag stats` (single-bundle + diff)
      - `diag slice` (step-index early resolution path)
      - selected `diag query` subcommands that require a bundle artifact
-   - remaining known holdouts: `commands/ai_packet.rs` and a few session-root-only helpers that intentionally do not require bundle materialization,
-3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
-4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
-5. decide whether campaign runs should persist a dashboard text or HTML projection,
-6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term,
+   - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
+ 3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
+ 4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
+ 5. decide whether campaign runs should persist a dashboard text or HTML projection,
+ 6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term,
 7. remove legacy top-level `suites` / `scripts` compatibility only after manifest authoring and evidence contracts stabilize.
 
 Important rule:
