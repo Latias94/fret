@@ -209,19 +209,17 @@ impl View for RouterBasicsView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(!can_back)
             .action(act::RouterBack)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_BACK);
 
         let forward = shadcn::Button::new("Forward")
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(!can_forward)
             .action(act::RouterForward)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_FORWARD);
 
         let location = cx.text(location_label).test_id(TEST_ID_LOCATION_LABEL);
 
-        let header_row = ui::h_flex(|_cx| [back, forward, location])
+        let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -287,17 +285,15 @@ impl View for RouterBasicsView {
         };
 
         let nav = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Nav").into_element(cx),
-                shadcn::CardDescription::new("Router links (hover prefetch + click navigate).")
-                    .into_element(cx),
+            shadcn::CardHeader::new(ui::children![cx;
+                shadcn::CardTitle::new("Nav"),
+                shadcn::CardDescription::new("Router links (hover prefetch + click navigate)."),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|_cx| {
-                [home_link, settings_link, user_link, missing_link]
-            })
-            .gap(Space::N2)
-            .into_element(cx)])
+            shadcn::CardContent::new(ui::children![cx;
+                ui::v_flex(|cx| ui::children![cx; home_link, settings_link, user_link, missing_link])
+                    .gap(Space::N2)
+            ])
             .into_element(cx),
         ])
         .ui()
@@ -326,13 +322,12 @@ impl View for RouterBasicsView {
                     };
 
                     shadcn::Card::new([
-                        shadcn::CardHeader::new([
-                            shadcn::CardTitle::new(title).into_element(cx),
-                            shadcn::CardDescription::new(format!("matched_path={matched_path}"))
-                                .into_element(cx),
+                        shadcn::CardHeader::new(ui::children![cx;
+                            shadcn::CardTitle::new(title),
+                            shadcn::CardDescription::new(format!("matched_path={matched_path}")),
                         ])
                         .into_element(cx),
-                        shadcn::CardContent::new([
+                        shadcn::CardContent::new(ui::children![cx;
                             cx.text(params_line),
                             cx.text(format!("depth={}", snap.match_depth())),
                         ])
@@ -343,13 +338,9 @@ impl View for RouterBasicsView {
                     .into_element(cx)
                 },
                 |cx, snap| {
-                    shadcn::Card::new([shadcn::CardHeader::new([
-                        shadcn::CardTitle::new("Not found").into_element(cx),
-                        shadcn::CardDescription::new(format!(
-                            "location={}",
-                            snap.location.to_url()
-                        ))
-                        .into_element(cx),
+                    shadcn::Card::new([shadcn::CardHeader::new(ui::children![cx;
+                        shadcn::CardTitle::new("Not found"),
+                        shadcn::CardDescription::new(format!("location={}", snap.location.to_url())),
                     ])
                     .into_element(cx)])
                     .ui()
@@ -359,37 +350,36 @@ impl View for RouterBasicsView {
             );
 
         let intents_panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Prefetch intents").into_element(cx),
-                shadcn::CardDescription::new("Populated on link hover and navigation.")
-                    .into_element(cx),
+            shadcn::CardHeader::new(ui::children![cx;
+                shadcn::CardTitle::new("Prefetch intents"),
+                shadcn::CardDescription::new("Populated on link hover and navigation."),
                 shadcn::Button::new("Clear")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .action(act::ClearIntents)
-                    .into_element(cx)
                     .test_id(TEST_ID_BTN_CLEAR_INTENTS),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx| {
-                if intents.is_empty() {
-                    return vec![cx.text("<none>")];
-                }
-                intents
-                    .into_iter()
-                    .map(|i| {
-                        cx.text(format!(
-                            "{:?}: {} ({}) extra={:?}",
-                            i.route,
-                            i.location.to_url(),
-                            i.namespace,
-                            i.extra
-                        ))
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .gap(Space::N1)
-            .into_element(cx)
-            .test_id(TEST_ID_INTENTS_ROOT)])
+            shadcn::CardContent::new(ui::children![cx;
+                ui::v_flex(|cx| {
+                    if intents.is_empty() {
+                        return vec![cx.text("<none>")];
+                    }
+                    intents
+                        .into_iter()
+                        .map(|i| {
+                            cx.text(format!(
+                                "{:?}: {} ({}) extra={:?}",
+                                i.route,
+                                i.location.to_url(),
+                                i.namespace,
+                                i.extra
+                            ))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .gap(Space::N1)
+                .test_id(TEST_ID_INTENTS_ROOT)
+            ])
             .into_element(cx),
         ])
         .ui()
@@ -397,27 +387,25 @@ impl View for RouterBasicsView {
         .into_element(cx);
 
         let content = ui::v_flex(|cx| {
-            [
+            ui::children![cx;
                 header_row,
-                ui::h_flex(|_cx| [nav, outlet, intents_panel])
+                ui::h_flex(|cx| ui::children![cx; nav, outlet, intents_panel])
                     .gap(Space::N3)
-                    .items_start()
-                    .into_element(cx),
+                    .items_start(),
             ]
         })
         .gap(Space::N3)
         .into_element(cx);
 
         let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Router basics").into_element(cx),
+            shadcn::CardHeader::new(ui::children![cx;
+                shadcn::CardTitle::new("Router basics"),
                 shadcn::CardDescription::new(
                     "A tiny routing example: links, outlet rendering, and back/forward.",
                 )
-                .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
+            shadcn::CardContent::new(ui::children![cx; content]).into_element(cx),
         ])
         .ui()
         .w_full()
