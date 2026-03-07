@@ -444,6 +444,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     the private `canvas/widget/pointer_up_pending.rs` seam, so click-distance selection toggles,
     click-connect wire re-arming, and pointer-capture release cleanup no longer stay embedded in
     the retained pointer release router.
+  - Progress: `event_pointer_down.rs` now routes background-zoom / edge-insert / reroute
+    double-click branches through the private `canvas/widget/pointer_down_double_click.rs` seam,
+    so repeated edge/background hit filtering and double-click orchestration no longer stay
+    embedded in the retained pointer-down router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

@@ -509,6 +509,10 @@ real editors.
   `canvas/widget/pointer_up_pending.rs` seam, so click-distance selection toggles, click-connect
   wire re-arming, and pointer-capture release cleanup no longer stay embedded in the retained
   pointer release router.
+- `event_pointer_down.rs` now also routes background-zoom / edge-insert / reroute double-click
+  branches through the private `canvas/widget/pointer_down_double_click.rs` seam, so repeated
+  edge/background hit filtering and double-click orchestration no longer stay embedded in the
+  retained pointer-down router.
 
 ### Deliverables
 
@@ -558,6 +562,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

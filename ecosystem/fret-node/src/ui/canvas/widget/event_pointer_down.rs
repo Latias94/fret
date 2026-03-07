@@ -49,179 +49,44 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         if button == MouseButton::Left
-            && click_count == 2
-            && snapshot.interaction.zoom_on_double_click
-            && self.interaction.searcher.is_none()
-            && self.interaction.context_menu.is_none()
+            && pointer_down_double_click::handle_background_zoom_double_click(
+                self,
+                cx,
+                &snapshot,
+                position,
+                modifiers,
+                click_count,
+                zoom,
+            )
         {
-            let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-            let is_background = self
-                .graph
-                .read_ref(cx.app, |graph| {
-                    let mut scratch = HitTestScratch::default();
-                    let mut ctx =
-                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
-
-                    if self.hit_port(&mut ctx, position).is_some() {
-                        return false;
-                    }
-                    if self
-                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
-                        .is_some()
-                    {
-                        return false;
-                    }
-                    if geom.nodes.values().any(|ng| ng.rect.contains(position)) {
-                        return false;
-                    }
-                    if self
-                        .hit_edge(graph, &snapshot, &mut ctx, position)
-                        .is_some()
-                    {
-                        return false;
-                    }
-                    !graph.groups.iter().any(|(group_id, group)| {
-                        let rect0 = self.group_rect_with_preview(*group_id, group.rect);
-                        group_resize::group_rect_to_px(rect0).contains(position)
-                    })
-                })
-                .unwrap_or(false);
-
-            if is_background {
-                if let Some(state) = self.interaction.viewport_move_debounce.take() {
-                    cx.app
-                        .push_effect(Effect::CancelTimer { token: state.timer });
-                    self.emit_move_end(&snapshot, state.kind, ViewportMoveEndOutcome::Ended);
-                }
-
-                self.emit_move_start(&snapshot, ViewportMoveKind::ZoomDoubleClick);
-                let factor = if modifiers.shift { 0.5 } else { 2.0 };
-                self.zoom_about_pointer_factor(position, factor);
-                let pan = self.cached_pan;
-                let zoom = self.cached_zoom;
-                self.update_view_state(cx.app, |s| {
-                    s.pan = pan;
-                    s.zoom = zoom;
-                });
-                let snap = self.sync_view_state(cx.app);
-                self.emit_move_end(
-                    &snap,
-                    ViewportMoveKind::ZoomDoubleClick,
-                    ViewportMoveEndOutcome::Ended,
-                );
-                cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-                return;
-            }
+            return;
         }
 
         if button == MouseButton::Left
-            && click_count == 2
-            && (modifiers.alt || modifiers.alt_gr)
-            && self.interaction.searcher.is_none()
-            && self.interaction.context_menu.is_none()
+            && pointer_down_double_click::handle_edge_insert_picker_double_click(
+                self,
+                cx,
+                &snapshot,
+                position,
+                modifiers,
+                click_count,
+                zoom,
+            )
         {
-            let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-            let hit: Option<EdgeId> = self
-                .graph
-                .read_ref(cx.app, |graph| {
-                    let mut scratch = HitTestScratch::default();
-                    let mut ctx =
-                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
-
-                    if self.hit_port(&mut ctx, position).is_some() {
-                        return None;
-                    }
-                    if self
-                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
-                        .is_some()
-                    {
-                        return None;
-                    }
-                    if geom.nodes.values().any(|ng| ng.rect.contains(position)) {
-                        return None;
-                    }
-                    if graph.groups.iter().any(|(group_id, group)| {
-                        let rect0 = self.group_rect_with_preview(*group_id, group.rect);
-                        group_resize::group_rect_to_px(rect0).contains(position)
-                    }) {
-                        return None;
-                    }
-                    self.hit_edge(graph, &snapshot, &mut ctx, position)
-                })
-                .ok()
-                .flatten();
-
-            if let Some(edge_id) = hit {
-                self.update_view_state(cx.app, |s| {
-                    s.selected_nodes.clear();
-                    s.selected_groups.clear();
-                    if !s.selected_edges.iter().any(|id| *id == edge_id) {
-                        s.selected_edges.clear();
-                        s.selected_edges.push(edge_id);
-                    }
-                });
-                self.open_edge_insert_node_picker(cx.app, cx.window, edge_id, position);
-                cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-                return;
-            }
+            return;
         }
 
         if button == MouseButton::Left
-            && click_count == 2
-            && snapshot.interaction.reroute_on_edge_double_click
-            && self.interaction.searcher.is_none()
-            && self.interaction.context_menu.is_none()
+            && pointer_down_double_click::handle_edge_reroute_double_click(
+                self,
+                cx,
+                &snapshot,
+                position,
+                click_count,
+                zoom,
+            )
         {
-            let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-            let hit: Option<EdgeId> = self
-                .graph
-                .read_ref(cx.app, |graph| {
-                    let mut scratch = HitTestScratch::default();
-                    let mut ctx =
-                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
-
-                    if self.hit_port(&mut ctx, position).is_some() {
-                        return None;
-                    }
-                    if self
-                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
-                        .is_some()
-                    {
-                        return None;
-                    }
-                    if geom.nodes.values().any(|ng| ng.rect.contains(position)) {
-                        return None;
-                    }
-                    if graph.groups.iter().any(|(group_id, group)| {
-                        let rect0 = self.group_rect_with_preview(*group_id, group.rect);
-                        group_resize::group_rect_to_px(rect0).contains(position)
-                    }) {
-                        return None;
-                    }
-                    self.hit_edge(graph, &snapshot, &mut ctx, position)
-                })
-                .ok()
-                .flatten();
-
-            if let Some(edge_id) = hit {
-                let invoked_at = position;
-                let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
-                self.execute_split_edge_reroute_outcome(
-                    cx.app,
-                    cx.window,
-                    Some("Insert Reroute"),
-                    outcome,
-                );
-
-                cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-                return;
-            }
+            return;
         }
 
         if self.interaction.context_menu.is_some()
