@@ -87,7 +87,6 @@ pub fn use_chain_of_thought_controller<H: UiHost>(
         .and_then(|st| st.controller.clone())
 }
 
-#[derive(Clone)]
 /// Collapsible container aligned with AI Elements `ChainOfThought`.
 pub struct ChainOfThought {
     open: Option<Model<bool>>,
@@ -155,6 +154,29 @@ impl ChainOfThought {
         self
     }
 
+    /// Docs-style compound children composition.
+    ///
+    /// This keeps `ChainOfThoughtHeader` / `ChainOfThoughtContent` move-only builders intact while
+    /// still letting the root install provider state before those parts are rendered.
+    pub fn children<I, C>(self, children: I) -> ChainOfThoughtWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ChainOfThoughtChild>,
+    {
+        ChainOfThoughtWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn header(self, header: ChainOfThoughtHeader) -> ChainOfThoughtWithChildren {
+        self.children([ChainOfThoughtChild::Header(header)])
+    }
+
+    pub fn content(self, content: ChainOfThoughtContent) -> ChainOfThoughtWithChildren {
+        self.children([ChainOfThoughtChild::Content(content)])
+    }
+
     pub fn into_element_with_children<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -207,6 +229,76 @@ impl ChainOfThought {
                 );
             }
             root
+        })
+    }
+}
+
+pub enum ChainOfThoughtChild {
+    Header(ChainOfThoughtHeader),
+    Content(ChainOfThoughtContent),
+}
+
+impl std::fmt::Debug for ChainOfThoughtChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Header(_) => f.write_str("ChainOfThoughtChild::Header(..)"),
+            Self::Content(_) => f.write_str("ChainOfThoughtChild::Content(..)"),
+        }
+    }
+}
+
+impl From<ChainOfThoughtHeader> for ChainOfThoughtChild {
+    fn from(value: ChainOfThoughtHeader) -> Self {
+        Self::Header(value)
+    }
+}
+
+impl From<ChainOfThoughtContent> for ChainOfThoughtChild {
+    fn from(value: ChainOfThoughtContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+impl ChainOfThoughtChild {
+    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Header(header) => header.into_element(cx),
+            Self::Content(content) => content.into_element(cx),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ChainOfThoughtWithChildren {
+    root: ChainOfThought,
+    children: Vec<ChainOfThoughtChild>,
+}
+
+impl ChainOfThoughtWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ChainOfThoughtChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn header(self, header: ChainOfThoughtHeader) -> Self {
+        self.children([ChainOfThoughtChild::Header(header)])
+    }
+
+    pub fn content(self, content: ChainOfThoughtContent) -> Self {
+        self.children([ChainOfThoughtChild::Content(content)])
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self { root, children } = self;
+        root.into_element_with_children(cx, move |cx| {
+            children
+                .into_iter()
+                .map(|child| child.into_element(cx))
+                .collect()
         })
     }
 }
@@ -925,13 +1017,35 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(600.0), Px(400.0)),
         )
+    }
+
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        if let ElementKind::Pressable(props) = &element.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
     }
 
     #[test]
@@ -1002,5 +1116,27 @@ mod tests {
                 other => panic!("expected description children slot, got {:?}", other),
             }
         });
+    }
+
+    #[test]
+    fn chain_of_thought_children_api_renders_header_and_content_in_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThought::new()
+                    .default_open(true)
+                    .test_id_root("root")
+                    .header(ChainOfThoughtHeader::new().test_id("header"))
+                    .content(
+                        ChainOfThoughtContent::new([cx.text("Visible content")]).test_id("content"),
+                    )
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "root"));
+        assert!(has_test_id(&element, "header"));
+        assert!(has_test_id(&element, "content"));
     }
 }

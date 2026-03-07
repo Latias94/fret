@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Chain of Thought screenshots (zinc dark)",
+    "tags": ["ui-gallery", "ai-elements", "chain-of-thought", "screenshots", "zinc-dark"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Sets theme preset to zinc/dark.",
+      "Navigates to the AI Chain of Thought demo page.",
+      "Captures the docs-aligned Usage section and the Fret-specific Composable Slots section."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 1040.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    { "type": "wait_frames", "n": 3 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai chain of thought" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chain-of-thought-demo" } },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chain-of-thought-demo" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-ai-chain-of-thought-demo" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-demo-content" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-demo-content" },
+      "delta_y": -96.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    { "type": "wait_bounds_stable", "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-demo-content" }, "timeout_frames": 600 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-chain-of-thought-usage-zinc-dark" },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-composable-content" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-composable-content" },
+      "delta_y": -96.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    { "type": "wait_bounds_stable", "target": { "kind": "test_id", "id": "ui-gallery-ai-chain-of-thought-composable-content" }, "timeout_frames": 600 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-chain-of-thought-composable-zinc-dark" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-chain-of-thought-screenshots-zinc-dark" }
+  ]
+}

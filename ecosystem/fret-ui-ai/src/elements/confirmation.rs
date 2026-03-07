@@ -2,9 +2,12 @@
 
 use std::sync::Arc;
 
-use fret_ui::Theme;
-use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
+use fret_core::{TextLineHeightPolicy, TextStyle};
+use fret_ui::element::{
+    AnyElement, ElementKind, InteractivityGateProps, LayoutStyle, SemanticsDecoration,
+};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui::{Theme, ThemeSnapshot};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Alert, Button, ButtonSize, ButtonVariant};
@@ -70,6 +73,49 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         |_cx| Vec::new(),
     )
+}
+
+fn alert_description_text_style(theme: &ThemeSnapshot) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.alert.description_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.alert.description_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyle {
+        size: px,
+        line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+        ..Default::default()
+    }
+}
+
+fn patch_text_style_recursive(element: &mut AnyElement, style: &TextStyle) {
+    match &mut element.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut element.children {
+        patch_text_style_recursive(child, style);
+    }
 }
 
 const CONFIRMATION_REQUEST_SLOT_KEY: &str = "__fret_ui_ai.confirmation.request";
@@ -326,7 +372,12 @@ impl ConfirmationTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
-        let el = cx.foreground_scope(fg, move |_cx| self.children);
+        let description_style = alert_description_text_style(&theme);
+        let mut children = self.children;
+        for child in &mut children {
+            patch_text_style_recursive(child, &description_style);
+        }
+        let el = cx.foreground_scope(fg, move |_cx| children);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -709,7 +760,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Px, Rect, SemanticsRole, Size};
-    use fret_ui::element::{CrossAlign, ElementKind, Length};
+    use fret_ui::element::{CrossAlign, ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -974,5 +1025,54 @@ mod tests {
         assert!(!has_test_id(&element, "request"));
         assert!(!has_test_id(&element, "rejected"));
         assert!(!has_test_id(&element, "actions"));
+    }
+
+    fn find_text<'a>(element: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => return Some(props),
+            _ => {}
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text(child, text))
+    }
+
+    #[test]
+    fn confirmation_title_applies_alert_description_typography_to_nested_plain_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ConfirmationTitle::new([ConfirmationRequest::new([cx.text("Ask")])
+                    .state(ToolUiPartState::ApprovalRequested)
+                    .into_element(cx)])
+                .into_element(cx)
+            });
+
+        let text = find_text(&element, "Ask").expect("expected nested text node");
+        let style = text
+            .style
+            .as_ref()
+            .expect("expected alert description typography on nested text");
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.alert.description_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.alert.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(
+            style.line_height_policy,
+            TextLineHeightPolicy::FixedFromStyle
+        );
     }
 }

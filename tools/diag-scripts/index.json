@@ -1593,13 +1593,54 @@
       ]
     },
     {
+      "id": "image-heavy-memory-size-2048-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-size-2048-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-size"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Size sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-size-512-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-size-512-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-size"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Size sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
       "id": "image-heavy-memory-steady",
       "path": "tools/diag-scripts/tooling/images/image-heavy-memory-steady.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "tooling-image-heavy-memory-sweep-count"
+        "tooling-image-heavy-memory-sweep-count",
+        "tooling-image-heavy-memory-sweep-size"
       ],
       "tags": [
         "images",
@@ -2487,24 +2528,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-ai-transcription-demo-seek",
-      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-seek.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-ai-elements"
-      ],
-      "tags": [
-        "ai-elements",
-        "seek",
-        "transcription",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Navigates to the AI Elements transcription demo.",
-        "Clicks a segment and asserts app-owned playback time and active-segment markers update."
-      ]
-    },
-    {
       "id": "ui-gallery-ai-transcription-demo-screenshot-zinc-dark",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-screenshot-zinc-dark.json",
       "required_capabilities": [
@@ -2526,6 +2549,16 @@
         "Navigates to the AI Elements transcription demo.",
         "Seeks into the transcript and captures a docs-aligned playback screenshot."
       ]
+    },
+    {
+      "id": "ui-gallery-ai-transcription-demo-seek",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-seek.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-alert-action-text-non-overlap",
