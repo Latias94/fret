@@ -15,6 +15,7 @@ pub mod context_demo;
 pub mod conversation_demo;
 pub mod environment_variables_demo;
 pub mod message_demo;
+pub mod message_usage;
 pub mod open_in_chat_demo;
 pub mod package_info_demo;
 pub mod plan_demo;
