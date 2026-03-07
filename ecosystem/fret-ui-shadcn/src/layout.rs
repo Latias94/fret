@@ -189,6 +189,43 @@ pub(crate) fn container_vstack<H: UiHost>(
     container_vstack_build(cx, props, stack_props, move |_cx, out| out.extend(children))
 }
 
+pub(crate) fn container_vstack_fill_width_build<H: UiHost, B>(
+    cx: &mut ElementContext<'_, H>,
+    props: ContainerProps,
+    stack_props: VStackProps,
+    build: B,
+) -> AnyElement
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    let VStackProps {
+        gap,
+        layout,
+        items,
+        justify,
+    } = stack_props;
+
+    cx.container(props, move |cx| {
+        vec![
+            ui::v_flex_build(build)
+                .gap(gap)
+                .items(items)
+                .justify(justify)
+                .layout(LayoutRefinement::default().w_full().min_w_0().merge(layout))
+                .into_element(cx),
+        ]
+    })
+}
+
+pub(crate) fn container_vstack_fill_width<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: ContainerProps,
+    stack_props: VStackProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    container_vstack_fill_width_build(cx, props, stack_props, move |_cx, out| out.extend(children))
+}
+
 pub(crate) fn container_vstack_gap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,
@@ -225,14 +262,7 @@ pub(crate) fn container_flow_fill_width<H: UiHost>(
     props: ContainerProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    cx.container(props, move |cx| {
-        vec![
-            ui::v_flex(move |_cx| children)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0)
-                .into_element(cx),
-        ]
-    })
+    container_vstack_fill_width(cx, props, VStackProps::default().gap(Space::N0), children)
 }
 
 pub(crate) fn container_hstack_build<H: UiHost, B>(
