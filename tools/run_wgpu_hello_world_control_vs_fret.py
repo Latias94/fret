@@ -11,6 +11,17 @@ import sys
 from pathlib import Path
 
 
+def parse_env_kv(raw: str) -> tuple[str, str]:
+    key, sep, value = raw.partition("=")
+    if not sep:
+        raise SystemExit(f"invalid env override `{raw}` (expected KEY=VALUE)")
+    key = key.strip()
+    value = value.strip()
+    if not key:
+        raise SystemExit(f"invalid env override `{raw}` (empty key)")
+    return key, value
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", required=True)
@@ -44,6 +55,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--window-width", type=int, default=500)
     parser.add_argument("--window-height", type=int, default=500)
+    parser.add_argument(
+        "--shared-env",
+        action="append",
+        default=[],
+        help="Shared env override forwarded to control and both Fret cases (KEY=VALUE).",
+    )
     return parser.parse_args()
 
 
@@ -110,6 +127,7 @@ def main() -> int:
     exit_after_secs = args.exit_after_secs or auto_exit_after_secs(
         sample_offsets, args.post_sample_wait_secs
     )
+    shared_env = dict(parse_env_kv(raw) for raw in args.shared_env)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -124,6 +142,7 @@ def main() -> int:
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
+            **shared_env,
             "FRET_WGPU_HELLO_WORLD_CONTROL_INTERNAL_REPORT_PATH": str(
                 runs_dir / "wgpu-control" / "internal.gpu.json"
             ),
@@ -141,6 +160,7 @@ def main() -> int:
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
+            **shared_env,
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH": str(
                 runs_dir / "fret-compare-full" / "internal.gpu.json"
             ),
@@ -158,6 +178,7 @@ def main() -> int:
         sample_at_secs=args.sample_at_secs,
         post_sample_wait_secs=args.post_sample_wait_secs,
         env_overrides={
+            **shared_env,
             "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH": str(
                 runs_dir / "fret-compare-empty" / "internal.gpu.json"
             ),
@@ -205,6 +226,7 @@ def main() -> int:
             "width_px": args.window_width,
             "height_px": args.window_height,
         },
+        "shared_env": shared_env,
         "artifacts": {
             "control_external": str(control_external),
             "control_internal": str(control_internal),
