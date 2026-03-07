@@ -57,6 +57,7 @@ pub struct Shimmer {
     duration_secs: f32,
     spread: f32,
     text_style: Option<TextStyle>,
+    use_resolved_passive_text: bool,
     wrap: TextWrap,
     role: SemanticsRole,
     test_id: Option<Arc<str>>,
@@ -83,6 +84,7 @@ impl Shimmer {
             duration_secs: 2.0,
             spread: 2.0,
             text_style: None,
+            use_resolved_passive_text: false,
             wrap: TextWrap::None,
             role: SemanticsRole::Text,
             test_id: None,
@@ -106,6 +108,15 @@ impl Shimmer {
     /// (e.g. shadcn CardTitle/CardDescription in AI Elements).
     pub fn text_style(mut self, style: TextStyle) -> Self {
         self.text_style = Some(style);
+        self
+    }
+
+    /// Resolve base/overlay typography from the passive-text cascade of the surrounding subtree.
+    ///
+    /// This keeps the legacy explicit `.text_style(...)` path intact, but allows semantic call
+    /// sites (e.g. streaming card descriptions) to reuse inherited text-style / foreground scopes.
+    pub fn use_resolved_passive_text(mut self) -> Self {
+        self.use_resolved_passive_text = true;
         self
     }
 
@@ -141,7 +152,9 @@ impl Shimmer {
         let duration_secs = self.duration_secs;
         let spread = self.spread;
 
-        let style = match self.text_style {
+        let use_resolved_passive_text = self.use_resolved_passive_text;
+        let explicit_style = self.text_style;
+        let legacy_style = match explicit_style.clone() {
             Some(style) => style,
             None => {
                 let font_size = theme
@@ -158,8 +171,7 @@ impl Shimmer {
                 }
             }
         };
-        let style = typography::as_control_text(style);
-        let style_for_paint = style.clone();
+        let legacy_style = typography::as_control_text(legacy_style);
 
         cx.semantics(
             SemanticsProps {
@@ -170,19 +182,30 @@ impl Shimmer {
             },
             move |cx| {
                 let theme = Theme::global(&*cx.app).clone();
-                let base_color = resolve_muted_foreground(&theme);
-
-                let base = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::clone(&text),
-                    style: Some(style.clone()),
-                    color: Some(base_color),
-                    wrap,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                });
+                let base = if use_resolved_passive_text {
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::clone(&text),
+                        style: explicit_style.clone(),
+                        color: None,
+                        wrap,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: fret_ui::element::TextInkOverflow::None,
+                    })
+                } else {
+                    let base_color = resolve_muted_foreground(&theme);
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::clone(&text),
+                        style: Some(legacy_style.clone()),
+                        color: Some(base_color),
+                        wrap,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: fret_ui::element::TextInkOverflow::None,
+                    })
+                };
 
                 let canvas_layout = decl_style::layout_style(
                     &theme,
@@ -234,6 +257,12 @@ impl Shimmer {
                         if x1 <= x0 {
                             return;
                         }
+
+                        let style_for_paint = if use_resolved_passive_text {
+                            painter.resolved_passive_text_style(explicit_style.clone())
+                        } else {
+                            legacy_style.clone()
+                        };
 
                         let constraints = TextConstraints {
                             max_width: Some(bounds.size.width),

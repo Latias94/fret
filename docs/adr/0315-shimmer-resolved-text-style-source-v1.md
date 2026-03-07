@@ -1,6 +1,6 @@
 # ADR 0315 — Shimmer Resolved Text Style Source v1
 
-Status: Proposed.
+Status: Accepted.
 
 ## Context
 
@@ -134,10 +134,17 @@ Recommended sequence:
 
 ## Initial evidence anchors
 
-### Current implementation gap
+### Pilot implementation evidence
 
+- `crates/fret-ui/src/canvas.rs`
+- `crates/fret-ui/src/declarative/tests/canvas.rs`
 - `ecosystem/fret-ui-ai/src/elements/shimmer.rs`
 - `ecosystem/fret-ui-ai/src/elements/plan.rs`
+
+### Remaining migration gaps
+
+- `ecosystem/fret-ui-ai/src/elements/plan.rs` (`PlanTitle` streaming path)
+- `ecosystem/fret-ui-ai/src/elements/{reasoning,transcription,terminal}.rs`
 
 ### Existing passive text contract
 
