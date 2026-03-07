@@ -16,7 +16,7 @@ Primary contract references:
 | AI / reasoning | default thinking message | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Trigger-owned subtree scope + `Shimmer::use_resolved_passive_text()` for streaming copy | Landed on trigger-local semantic typography so shimmer and settled copy share the same `text-sm text-muted-foreground` contract | P2 | `[x]` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs`, `reasoning_trigger_default_streaming_message_scopes_inherited_typography_for_shimmer`, `reasoning_trigger_default_settled_message_scopes_inherited_typography` |
 | AI / transcription | segment override path | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Caller-owned explicit text override on `TranscriptionSegment` | Intentionally remains explicit: segment typography is a public authoring seam, not a semantic shimmer default | P1 | `[~]` | `transcription_segment_text_style_override_applies_to_text_child` |
 | AI / terminal | streaming status label | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Status-owned subtree scope + `Shimmer::use_resolved_passive_text()` | Landed on the header status slot typography so the default streaming label follows upstream `text-xs muted` ownership | P3 | `[x]` | `ecosystem/fret-ui-ai/src/elements/terminal.rs`, `terminal_status_default_streaming_message_scopes_inherited_typography_for_shimmer` |
-| UI Gallery | shimmer demos | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs` | Mix of default and explicit style demo cases | Audited as demo-only compatibility surfaces; keep explicit override examples and consider adding one inherited-style example later | P3 | `[~]` | Demo-only compatibility surface |
+| UI Gallery | shimmer demos | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs` | Default, explicit, and inherited-style examples now co-exist | Landed an inherited subtree-typography example while keeping explicit override demos as compatibility references | P3 | `[x]` | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_elements_demo.rs`, `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs` |
 
 Suggested review states:
 
@@ -53,7 +53,7 @@ Suggested review states:
 - [x] SHIMMER-migrate-020 Migrate `PlanTitle` streaming path to the subtree-resolved mode.
 - [x] SHIMMER-migrate-021 Migrate `PlanDescription` streaming path to the subtree-resolved mode.
 - [x] SHIMMER-migrate-022 Re-audit `Reasoning` / `Terminal` / gallery demos after the bridge lands.
-  - `Reasoning` and `TerminalStatus` now consume subtree-resolved typography; gallery demos remain compatibility-focused on purpose.
+  - `Reasoning` and `TerminalStatus` now consume subtree-resolved typography, and gallery demos now include an inherited-style example alongside explicit compatibility cases.
 - [x] SHIMMER-migrate-023 Keep `Transcription` explicit override behavior intact.
   - Locked by `transcription_segment_text_style_override_applies_to_text_child`.
 

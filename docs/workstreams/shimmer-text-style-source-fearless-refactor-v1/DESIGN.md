@@ -66,7 +66,7 @@ assembly from sneaking back in.
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_demo.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_elements_demo.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_duration_demo.rs`
-  - remaining demo-only audit / docs alignment surfaces
+  - now audited as demo/documentation surfaces, with an inherited-style example added alongside explicit compatibility cases
 
 ## Problem statement
 

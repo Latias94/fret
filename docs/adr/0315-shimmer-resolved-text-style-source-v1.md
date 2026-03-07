@@ -141,9 +141,9 @@ Recommended sequence:
 - `ecosystem/fret-ui-ai/src/elements/shimmer.rs`
 - `ecosystem/fret-ui-ai/src/elements/plan.rs`
 
-### Remaining audit items
+### Remaining known gaps
 
-- `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer*.rs`
+- focused wrap / overflow / baseline parity coverage for the resolved mode is still tracked by `SHIMMER-impl-013` in `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/TODO.md`
 
 ### Existing passive text contract
 
