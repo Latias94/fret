@@ -328,23 +328,20 @@ fn view(
     let size_controls = ui::h_flex(|cx| {
         ui::children![
             cx;
-            shadcn::Button::new("640×360")
+            shadcn::Button::new("640?360")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_640)
                 .disabled(preset == 0)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_640),
-            shadcn::Button::new("960×540")
+            shadcn::Button::new("960?540")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_960)
                 .disabled(preset == 1)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_960),
-            shadcn::Button::new("1280×720")
+            shadcn::Button::new("1280?720")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_1280)
                 .disabled(preset == 2)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
@@ -353,19 +350,16 @@ fn view(
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)
                 .disabled(fit == ViewportFit::Contain)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_CONTAIN),
             shadcn::Button::new("Cover")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_COVER)
                 .disabled(fit == ViewportFit::Cover)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_COVER),
             shadcn::Button::new("Stretch")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_STRETCH)
                 .disabled(fit == ViewportFit::Stretch)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_STRETCH),
         ]
     })
@@ -450,13 +444,12 @@ fn view(
     .wrap()
     .into_element(cx);
 
-    let hint = shadcn::Alert::new([
-        shadcn::AlertTitle::new("What this teaches").into_element(cx),
+    let hint = shadcn::Alert::new(ui::children![
+        cx;
+        shadcn::AlertTitle::new("What this teaches"),
         shadcn::AlertDescription::new(
-            "This panel renders into an offscreen texture and is presented via a ViewportSurface element. \
-Input does not arrive as normal UI pointer events; it is forwarded as ViewportInputEvent at the app level.",
-        )
-        .into_element(cx),
+            "This panel renders into an offscreen texture and is presented via a ViewportSurface element. Input does not arrive as normal UI pointer events; it is forwarded as ViewportInputEvent at the app level.",
+        ),
     ])
     .into_element(cx);
 

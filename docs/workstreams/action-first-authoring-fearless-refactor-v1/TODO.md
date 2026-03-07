@@ -327,6 +327,7 @@ ID format:
     - `apps/fret-cookbook/examples/drag_basics.rs`
     - `apps/fret-cookbook/examples/effects_layer_basics.rs`
     - `apps/fret-cookbook/examples/text_input_basics.rs`
+  - Follow-up polish (same slice, 2026-03-07): late-landing cleanup continued on already-listed `assets_reload_epoch_basics`, `undo_basics`, and `embedded_viewport_basics` to keep builder-first composition consistent after the broader cookbook sweep.
 
 ---
 

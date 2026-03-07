@@ -289,14 +289,11 @@ impl View for UndoBasicsView {
         .into_element(cx);
 
         let row_coalesce = ui::h_flex(|cx| {
-            ui::children![cx;
+            ui::children![
+                cx;
                 shadcn::Label::new("Coalesce nudges (key = \"value\"):"),
-                shadcn::Switch::new(self.coalesce.clone())
-                    .test_id(TEST_ID_COALESCE)
-                    ,
-                shadcn::Badge::new(coalesce_label)
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    ,
+                shadcn::Switch::new(self.coalesce.clone()).test_id(TEST_ID_COALESCE),
+                shadcn::Badge::new(coalesce_label).variant(shadcn::BadgeVariant::Secondary),
             ]
         })
         .gap(Space::N2)
@@ -308,13 +305,13 @@ impl View for UndoBasicsView {
                 ui::text(format!("Next undo: {next_undo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx)
-                    .test_id(TEST_ID_NEXT_UNDO),
+                    .test_id(TEST_ID_NEXT_UNDO)
+                    .into_element(cx),
                 ui::text(format!("Next redo: {next_redo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx)
-                    .test_id(TEST_ID_NEXT_REDO),
+                    .test_id(TEST_ID_NEXT_REDO)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N1)

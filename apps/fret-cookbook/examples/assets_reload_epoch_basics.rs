@@ -83,18 +83,16 @@ impl View for AssetsReloadEpochBasicsView {
             .unwrap_or(0);
 
         let actions = ui::h_flex(|cx| {
-            ui::children![cx;
+            ui::children![
+                cx;
                 shadcn::Button::new("Bump assets reload epoch")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::BumpReload)
-                    .test_id(TEST_ID_BUMP_RELOAD)
-                    ,
+                    .test_id(TEST_ID_BUMP_RELOAD),
                 shadcn::Badge::new(format!("epoch: {epoch}"))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    ,
+                    .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("Tip: edit files under `assets/` then click reload.")
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    ,
+                    .variant(shadcn::BadgeVariant::Secondary),
             ]
         })
         .gap(Space::N2)
@@ -109,25 +107,24 @@ impl View for AssetsReloadEpochBasicsView {
         let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_file);
         let svg_panel = render_svg_panel(cx, &theme, svg_file_state);
 
-        let stats = {
-            let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
-            let svgs = fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);
-            shadcn::Alert::new(ui::children![cx;
-                shadcn::AlertTitle::new("Budgets + cache stats"),
-                shadcn::AlertDescription::new(format!(
-                    "Images: ready={} pending={} failed={} bytes={} / {} | SVGs: ready={} bytes={} / {}",
-                    images.ready_count,
-                    images.pending_count,
-                    images.failed_count,
-                    images.bytes_ready,
-                    images.bytes_budget,
-                    svgs.ready_count,
-                    svgs.bytes_ready,
-                    svgs.bytes_budget
-                )),
-            ])
-            .into_element(cx)
-        };
+        let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
+        let svgs = fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);
+        let stats = shadcn::Alert::new(ui::children![
+            cx;
+            shadcn::AlertTitle::new("Budgets + cache stats"),
+            shadcn::AlertDescription::new(format!(
+                "Images: ready={} pending={} failed={} bytes={} / {} | SVGs: ready={} bytes={} / {}",
+                images.ready_count,
+                images.pending_count,
+                images.failed_count,
+                images.bytes_ready,
+                images.bytes_budget,
+                svgs.ready_count,
+                svgs.bytes_ready,
+                svgs.bytes_budget
+            )),
+        ])
+        .into_element(cx);
 
         let content = ui::v_flex(|cx| ui::children![cx; actions, image_panel, svg_panel, stats])
             .gap(Space::N4)
