@@ -4,9 +4,9 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
-use crate::runtime::store::NodeGraphStore;
+use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
 
-use super::controller::NodeGraphController;
+use super::controller::{NodeGraphController, NodeGraphControllerError};
 use super::declarative::NodeGraphSurfaceProps;
 
 /// Canonical app-facing binding bundle for the declarative node-graph surface.
@@ -96,6 +96,34 @@ impl NodeGraphSurfaceBinding {
     pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
         self.controller
             .sync_models_from_store_action_host(host, &self.graph, &self.view_state)
+    }
+
+    /// Returns whether the bound store currently has undo history.
+    pub fn can_undo<H: UiHost>(&self, host: &H) -> bool {
+        self.controller.can_undo(host)
+    }
+
+    /// Returns whether the bound store currently has redo history.
+    pub fn can_redo<H: UiHost>(&self, host: &H) -> bool {
+        self.controller.can_redo(host)
+    }
+
+    /// Undoes the last committed transaction and keeps the external graph/view mirrors in sync.
+    pub fn undo<H: UiHost>(
+        &self,
+        host: &mut H,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.controller
+            .undo_and_sync_models(host, &self.graph, &self.view_state)
+    }
+
+    /// Redoes the last undone transaction and keeps the external graph/view mirrors in sync.
+    pub fn redo<H: UiHost>(
+        &self,
+        host: &mut H,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.controller
+            .redo_and_sync_models(host, &self.graph, &self.view_state)
     }
 }
 

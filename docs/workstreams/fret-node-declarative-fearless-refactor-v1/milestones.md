@@ -96,6 +96,7 @@ make compatibility paths explicit instead of accidental.
 
 - `ecosystem/fret-node/src/ui/declarative/mod.rs`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `ecosystem/fret-node/src/ui/binding.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `apps/fret-examples/src/imui_node_graph_demo.rs`
@@ -260,6 +261,9 @@ points rather than direct graph mutation.
     mutation or queue ownership for those core surfaces.
   - Feature-gated retained coverage now also includes a blackboard controller-first gate proving
     symbol creation prefers controller/store commit over raw queue transport.
+  - `NodeGraphController` now also owns undo/redo sync helpers for the default store-backed
+    app-facing surface, and focused declarative coverage now proves node-drag commit history can be
+    undone/redone while graph/view mirrors stay in sync.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while
@@ -319,6 +323,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/runtime/changes.rs`
 - `ecosystem/fret-node/src/runtime/lookups.rs`
 - `ecosystem/fret-node/src/ui/controller.rs`
+- `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`

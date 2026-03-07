@@ -47,6 +47,7 @@ while teaching the same declarative surface that app code should copy.
 - Create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Route app-facing viewport/query/edit operations through `binding.controller()`.
+- Use `binding.undo(...)` / `binding.redo(...)` when app code wants history actions without manually re-syncing graph/view mirrors.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
   commit/view notifications.
   - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.

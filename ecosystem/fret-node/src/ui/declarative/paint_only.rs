@@ -4310,6 +4310,105 @@ mod tests {
         assert_eq!(callback_commits[0].1, 1);
     }
 
+    #[test]
+    fn declarative_node_drag_commit_supports_undo_and_redo_through_controller() {
+        let node_a = NodeId::from_u128(601);
+        let node_b = NodeId::from_u128(602);
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            601,
+            node_a,
+            CanvasPoint { x: 10.0, y: 20.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            NodeGraphViewState::default(),
+        );
+
+        let tx = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                build_node_drag_transaction(graph, &[node_a], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_node_drag_transaction(
+            &mut fixture.host,
+            &fixture.graph,
+            &fixture.view_state,
+            &fixture.controller,
+            &tx,
+        ));
+
+        let committed_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after commit");
+        assert_eq!(committed_pos, CanvasPoint { x: 15.0, y: 18.0 });
+
+        let undo = fixture
+            .controller
+            .undo_and_sync_models_action_host(
+                &mut fixture.host,
+                &fixture.graph,
+                &fixture.view_state,
+            )
+            .unwrap()
+            .expect("did undo");
+        assert!(!undo.committed.ops.is_empty());
+
+        let undone_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after undo");
+        let store_flags = fixture
+            .host
+            .models
+            .read(&fixture.store, |store| (store.can_undo(), store.can_redo()))
+            .ok()
+            .expect("history flags after undo");
+        assert_eq!(undone_pos, CanvasPoint { x: 10.0, y: 20.0 });
+        assert_eq!(store_flags, (false, true));
+
+        let redo = fixture
+            .controller
+            .redo_and_sync_models_action_host(
+                &mut fixture.host,
+                &fixture.graph,
+                &fixture.view_state,
+            )
+            .unwrap()
+            .expect("did redo");
+        assert!(!redo.committed.ops.is_empty());
+
+        let redone_pos = fixture
+            .host
+            .models
+            .read(&fixture.graph, |graph| {
+                graph.nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("graph node pos after redo");
+        let store_flags = fixture
+            .host
+            .models
+            .read(&fixture.store, |store| (store.can_undo(), store.can_redo()))
+            .ok()
+            .expect("history flags after redo");
+        assert_eq!(redone_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(store_flags, (true, false));
+    }
+
     #[derive(Debug, Default, Clone, PartialEq, Eq)]
     struct DeclarativeCallbackTrace {
         commit_labels: Vec<Option<String>>,

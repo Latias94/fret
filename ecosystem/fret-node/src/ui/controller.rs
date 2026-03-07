@@ -101,6 +101,20 @@ impl NodeGraphController {
             .ok()
     }
 
+    pub fn can_undo<H: UiHost>(&self, host: &H) -> bool {
+        self.store
+            .read_ref(host, |store| store.can_undo())
+            .ok()
+            .unwrap_or(false)
+    }
+
+    pub fn can_redo<H: UiHost>(&self, host: &H) -> bool {
+        self.store
+            .read_ref(host, |store| store.can_redo())
+            .ok()
+            .unwrap_or(false)
+    }
+
     pub fn dispatch_transaction<H: UiHost>(
         &self,
         host: &mut H,
@@ -199,6 +213,86 @@ impl NodeGraphController {
     ) -> Result<DispatchOutcome, NodeGraphControllerError> {
         let outcome = self.dispatch_transaction_in_models(host.models_mut(), tx)?;
         let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        Ok(outcome)
+    }
+
+    pub fn undo<H: UiHost>(
+        &self,
+        host: &mut H,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.undo_in_models(host.models_mut())
+    }
+
+    pub fn undo_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.undo_in_models(host.models_mut())
+    }
+
+    pub fn undo_and_sync_models<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        let outcome = self.undo_in_models(host.models_mut())?;
+        if outcome.is_some() {
+            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        }
+        Ok(outcome)
+    }
+
+    pub fn undo_and_sync_models_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        let outcome = self.undo_in_models(host.models_mut())?;
+        if outcome.is_some() {
+            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        }
+        Ok(outcome)
+    }
+
+    pub fn redo<H: UiHost>(
+        &self,
+        host: &mut H,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.redo_in_models(host.models_mut())
+    }
+
+    pub fn redo_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        self.redo_in_models(host.models_mut())
+    }
+
+    pub fn redo_and_sync_models<H: UiHost>(
+        &self,
+        host: &mut H,
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        let outcome = self.redo_in_models(host.models_mut())?;
+        if outcome.is_some() {
+            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        }
+        Ok(outcome)
+    }
+
+    pub fn redo_and_sync_models_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        graph: &Model<Graph>,
+        view_state: &Model<NodeGraphViewState>,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        let outcome = self.redo_in_models(host.models_mut())?;
+        if outcome.is_some() {
+            let _ = self.sync_models_from_store_in_models(host.models_mut(), graph, view_state);
+        }
         Ok(outcome)
     }
 
@@ -594,6 +688,28 @@ impl NodeGraphController {
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, NodeGraphControllerError> {
         match models.update(&self.store, |store| store.dispatch_transaction(tx)) {
+            Ok(Ok(outcome)) => Ok(outcome),
+            Ok(Err(err)) => Err(NodeGraphControllerError::Dispatch(err)),
+            Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+        }
+    }
+
+    fn undo_in_models(
+        &self,
+        models: &mut ModelStore,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        match models.update(&self.store, NodeGraphStore::undo) {
+            Ok(Ok(outcome)) => Ok(outcome),
+            Ok(Err(err)) => Err(NodeGraphControllerError::Dispatch(err)),
+            Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+        }
+    }
+
+    fn redo_in_models(
+        &self,
+        models: &mut ModelStore,
+    ) -> Result<Option<DispatchOutcome>, NodeGraphControllerError> {
+        match models.update(&self.store, NodeGraphStore::redo) {
             Ok(Ok(outcome)) => Ok(outcome),
             Ok(Err(err)) => Err(NodeGraphControllerError::Dispatch(err)),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
@@ -1652,5 +1768,74 @@ mod tests {
             .flatten()
             .expect("graph node pos");
         assert_eq!(graph_pos, CanvasPoint { x: 84.0, y: 12.0 });
+    }
+
+    #[test]
+    fn controller_undo_and_redo_sync_models_without_edit_queue() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, node_a, _node_b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value.clone());
+        let initial_view = NodeGraphViewState::default();
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view));
+        let controller = NodeGraphController::new(store.clone());
+        let tx = GraphTransaction {
+            label: Some("Move Node".to_string()),
+            ops: vec![GraphOp::SetNodePos {
+                id: node_a,
+                from: CanvasPoint { x: 0.0, y: 0.0 },
+                to: CanvasPoint { x: 64.0, y: 16.0 },
+            }],
+        };
+
+        controller
+            .dispatch_transaction_and_sync_models(&mut host, &graph, &view_state, &tx)
+            .unwrap();
+        assert!(controller.can_undo(&host));
+
+        let undo = controller
+            .undo_and_sync_models(&mut host, &graph, &view_state)
+            .unwrap()
+            .expect("did undo");
+        assert!(!undo.committed.ops.is_empty());
+        assert!(controller.can_redo(&host));
+
+        let graph_pos = graph
+            .read_ref(&host, |graph| graph.nodes.get(&node_a).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("graph node pos after undo");
+        let store_pos = store
+            .read_ref(&host, |store| {
+                store.graph().nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("store node pos after undo");
+        assert_eq!(graph_pos, CanvasPoint { x: 0.0, y: 0.0 });
+        assert_eq!(store_pos, CanvasPoint { x: 0.0, y: 0.0 });
+
+        let redo = controller
+            .redo_and_sync_models(&mut host, &graph, &view_state)
+            .unwrap()
+            .expect("did redo");
+        assert!(!redo.committed.ops.is_empty());
+
+        let graph_pos = graph
+            .read_ref(&host, |graph| graph.nodes.get(&node_a).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("graph node pos after redo");
+        let store_pos = store
+            .read_ref(&host, |store| {
+                store.graph().nodes.get(&node_a).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("store node pos after redo");
+        assert_eq!(graph_pos, CanvasPoint { x: 64.0, y: 16.0 });
+        assert_eq!(store_pos, CanvasPoint { x: 64.0, y: 16.0 });
     }
 }

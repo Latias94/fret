@@ -205,7 +205,10 @@ Execution companion: `design.md` (surface map + next worktree order).
       rather than stopping at node drag.
 - [ ] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
       commits through transactions.
-- [ ] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.
+- [x] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.
+  - Landed via focused paint-only coverage: controller-backed node-drag commit now proves
+    history records the transaction, undo re-syncs graph/view models, and redo restores the same
+    committed graph state.
 - [x] Add at least one gate proving that a declarative drag or marquee commit produces a
       transaction-safe update path.
   - Landed via `paint_only.rs` callback gates: controller-backed node-drag commit proves it

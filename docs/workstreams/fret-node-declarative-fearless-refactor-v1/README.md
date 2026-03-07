@@ -403,7 +403,8 @@ For new editor surfaces, teach and copy this shape first:
 1. create one `NodeGraphSurfaceBinding::new(models, graph, view_state)`,
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. route app-facing viewport/query/edit operations through `binding.controller()`,
-4. treat raw graph/view models as advanced seams rather than the default teaching surface.
+4. use `binding.undo(...)` / `binding.redo(...)` for history actions that should keep graph/view mirrors in sync,
+5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 
 This is the public teaching surface now used by `apps/fret-examples/src/node_graph_demo.rs`.
 
