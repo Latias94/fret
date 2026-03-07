@@ -452,6 +452,9 @@ real editors.
 - Right-click menu presentation and edge-target selection now also have named private seams,
   `canvas/widget/context_menu/opening.rs` and `context_menu/target_selection.rs`, so menu state
   presentation and edge selection sync no longer stay duplicated in `right_click.rs`.
+- Static group/background/edge context-menu items now also have a named private seam,
+  `canvas/widget/context_menu/item_builders.rs`, so command-item construction no longer stays
+  duplicated between `right_click.rs` and `context_menu/opening.rs`.
 
 ### Deliverables
 
@@ -485,6 +488,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/item_builders.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`

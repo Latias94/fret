@@ -5,6 +5,7 @@ mod background_execution;
 mod connection_execution;
 mod edge_execution;
 mod input;
+pub(in crate::ui::canvas::widget) mod item_builders;
 mod key_navigation;
 mod opening;
 mod pointer;

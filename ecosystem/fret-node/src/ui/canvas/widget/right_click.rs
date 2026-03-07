@@ -1,16 +1,7 @@
-use std::sync::Arc;
-
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_DELETE_SELECTION,
-    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_PASTE,
-    CMD_NODE_GRAPH_SELECT_ALL,
-};
-use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
-
+use super::context_menu::item_builders;
 use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::{ContextMenuTarget, ViewSnapshot};
 
@@ -59,36 +50,7 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     };
 
     if let Some(group_id) = hit_group {
-        let items: Vec<NodeGraphContextMenuItem> = vec![
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Bring to Front"),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Send to Back"),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Rename..."),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_GROUP_RENAME,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Delete"),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_DELETE_SELECTION,
-                )),
-            },
-        ];
+        let items = item_builders::build_group_context_menu_items();
 
         canvas.select_group_context_target(cx.app, group_id);
         return canvas.show_context_menu(
@@ -121,43 +83,8 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
         let has_selection = !snapshot.selected_nodes.is_empty()
             || !snapshot.selected_edges.is_empty()
             || !snapshot.selected_groups.is_empty();
-        let items: Vec<NodeGraphContextMenuItem> = vec![
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Insert Node..."),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_OPEN_INSERT_NODE,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Create Group"),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_CREATE_GROUP,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Paste"),
-                enabled: cx.window.is_some(),
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_PASTE,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Select All"),
-                enabled: true,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_SELECT_ALL,
-                )),
-            },
-            NodeGraphContextMenuItem {
-                label: Arc::<str>::from("Delete Selection"),
-                enabled: has_selection,
-                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                    CMD_NODE_GRAPH_DELETE_SELECTION,
-                )),
-            },
-        ];
+        let items =
+            item_builders::build_background_context_menu_items(cx.window.is_some(), has_selection);
 
         return canvas.show_context_menu(
             cx,

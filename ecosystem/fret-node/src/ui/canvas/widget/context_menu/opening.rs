@@ -1,8 +1,6 @@
 use crate::ui::canvas::widget::*;
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-};
+
+use super::item_builders;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in crate::ui::canvas::widget) fn show_context_menu<H: UiHost>(
@@ -39,27 +37,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .read_ref(host, |graph| {
                 let mut items = Vec::new();
                 presenter.fill_edge_context_menu(graph, edge, style, &mut items);
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Insert Node..."),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-                    )),
-                });
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Insert Reroute"),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_INSERT_REROUTE,
-                    )),
-                });
-                items.push(NodeGraphContextMenuItem {
-                    label: Arc::<str>::from("Delete"),
-                    enabled: true,
-                    action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
-                        CMD_NODE_GRAPH_DELETE_SELECTION,
-                    )),
-                });
+                item_builders::append_builtin_edge_context_menu_items(&mut items);
                 items
             })
             .ok()
