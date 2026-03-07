@@ -421,6 +421,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `context_menu/input.rs` and `context_menu/pointer.rs` now act as thin retained event
     routers, delegating key and pointer behavior to `key_navigation.rs` and
     `selection_activation.rs` instead of keeping event glue inline.
+  - Progress: `right_click.rs` now also acts as a thin retained event router, while pending
+    right-click click-vs-drag threshold checks are shared between `event_pointer_move.rs` and
+    `event_pointer_up.rs`, and context-menu opening delegates into `context_menu/opening.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

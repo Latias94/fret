@@ -7,7 +7,7 @@ mod edge_execution;
 mod input;
 pub(in crate::ui::canvas::widget) mod item_builders;
 mod key_navigation;
-mod opening;
+pub(in crate::ui::canvas::widget) mod opening;
 mod pointer;
 mod selection_activation;
 mod target_hit;

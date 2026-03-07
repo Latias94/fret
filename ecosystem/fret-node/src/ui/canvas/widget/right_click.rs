@@ -1,9 +1,32 @@
+use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::context_menu::item_builders;
+use super::context_menu::opening;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{ContextMenuTarget, ViewSnapshot};
+use crate::ui::canvas::state::{PendingRightClick, ViewSnapshot};
+
+pub(super) fn pending_right_click_is_click(
+    pending: PendingRightClick,
+    position: Point,
+    click_distance: f32,
+    zoom: f32,
+) -> bool {
+    let click_distance = click_distance.max(0.0);
+    let threshold = canvas_units_from_screen_px(click_distance, zoom);
+    let dx = position.x.0 - pending.start_pos.x.0;
+    let dy = position.y.0 - pending.start_pos.y.0;
+    click_distance == 0.0 || (dx * dx + dy * dy) <= threshold * threshold
+}
+
+pub(super) fn pending_right_click_exceeded_drag_threshold(
+    pending: PendingRightClick,
+    position: Point,
+    click_distance: f32,
+    zoom: f32,
+) -> bool {
+    !pending_right_click_is_click(pending, position, click_distance, zoom)
+}
 
 pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -12,58 +35,73 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     position: Point,
     zoom: f32,
 ) -> bool {
-    canvas.interaction.last_pos = Some(position);
-    canvas.interaction.last_canvas_pos = Some(crate::core::CanvasPoint {
-        x: position.x.0,
-        y: position.y.0,
-    });
+    opening::handle_right_click_context_menu_event(canvas, cx, snapshot, position, zoom)
+}
 
-    let hit_group = canvas.hit_group_context_target(cx.app, snapshot, position, zoom);
-
-    if let Some(group_id) = hit_group {
-        let items = item_builders::build_group_context_menu_items();
-
-        canvas.select_group_context_target(cx.app, group_id);
-        return canvas.show_context_menu(
-            cx,
-            snapshot,
-            position,
-            ContextMenuTarget::Group(group_id),
-            items,
-            Vec::new(),
-            true,
-        );
+pub(super) fn handle_pending_right_click_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    position: Point,
+    button: fret_core::MouseButton,
+    zoom: f32,
+) -> bool {
+    if button != fret_core::MouseButton::Right || !snapshot.interaction.pan_on_drag.right {
+        return false;
     }
 
-    let hit_edge = canvas.hit_edge_context_target(cx.app, snapshot, position, zoom);
-
-    let Some(edge) = hit_edge else {
-        let has_selection = !snapshot.selected_nodes.is_empty()
-            || !snapshot.selected_edges.is_empty()
-            || !snapshot.selected_groups.is_empty();
-        let items =
-            item_builders::build_background_context_menu_items(cx.window.is_some(), has_selection);
-
-        return canvas.show_context_menu(
-            cx,
-            snapshot,
-            position,
-            ContextMenuTarget::Background,
-            items,
-            Vec::new(),
-            false,
-        );
+    let Some(pending) = canvas.interaction.pending_right_click.take() else {
+        return false;
     };
 
-    let items = canvas.build_edge_context_menu_items(cx.app, edge);
-    canvas.select_edge_context_target(cx.app, edge);
-    canvas.show_context_menu(
-        cx,
-        snapshot,
+    cx.release_pointer_capture();
+    if pending_right_click_is_click(
+        pending,
         position,
-        ContextMenuTarget::Edge(edge),
-        items,
-        Vec::new(),
-        true,
-    )
+        snapshot.interaction.pane_click_distance,
+        zoom,
+    ) {
+        let _ = handle_right_click_pointer_down(canvas, cx, snapshot, position, zoom);
+    }
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_core::{Point, Px};
+
+    use super::*;
+
+    fn pending(start_x: f32, start_y: f32) -> PendingRightClick {
+        PendingRightClick {
+            start_pos: Point::new(Px(start_x), Px(start_y)),
+        }
+    }
+
+    #[test]
+    fn pending_right_click_zero_distance_is_always_click() {
+        assert!(pending_right_click_is_click(
+            pending(10.0, 20.0),
+            Point::new(Px(100.0), Px(200.0)),
+            0.0,
+            2.0,
+        ));
+    }
+
+    #[test]
+    fn pending_right_click_exceeded_threshold_matches_distance_check() {
+        let pending = pending(10.0, 10.0);
+        assert!(!pending_right_click_exceeded_drag_threshold(
+            pending.clone(),
+            Point::new(Px(11.0), Px(10.0)),
+            4.0,
+            1.0,
+        ));
+        assert!(pending_right_click_exceeded_drag_threshold(
+            pending,
+            Point::new(Px(20.0), Px(10.0)),
+            4.0,
+            1.0,
+        ));
+    }
 }

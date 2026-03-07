@@ -486,6 +486,9 @@ real editors.
 - `context_menu/input.rs` and `context_menu/pointer.rs` now also act as thin retained event
   routers, delegating key and pointer behavior to `key_navigation.rs` and
   `selection_activation.rs` instead of keeping event glue inline.
+- `right_click.rs` now also acts as a thin retained event router, while pending right-click
+  click-vs-drag threshold checks are shared between `event_pointer_move.rs` and
+  `event_pointer_up.rs`, and context-menu opening delegates into `context_menu/opening.rs`.
 
 ### Deliverables
 
@@ -529,6 +532,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

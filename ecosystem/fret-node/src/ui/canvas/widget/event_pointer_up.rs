@@ -17,20 +17,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .multi_selection_key
             .is_pressed(modifiers);
 
-        if button == MouseButton::Right
-            && snapshot.interaction.pan_on_drag.right
-            && let Some(pending) = self.interaction.pending_right_click.take()
-        {
-            let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
-            let threshold = canvas_units_from_screen_px(click_distance, zoom);
-            let dx = position.x.0 - pending.start_pos.x.0;
-            let dy = position.y.0 - pending.start_pos.y.0;
-            let is_click = click_distance == 0.0 || (dx * dx + dy * dy) <= threshold * threshold;
-
-            cx.release_pointer_capture();
-            if is_click {
-                right_click::handle_right_click_pointer_down(self, cx, snapshot, position, zoom);
-            }
+        if right_click::handle_pending_right_click_pointer_up(
+            self, cx, snapshot, position, button, zoom,
+        ) {
             return;
         }
 

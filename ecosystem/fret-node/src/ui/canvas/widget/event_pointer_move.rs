@@ -51,22 +51,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && buttons.right
             && self.interaction.panning_button.is_none()
             && let Some(pending) = self.interaction.pending_right_click
+            && right_click::pending_right_click_exceeded_drag_threshold(
+                pending,
+                position,
+                snapshot.interaction.pane_click_distance,
+                zoom,
+            )
         {
-            let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
-            let threshold = canvas_units_from_screen_px(click_distance, zoom);
-            let dx = position.x.0 - pending.start_pos.x.0;
-            let dy = position.y.0 - pending.start_pos.y.0;
-            if click_distance == 0.0 || (dx * dx + dy * dy) > threshold * threshold {
-                self.interaction.pending_right_click = None;
-                let _ = pan_zoom::begin_panning(
-                    self,
-                    cx,
-                    snapshot,
-                    position,
-                    fret_core::MouseButton::Right,
-                );
-                return;
-            }
+            self.interaction.pending_right_click = None;
+            let _ = pan_zoom::begin_panning(
+                self,
+                cx,
+                snapshot,
+                position,
+                fret_core::MouseButton::Right,
+            );
+            return;
         }
 
         let has_left_interaction = self.interaction.pending_marquee.is_some()
