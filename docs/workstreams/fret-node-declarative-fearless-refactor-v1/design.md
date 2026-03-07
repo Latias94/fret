@@ -36,6 +36,15 @@ something else.
   - is still allowed as a compatibility path,
   - but should be taught as compatibility-only, not as the long-term public design center.
 
+### XYFlow alignment note
+
+XYFlow’s core affordance is “nodes as component subtrees in a panning/zooming world layer”. Fret can
+support that outcome, but the long-term home for the generic world-layer mechanism is
+`ecosystem/fret-canvas` (see `docs/workstreams/xyflow-gap-analysis.md`). `fret-node` should remain
+focused on the editor-grade substrate + transaction-safe interaction model, and use portals/world
+layer techniques only when they directly serve the node editor’s contracts (portals, overlays,
+anchoring, diagnostics).
+
 ### Advanced transport surface
 
 Only use these when an integration intentionally owns raw queue transport and accepts the retained /

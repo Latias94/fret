@@ -100,6 +100,7 @@ make compatibility paths explicit instead of accidental.
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `apps/fret-examples/src/imui_node_graph_demo.rs`
 - `docs/workstreams/xyflow-gap-analysis.md`
+- `docs/workstreams/crate-audits/fret-node.l0.md`
 
 ## M2 - State boundary split
 
@@ -412,7 +413,6 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
-
 
 
 

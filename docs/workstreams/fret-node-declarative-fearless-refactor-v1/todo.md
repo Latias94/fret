@@ -13,6 +13,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Keep the workstream docs aligned with the actual public recommendation after each milestone.
 - [x] Keep diagnostics-driven example hosts aligned with the current `UiDiagnosticsService`
       script-driving surface when syncing from `main`.
+- [x] Publish and maintain an L0 crate audit note (`docs/workstreams/crate-audits/fret-node.l0.md`).
 - [ ] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
       implementation-only diffs.
 
@@ -326,7 +327,6 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 

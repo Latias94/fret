@@ -6,6 +6,7 @@ Quick navigation:
 - `design.md` - current surface map + next worktree order
 - `todo.md` - actionable backlog
 - `milestones.md` - done criteria + regression expectations
+- `../crate-audits/fret-node.l0.md` - L0 public surface + hazard scan
 Scope: `ecosystem/fret-node` with focused touch points in `ecosystem/fret-canvas`, `apps/fret-examples`, and node-graph diagnostics
 
 Historical note:
