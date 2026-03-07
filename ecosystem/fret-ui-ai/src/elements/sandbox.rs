@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -25,13 +23,6 @@ fn muted_fg(theme: &Theme) -> Color {
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
         .unwrap_or_else(|| theme.color_required("foreground"))
-}
-
-fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style
 }
 
 fn tool_status_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, status: ToolStatus) -> AnyElement {
@@ -186,7 +177,12 @@ impl SandboxHeader {
                 LayoutRefinement::default().flex_grow(1.0).min_w_0(),
             ),
             text: label,
-            style: Some(text_sm_style(&theme, FontWeight::MEDIUM)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: Some(theme.color_required("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -426,5 +422,32 @@ mod tests {
         assert_eq!(label.layout.flex.shrink, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn sandbox_header_uses_shared_sm_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title = "Sandbox";
+        let open_model = app.models_mut().insert(false);
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "sandbox-style", |cx| {
+                SandboxHeader::new(ToolStatus::InputAvailable)
+                    .title(title)
+                    .into_trigger(cx, open_model.clone(), false)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let label = find_text_by_content(&el, title).expect("sandbox header label text");
+        assert_eq!(
+            label.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            ))
+        );
     }
 }

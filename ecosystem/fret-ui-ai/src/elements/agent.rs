@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -36,16 +34,6 @@ fn token_color_with_alpha(
         b: base.b,
         a: base.a * alpha,
     }
-}
-
-fn text_sm_style(theme: &Theme, weight: FontWeight, monospace: bool) -> TextStyle {
-    let mut style = if monospace {
-        typography::TypographyPreset::control_monospace(typography::UiTextSize::Sm).resolve(theme)
-    } else {
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme)
-    };
-    style.weight = weight;
-    style
 }
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -204,7 +192,12 @@ impl AgentHeader {
                 LayoutRefinement::default().flex_grow(1.0).min_w_0(),
             ),
             text: name,
-            style: Some(text_sm_style(&theme, FontWeight::MEDIUM, false)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: Some(theme.color_required("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -354,7 +347,12 @@ impl AgentInstructions {
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::from("Instructions"),
-            style: Some(text_sm_style(&theme, FontWeight::MEDIUM, false)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -365,7 +363,12 @@ impl AgentInstructions {
         let body_text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(text_sm_style(&theme, FontWeight::NORMAL, false)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -467,6 +470,65 @@ mod tests {
             .expect("tool description text");
         assert_eq!(description.text.as_ref(), "Search the web for information");
     }
+
+    #[test]
+    fn agent_surfaces_use_shared_sm_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let header = "Alpha Agent";
+        let instruction = "Follow the repository instructions carefully.";
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "agent-style", |cx| {
+                ui::v_stack(|cx| {
+                    vec![
+                        AgentHeader::new(header).into_element(cx),
+                        AgentInstructions::new(instruction).into_element(cx),
+                        AgentTools::multiple_uncontrolled([]).into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let expected_medium = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::MEDIUM),
+            None,
+        ));
+        let expected_normal = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+
+        assert_eq!(
+            find_text_by_content(&el, header)
+                .expect("agent header text")
+                .style,
+            expected_medium
+        );
+        assert_eq!(
+            find_text_by_content(&el, "Instructions")
+                .expect("instructions label")
+                .style,
+            expected_medium
+        );
+        assert_eq!(
+            find_text_by_content(&el, instruction)
+                .expect("instructions body")
+                .style,
+            expected_normal
+        );
+        assert_eq!(
+            find_text_by_content(&el, "Tools")
+                .expect("tools label")
+                .style,
+            expected_medium
+        );
+    }
 }
 
 /// `Tools` section wrapper (label + bordered accordion).
@@ -521,7 +583,12 @@ impl AgentTools {
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::from("Tools"),
-            style: Some(text_sm_style(&theme, FontWeight::MEDIUM, false)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -676,7 +743,12 @@ impl AgentOutput {
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::from("Output Schema"),
-            style: Some(text_sm_style(&theme, FontWeight::MEDIUM, false)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: Some(muted),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
