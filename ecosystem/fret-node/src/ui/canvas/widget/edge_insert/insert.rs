@@ -1,5 +1,28 @@
 use super::prelude::*;
 
+pub(in super::super) fn activate_edge_insert_picker_action<
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut EventCx<'_, H>,
+    edge: EdgeId,
+    invoked_at: Point,
+    action: NodeGraphContextMenuAction,
+    menu_candidates: &[InsertNodeCandidate],
+) -> bool {
+    match action {
+        NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix) => {
+            let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                return true;
+            };
+            insert_node_on_edge(canvas, cx, edge, invoked_at, candidate);
+            true
+        }
+        _ => false,
+    }
+}
+
 pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,

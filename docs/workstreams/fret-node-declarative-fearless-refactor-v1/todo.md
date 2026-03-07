@@ -371,6 +371,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/context_menu/background_execution.rs` seam, so background insert planning,
     commit/selection, and rejection-toast handling no longer stay inlined inside
     `context_menu/activate.rs`.
+  - Progress: edge-insert picker activation now also routes through the `canvas/widget/edge_insert`
+    seam, so `context_menu/activate.rs` no longer owns candidate lookup plus handoff for the
+    edge-insert searcher target.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
@@ -418,7 +421,6 @@ Execution companion: `design.md` (surface map + next worktree order).
       proves insufficient.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
-
 
 
 

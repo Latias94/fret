@@ -436,6 +436,9 @@ real editors.
   `canvas/widget/context_menu/background_execution.rs`, so background insert planning,
   commit/selection, and rejection-toast handling no longer stay embedded in
   `context_menu/activate.rs`.
+- Edge-insert picker activation now also routes through the `canvas/widget/edge_insert` seam, so
+  `context_menu/activate.rs` no longer owns candidate lookup plus handoff for the edge-insert
+  searcher target.
 
 ### Deliverables
 
@@ -469,6 +472,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert/insert.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`
@@ -519,6 +523,5 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
-
 
 

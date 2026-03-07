@@ -38,14 +38,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     return;
                 }
             }
-            (
-                ContextMenuTarget::EdgeInsertNodePicker(edge_id),
-                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
-            ) => {
-                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+            (ContextMenuTarget::EdgeInsertNodePicker(edge_id), action) => {
+                if edge_insert::activate_edge_insert_picker_action(
+                    self,
+                    cx,
+                    *edge_id,
+                    invoked_at,
+                    action,
+                    menu_candidates,
+                ) {
                     return;
-                };
-                edge_insert::insert_node_on_edge(self, cx, *edge_id, invoked_at, candidate);
+                }
             }
             (ContextMenuTarget::ConnectionConvertPicker { from, to, at }, action) => {
                 if self.activate_connection_conversion_picker_action(

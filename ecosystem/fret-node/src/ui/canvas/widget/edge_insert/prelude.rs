@@ -10,6 +10,7 @@ pub(super) use crate::rules::DiagnosticSeverity;
 pub(super) use crate::ui::canvas::state::ContextMenuTarget;
 pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
+pub(super) use crate::ui::NodeGraphContextMenuAction;
 pub(super) use crate::ui::canvas::widget::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasWith, is_reroute_insert_candidate,
 };
