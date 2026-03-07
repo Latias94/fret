@@ -288,6 +288,62 @@ fn suite_row_to_regression_item(
     }
 }
 
+struct SuiteSummaryContext<'a> {
+    workspace_root: &'a Path,
+    resolved_out_dir: &'a Path,
+    suite_summary_path: &'a Path,
+    regression_summary_path: &'a Path,
+    suite_name: Option<&'a str>,
+    generated_unix_ms: u64,
+    warmup_frames: u64,
+    reuse_launch: bool,
+    wants_screenshots: bool,
+}
+
+impl<'a> SuiteSummaryContext<'a> {
+    fn emit_input<'b>(
+        &'b self,
+        stage_counts: &'b std::collections::BTreeMap<String, u64>,
+        reason_code_counts: &'b std::collections::BTreeMap<String, u64>,
+        rows: &'b [serde_json::Value],
+        evidence_aggregate: &'b suite_summary::SuiteEvidenceAggregate,
+    ) -> SuiteSummaryEmitInput<'b> {
+        SuiteSummaryEmitInput {
+            workspace_root: self.workspace_root,
+            resolved_out_dir: self.resolved_out_dir,
+            suite_summary_path: self.suite_summary_path,
+            regression_summary_path: self.regression_summary_path,
+            suite_name: self.suite_name,
+            generated_unix_ms: self.generated_unix_ms,
+            warmup_frames: self.warmup_frames,
+            reuse_launch: self.reuse_launch,
+            wants_screenshots: self.wants_screenshots,
+            stage_counts,
+            reason_code_counts,
+            rows,
+            evidence_aggregate,
+        }
+    }
+
+    fn emit(
+        &self,
+        stage_counts: &std::collections::BTreeMap<String, u64>,
+        reason_code_counts: &std::collections::BTreeMap<String, u64>,
+        rows: &[serde_json::Value],
+        evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+        status: &'static str,
+        error_reason_code: Option<&str>,
+        failure_kind: Option<&str>,
+    ) {
+        emit_suite_summary(
+            &self.emit_input(stage_counts, reason_code_counts, rows, evidence_aggregate),
+            status,
+            error_reason_code,
+            failure_kind,
+        );
+    }
+}
+
 struct SuiteSummaryEmitInput<'a> {
     workspace_root: &'a Path,
     resolved_out_dir: &'a Path,
@@ -394,6 +450,72 @@ fn emit_suite_summary(
         input.generated_unix_ms,
         &payload,
     );
+}
+
+fn maybe_stop_suite_demo(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+) {
+    if stop_demo {
+        stop_launched_demo(child, resolved_exit_path, poll_ms);
+    }
+}
+
+fn finalize_suite_failure_and_return(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &[serde_json::Value],
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+    message: &'static str,
+) -> String {
+    maybe_stop_suite_demo(child, stop_demo, resolved_exit_path, poll_ms);
+    summary_ctx.emit(
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        status,
+        error_reason_code,
+        failure_kind,
+    );
+    message.to_string()
+}
+
+fn finalize_suite_failure_and_exit(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &[serde_json::Value],
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    status: &'static str,
+    error_reason_code: Option<&str>,
+    failure_kind: Option<&str>,
+) -> ! {
+    maybe_stop_suite_demo(child, stop_demo, resolved_exit_path, poll_ms);
+    summary_ctx.emit(
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        status,
+        error_reason_code,
+        failure_kind,
+    );
+    std::process::exit(1);
 }
 
 fn write_regression_summary_for_suite(
@@ -1840,6 +1962,17 @@ hint: list suites via `fretboard diag list suites`"
         std::collections::BTreeMap::new();
     let mut suite_rows: Vec<serde_json::Value> = Vec::new();
     let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
+    let summary_ctx = SuiteSummaryContext {
+        workspace_root: &workspace_root,
+        resolved_out_dir: &resolved_out_dir,
+        suite_summary_path: &suite_summary_path,
+        regression_summary_path: &regression_summary_path,
+        suite_name: suite_summary_suite.as_deref(),
+        generated_unix_ms: suite_summary_generated_unix_ms,
+        warmup_frames,
+        reuse_launch,
+        wants_screenshots: suite_wants_screenshots,
+    };
 
     let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
 
@@ -1879,22 +2012,11 @@ hint: list suites via `fretboard diag list suites`"
                     Some("tooling.connect.failed"),
                     &err,
                 ));
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                summary_ctx.emit(
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "error",
                     Some("tooling.connect.failed"),
                     None,
@@ -1937,22 +2059,11 @@ hint: list suites via `fretboard diag list suites`"
                     Some("tooling.launch.failed"),
                     &err,
                 ));
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                summary_ctx.emit(
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "error",
                     Some("tooling.launch.failed"),
                     None,
@@ -1987,30 +2098,21 @@ hint: list suites via `fretboard diag list suites`"
                     Some("tooling.connect.failed"),
                     &err,
                 ));
-                if !keep_open {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                }
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                return Err(finalize_suite_failure_and_return(
+                    &mut child,
+                    !keep_open,
+                    &resolved_exit_path,
+                    poll_ms,
+                    &summary_ctx,
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "error",
                     Some("tooling.connect.failed"),
                     None,
-                );
-                return Err("suite setup failed (see suite.summary.json)".to_string());
+                    "suite setup failed (see suite.summary.json)",
+                ));
             }
         }
     } else {
@@ -2053,30 +2155,21 @@ hint: list suites via `fretboard diag list suites`"
                         Some("tooling.launch.failed"),
                         &err,
                     ));
-                    if !keep_open {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    }
-                    emit_suite_summary(
-                        &SuiteSummaryEmitInput {
-                            workspace_root: &workspace_root,
-                            resolved_out_dir: &resolved_out_dir,
-                            suite_summary_path: &suite_summary_path,
-                            regression_summary_path: &regression_summary_path,
-                            suite_name: suite_summary_suite.as_deref(),
-                            generated_unix_ms: suite_summary_generated_unix_ms,
-                            warmup_frames,
-                            reuse_launch,
-                            wants_screenshots: suite_wants_screenshots,
-                            stage_counts: &suite_stage_counts,
-                            reason_code_counts: &suite_reason_code_counts,
-                            rows: &suite_rows,
-                            evidence_aggregate: &suite_evidence_agg,
-                        },
+                    return Err(finalize_suite_failure_and_return(
+                        &mut child,
+                        !keep_open,
+                        &resolved_exit_path,
+                        poll_ms,
+                        &summary_ctx,
+                        &suite_stage_counts,
+                        &suite_reason_code_counts,
+                        &suite_rows,
+                        &suite_evidence_agg,
                         "error",
                         Some("tooling.launch.failed"),
                         None,
-                    );
-                    return Err("suite run failed (see suite.summary.json)".to_string());
+                        "suite run failed (see suite.summary.json)",
+                    ));
                 }
             };
         }
@@ -2267,30 +2360,21 @@ hint: list suites via `fretboard diag list suites`"
                     tooling_reason_code.as_deref(),
                     &e,
                 ));
-                if !keep_open {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                }
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                return Err(finalize_suite_failure_and_return(
+                    &mut child,
+                    !keep_open,
+                    &resolved_exit_path,
+                    poll_ms,
+                    &summary_ctx,
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "error",
                     Some(error_reason_code.as_str()),
                     None,
-                );
-                return Err("suite run failed (see suite.summary.json)".to_string());
+                    "suite run failed (see suite.summary.json)",
+                ));
             }
         };
 
@@ -2330,30 +2414,20 @@ hint: list suites via `fretboard diag list suites`"
                     lint_summary.as_ref(),
                     evidence_highlights.as_ref(),
                 ));
-                if !keep_open {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                }
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                finalize_suite_failure_and_exit(
+                    &mut child,
+                    !keep_open,
+                    &resolved_exit_path,
+                    poll_ms,
+                    &summary_ctx,
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "failed",
                     None,
                     None,
                 );
-                std::process::exit(1);
             }
             _ => {
                 eprintln!(
@@ -2367,30 +2441,20 @@ hint: list suites via `fretboard diag list suites`"
                     lint_summary.as_ref(),
                     evidence_highlights.as_ref(),
                 ));
-                if !keep_open {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                }
-                emit_suite_summary(
-                    &SuiteSummaryEmitInput {
-                        workspace_root: &workspace_root,
-                        resolved_out_dir: &resolved_out_dir,
-                        suite_summary_path: &suite_summary_path,
-                        regression_summary_path: &regression_summary_path,
-                        suite_name: suite_summary_suite.as_deref(),
-                        generated_unix_ms: suite_summary_generated_unix_ms,
-                        warmup_frames,
-                        reuse_launch,
-                        wants_screenshots: suite_wants_screenshots,
-                        stage_counts: &suite_stage_counts,
-                        reason_code_counts: &suite_reason_code_counts,
-                        rows: &suite_rows,
-                        evidence_aggregate: &suite_evidence_agg,
-                    },
+                finalize_suite_failure_and_exit(
+                    &mut child,
+                    !keep_open,
+                    &resolved_exit_path,
+                    poll_ms,
+                    &summary_ctx,
+                    &suite_stage_counts,
+                    &suite_reason_code_counts,
+                    &suite_rows,
+                    &suite_evidence_agg,
                     "failed",
                     None,
                     None,
                 );
-                std::process::exit(1);
             }
         }
 
@@ -2467,28 +2531,20 @@ hint: list suites via `fretboard diag list suites`"
                         lint_summary.as_ref(),
                         evidence_highlights.as_ref(),
                     ));
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    emit_suite_summary(
-                        &SuiteSummaryEmitInput {
-                            workspace_root: &workspace_root,
-                            resolved_out_dir: &resolved_out_dir,
-                            suite_summary_path: &suite_summary_path,
-                            regression_summary_path: &regression_summary_path,
-                            suite_name: suite_summary_suite.as_deref(),
-                            generated_unix_ms: suite_summary_generated_unix_ms,
-                            warmup_frames,
-                            reuse_launch,
-                            wants_screenshots: suite_wants_screenshots,
-                            stage_counts: &suite_stage_counts,
-                            reason_code_counts: &suite_reason_code_counts,
-                            rows: &suite_rows,
-                            evidence_aggregate: &suite_evidence_agg,
-                        },
+                    finalize_suite_failure_and_exit(
+                        &mut child,
+                        true,
+                        &resolved_exit_path,
+                        poll_ms,
+                        &summary_ctx,
+                        &suite_stage_counts,
+                        &suite_reason_code_counts,
+                        &suite_rows,
+                        &suite_evidence_agg,
                         "failed",
                         None,
                         Some("lint_failed"),
                     );
-                    std::process::exit(1);
                 }
             }
         }
@@ -2693,22 +2749,11 @@ hint: list suites via `fretboard diag list suites`"
     if !keep_open {
         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
     }
-    emit_suite_summary(
-        &SuiteSummaryEmitInput {
-            workspace_root: &workspace_root,
-            resolved_out_dir: &resolved_out_dir,
-            suite_summary_path: &suite_summary_path,
-            regression_summary_path: &regression_summary_path,
-            suite_name: suite_summary_suite.as_deref(),
-            generated_unix_ms: suite_summary_generated_unix_ms,
-            warmup_frames,
-            reuse_launch,
-            wants_screenshots: suite_wants_screenshots,
-            stage_counts: &suite_stage_counts,
-            reason_code_counts: &suite_reason_code_counts,
-            rows: &suite_rows,
-            evidence_aggregate: &suite_evidence_agg,
-        },
+    summary_ctx.emit(
+        &suite_stage_counts,
+        &suite_reason_code_counts,
+        &suite_rows,
+        &suite_evidence_agg,
         "passed",
         None,
         None,

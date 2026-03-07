@@ -295,7 +295,8 @@ Recommended PR slices:
    - forty-first landing: `diag_suite` now routes retained-vlist script-specific overrides through `SuiteScriptOverrideChecks`, so trigger planning and post-run application reuse the same per-script override seam instead of filtering the same checks twice
    - forty-second landing: `diag_suite` now routes suite success/failure summary payload assembly and emission through `SuiteSummaryEmitInput` plus dedicated helpers, so setup failures, run failures, lint failures, and pass-result writing no longer duplicate payload/write/regression-summary plumbing inline
    - forty-third landing: `diag_suite` now builds tooling-error rows and script-result rows through dedicated helpers, so setup/tooling/script/lint outcome payloads stop open-coding the same JSON fragments inline beside execution control flow
-   - next recommended landing: extract suite failure-finalization helpers so stop-demo, summary emit, and return/exit decisions stop repeating around setup/run/lint failure branches
+   - forty-fourth landing: `diag_suite` now routes stop-demo, summary emit, and return/exit decisions through dedicated failure-finalization helpers plus a shared summary context, so setup/run/lint failure branches stop repeating the same cleanup + summary plumbing inline
+   - next recommended landing: extract tooling-failure handling helpers so script-result writes plus row/finalize wiring stop repeating across DevTools/connect/launch failure branches
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

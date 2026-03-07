@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring and per-row payload shaping have landed; the next target inside this file is failure-finalization helpers for stop/emit/return-exit paths)
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, and failure-finalization helpers have landed; the next target inside this file is tooling-failure handling helpers for script-result writes plus row/finalize wiring)
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/diag_run.rs`
 - `crates/fret-diag/src/commands/artifacts.rs`
@@ -156,6 +156,9 @@ Recent progress since this note was drafted:
 - `diag_suite` now also builds tooling-error rows and script-result rows through dedicated helpers,
   so setup/tooling/script/lint outcome payloads stop open-coding the same JSON fragments inline
   beside execution control flow.
+- `diag_suite` now also routes stop-demo, summary emit, and return/exit decisions through
+  dedicated failure-finalization helpers plus a shared summary context, so setup/run/lint failure
+  branches no longer repeat the same cleanup + summary plumbing inline.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.
