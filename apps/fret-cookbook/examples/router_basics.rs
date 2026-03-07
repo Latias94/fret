@@ -221,8 +221,7 @@ impl View for RouterBasicsView {
 
         let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let home_label = cx.text("Home");
         let settings_label = cx.text("Settings");
@@ -300,19 +299,18 @@ impl View for RouterBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| {
                             ui::children![cx; home_link, settings_link, user_link, missing_link]
                         })
-                        .gap(Space::N2)
-                        .into_element(cx),
+                        .gap(Space::N2),
                     );
                 }),
             );
         })
         .ui()
-        .w_px(Px(200.0))
-        .into_element(cx);
+        .w_px(Px(200.0));
 
         let outlet = RouterOutlet::new(snapshot_model.clone())
             .test_id(TEST_ID_OUTLET)
@@ -403,7 +401,8 @@ impl View for RouterBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| {
                             if intents.is_empty() {
                                 return vec![cx.text("<none>")];
@@ -422,15 +421,13 @@ impl View for RouterBasicsView {
                                 .collect::<Vec<_>>()
                         })
                         .gap(Space::N1)
-                        .test_id(TEST_ID_INTENTS_ROOT)
-                        .into_element(cx),
+                        .test_id(TEST_ID_INTENTS_ROOT),
                     );
                 }),
             );
         })
         .ui()
-        .w_px(Px(320.0))
-        .into_element(cx);
+        .w_px(Px(320.0));
 
         let content = ui::v_flex(|cx| {
             ui::children![cx;
@@ -440,8 +437,7 @@ impl View for RouterBasicsView {
                     .items_start(),
             ]
         })
-        .gap(Space::N3)
-        .into_element(cx);
+        .gap(Space::N3);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -458,8 +454,8 @@ impl View for RouterBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(content);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
                 }),
             );
         })

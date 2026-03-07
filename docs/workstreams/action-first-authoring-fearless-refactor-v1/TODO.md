@@ -334,6 +334,7 @@ ID format:
   - Additional 2026-03-07 follow-up: `undo_basics`, `hello_counter`, and `drop_shadow_basics` now keep most shortcut/action rows, header/content stacks, and staged grid composition on the late-landing path as well; their remaining eager boundaries are mostly semantics-heavy value badges, effect-layer/card footer boundaries, and the final scaffold surface.
   - Additional 2026-03-07 follow-up: `external_texture_import_basics` and `utility_window_materials_windows` now keep their card headers, control/content stacks, and most inline status text/buttons on the builder path too; their remaining eager boundaries are mainly semantics meters, viewport/material root surfaces, and final scaffold/card shells.
   - Additional 2026-03-07 follow-up: `drag_basics`, `query_basics`, and `commands_keymap_basics` now keep their headers, action rows, and card-content stacks mostly on the builder path as well; remaining eager landings are mainly semantics counters, pointer-region/container boundaries, and a few fixed-array panel-body rows that still need concrete `AnyElement` values.
+  - Additional 2026-03-07 follow-up: `date_picker_basics` and `router_basics` now keep their card headers, selected/location rows, and card-content stacks on the late-landing path too; the remaining eager boundaries are mostly the date-picker/widget host boundary, router outlet leaf rendering, and the final scaffold/card surface.
 
 ---
 
