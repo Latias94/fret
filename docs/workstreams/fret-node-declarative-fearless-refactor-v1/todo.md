@@ -459,6 +459,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     and focused-port activation through the private `canvas/widget/focus_nav_ports.rs` seam, so
     connect-preview simulation and click-connect activation no longer stay embedded in the thin
     focus-nav router.
+  - Progress: `event_pointer_move.rs` now routes missing pointer-up inference, pending right-click
+    pan threshold checks, and retained move-handler dispatch through the private
+    `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
+    release synthesis and move arbitration no longer stay embedded in one retained pointer-move
+    router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

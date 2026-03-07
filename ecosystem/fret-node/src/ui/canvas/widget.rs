@@ -125,6 +125,8 @@ mod group_resize;
 mod hit_test;
 mod pointer_down_double_click;
 mod pointer_down_gesture_start;
+mod pointer_move_dispatch;
+mod pointer_move_release;
 use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_candidates;

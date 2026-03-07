@@ -524,6 +524,11 @@ real editors.
   focused-port activation through the private `canvas/widget/focus_nav_ports.rs` seam, so
   connect-preview simulation and click-connect activation no longer stay embedded in the thin
   focus-nav router.
+- `event_pointer_move.rs` now also routes missing pointer-up inference, pending right-click pan
+  threshold checks, and retained move-handler dispatch through the private
+  `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
+  release synthesis and move arbitration no longer stay embedded in one retained pointer-move
+  router.
 
 ### Deliverables
 
@@ -577,6 +582,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
