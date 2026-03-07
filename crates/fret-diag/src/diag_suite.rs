@@ -533,6 +533,39 @@ fn record_suite_tooling_failure_and_emit(
     message.to_string()
 }
 
+struct PreparedSuiteScriptContext {
+    script_key: String,
+    lint_summary: Option<serde_json::Value>,
+    evidence_highlights: Option<serde_json::Value>,
+}
+
+fn prepare_suite_script_context(
+    script_key: String,
+    result: &crate::stats::ScriptResultSummary,
+    script_result_path: &Path,
+    stage_counts: &mut std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &mut std::collections::BTreeMap<String, u64>,
+    evidence_aggregate: &mut suite_summary::SuiteEvidenceAggregate,
+) -> PreparedSuiteScriptContext {
+    if let Some(stage) = result.stage.as_deref() {
+        *stage_counts.entry(stage.to_string()).or_default() += 1;
+    }
+    if let Some(code) = result.reason_code.as_deref()
+        && !code.trim().is_empty()
+    {
+        *reason_code_counts.entry(code.to_string()).or_default() += 1;
+    }
+
+    PreparedSuiteScriptContext {
+        script_key,
+        lint_summary: None,
+        evidence_highlights: suite_summary::evidence_highlights_from_script_result_path(
+            script_result_path,
+            evidence_aggregate,
+        ),
+    }
+}
+
 fn record_suite_script_outcome(
     rows: &mut Vec<serde_json::Value>,
     script_key: &str,
@@ -2496,21 +2529,12 @@ hint: list suites via `fretboard diag list suites`"
             }
         };
 
-        if let Some(stage) = result.stage.as_deref() {
-            *suite_stage_counts.entry(stage.to_string()).or_default() += 1;
-        }
-        if let Some(code) = result.reason_code.as_deref()
-            && !code.trim().is_empty()
-        {
-            *suite_reason_code_counts
-                .entry(code.to_string())
-                .or_default() += 1;
-        }
-
-        let script_key = normalize_repo_relative_path(&workspace_root, &src);
-        let mut lint_summary: Option<serde_json::Value> = None;
-        let evidence_highlights = suite_summary::evidence_highlights_from_script_result_path(
+        let mut script_ctx = prepare_suite_script_context(
+            script_key,
+            &result,
             &resolved_script_result_path,
+            &mut suite_stage_counts,
+            &mut suite_reason_code_counts,
             &mut suite_evidence_agg,
         );
         match result.stage.as_deref() {
@@ -2536,10 +2560,10 @@ hint: list suites via `fretboard diag list suites`"
                     &suite_reason_code_counts,
                     &mut suite_rows,
                     &suite_evidence_agg,
-                    &script_key,
+                    &script_ctx.script_key,
                     &result,
-                    lint_summary.as_ref(),
-                    evidence_highlights.as_ref(),
+                    script_ctx.lint_summary.as_ref(),
+                    script_ctx.evidence_highlights.as_ref(),
                     "failed",
                     None,
                     None,
@@ -2561,10 +2585,10 @@ hint: list suites via `fretboard diag list suites`"
                     &suite_reason_code_counts,
                     &mut suite_rows,
                     &suite_evidence_agg,
-                    &script_key,
+                    &script_ctx.script_key,
                     &result,
-                    lint_summary.as_ref(),
-                    evidence_highlights.as_ref(),
+                    script_ctx.lint_summary.as_ref(),
+                    script_ctx.evidence_highlights.as_ref(),
                     "failed",
                     None,
                     None,
@@ -2610,7 +2634,7 @@ hint: list suites via `fretboard diag list suites`"
                 )?;
 
                 let out = default_lint_out_path(&bundle_path);
-                lint_summary = Some(serde_json::json!({
+                script_ctx.lint_summary = Some(serde_json::json!({
                     "out": out.display().to_string(),
                     "error_issues": report
                         .payload
@@ -2649,10 +2673,10 @@ hint: list suites via `fretboard diag list suites`"
                         &suite_reason_code_counts,
                         &mut suite_rows,
                         &suite_evidence_agg,
-                        &script_key,
+                        &script_ctx.script_key,
                         &result,
-                        lint_summary.as_ref(),
-                        evidence_highlights.as_ref(),
+                        script_ctx.lint_summary.as_ref(),
+                        script_ctx.evidence_highlights.as_ref(),
                         "failed",
                         None,
                         Some("lint_failed"),
@@ -2844,10 +2868,10 @@ hint: list suites via `fretboard diag list suites`"
         }
 
         suite_rows.push(build_suite_script_result_row(
-            &script_key,
+            &script_ctx.script_key,
             &result,
-            lint_summary.as_ref(),
-            evidence_highlights.as_ref(),
+            script_ctx.lint_summary.as_ref(),
+            script_ctx.evidence_highlights.as_ref(),
         ));
 
         if !reuse_process {
