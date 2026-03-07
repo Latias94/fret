@@ -318,6 +318,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
     `portal_lifecycle_conformance.rs`), and those retained gates now run again after the harness was
     updated for the latest `EventCx` / `LayoutCx` contract.
+  - Progress: declarative paint-only tooltip anchoring now has focused correctness gates proving
+    `portal_bounds_store` wins when hosted bounds exist, while `hover_anchor_store` remains the
+    fallback when portals are disabled or unavailable; motion-specific anchoring coverage is still
+    pending.
 
 ## M5 - Compatibility retained convergence
 

@@ -94,6 +94,57 @@ struct HoverAnchorStore {
     hovered_canvas_bounds: Option<Rect>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HoverTooltipAnchorSource {
+    PortalBoundsStore,
+    HoverAnchorStore,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct HoverTooltipAnchor {
+    origin_screen: Point,
+    width_screen: Px,
+    source: HoverTooltipAnchorSource,
+}
+
+fn resolve_hover_tooltip_anchor(
+    bounds: Rect,
+    view: PanZoom2D,
+    portals_disabled: bool,
+    portal_canvas_bounds: Option<Rect>,
+    hover_anchor_canvas_bounds: Option<Rect>,
+) -> Option<HoverTooltipAnchor> {
+    if !bounds.size.width.0.is_finite()
+        || !bounds.size.height.0.is_finite()
+        || bounds.size.width.0 <= 0.0
+        || bounds.size.height.0 <= 0.0
+    {
+        return None;
+    }
+
+    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
+    let candidate = if !portals_disabled {
+        portal_canvas_bounds.map(|rect| (rect, HoverTooltipAnchorSource::PortalBoundsStore))
+    } else {
+        None
+    }
+    .or_else(|| {
+        hover_anchor_canvas_bounds.map(|rect| (rect, HoverTooltipAnchorSource::HoverAnchorStore))
+    })?;
+
+    let (canvas_bounds, source) = candidate;
+    let width_screen = Px((canvas_bounds.size.width.0 * zoom).max(0.0));
+    if !width_screen.0.is_finite() || width_screen.0 <= 0.0 {
+        return None;
+    }
+
+    Some(HoverTooltipAnchor {
+        origin_screen: view.canvas_to_screen(bounds, canvas_bounds.origin),
+        width_screen,
+        source,
+    })
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct NodeGraphWheelZoomConfig {
     pub base: f32,
@@ -3567,8 +3618,6 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     if let Some(hovered_id) = hovered_node_value {
                         let bounds = grid_cache_value.bounds;
                         let view = view_for_paint;
-                        let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-
                         if bounds.size.width.0.is_finite()
                             && bounds.size.height.0.is_finite()
                             && bounds.size.width.0 > 0.0
@@ -3599,26 +3648,25 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                                 .ok()
                                 .flatten();
 
-                            let tooltip_origin_screen_width_source: Option<(Point, Px, Arc<str>)> =
-                                if let Some(portal_canvas_bounds) = portal_canvas_bounds {
-                                    Some((
-                                        view.canvas_to_screen(bounds, portal_canvas_bounds.origin),
-                                        Px((portal_canvas_bounds.size.width.0 * zoom).max(0.0)),
-                                        Arc::<str>::from("portal_bounds_store"),
-                                    ))
-                                } else if let Some(anchor_canvas_bounds) = anchor_canvas_bounds {
-                                    Some((
-                                        view.canvas_to_screen(bounds, anchor_canvas_bounds.origin),
-                                        Px((anchor_canvas_bounds.size.width.0 * zoom).max(0.0)),
-                                        Arc::<str>::from("hover_anchor_store"),
-                                    ))
-                                } else {
-                                    None
-                                };
+                            let tooltip_anchor = resolve_hover_tooltip_anchor(
+                                bounds,
+                                view,
+                                portals_disabled,
+                                portal_canvas_bounds,
+                                anchor_canvas_bounds,
+                            );
 
-                            if let Some((origin_screen, width, source)) =
-                                tooltip_origin_screen_width_source
-                            {
+                            if let Some(tooltip_anchor) = tooltip_anchor {
+                                let origin_screen = tooltip_anchor.origin_screen;
+                                let width = tooltip_anchor.width_screen;
+                                let source = Arc::<str>::from(match tooltip_anchor.source {
+                                    HoverTooltipAnchorSource::PortalBoundsStore => {
+                                        "portal_bounds_store"
+                                    }
+                                    HoverTooltipAnchorSource::HoverAnchorStore => {
+                                        "hover_anchor_store"
+                                    }
+                                });
                                 let left = Px(origin_screen.x.0 - bounds.origin.x.0);
                                 let mut top = Px(origin_screen.y.0 - bounds.origin.y.0 - 30.0);
                                 if top.0 < 0.0 {
@@ -3887,10 +3935,10 @@ mod tests {
     use super::{
         AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
         DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
-        Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
-        MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
-        NodeDragReleaseOutcome, NodeDragState, PendingSelectionState, PortalBoundsStore,
-        PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
+        HoverTooltipAnchorSource, Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot,
+        LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
+        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, PendingSelectionState,
+        PortalBoundsStore, PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
         authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
         begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
         build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
@@ -3907,7 +3955,8 @@ mod tests {
         handle_node_drag_pointer_move_action_host,
         handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
         nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
-        pointer_crossed_threshold, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
+        pointer_crossed_threshold, resolve_hover_tooltip_anchor, stable_hash_u64,
+        sync_authoritative_surface_boundary_in_models,
         update_hovered_node_pointer_move_action_host, view_from_state,
     };
     use crate::core::{
@@ -6502,6 +6551,84 @@ mod tests {
 
         assert_eq!(from_pending, vec![node_b]);
         assert_eq!(from_view, vec![node_a]);
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_prefers_portal_bounds_when_available() {
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let portal = Rect::new(
+            Point::new(Px(30.0), Px(40.0)),
+            fret_core::Size::new(Px(120.0), Px(60.0)),
+        );
+        let hover = Rect::new(
+            Point::new(Px(100.0), Px(200.0)),
+            fret_core::Size::new(Px(80.0), Px(50.0)),
+        );
+
+        let anchor = resolve_hover_tooltip_anchor(bounds, view, false, Some(portal), Some(hover))
+            .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::PortalBoundsStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, portal.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(240.0));
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_falls_back_to_hover_anchor_when_portals_disabled() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let view = PanZoom2D {
+            pan: Point::new(Px(16.0), Px(-8.0)),
+            zoom: 1.5,
+        };
+        let portal = Rect::new(
+            Point::new(Px(30.0), Px(40.0)),
+            fret_core::Size::new(Px(120.0), Px(60.0)),
+        );
+        let hover = Rect::new(
+            Point::new(Px(22.0), Px(18.0)),
+            fret_core::Size::new(Px(40.0), Px(30.0)),
+        );
+
+        let anchor = resolve_hover_tooltip_anchor(bounds, view, true, Some(portal), Some(hover))
+            .expect("anchor resolved");
+
+        assert_eq!(anchor.source, HoverTooltipAnchorSource::HoverAnchorStore);
+        assert_eq!(
+            anchor.origin_screen,
+            view.canvas_to_screen(bounds, hover.origin)
+        );
+        assert_eq!(anchor.width_screen, Px(60.0));
+    }
+
+    #[test]
+    fn resolve_hover_tooltip_anchor_rejects_non_positive_width() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let view = PanZoom2D::default();
+        let hover = Rect::new(
+            Point::new(Px(22.0), Px(18.0)),
+            fret_core::Size::new(Px(0.0), Px(30.0)),
+        );
+
+        assert_eq!(
+            resolve_hover_tooltip_anchor(bounds, view, true, None, Some(hover)),
+            None
+        );
     }
 
     #[test]

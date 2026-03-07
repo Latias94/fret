@@ -286,6 +286,10 @@ points rather than direct graph mutation.
   - Paint cache discipline is now explicit as a gate: selection-only authoritative updates keep
     grid / derived / node / edge cache keys stable, while graph replacement invalidates only the
     graph-dependent caches instead of churning viewport-only paint caches.
+  - Declarative overlay/portal anchoring now has an explicit correctness seam: hover tooltip
+    positioning prefers hosted portal bounds when available, but deterministically falls back to the
+    local hover-anchor store when portals are disabled or unavailable; focused tests lock both
+    precedence paths.
   - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
     `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
     `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while
