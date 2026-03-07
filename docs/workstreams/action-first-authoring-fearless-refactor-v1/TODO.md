@@ -311,6 +311,12 @@ ID format:
     - `apps/fret-cookbook/examples/customv1_basics.rs`
     - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
     - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
+    - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+    - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
+    - `apps/fret-cookbook/examples/drop_shadow_basics.rs`
+    - `apps/fret-cookbook/examples/overlay_basics.rs`
+    - `apps/fret-cookbook/examples/toast_basics.rs`
+    - `apps/fret-cookbook/examples/query_basics.rs`
 
 ---
 
