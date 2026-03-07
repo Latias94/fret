@@ -828,17 +828,23 @@ impl VoiceSelectorDescription {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout),
-            text: self.text,
-            style: Some(text_xs(&theme)),
-            color: Some(muted_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let theme = Theme::global(&*cx.app).snapshot();
+        let mut element = typography::scope_description_text_with_fallbacks(
+            cx.text_props(TextProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                text: self.text,
+                style: None,
+                color: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+            &theme,
+            "component.voice_selector.description",
+            Some("component.text.xs_px"),
+            Some("component.text.xs_line_height"),
+        );
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -1317,6 +1323,10 @@ impl VoiceSelectorButton {
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
     #[test]
     fn voice_selector_list_entries_mode_captures_entries() {
         let list = VoiceSelectorList::new_entries([CommandItem::new("Alloy")]);
@@ -1324,6 +1334,43 @@ mod tests {
             VoiceSelectorListMode::Entries(entries) => assert_eq!(entries.len(), 1),
             VoiceSelectorListMode::Auto => panic!("expected entries mode"),
         }
+    }
+
+    #[test]
+    fn voice_selector_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            VoiceSelectorDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected VoiceSelectorDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.voice_selector.description",
+                Some("component.text.xs_px"),
+                Some("component.text.xs_line_height"),
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
