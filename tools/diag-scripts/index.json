@@ -2523,6 +2523,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert_dialog",
+        "focus",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-link-activation",
       "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
       "required_capabilities": [
