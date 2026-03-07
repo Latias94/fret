@@ -361,6 +361,24 @@ pub(crate) fn try_read_script_result_v1(path: &Path) -> Option<UiScriptResultV1>
     serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
 }
 
+pub(crate) fn read_script_result_v1_or_err(
+    path: &Path,
+    purpose: &str,
+) -> Result<UiScriptResultV1, String> {
+    let bytes = std::fs::read(path).map_err(|e| {
+        format!(
+            "failed to read script.result.json {purpose} ({}): {e}",
+            path.display()
+        )
+    })?;
+    serde_json::from_slice::<UiScriptResultV1>(&bytes).map_err(|e| {
+        format!(
+            "script.result.json was not valid UiScriptResultV1 JSON {purpose} ({}): {e}",
+            path.display()
+        )
+    })
+}
+
 pub(crate) fn resolve_latest_bundle_dir_for_out_dir(
     out_dir: &Path,
     script_result: Option<&UiScriptResultV1>,
