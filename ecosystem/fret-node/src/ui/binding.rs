@@ -4,9 +4,13 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::{CanvasPoint, EdgeId, Graph, GroupId, NodeId};
 use crate::io::NodeGraphViewState;
+use crate::runtime::lookups::HandleConnection;
 use crate::runtime::store::{DispatchOutcome, NodeGraphStore};
 
-use super::controller::{NodeGraphController, NodeGraphControllerError};
+use super::controller::{
+    NodeGraphController, NodeGraphControllerError, NodeGraphNodeConnectionsQuery,
+    NodeGraphPortConnectionsQuery,
+};
 use super::declarative::NodeGraphSurfaceProps;
 
 /// Canonical app-facing binding bundle for the declarative node-graph surface.
@@ -176,6 +180,39 @@ impl NodeGraphSurfaceBinding {
     /// Fits the viewport to the given node ids through the bound controller.
     pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) -> bool {
         self.controller.fit_view_nodes(host, nodes)
+    }
+
+    /// Returns the outgoing neighbor node ids for the given node.
+    pub fn outgoers<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<NodeId> {
+        self.controller.outgoers(host, node)
+    }
+
+    /// Returns the incoming neighbor node ids for the given node.
+    pub fn incomers<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<NodeId> {
+        self.controller.incomers(host, node)
+    }
+
+    /// Returns the edge ids incident to the given node.
+    pub fn connected_edges<H: UiHost>(&self, host: &H, node: NodeId) -> Vec<EdgeId> {
+        self.controller.connected_edges(host, node)
+    }
+
+    /// Returns handle-level connections for the given node-side/port query.
+    pub fn port_connections<H: UiHost>(
+        &self,
+        host: &H,
+        query: NodeGraphPortConnectionsQuery,
+    ) -> Vec<HandleConnection> {
+        self.controller.port_connections(host, query)
+    }
+
+    /// Returns node-level connections for the given query.
+    pub fn node_connections<H: UiHost>(
+        &self,
+        host: &H,
+        query: NodeGraphNodeConnectionsQuery,
+    ) -> Vec<HandleConnection> {
+        self.controller.node_connections(host, query)
     }
 
     /// Returns whether the bound store currently has undo history.

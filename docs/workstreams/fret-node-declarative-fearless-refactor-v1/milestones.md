@@ -265,8 +265,9 @@ points rather than direct graph mutation.
     app-facing surface, and focused declarative coverage now proves node-drag commit history can be
     undone/redone while graph/view mirrors stay in sync.
   - `NodeGraphSurfaceBinding` now acts as the instance-style app-facing facade for common queries,
-    viewport actions, and controlled-sync helpers (`replace_graph`, `replace_view_state`,
-    `set_selection`, `undo`, `redo`), while `binding.controller()` stays available as the advanced
+    viewport actions, graph adjacency queries, and controlled-sync helpers (`replace_graph`,
+    `replace_view_state`, `set_selection`, `outgoers`, `incomers`, `connected_edges`,
+    `port_connections`, `node_connections`, `undo`, `redo`), while `binding.controller()` stays available as the advanced
     escape hatch.
   - Controlled mode now has an explicit full-replace-first policy: replacing the authoritative graph
     document is treated as a reset + re-sync operation, while diff-first replace helpers remain a

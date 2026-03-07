@@ -404,7 +404,8 @@ For new editor surfaces, teach and copy this shape first:
 2. render `node_graph_surface(cx, binding.surface_props())` for the default surface props,
 3. use the binding itself for common app-facing helpers (`viewport`, `graph_snapshot`,
    `view_state_snapshot`, `set_viewport`, `fit_view_nodes`, `replace_document`,
-   `replace_graph`, `replace_view_state`, `set_selection`, `undo`, `redo`),
+   `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`, `incomers`,
+   `connected_edges`, `port_connections`, `node_connections`, `undo`, `redo`),
 4. drop to `binding.controller()` only for advanced helpers or retained/compat composition,
 5. treat raw graph/view models as advanced seams rather than the default teaching surface.
 

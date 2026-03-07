@@ -1002,6 +1002,7 @@ mod tests {
     };
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
+    use crate::ui::NodeGraphSurfaceBinding;
     use crate::ui::edit_queue::NodeGraphEditQueue;
     use crate::ui::view_queue::{
         NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue,
@@ -1943,6 +1944,66 @@ mod tests {
                     },
                 )
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn binding_query_helpers_proxy_controller_queries() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, node_a, a_out, node_b, b_in) = make_test_graph_two_nodes_with_ports();
+        let edge = EdgeId::new();
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let graph = host.models.insert(graph_value.clone());
+        let view = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let binding =
+            NodeGraphSurfaceBinding::from_models(graph, view, NodeGraphController::new(store));
+        let expected = HandleConnection {
+            edge,
+            source_node: node_a,
+            source_port: a_out,
+            target_node: node_b,
+            target_port: b_in,
+            kind: EdgeKind::Data,
+        };
+
+        assert_eq!(binding.outgoers(&host, node_a), vec![node_b]);
+        assert_eq!(binding.incomers(&host, node_b), vec![node_a]);
+        assert_eq!(binding.connected_edges(&host, node_a), vec![edge]);
+        assert_eq!(
+            binding.port_connections(
+                &host,
+                NodeGraphPortConnectionsQuery {
+                    node_id: node_a,
+                    port_id: a_out,
+                    side: ConnectionSide::Source,
+                },
+            ),
+            vec![expected],
+        );
+        assert_eq!(
+            binding.node_connections(
+                &host,
+                NodeGraphNodeConnectionsQuery {
+                    node_id: node_b,
+                    side: Some(ConnectionSide::Target),
+                    port_id: Some(b_in),
+                },
+            ),
+            vec![expected],
         );
     }
 

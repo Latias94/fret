@@ -50,7 +50,8 @@ copy.
 - Render `node_graph_surface(cx, binding.surface_props())` for the default surface props.
 - Prefer the binding itself for common app-facing helpers:
   `viewport`, `graph_snapshot`, `view_state_snapshot`, `set_viewport`, `fit_view_nodes`,
-  `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `undo`, and `redo`.
+  `replace_document`, `replace_graph`, `replace_view_state`, `set_selection`, `outgoers`,
+  `incomers`, `connected_edges`, `port_connections`, `node_connections`, `undo`, and `redo`.
 - Treat `binding.controller()` as the advanced escape hatch for helpers that are not yet surfaced on
   the binding or for retained/compat wiring.
 - Optionally attach callbacks to the store (`install_callbacks`) when app-owned integration needs
