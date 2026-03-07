@@ -160,6 +160,7 @@ mod rect_math;
 mod retained_widget;
 mod right_click;
 mod searcher;
+mod searcher_activation;
 mod searcher_logic;
 mod searcher_ui;
 mod selection;

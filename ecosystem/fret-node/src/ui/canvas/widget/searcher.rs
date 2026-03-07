@@ -1,10 +1,9 @@
-use fret_core::{Modifiers, MouseButton, Point, PointerId};
+use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
+use super::searcher_activation::searcher_pointer_hit;
 use super::searcher_ui::{finish_searcher_event, invalidate_searcher_paint};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::searcher::SearcherRowKind;
-use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 pub(super) fn handle_searcher_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -119,55 +118,13 @@ pub(super) fn handle_searcher_pointer_down<H: UiHost, M: NodeGraphCanvasMiddlewa
         return false;
     }
 
-    let (inside, hit_row) = if let Some(searcher) = canvas.interaction.searcher.as_ref() {
-        let visible = super::searcher_visible_rows(searcher);
-        let rect = super::searcher_rect_at(&canvas.style, searcher.origin, visible, zoom);
-        let inside = rect.contains(position);
-        let hit_row = super::hit_searcher_row(&canvas.style, searcher, position, zoom);
-        (inside, hit_row)
-    } else {
-        (false, None)
-    };
+    let hit = searcher_pointer_hit(canvas, position, zoom);
 
     match button {
         MouseButton::Left => {
-            if let Some(row_ix) = hit_row {
-                let row = canvas
-                    .interaction
-                    .searcher
-                    .as_ref()
-                    .and_then(|s| s.rows.get(row_ix));
-                let selectable =
-                    row.is_some_and(NodeGraphCanvasWith::<M>::searcher_is_selectable_row);
-                if selectable {
-                    let candidate = canvas
-                        .interaction
-                        .searcher
-                        .as_ref()
-                        .and_then(|s| s.rows.get(row_ix).cloned().zip(Some(s.candidates.clone())))
-                        .and_then(|(row, candidates)| match row.kind {
-                            SearcherRowKind::Candidate { candidate_ix } => {
-                                candidates.get(candidate_ix).cloned()
-                            }
-                            SearcherRowKind::Header => None,
-                        });
-                    if let Some(candidate) = candidate {
-                        canvas.interaction.pending_insert_node_drag = Some(PendingInsertNodeDrag {
-                            candidate,
-                            start_pos: position,
-                            pointer_id: cx.pointer_id.unwrap_or(PointerId(0)),
-                            start_tick: cx.app.tick_id(),
-                        });
-                        cx.capture_pointer(cx.node);
-                    }
-                }
-                if let Some(searcher) = canvas.interaction.searcher.as_mut()
-                    && selectable
-                {
-                    searcher.active_row = row_ix;
-                    NodeGraphCanvasWith::<M>::ensure_searcher_active_visible(searcher);
-                }
-            } else if !inside {
+            if let Some(row_ix) = hit.row_ix {
+                let _ = canvas.arm_searcher_row_drag(cx, row_ix, position);
+            } else if !hit.inside {
                 canvas.dismiss_searcher_overlay(cx);
             }
             finish_searcher_event(cx)
@@ -198,23 +155,11 @@ pub(super) fn handle_searcher_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware
         return false;
     }
 
-    let (inside, hit_row) = if let Some(searcher) = canvas.interaction.searcher.as_ref() {
-        let visible = super::searcher_visible_rows(searcher);
-        let rect = super::searcher_rect_at(&canvas.style, searcher.origin, visible, zoom);
-        let inside = rect.contains(position);
-        let hit_row = super::hit_searcher_row(&canvas.style, searcher, position, zoom);
-        (inside, hit_row)
-    } else {
-        (false, None)
-    };
+    let hit = searcher_pointer_hit(canvas, position, zoom);
 
     if canvas.interaction.pending_insert_node_drag.take().is_some() {
         cx.release_pointer_capture();
-        if let Some(row_ix) = hit_row {
-            let _ = canvas.try_activate_searcher_row(cx, row_ix);
-        } else if !inside {
-            canvas.interaction.searcher = None;
-        }
+        canvas.activate_searcher_hit_or_dismiss(cx, hit);
         return finish_searcher_event(cx);
     }
 

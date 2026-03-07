@@ -403,6 +403,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/searcher_ui.rs` seam, so overlay install/open/dismiss handling and shared
     event-finish paint invalidation no longer stay repeated across `searcher.rs`,
     `searcher_logic.rs`, `command_open.rs`, and `edge_insert/picker.rs`.
+  - Progress: searcher row activation and pending-drag arming now route through the private
+    `canvas/widget/searcher_activation.rs` seam, so pointer hit resolution, active-row sync, and
+    pointer-up activation/dismiss fallback no longer stay repeated inline in `searcher.rs`.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

@@ -468,6 +468,9 @@ real editors.
   `canvas/widget/searcher_ui.rs` seam, so overlay install/open/dismiss handling and shared
   event-finish paint invalidation no longer stay repeated across `searcher.rs`,
   `searcher_logic.rs`, `command_open.rs`, and `edge_insert/picker.rs`.
+- Searcher row activation and pending-drag arming now also route through the private
+  `canvas/widget/searcher_activation.rs` seam, so pointer hit resolution, active-row sync, and
+  pointer-up activation/dismiss fallback no longer stay repeated inline in `searcher.rs`.
 
 ### Deliverables
 
@@ -506,6 +509,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_hit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
