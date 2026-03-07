@@ -26,7 +26,6 @@ pub(crate) fn cmd_windows(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (window_map_path, bundle_path) = if src.is_file()
         && src
@@ -44,26 +43,30 @@ pub(crate) fn cmd_windows(
             ));
         }
     } else if src.is_dir() {
-        let direct = src.join("window.map.json");
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        let bundle_dir = resolved.bundle_dir;
+        let bundle_path = resolved.bundle_artifact;
+
+        let direct = bundle_dir.join("window.map.json");
         if direct.is_file()
             && sidecars::try_read_sidecar_json_v1(&direct, "window_map", warmup_frames).is_some()
         {
             (direct, None)
         } else {
-            let root = src.join("_root").join("window.map.json");
+            let root = bundle_dir.join("_root").join("window.map.json");
             if root.is_file()
                 && sidecars::try_read_sidecar_json_v1(&root, "window_map", warmup_frames).is_some()
             {
                 (root, None)
             } else {
-                let bundle_path = crate::resolve_bundle_artifact_path(&src);
                 let window_map_path =
                     crate::bundle_index::ensure_window_map_json(&bundle_path, warmup_frames)?;
                 (window_map_path, Some(bundle_path))
             }
         }
     } else {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        let bundle_path = resolved.bundle_artifact;
         let window_map_path =
             crate::bundle_index::ensure_window_map_json(&bundle_path, warmup_frames)?;
         (window_map_path, Some(bundle_path))

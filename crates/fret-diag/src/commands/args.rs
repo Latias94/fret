@@ -13,11 +13,12 @@ pub(crate) fn resolve_bundle_artifact_path_or_latest(
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-        return Ok(crate::resolve_bundle_artifact_path(&src));
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        return Ok(resolved.bundle_artifact);
     }
     let latest = resolve_latest_bundle_dir_path(out_dir)?;
-    Ok(crate::resolve_bundle_artifact_path(&latest))
+    let resolved = resolve::resolve_bundle_ref(&latest)?;
+    Ok(resolved.bundle_artifact)
 }
 
 pub(crate) fn resolve_latest_bundle_dir_path(out_dir: &Path) -> Result<PathBuf, String> {

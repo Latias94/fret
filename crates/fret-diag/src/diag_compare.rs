@@ -49,10 +49,10 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
         return cmd_compare_resource_footprint(&a_src, &b_src, stats_json);
     }
 
-    let a_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&a_src);
-    let b_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&b_src);
-    let a_bundle_path = resolve_bundle_artifact_path(&a_src);
-    let b_bundle_path = resolve_bundle_artifact_path(&b_src);
+    let a_resolved = resolve::resolve_bundle_ref(&a_src)?;
+    let b_resolved = resolve::resolve_bundle_ref(&b_src)?;
+    let a_bundle_path = a_resolved.bundle_artifact;
+    let b_bundle_path = b_resolved.bundle_artifact;
 
     let report = compare_bundles(
         &a_bundle_path,

@@ -233,7 +233,18 @@ Recommended PR slices:
 
 1. finish the canonical artifact/evidence contract now that campaign, share, and failure packaging are landed,
 2. extract the next high-ROI orchestration seams: `artifact resolution/materialization`, `run planning/context`, and `suite/campaign resolution`,
-   - first landing started: shared bundle input resolution now lives in `commands/resolve.rs` and is already reused by `diag pack` and `diag trace`,
+   - first landing expanded: shared bundle input resolution now lives in `crates/fret-diag/src/commands/resolve.rs` and is now reused by:
+     - `diag pack`
+     - `diag trace`
+     - `diag index`
+     - `diag windows`
+     - `diag dock-graph`
+     - `diag dock-routing`
+     - `diag compare` (bundle compare path; resource-footprint path still uses session-root resolution)
+     - `diag stats` (single-bundle + diff)
+     - `diag slice` (step-index early resolution path)
+     - selected `diag query` subcommands that require a bundle artifact
+   - remaining known holdouts: `commands/ai_packet.rs` and a few session-root-only helpers that intentionally do not require bundle materialization,
 3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
 4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
 5. decide whether campaign runs should persist a dashboard text or HTML projection,

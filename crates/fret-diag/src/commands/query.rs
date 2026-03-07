@@ -427,9 +427,8 @@ fn cmd_query_scroll_extents_observation(
     let bundle_path = match positionals.as_slice() {
         [bundle_src] => {
             let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
-            let resolved =
-                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&bundle_src);
-            crate::resolve_bundle_artifact_path(&resolved)
+            let resolved = resolve::resolve_bundle_ref(&bundle_src)?;
+            resolved.bundle_artifact
         }
         [] => resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
         _ => unreachable!(),
