@@ -20,6 +20,155 @@ enum BuiltinSuite {
     DockingMotionPilot,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct SuiteRunProfile {
+    strict_termination: bool,
+    ui_gallery_ai_transcript_retained_suite: bool,
+    ui_gallery_canvas_cull_suite: bool,
+    ui_gallery_node_graph_cull_suite: bool,
+    ui_gallery_node_graph_cull_window_shifts_suite: bool,
+    ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite: bool,
+    ui_gallery_chart_torture_suite: bool,
+    ui_gallery_vlist_window_boundary_suite: bool,
+    ui_gallery_vlist_window_boundary_retained_suite: bool,
+    ui_gallery_vlist_no_window_shifts_small_scroll_suite: bool,
+    components_gallery_file_tree_suite: bool,
+    components_gallery_table_suite: bool,
+    components_gallery_table_keep_alive_suite: bool,
+}
+
+impl SuiteRunProfile {
+    fn from_suite_args(suite_args: &[String]) -> Self {
+        let single_suite_name = (suite_args.len() == 1).then_some(suite_args[0].as_str());
+        let is_suite = |name: &str| single_suite_name == Some(name);
+
+        Self {
+            strict_termination: single_suite_name
+                .is_some_and(|name| name.starts_with("diag-hardening-smoke")),
+            ui_gallery_ai_transcript_retained_suite: is_suite("ui-gallery-ai-transcript-retained"),
+            ui_gallery_canvas_cull_suite: is_suite("ui-gallery-canvas-cull"),
+            ui_gallery_node_graph_cull_suite: is_suite("ui-gallery-node-graph-cull"),
+            ui_gallery_node_graph_cull_window_shifts_suite: is_suite(
+                "ui-gallery-node-graph-cull-window-shifts",
+            ),
+            ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite: is_suite(
+                "ui-gallery-node-graph-cull-window-no-shifts-small-pan",
+            ),
+            ui_gallery_chart_torture_suite: is_suite("ui-gallery-chart-torture"),
+            ui_gallery_vlist_window_boundary_suite: is_suite("ui-gallery-vlist-window-boundary"),
+            ui_gallery_vlist_window_boundary_retained_suite: is_suite(
+                "ui-gallery-vlist-window-boundary-retained",
+            ),
+            ui_gallery_vlist_no_window_shifts_small_scroll_suite: is_suite(
+                "ui-gallery-vlist-no-window-shifts-small-scroll",
+            ),
+            components_gallery_file_tree_suite: is_suite("components-gallery-file-tree"),
+            components_gallery_table_suite: is_suite("components-gallery-table"),
+            components_gallery_table_keep_alive_suite: is_suite(
+                "components-gallery-table-keep-alive",
+            ),
+        }
+    }
+
+    fn vlist_window_boundary_suite(self) -> bool {
+        self.ui_gallery_vlist_window_boundary_suite
+            || self.ui_gallery_vlist_window_boundary_retained_suite
+    }
+
+    fn components_gallery_suite(self) -> bool {
+        self.components_gallery_file_tree_suite
+            || self.components_gallery_table_suite
+            || self.components_gallery_table_keep_alive_suite
+    }
+
+    fn pan_zoom_suite(self) -> bool {
+        self.ui_gallery_canvas_cull_suite || self.ui_gallery_chart_torture_suite
+    }
+
+    fn ai_transcript_suite(self) -> bool {
+        self.ui_gallery_ai_transcript_retained_suite
+    }
+
+    fn resolve_warmup_frames(self, warmup_frames: u64) -> u64 {
+        if warmup_frames != 0 {
+            warmup_frames
+        } else if self.ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+            32
+        } else if self.vlist_window_boundary_suite()
+            || self.ui_gallery_canvas_cull_suite
+            || self.ui_gallery_node_graph_cull_suite
+            || self.ui_gallery_node_graph_cull_window_shifts_suite
+            || self.ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+            || self.ui_gallery_chart_torture_suite
+            || self.ui_gallery_ai_transcript_retained_suite
+        {
+            5
+        } else {
+            0
+        }
+    }
+
+    fn wants_screenshots(
+        self,
+        pack_include_screenshots: bool,
+        wants_registered_screenshots: bool,
+        scripts: &[PathBuf],
+        explicit_pixels_gate: bool,
+    ) -> bool {
+        pack_include_screenshots
+            || wants_registered_screenshots
+            || (!explicit_pixels_gate
+                && scripts.iter().any(|src| {
+                    diag_policy::ui_gallery_script_pixels_changed_test_id(src).is_some()
+                }))
+            || scripts.iter().any(|src| script_requests_screenshots(src))
+    }
+
+    fn wants_post_run_checks_for_script(
+        self,
+        builtin_suite: Option<BuiltinSuite>,
+        wants_post_run_checks_for_script: bool,
+        is_gc_liveness_script: bool,
+    ) -> bool {
+        wants_post_run_checks_for_script
+            || builtin_suite == Some(BuiltinSuite::DockingArbitration)
+            || builtin_suite == Some(BuiltinSuite::UiGalleryCodeEditor)
+            || self.ui_gallery_canvas_cull_suite
+            || self.ui_gallery_chart_torture_suite
+            || self.vlist_window_boundary_suite()
+            || self.ui_gallery_vlist_no_window_shifts_small_scroll_suite
+            || self.components_gallery_suite()
+            || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script)
+    }
+
+    fn components_gallery_root_test_id(self) -> Option<&'static str> {
+        if self.components_gallery_file_tree_suite {
+            Some("components-gallery-file-tree-root")
+        } else if self.components_gallery_table_suite
+            || self.components_gallery_table_keep_alive_suite
+        {
+            Some("components-gallery-table-root")
+        } else {
+            None
+        }
+    }
+
+    fn default_pixels_changed_test_id(self) -> Option<&'static str> {
+        if self.ui_gallery_canvas_cull_suite {
+            Some("ui-gallery-canvas-cull-root")
+        } else if self.ui_gallery_chart_torture_suite {
+            Some("ui-gallery-chart-torture-root")
+        } else {
+            None
+        }
+    }
+
+    fn wheel_scroll_test_id(self) -> Option<&'static str> {
+        self.ui_gallery_vlist_no_window_shifts_small_scroll_suite
+            .then_some("ui-gallery-virtual-list-row-0-label")
+    }
+}
+
 fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
     if env.iter().any(|(k, _v)| k == key) {
         return;
@@ -903,27 +1052,7 @@ hint: list suites via `fretboard diag list suites`"
     }
 
     let suite_args: Vec<String> = rest.clone();
-    let strict_termination =
-        suite_args.len() == 1 && suite_args[0].starts_with("diag-hardening-smoke");
-
-    let is_suite = |name: &str| suite_args.len() == 1 && suite_args[0] == name;
-    let is_ui_gallery_ai_transcript_retained_suite = is_suite("ui-gallery-ai-transcript-retained");
-    let is_ui_gallery_canvas_cull_suite = is_suite("ui-gallery-canvas-cull");
-    let is_ui_gallery_node_graph_cull_suite = is_suite("ui-gallery-node-graph-cull");
-    let is_ui_gallery_node_graph_cull_window_shifts_suite =
-        is_suite("ui-gallery-node-graph-cull-window-shifts");
-    let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite =
-        is_suite("ui-gallery-node-graph-cull-window-no-shifts-small-pan");
-    let is_ui_gallery_chart_torture_suite = is_suite("ui-gallery-chart-torture");
-    let is_ui_gallery_vlist_window_boundary_suite = is_suite("ui-gallery-vlist-window-boundary");
-    let is_ui_gallery_vlist_window_boundary_retained_suite =
-        is_suite("ui-gallery-vlist-window-boundary-retained");
-    let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
-        is_suite("ui-gallery-vlist-no-window-shifts-small-scroll");
-    let is_components_gallery_file_tree_suite = is_suite("components-gallery-file-tree");
-    let is_components_gallery_table_suite = is_suite("components-gallery-table");
-    let is_components_gallery_table_keep_alive_suite =
-        is_suite("components-gallery-table-keep-alive");
+    let suite_profile = SuiteRunProfile::from_suite_args(&suite_args);
 
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
@@ -944,36 +1073,17 @@ hint: list suites via `fretboard diag list suites`"
         &suite_prelude_scripts,
         reuse_process,
         launch_env,
-        strict_termination,
+        suite_profile.strict_termination,
     )?;
 
-    let suite_wants_screenshots = pack_include_screenshots
-        || crate::registry::checks::CheckRegistry::builtin()
-            .wants_screenshots(&checks_for_post_run_template)
-        || (check_pixels_changed_test_id.is_none()
-            && check_pixels_unchanged_test_id.is_none()
-            && scripts
-                .iter()
-                .any(|src| diag_policy::ui_gallery_script_pixels_changed_test_id(src).is_some()))
-        || scripts.iter().any(|src| script_requests_screenshots(src));
-    // Suite defaults: most suites only need a small warmup to skip startup churn, but
-    // "no shift" gates should avoid the initial VirtualList window stabilization phase.
-    if warmup_frames == 0 && is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
-        warmup_frames = 32;
-    }
-
-    if warmup_frames == 0
-        && (is_ui_gallery_vlist_window_boundary_suite
-            || is_ui_gallery_vlist_window_boundary_retained_suite
-            || is_ui_gallery_canvas_cull_suite
-            || is_ui_gallery_node_graph_cull_suite
-            || is_ui_gallery_node_graph_cull_window_shifts_suite
-            || is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
-            || is_ui_gallery_chart_torture_suite
-            || is_ui_gallery_ai_transcript_retained_suite)
-    {
-        warmup_frames = 5;
-    }
+    let suite_wants_screenshots = suite_profile.wants_screenshots(
+        pack_include_screenshots,
+        crate::registry::checks::CheckRegistry::builtin()
+            .wants_screenshots(&checks_for_post_run_template),
+        &scripts,
+        check_pixels_changed_test_id.is_some() || check_pixels_unchanged_test_id.is_some(),
+    );
+    warmup_frames = suite_profile.resolve_warmup_frames(warmup_frames);
 
     let tool_launched = launch.is_some() || reuse_launch;
 
@@ -1848,18 +1958,11 @@ hint: list suites via `fretboard diag list suites`"
             n == "ui-gallery-overlay-torture.json" || n == "ui-gallery-sidebar-scroll-refresh.json"
         });
 
-        let wants_post_run_checks_for_script = wants_post_run_checks_for_script
-            || builtin_suite == Some(BuiltinSuite::DockingArbitration)
-            || builtin_suite == Some(BuiltinSuite::UiGalleryCodeEditor)
-            || is_ui_gallery_canvas_cull_suite
-            || is_ui_gallery_chart_torture_suite
-            || is_ui_gallery_vlist_window_boundary_suite
-            || is_ui_gallery_vlist_window_boundary_retained_suite
-            || is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-            || is_components_gallery_file_tree_suite
-            || is_components_gallery_table_suite
-            || is_components_gallery_table_keep_alive_suite
-            || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
+        let wants_post_run_checks_for_script = suite_profile.wants_post_run_checks_for_script(
+            builtin_suite,
+            wants_post_run_checks_for_script,
+            is_gc_liveness_script,
+        );
 
         if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
             let bundle_path = wait_for_bundle_artifact_from_script_result(
@@ -1885,47 +1988,28 @@ hint: list suites via `fretboard diag list suites`"
                 } else {
                     (None, None, None)
                 };
-            let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite
-                || is_ui_gallery_vlist_window_boundary_retained_suite;
+            let vlist_window_boundary_suite = suite_profile.vlist_window_boundary_suite();
             let vlist_window_boundary_retained_suite =
-                is_ui_gallery_vlist_window_boundary_retained_suite;
-            let components_gallery_suite = is_components_gallery_file_tree_suite
-                || is_components_gallery_table_suite
-                || is_components_gallery_table_keep_alive_suite;
-            let pan_zoom_suite =
-                is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
-            let ai_transcript_suite = is_ui_gallery_ai_transcript_retained_suite;
-            let suite_wheel_scroll_test_id =
-                is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                    .then_some("ui-gallery-virtual-list-row-0-label")
-                    .filter(|_| check_wheel_scroll_test_id.is_none());
+                suite_profile.ui_gallery_vlist_window_boundary_retained_suite;
+            let components_gallery_suite = suite_profile.components_gallery_suite();
+            let pan_zoom_suite = suite_profile.pan_zoom_suite();
+            let ai_transcript_suite = suite_profile.ai_transcript_suite();
+            let suite_wheel_scroll_test_id = suite_profile
+                .wheel_scroll_test_id()
+                .filter(|_| check_wheel_scroll_test_id.is_none());
             let suite_wheel_events_max_per_frame =
                 diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(&src)
                     .then_some(1u64)
                     .filter(|_| check_wheel_events_max_per_frame.is_none());
-            let suite_components_gallery_stale_paint_test_id =
-                is_components_gallery_file_tree_suite
-                    .then_some("components-gallery-file-tree-root")
-                    .or_else(|| {
-                        (is_components_gallery_table_suite
-                            || is_components_gallery_table_keep_alive_suite)
-                            .then_some("components-gallery-table-root")
-                    })
-                    .filter(|_| check_stale_paint_test_id.is_none());
+            let suite_components_gallery_stale_paint_test_id = suite_profile
+                .components_gallery_root_test_id()
+                .filter(|_| check_stale_paint_test_id.is_none());
             let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
                 .then_some("ui-gallery-ai-transcript-row-0")
                 .filter(|_| check_stale_paint_test_id.is_none());
             let suite_wheel_scroll_hit_changes_test_id =
                 diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(&src)
-                    .or_else(|| {
-                        is_components_gallery_file_tree_suite
-                            .then_some("components-gallery-file-tree-root")
-                            .or_else(|| {
-                                (is_components_gallery_table_suite
-                                    || is_components_gallery_table_keep_alive_suite)
-                                    .then_some("components-gallery-table-root")
-                            })
-                    })
+                    .or_else(|| suite_profile.components_gallery_root_test_id())
                     .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
             let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
                 .then_some(1u64)
@@ -1944,12 +2028,8 @@ hint: list suites via `fretboard diag list suites`"
             let suite_view_cache_reuse_stable_min = ai_transcript_suite
                 .then_some(10u64)
                 .filter(|_| check_view_cache_reuse_stable_min.is_none());
-            let suite_default_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
-                .then_some("ui-gallery-canvas-cull-root")
-                .or_else(|| {
-                    is_ui_gallery_chart_torture_suite.then_some("ui-gallery-chart-torture-root")
-                })
-                .filter(|_| {
+            let suite_default_pixels_changed_test_id =
+                suite_profile.default_pixels_changed_test_id().filter(|_| {
                     check_pixels_changed_test_id.is_none()
                         && check_pixels_unchanged_test_id.is_none()
                 });
@@ -1976,18 +2056,23 @@ hint: list suites via `fretboard diag list suites`"
             let suite_hover_layout_max = ai_transcript_suite
                 .then_some(0u32)
                 .filter(|_| check_hover_layout_max.is_none());
-            let suite_chart_sampling_window_shifts_min = is_ui_gallery_chart_torture_suite
+            let suite_chart_sampling_window_shifts_min = suite_profile
+                .ui_gallery_chart_torture_suite
                 .then_some(1u64)
                 .filter(|_| check_chart_sampling_window_shifts_min.is_none());
-            let suite_node_graph_cull_window_shifts_min =
-                is_ui_gallery_node_graph_cull_window_shifts_suite
-                    .then_some(1u64)
-                    .or_else(|| is_ui_gallery_node_graph_cull_suite.then_some(0u64))
-                    .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
-            let suite_node_graph_cull_window_shifts_max =
-                is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
-                    .then_some(0u64)
-                    .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
+            let suite_node_graph_cull_window_shifts_min = suite_profile
+                .ui_gallery_node_graph_cull_window_shifts_suite
+                .then_some(1u64)
+                .or_else(|| {
+                    suite_profile
+                        .ui_gallery_node_graph_cull_suite
+                        .then_some(0u64)
+                })
+                .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
+            let suite_node_graph_cull_window_shifts_max = suite_profile
+                .ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+                .then_some(0u64)
+                .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
             let suite_vlist_window_shifts_have_prepaint_actions =
                 vlist_window_boundary_suite && !check_vlist_window_shifts_have_prepaint_actions;
             let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
@@ -2011,18 +2096,18 @@ hint: list suites via `fretboard diag list suites`"
                 script_requires_retained_vlist_reconcile_gate
                     .then_some(0u64)
                     .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_non_retained_max =
-                is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                    .then_some(0u64)
-                    .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_prefetch_max =
-                is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                    .then_some(0u64)
-                    .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
-            let suite_vlist_small_scroll_window_shifts_escape_max =
-                is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                    .then_some(0u64)
-                    .filter(|_| check_vlist_window_shifts_escape_max.is_none());
+            let suite_vlist_small_scroll_window_shifts_non_retained_max = suite_profile
+                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                .then_some(0u64)
+                .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+            let suite_vlist_small_scroll_window_shifts_prefetch_max = suite_profile
+                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                .then_some(0u64)
+                .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
+            let suite_vlist_small_scroll_window_shifts_escape_max = suite_profile
+                .ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                .then_some(0u64)
+                .filter(|_| check_vlist_window_shifts_escape_max.is_none());
             let suite_vlist_policy_key_stable = components_gallery_suite
                 && script_requires_retained_vlist_reconcile_gate
                 && !check_vlist_policy_key_stable;
@@ -2556,6 +2641,36 @@ hint: list suites via `fretboard diag list suites`"
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn suite_run_profile_marks_smoke_suites_strict() {
+        let profile =
+            SuiteRunProfile::from_suite_args(&["diag-hardening-smoke-docking".to_string()]);
+
+        assert!(profile.strict_termination);
+        assert_eq!(profile.resolve_warmup_frames(0), 0);
+    }
+
+    #[test]
+    fn suite_run_profile_exposes_named_suite_defaults() {
+        let profile = SuiteRunProfile::from_suite_args(&[
+            "ui-gallery-vlist-no-window-shifts-small-scroll".to_string(),
+        ]);
+        let components_profile =
+            SuiteRunProfile::from_suite_args(&["components-gallery-table-keep-alive".to_string()]);
+
+        assert!(profile.ui_gallery_vlist_no_window_shifts_small_scroll_suite);
+        assert_eq!(profile.resolve_warmup_frames(0), 32);
+        assert_eq!(
+            profile.wheel_scroll_test_id(),
+            Some("ui-gallery-virtual-list-row-0-label")
+        );
+        assert!(components_profile.components_gallery_suite());
+        assert_eq!(
+            components_profile.components_gallery_root_test_id(),
+            Some("components-gallery-table-root")
+        );
+    }
 
     #[test]
     fn resolve_suite_run_inputs_merges_script_inputs_and_reuse_process_env_defaults() {
