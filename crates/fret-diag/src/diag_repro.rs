@@ -10,8 +10,7 @@ mod util;
 pub(crate) struct ReproCmdContext {
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_paths: ResolvedScriptPaths,
-    pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub resolved_run_context: ResolvedRunContext,
     pub pack_out: Option<PathBuf>,
     pub ensure_ai_packet: bool,
     pub pack_ai_only: bool,
@@ -49,8 +48,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
         workspace_root,
-        resolved_paths,
-        fs_transport_cfg,
+        resolved_run_context,
         pack_out,
         ensure_ai_packet,
         pack_ai_only,
@@ -83,6 +81,11 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_redraw_hitches_max_total_ms_threshold,
         checks,
     } = ctx;
+
+    let ResolvedRunContext {
+        paths: resolved_paths,
+        fs_transport_cfg,
+    } = resolved_run_context;
 
     let resolved_out_dir = resolved_paths.out_dir;
     let resolved_ready_path = resolved_paths.ready_path;

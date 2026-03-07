@@ -298,8 +298,7 @@ pub(crate) struct RunCmdContext {
     pub ensure_ai_packet: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_paths: ResolvedScriptPaths,
-    pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub resolved_run_context: ResolvedRunContext,
     pub pack_out: Option<PathBuf>,
     pub pack_include_root_artifacts: bool,
     pub pack_include_triage: bool,
@@ -331,8 +330,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         ensure_ai_packet,
         rest,
         workspace_root,
-        resolved_paths,
-        fs_transport_cfg,
+        resolved_run_context,
         pack_out,
         pack_include_root_artifacts,
         pack_include_triage,
@@ -356,6 +354,11 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         keep_open,
         checks,
     } = ctx;
+
+    let ResolvedRunContext {
+        paths: resolved_paths,
+        fs_transport_cfg,
+    } = resolved_run_context;
 
     let resolved_out_dir = resolved_paths.out_dir;
     let resolved_trigger_path = resolved_paths.trigger_path;

@@ -255,6 +255,7 @@ Recommended PR slices:
      - `diag repro`
      - `diag campaign` (suite/script item dispatch)
      - `diag matrix`
+   - fourth landing: `diag run` and `diag repro` now share a higher-level `ResolvedRunContext`, so transport wiring no longer travels as a separate parallel argument beside resolved script paths
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

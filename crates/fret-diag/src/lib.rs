@@ -2953,6 +2953,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         script_result_path: resolved_script_result_path.clone(),
         script_result_trigger_path: resolved_script_result_trigger_path.clone(),
     };
+    let resolved_run_context = ResolvedRunContext {
+        paths: resolved_paths.clone(),
+        fs_transport_cfg: fs_transport_cfg.clone(),
+    };
 
     if let Some(res) = diag_simple_dispatch::dispatch_simple(
         sub.as_str(),
@@ -3178,8 +3182,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 ensure_ai_packet,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_paths: resolved_paths.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 pack_include_root_artifacts,
                 pack_include_triage,
@@ -3234,8 +3237,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             diag_repro::cmd_repro(diag_repro::ReproCmdContext {
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_paths: resolved_paths.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 ensure_ai_packet,
                 pack_ai_only,
@@ -4161,6 +4163,12 @@ pub(crate) struct ResolvedScriptPaths {
     pub(crate) script_trigger_path: PathBuf,
     pub(crate) script_result_path: PathBuf,
     pub(crate) script_result_trigger_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedRunContext {
+    pub(crate) paths: ResolvedScriptPaths,
+    pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
 }
 
 impl ResolvedScriptPaths {
