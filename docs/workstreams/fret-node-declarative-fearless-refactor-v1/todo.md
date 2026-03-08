@@ -487,6 +487,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     bridge work through the private `canvas/widget/retained_widget_runtime.rs` seam, so
     style/skin/paint-override sync, text-input command deferral, middleware handoff, and
     middleware-handled redraw/invalidation no longer stay embedded in the main trait router.
+  - Progress: `retained_widget.rs` now also routes command availability through the
+    private `canvas/widget/retained_widget_command_availability.rs` seam, so clipboard
+    capability gating and selection/content availability checks no longer stay embedded in
+    the main retained widget trait router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

@@ -169,6 +169,7 @@ mod preview;
 mod reconnect;
 mod rect_math;
 mod retained_widget;
+mod retained_widget_command_availability;
 mod retained_widget_frame;
 mod retained_widget_runtime;
 mod right_click;
