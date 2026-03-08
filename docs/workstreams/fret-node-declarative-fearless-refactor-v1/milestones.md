@@ -589,6 +589,11 @@ real editors.
   `canvas/widget/clipboard_anchor.rs`, `canvas/widget/clipboard_transfer.rs`, and
   `canvas/widget/clipboard_paste.rs` seams, so retained clipboard reducers no longer stay
   embedded in one mixed surface.
+- `marquee.rs` now routes background-marquee arming, active selection
+  updates, threshold/pan arbitration, and pointer-up cleanup through the private
+  `canvas/widget/marquee_begin.rs`, `canvas/widget/marquee_selection.rs`,
+  `canvas/widget/marquee_pending.rs`, and `canvas/widget/marquee_finish.rs` seams,
+  so retained marquee reducers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -655,6 +660,11 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_anchor.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_transfer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_connect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_graph.rs`

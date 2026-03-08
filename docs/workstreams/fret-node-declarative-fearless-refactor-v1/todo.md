@@ -526,6 +526,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/clipboard_anchor.rs`, `canvas/widget/clipboard_transfer.rs`, and
     `canvas/widget/clipboard_paste.rs` seams, so retained clipboard reducers no longer stay
     embedded in one mixed surface.
+  - Progress: `marquee.rs` now routes background-marquee arming, active selection
+    updates, threshold/pan arbitration, and pointer-up cleanup through the private
+    `canvas/widget/marquee_begin.rs`, `canvas/widget/marquee_selection.rs`,
+    `canvas/widget/marquee_pending.rs`, and `canvas/widget/marquee_finish.rs` seams,
+    so retained marquee reducers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
