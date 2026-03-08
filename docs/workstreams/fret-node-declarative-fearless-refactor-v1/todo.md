@@ -609,6 +609,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/clipboard_paste_transaction.rs`, and
     `canvas/widget/clipboard_paste_selection.rs` seams, so retained clipboard
     paste helpers no longer stay embedded in one mixed surface.
+  - Progress: `keyboard_shortcuts.rs` now routes overlay escape/key-down
+    handling and modifier/navigation shortcut dispatch through the private
+    `canvas/widget/keyboard_shortcuts_overlay.rs` and
+    `canvas/widget/keyboard_shortcuts_commands.rs` seams, so retained keyboard
+    shortcut reducers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

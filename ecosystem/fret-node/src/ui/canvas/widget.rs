@@ -179,6 +179,8 @@ mod insert_node_drag;
 mod interaction_policy;
 mod keyboard_pan_activation;
 mod keyboard_shortcuts;
+mod keyboard_shortcuts_commands;
+mod keyboard_shortcuts_overlay;
 mod left_click;
 mod marquee;
 mod marquee_begin;

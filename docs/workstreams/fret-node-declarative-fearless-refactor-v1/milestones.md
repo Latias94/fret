@@ -672,6 +672,11 @@ real editors.
   `canvas/widget/clipboard_paste_transaction.rs`, and
   `canvas/widget/clipboard_paste_selection.rs` seams, so retained clipboard
   paste helpers no longer stay embedded in one mixed surface.
+- `keyboard_shortcuts.rs` now routes overlay escape/key-down handling and
+  modifier/navigation shortcut dispatch through the private
+  `canvas/widget/keyboard_shortcuts_overlay.rs` and
+  `canvas/widget/keyboard_shortcuts_commands.rs` seams, so retained keyboard
+  shortcut reducers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -773,6 +778,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste_parse.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste_transaction.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_overlay.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`
