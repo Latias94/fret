@@ -149,6 +149,8 @@ mod event_pointer_wheel;
 mod event_pointer_wheel_route;
 mod event_pointer_wheel_state;
 mod event_router;
+mod event_router_pointer;
+mod event_router_system;
 mod event_timer;
 mod focus;
 mod focus_draw_order;

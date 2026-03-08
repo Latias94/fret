@@ -492,6 +492,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     motion through the private `canvas/widget/timer_motion.rs` seam, so pan inertia,
     viewport animation, auto-pan replay, and move-end debounce no longer stay embedded
     in the retained timer router.
+  - Progress: `event_router.rs` now routes non-pointer lifecycle dispatch and
+    pointer-variant dispatch through the private
+    `canvas/widget/event_router_system.rs` and
+    `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
+    internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
+    embedded in one retained event router surface.
   - Progress: `event_keyboard.rs` now routes escape / overlay / modifier shortcut /
     tab / nudge / delete handling through the private
     `canvas/widget/keyboard_shortcuts.rs` seam, so key-driven command dispatch and

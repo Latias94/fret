@@ -557,6 +557,11 @@ real editors.
   through the private `canvas/widget/timer_motion.rs` seam, so pan inertia, viewport
   animation, auto-pan replay, and move-end debounce no longer stay embedded in the
   retained timer router.
+- `event_router.rs` now routes non-pointer lifecycle dispatch and pointer-variant
+  dispatch through the private `canvas/widget/event_router_system.rs` and
+  `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
+  internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
+  embedded in one retained event router surface.
 - `event_keyboard.rs` now routes escape / overlay / modifier shortcut / tab /
   nudge / delete handling through the private `canvas/widget/keyboard_shortcuts.rs` seam,
   so key-driven command dispatch and overlay-aware keyboard exits no longer stay embedded in
@@ -985,6 +990,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`
