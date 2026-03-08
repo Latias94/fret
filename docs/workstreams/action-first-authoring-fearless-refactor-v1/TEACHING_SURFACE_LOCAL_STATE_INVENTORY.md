@@ -110,6 +110,20 @@ The inventory above closes the default cookbook/template migration queue. The fo
 still useful in-tree references, but they should be treated as advanced/runtime-bound or
 component-contract examples rather than blockers for the post-v1 default path.
 
+### Explicit-model collection comparison targets
+
+- `apps/fret-cookbook/examples/simple_todo.rs`
+- `apps/fret-cookbook/examples/simple_todo_v2_target.rs`
+- `apps/fret-examples/src/todo_demo.rs`
+- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
+
+Reason: these surfaces now form the smallest side-by-side comparison set for deciding whether the
+next v2 migration should move an app-grade or scaffold-grade dynamic list away from explicit
+`Model<Vec<_>>` ownership. `simple_todo.rs` remains useful as the explicit-model reference,
+`simple_todo_v2_target.rs` is the local-state proof target, `todo_demo.rs` is the next realistic
+app-grade migration candidate, and the scaffold template should wait for that extra proof before it
+changes. See `EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` for the current sequencing note.
+
 ### `apps/fret-examples` (advanced / runtime-bound)
 
 - `apps/fret-examples/src/async_playground_demo.rs`
@@ -143,6 +157,7 @@ No further default-surface local-state migrations are queued right now.
 The next wave should focus on:
 
 - tracked-state write ergonomics and the remaining explicit-model escape hatches after render-side `value_*` plus store-side `value_in*` reads landed,
+- explicit-model collection comparison work centered on `simple_todo_v2_target`, `todo_demo`, and the simple-todo scaffold before widening the helper surface again,
 - explicit advanced docs for the remaining interop-bound/model-centered examples,
 - only then consider another surgical advanced-demo cleanup if a remaining field is unambiguously view-local and does not blur the runtime/interop lesson,
 - keeping new cookbook/template work on the post-v1 local-state default path.
