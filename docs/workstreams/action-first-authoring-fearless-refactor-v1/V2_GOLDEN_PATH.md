@@ -141,6 +141,7 @@ These remain valid, but they are not the default golden path:
 - raw `cx.on_action(...)`
 - pure view-owned keyed collections expressed without explicit `Model<Vec<_>>` coordination
 - widget-local `listener` / `dispatch` / `shortcut` sugar
+- another default transaction helper beyond `on_action_notify_models::<A>(...)`
 - macros beyond existing minimal helpers
 - broad `ui::children!`-heavy trees when a root/section/trigger builder already exists
 - early `into_element(cx)` just to attach semantics or diagnostics hooks when the surrounding sink already accepts builders (for example numeric badges/text or other decorate-only patches); if a sink still requires concrete `AnyElement`s, land exactly at that boundary instead of inventing extra adapters
