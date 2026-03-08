@@ -582,6 +582,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/pointer_wheel_motion.rs`, `canvas/widget/pointer_wheel_zoom.rs`, and
     `canvas/widget/pointer_wheel_pan.rs` seams, so retained wheel-viewport reducers no longer
     stay embedded in one mixed surface.
+  - Progress: `searcher_logic.rs` now routes recent-kind/row rebuild helpers, row
+    activation handoff, and picker-opening orchestration through the private
+    `canvas/widget/searcher_rows.rs`, `canvas/widget/searcher_row_activation.rs`, and
+    `canvas/widget/searcher_picker.rs` seams, so retained searcher logic no longer stays
+    embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -645,6 +645,11 @@ real editors.
   `canvas/widget/pointer_wheel_motion.rs`, `canvas/widget/pointer_wheel_zoom.rs`, and
   `canvas/widget/pointer_wheel_pan.rs` seams, so retained wheel-viewport reducers no longer
   stay embedded in one mixed surface.
+- `searcher_logic.rs` now routes recent-kind/row rebuild helpers, row
+  activation handoff, and picker-opening orchestration through the private
+  `canvas/widget/searcher_rows.rs`, `canvas/widget/searcher_row_activation.rs`, and
+  `canvas/widget/searcher_picker.rs` seams, so retained searcher logic no longer stays
+  embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -744,7 +749,11 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_nav.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_picker.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_row_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_rows.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer_hover.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer_wheel.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
