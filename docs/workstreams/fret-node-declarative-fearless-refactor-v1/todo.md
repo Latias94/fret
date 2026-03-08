@@ -653,6 +653,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/marquee_selection_query.rs` and
     `canvas/widget/marquee_selection_apply.rs` seams, so retained marquee reducers
     no longer keep box-selection geometry and state writes embedded in one surface.
+  - Progress: `paint_grid_plan.rs` now routes canvas chrome hint lookup,
+    grid metrics/tile scratch preparation, and pattern-size validation through the private
+    `canvas/widget/paint_grid_plan_support.rs` seam, so retained grid-plan reducers
+    no longer keep paint planning helpers embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

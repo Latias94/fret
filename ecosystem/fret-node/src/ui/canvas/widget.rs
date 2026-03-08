@@ -211,6 +211,7 @@ mod paint_edges;
 mod paint_grid;
 mod paint_grid_cache;
 mod paint_grid_plan;
+mod paint_grid_plan_support;
 mod paint_grid_stats;
 mod paint_grid_tiles;
 mod paint_grid_tiles_cross;
