@@ -1763,27 +1763,14 @@ fn write_campaign_share_manifest(
     std::fs::create_dir_all(&share_dir)
         .map_err(|e| format!("failed to create share dir {}: {}", share_dir.display(), e))?;
 
-    let mut counters = CampaignShareManifestCounters::default();
-    let mut run_entries = Vec::new();
-    let mut combined_entries = Vec::new();
-
-    for item in &summary.items {
-        if !include_passed && item.status == RegressionStatusV1::Passed {
-            continue;
-        }
-
-        let share_item = build_campaign_share_manifest_item(CampaignShareManifestItemRequest {
-            item,
-            root_dir,
-            share_dir: &share_dir,
-            bundle_ordinal: counters.bundles_total.saturating_add(1),
-            stats_top,
-            warmup_frames,
-        });
-        counters.merge(&share_item.counters);
-        run_entries.push(share_item.run_entry);
-        combined_entries.push(share_item.combined_entry);
-    }
+    let share_items = build_campaign_share_manifest_items(
+        &summary,
+        root_dir,
+        &share_dir,
+        include_passed,
+        stats_top,
+        warmup_frames,
+    );
 
     let share_manifest_path = share_dir.join("share.manifest.json");
     let mut payload = build_campaign_share_manifest_payload(CampaignShareManifestPayloadRequest {
@@ -1793,8 +1780,8 @@ fn write_campaign_share_manifest(
         share_dir: &share_dir,
         summary: &summary,
         include_passed,
-        counters: &counters,
-        run_entries,
+        counters: &share_items.counters,
+        run_entries: share_items.run_entries,
     });
     write_json_value(&share_manifest_path, &payload)?;
 
@@ -1803,7 +1790,7 @@ fn write_campaign_share_manifest(
         &share_dir,
         &share_manifest_path,
         summary_path,
-        &combined_entries,
+        &share_items.combined_entries,
     );
     apply_campaign_share_manifest_combined_zip(&mut payload, &combined_zip_outcome);
     write_json_value(&share_manifest_path, &payload)?;
@@ -1895,6 +1882,13 @@ impl CampaignShareManifestCounters {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignShareManifestItems {
+    counters: CampaignShareManifestCounters,
+    run_entries: Vec<serde_json::Value>,
+    combined_entries: Vec<CampaignCombinedFailureEntry>,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignCombinedFailureEntry {
     item_id: String,
     share_zip: Option<PathBuf>,
@@ -1923,6 +1917,17 @@ struct CampaignShareManifestItem {
     counters: CampaignShareManifestCounters,
     run_entry: serde_json::Value,
     combined_entry: CampaignCombinedFailureEntry,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignShareManifestItemArtifacts {
+    counters: CampaignShareManifestCounters,
+    bundle_dir: Option<PathBuf>,
+    triage_path: Option<PathBuf>,
+    triage_error: Option<String>,
+    screenshots_manifest: Option<PathBuf>,
+    share_zip: Option<PathBuf>,
+    share_zip_error: Option<String>,
 }
 
 struct CampaignShareManifestPayloadRequest<'a> {
@@ -2048,6 +2053,43 @@ fn build_campaign_share_manifest_payload(
     })
 }
 
+fn build_campaign_share_manifest_items(
+    summary: &RegressionSummaryV1,
+    root_dir: &Path,
+    share_dir: &Path,
+    include_passed: bool,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> CampaignShareManifestItems {
+    let mut counters = CampaignShareManifestCounters::default();
+    let mut run_entries = Vec::new();
+    let mut combined_entries = Vec::new();
+
+    for item in &summary.items {
+        if !include_passed && item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+
+        let share_item = build_campaign_share_manifest_item(CampaignShareManifestItemRequest {
+            item,
+            root_dir,
+            share_dir,
+            bundle_ordinal: counters.bundles_total.saturating_add(1),
+            stats_top,
+            warmup_frames,
+        });
+        counters.merge(&share_item.counters);
+        run_entries.push(share_item.run_entry);
+        combined_entries.push(share_item.combined_entry);
+    }
+
+    CampaignShareManifestItems {
+        counters,
+        run_entries,
+        combined_entries,
+    }
+}
+
 fn apply_campaign_share_manifest_combined_zip(
     payload: &mut serde_json::Value,
     outcome: &CampaignCombinedZipOutcome,
@@ -2078,6 +2120,24 @@ fn apply_campaign_share_manifest_combined_zip(
 fn build_campaign_share_manifest_item(
     request: CampaignShareManifestItemRequest<'_>,
 ) -> CampaignShareManifestItem {
+    let artifacts = collect_campaign_share_manifest_item_artifacts(&request);
+    let run_entry = build_campaign_share_manifest_item_run_entry(request.item, &artifacts);
+
+    CampaignShareManifestItem {
+        counters: artifacts.counters,
+        run_entry,
+        combined_entry: CampaignCombinedFailureEntry {
+            item_id: request.item.item_id.clone(),
+            share_zip: artifacts.share_zip.clone(),
+            triage_path: artifacts.triage_path.clone(),
+            screenshots_manifest: artifacts.screenshots_manifest.clone(),
+        },
+    }
+}
+
+fn collect_campaign_share_manifest_item_artifacts(
+    request: &CampaignShareManifestItemRequest<'_>,
+) -> CampaignShareManifestItemArtifacts {
     let bundle_dir = request
         .item
         .evidence
@@ -2105,7 +2165,7 @@ fn build_campaign_share_manifest_item(
         counters.triage_failed = 1;
     }
 
-    let pack_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
+    let share_zip_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
         counters.bundles_total = 1;
         let packet_dir = bundle_dir.join("ai.packet");
         let ai_packet_result = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
@@ -2136,36 +2196,37 @@ fn build_campaign_share_manifest_item(
         Err("item does not expose evidence.bundle_dir".to_string())
     };
 
-    let pack_path = pack_result.as_ref().ok().cloned();
-    let pack_error = pack_result.as_ref().err().cloned();
-    let run_entry = serde_json::json!({
-        "item_id": request.item.item_id,
-        "name": request.item.name,
-        "status": request.item.status,
-        "reason_code": request.item.reason_code,
-        "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
-        "triage_json": triage_path.as_ref().map(|path| path.display().to_string()),
-        "triage_error": triage_error,
-        "screenshots_manifest": screenshots_manifest.as_ref().map(|path| path.display().to_string()),
-        "source_script": request
-            .item
+    CampaignShareManifestItemArtifacts {
+        counters,
+        bundle_dir,
+        triage_path,
+        triage_error,
+        screenshots_manifest,
+        share_zip: share_zip_result.as_ref().ok().cloned(),
+        share_zip_error: share_zip_result.as_ref().err().cloned(),
+    }
+}
+
+fn build_campaign_share_manifest_item_run_entry(
+    item: &RegressionItemSummaryV1,
+    artifacts: &CampaignShareManifestItemArtifacts,
+) -> serde_json::Value {
+    serde_json::json!({
+        "item_id": item.item_id,
+        "name": item.name,
+        "status": item.status,
+        "reason_code": item.reason_code,
+        "bundle_dir": artifacts.bundle_dir.as_ref().map(|path| path.display().to_string()),
+        "triage_json": artifacts.triage_path.as_ref().map(|path| path.display().to_string()),
+        "triage_error": artifacts.triage_error,
+        "screenshots_manifest": artifacts.screenshots_manifest.as_ref().map(|path| path.display().to_string()),
+        "source_script": item
             .source
             .as_ref()
             .and_then(|source| source.script.clone()),
-        "share_zip": pack_path.as_ref().map(|path| path.display().to_string()),
-        "error": pack_error,
-    });
-
-    CampaignShareManifestItem {
-        counters,
-        run_entry,
-        combined_entry: CampaignCombinedFailureEntry {
-            item_id: request.item.item_id.clone(),
-            share_zip: pack_path,
-            triage_path,
-            screenshots_manifest,
-        },
-    }
+        "share_zip": artifacts.share_zip.as_ref().map(|path| path.display().to_string()),
+        "error": artifacts.share_zip_error,
+    })
 }
 
 fn add_file_to_zip(
@@ -2971,6 +3032,75 @@ mod tests {
         root
     }
 
+    fn sample_regression_item_summary(
+        item_id: &str,
+        status: RegressionStatusV1,
+        bundle_dir: Option<&Path>,
+    ) -> RegressionItemSummaryV1 {
+        RegressionItemSummaryV1 {
+            item_id: item_id.to_string(),
+            kind: RegressionItemKindV1::Script,
+            name: item_id.to_string(),
+            status,
+            reason_code: Some("diag.test.failure".to_string()),
+            source_reason_code: None,
+            lane: RegressionLaneV1::Smoke,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: Some(RegressionEvidenceV1 {
+                bundle_artifact: None,
+                bundle_dir: bundle_dir.map(|path| path.display().to_string()),
+                triage_json: None,
+                script_result_json: None,
+                ai_packet_dir: None,
+                pack_path: None,
+                screenshots_manifest: None,
+                perf_summary_json: None,
+                compare_json: None,
+                extra: None,
+            }),
+            source: None,
+            notes: None,
+        }
+    }
+
+    fn sample_regression_summary(items: Vec<RegressionItemSummaryV1>) -> RegressionSummaryV1 {
+        let mut totals = RegressionTotalsV1::default();
+        for item in &items {
+            totals.record_status(item.status);
+        }
+        let mut summary = RegressionSummaryV1::new(
+            RegressionCampaignSummaryV1 {
+                name: "ui-gallery-smoke".to_string(),
+                lane: RegressionLaneV1::Smoke,
+                profile: None,
+                schema_version: None,
+                requested_by: None,
+                filters: None,
+            },
+            RegressionRunSummaryV1 {
+                run_id: "1234".to_string(),
+                tool: "fretboard diag campaign".to_string(),
+                created_unix_ms: crate::util::now_unix_ms(),
+                duration_ms: None,
+                workspace_root: None,
+                out_dir: None,
+                started_unix_ms: None,
+                finished_unix_ms: None,
+                tool_version: None,
+                git_commit: None,
+                git_branch: None,
+                host: None,
+            },
+            totals,
+        );
+        summary.items = items;
+        summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+        summary
+    }
+
     fn sample_campaign_cmd_context(root: &Path, rest: Vec<String>) -> CampaignCmdContext {
         CampaignCmdContext {
             pack_after_run: false,
@@ -3173,6 +3303,129 @@ mod tests {
                     dest: "items/01-accordion-basic.screenshots.manifest.json".to_string(),
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn build_campaign_share_manifest_items_skips_passed_items_when_not_requested() {
+        let root = temp_test_root("share-manifest-items");
+        let share_dir = root.join("share");
+        std::fs::create_dir_all(&share_dir).expect("create share dir");
+        let summary = sample_regression_summary(vec![
+            sample_regression_item_summary("passed-item", RegressionStatusV1::Passed, None),
+            sample_regression_item_summary(
+                "failed-item",
+                RegressionStatusV1::FailedDeterministic,
+                None,
+            ),
+        ]);
+
+        let share_items =
+            build_campaign_share_manifest_items(&summary, &root, &share_dir, false, 5, 0);
+
+        assert_eq!(share_items.run_entries.len(), 1);
+        assert_eq!(share_items.combined_entries.len(), 1);
+        assert_eq!(share_items.counters.bundles_total, 0);
+        assert_eq!(share_items.counters.bundles_missing, 1);
+        assert_eq!(
+            share_items.run_entries[0]
+                .get("item_id")
+                .and_then(|value| value.as_str()),
+            Some("failed-item")
+        );
+        assert_eq!(
+            share_items.run_entries[0]
+                .get("error")
+                .and_then(|value| value.as_str()),
+            Some("item does not expose evidence.bundle_dir")
+        );
+    }
+
+    #[test]
+    fn collect_campaign_share_manifest_item_artifacts_marks_missing_bundle_dir() {
+        let root = temp_test_root("share-item-artifacts-missing");
+        let share_dir = root.join("share");
+        let item = sample_regression_item_summary(
+            "missing-bundle",
+            RegressionStatusV1::FailedDeterministic,
+            None,
+        );
+        let request = CampaignShareManifestItemRequest {
+            item: &item,
+            root_dir: &root,
+            share_dir: &share_dir,
+            bundle_ordinal: 1,
+            stats_top: 5,
+            warmup_frames: 0,
+        };
+
+        let artifacts = collect_campaign_share_manifest_item_artifacts(&request);
+
+        assert_eq!(artifacts.counters.bundles_total, 0);
+        assert_eq!(artifacts.counters.bundles_missing, 1);
+        assert_eq!(artifacts.counters.bundles_packed, 0);
+        assert!(artifacts.bundle_dir.is_none());
+        assert!(artifacts.share_zip.is_none());
+        assert_eq!(
+            artifacts.share_zip_error.as_deref(),
+            Some("item does not expose evidence.bundle_dir")
+        );
+    }
+
+    #[test]
+    fn build_campaign_share_manifest_item_run_entry_uses_artifact_snapshot() {
+        let item = sample_regression_item_summary(
+            "accordion-basic",
+            RegressionStatusV1::FailedDeterministic,
+            None,
+        );
+        let artifacts = CampaignShareManifestItemArtifacts {
+            counters: CampaignShareManifestCounters {
+                bundles_total: 1,
+                bundles_packed: 1,
+                bundles_missing: 0,
+                triage_generated: 1,
+                triage_failed: 0,
+            },
+            bundle_dir: Some(PathBuf::from("bundle-a")),
+            triage_path: Some(PathBuf::from("bundle-a.triage.json")),
+            triage_error: Some("triage warning".to_string()),
+            screenshots_manifest: Some(PathBuf::from("screenshots/manifest.json")),
+            share_zip: Some(PathBuf::from("share/01-accordion-basic.ai.zip")),
+            share_zip_error: Some("zip warning".to_string()),
+        };
+
+        let run_entry = build_campaign_share_manifest_item_run_entry(&item, &artifacts);
+
+        assert_eq!(
+            run_entry.get("bundle_dir").and_then(|value| value.as_str()),
+            Some("bundle-a")
+        );
+        assert_eq!(
+            run_entry
+                .get("triage_json")
+                .and_then(|value| value.as_str()),
+            Some("bundle-a.triage.json")
+        );
+        assert_eq!(
+            run_entry
+                .get("screenshots_manifest")
+                .and_then(|value| value.as_str()),
+            Some("screenshots/manifest.json")
+        );
+        assert_eq!(
+            run_entry.get("share_zip").and_then(|value| value.as_str()),
+            Some("share/01-accordion-basic.ai.zip")
+        );
+        assert_eq!(
+            run_entry
+                .get("triage_error")
+                .and_then(|value| value.as_str()),
+            Some("triage warning")
+        );
+        assert_eq!(
+            run_entry.get("error").and_then(|value| value.as_str()),
+            Some("zip warning")
         );
     }
 
