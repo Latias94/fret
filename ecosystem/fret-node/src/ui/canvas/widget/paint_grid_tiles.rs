@@ -1,6 +1,22 @@
 use super::*;
 use crate::ui::style::NodeGraphBackgroundPattern;
 
+pub(super) struct GridTileSpec {
+    pub(super) tile_origin: Point,
+    pub(super) tile_size_canvas: f32,
+    pub(super) spacing: f32,
+    pub(super) major_every: i64,
+    pub(super) major_color: Color,
+    pub(super) minor_color: Color,
+    pub(super) thickness: Px,
+    pub(super) dot_size: f32,
+    pub(super) cross_size: f32,
+    pub(super) x0: i64,
+    pub(super) x1: i64,
+    pub(super) y0: i64,
+    pub(super) y1: i64,
+}
+
 pub(super) fn grid_tile_ops(
     pattern: NodeGraphBackgroundPattern,
     tile_origin: Point,
@@ -13,159 +29,82 @@ pub(super) fn grid_tile_ops(
     dot_size: f32,
     cross_size: f32,
 ) -> Vec<SceneOp> {
-    let tile_min_x = tile_origin.x.0;
-    let tile_min_y = tile_origin.y.0;
-    let tile_max_x = tile_min_x + tile_size_canvas;
-    let tile_max_y = tile_min_y + tile_size_canvas;
-
-    let x0 = (tile_min_x / spacing).floor() as i64;
-    let x1 = (tile_max_x / spacing).ceil() as i64;
-    let y0 = (tile_min_y / spacing).floor() as i64;
-    let y1 = (tile_max_y / spacing).ceil() as i64;
-
-    let approx_x = (x1 - x0 + 1).max(0) as usize;
-    let approx_y = (y1 - y0 + 1).max(0) as usize;
-    let approx_points = approx_x.saturating_mul(approx_y);
-    let approx_ops = match pattern {
-        NodeGraphBackgroundPattern::Lines => approx_x.saturating_add(approx_y),
-        NodeGraphBackgroundPattern::Dots => approx_points,
-        NodeGraphBackgroundPattern::Cross => approx_points.saturating_mul(2),
-    };
-    let mut ops: Vec<SceneOp> = Vec::with_capacity(approx_ops);
+    let spec = GridTileSpec::new(
+        tile_origin,
+        tile_size_canvas,
+        spacing,
+        major_every,
+        major_color,
+        minor_color,
+        thickness,
+        dot_size,
+        cross_size,
+    );
+    let mut ops: Vec<SceneOp> = Vec::with_capacity(spec.approx_ops(pattern));
 
     match pattern {
         NodeGraphBackgroundPattern::Lines => {
-            for ix in x0..=x1 {
-                let x = ix as f32 * spacing;
-                let color = if ix.rem_euclid(major_every) == 0 {
-                    major_color
-                } else {
-                    minor_color
-                };
-                ops.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(Px(x - tile_origin.x.0 - 0.5 * thickness.0), Px(0.0)),
-                        Size::new(thickness, Px(tile_size_canvas)),
-                    ),
-                    background: fret_core::Paint::Solid(color).into(),
-
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
-
-            for iy in y0..=y1 {
-                let y = iy as f32 * spacing;
-                let color = if iy.rem_euclid(major_every) == 0 {
-                    major_color
-                } else {
-                    minor_color
-                };
-                ops.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(Px(0.0), Px(y - tile_origin.y.0 - 0.5 * thickness.0)),
-                        Size::new(Px(tile_size_canvas), thickness),
-                    ),
-                    background: fret_core::Paint::Solid(color).into(),
-
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
+            super::paint_grid_tiles_lines::append_line_ops(&spec, &mut ops)
         }
         NodeGraphBackgroundPattern::Dots => {
-            let d = dot_size.max(0.0);
-            let r = 0.5 * d;
-            if !(d.is_finite() && d > 0.0) {
-                return ops;
-            }
-
-            let corner = Corners::all(Px(r));
-            for ix in x0..=x1 {
-                let x = ix as f32 * spacing;
-                let x_local = x - tile_origin.x.0;
-                for iy in y0..=y1 {
-                    let y = iy as f32 * spacing;
-                    let y_local = y - tile_origin.y.0;
-
-                    let is_major =
-                        ix.rem_euclid(major_every) == 0 && iy.rem_euclid(major_every) == 0;
-                    let color = if is_major { major_color } else { minor_color };
-
-                    ops.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(Px(x_local - r), Px(y_local - r)),
-                            Size::new(Px(d), Px(d)),
-                        ),
-                        background: fret_core::Paint::Solid(color).into(),
-
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                        corner_radii: corner,
-                    });
-                }
-            }
+            super::paint_grid_tiles_dots::append_dot_ops(&spec, &mut ops)
         }
         NodeGraphBackgroundPattern::Cross => {
-            let s = cross_size.max(0.0);
-            if !(s.is_finite() && s > 0.0) {
-                return ops;
-            }
+            super::paint_grid_tiles_cross::append_cross_ops(&spec, &mut ops)
+        }
+    }
+    ops
+}
 
-            let half = 0.5 * s;
-            for ix in x0..=x1 {
-                let x = ix as f32 * spacing;
-                let x_local = x - tile_origin.x.0;
-                for iy in y0..=y1 {
-                    let y = iy as f32 * spacing;
-                    let y_local = y - tile_origin.y.0;
+impl GridTileSpec {
+    pub(super) fn new(
+        tile_origin: Point,
+        tile_size_canvas: f32,
+        spacing: f32,
+        major_every: i64,
+        major_color: Color,
+        minor_color: Color,
+        thickness: Px,
+        dot_size: f32,
+        cross_size: f32,
+    ) -> Self {
+        let tile_min_x = tile_origin.x.0;
+        let tile_min_y = tile_origin.y.0;
+        let tile_max_x = tile_min_x + tile_size_canvas;
+        let tile_max_y = tile_min_y + tile_size_canvas;
 
-                    let is_major =
-                        ix.rem_euclid(major_every) == 0 || iy.rem_euclid(major_every) == 0;
-                    let color = if is_major { major_color } else { minor_color };
+        let x0 = (tile_min_x / spacing).floor() as i64;
+        let x1 = (tile_max_x / spacing).ceil() as i64;
+        let y0 = (tile_min_y / spacing).floor() as i64;
+        let y1 = (tile_max_y / spacing).ceil() as i64;
 
-                    // Vertical segment.
-                    ops.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(Px(x_local - 0.5 * thickness.0), Px(y_local - half)),
-                            Size::new(thickness, Px(s)),
-                        ),
-                        background: fret_core::Paint::Solid(color).into(),
-
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                    // Horizontal segment.
-                    ops.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(Px(x_local - half), Px(y_local - 0.5 * thickness.0)),
-                            Size::new(Px(s), thickness),
-                        ),
-                        background: fret_core::Paint::Solid(color).into(),
-
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                }
-            }
+        Self {
+            tile_origin,
+            tile_size_canvas,
+            spacing,
+            major_every,
+            major_color,
+            minor_color,
+            thickness,
+            dot_size,
+            cross_size,
+            x0,
+            x1,
+            y0,
+            y1,
         }
     }
 
-    ops
+    pub(super) fn approx_ops(&self, pattern: NodeGraphBackgroundPattern) -> usize {
+        let approx_x = (self.x1 - self.x0 + 1).max(0) as usize;
+        let approx_y = (self.y1 - self.y0 + 1).max(0) as usize;
+        let approx_points = approx_x.saturating_mul(approx_y);
+        match pattern {
+            NodeGraphBackgroundPattern::Lines => approx_x.saturating_add(approx_y),
+            NodeGraphBackgroundPattern::Dots => approx_points,
+            NodeGraphBackgroundPattern::Cross => approx_points.saturating_mul(2),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -638,6 +638,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/auto_measure_collect.rs` and
     `canvas/widget/auto_measure_apply.rs` seams, so retained auto-measure
     reducers no longer keep collection and apply phases embedded in one surface.
+  - Progress: `paint_grid_tiles.rs` now routes line, dot, and cross tile-op
+    painting through the private `canvas/widget/paint_grid_tiles_lines.rs`,
+    `canvas/widget/paint_grid_tiles_dots.rs`, and
+    `canvas/widget/paint_grid_tiles_cross.rs` seams, so retained grid tile
+    painters no longer keep all background patterns embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -701,6 +701,11 @@ real editors.
   `canvas/widget/auto_measure_collect.rs` and
   `canvas/widget/auto_measure_apply.rs` seams, so retained auto-measure
   reducers no longer keep collection and apply phases embedded in one surface.
+- `paint_grid_tiles.rs` now routes line, dot, and cross tile-op painting
+  through the private `canvas/widget/paint_grid_tiles_lines.rs`,
+  `canvas/widget/paint_grid_tiles_dots.rs`, and
+  `canvas/widget/paint_grid_tiles_cross.rs` seams, so retained grid tile
+  painters no longer keep all background patterns embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -819,6 +824,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/auto_measure.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/auto_measure_collect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/auto_measure_apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_lines.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_dots.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles_cross.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`
