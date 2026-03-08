@@ -21,6 +21,19 @@ struct ResolveLatestOutput {
     latest_bundle_artifact: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolveLatestRunProjection {
+    latest_run_id: Option<u64>,
+    latest_run_dir: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolveLatestBundleProjection {
+    latest_bundle_dir: Option<PathBuf>,
+    latest_bundle_dir_source: Option<&'static str>,
+    latest_bundle_artifact: Option<PathBuf>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct ResolveLatestOptions {
     within_session: Option<String>,
@@ -409,28 +422,53 @@ fn resolve_latest_for_out_dir(
     let out_dir = &session.out_dir;
 
     let script_result = try_read_script_result_v1(&out_dir.join("script.result.json"));
+    let run = build_resolve_latest_run_projection(out_dir, script_result.as_ref());
+    let bundle = build_resolve_latest_bundle_projection(out_dir, script_result.as_ref());
+
+    Ok(ResolveLatestOutput {
+        base_out_dir: session.base_out_dir.clone(),
+        out_dir: out_dir.clone(),
+        session_id: session.session_id.clone(),
+        latest_run_id: run.latest_run_id,
+        latest_run_dir: run.latest_run_dir,
+        latest_bundle_dir: bundle.latest_bundle_dir,
+        latest_bundle_dir_source: bundle.latest_bundle_dir_source,
+        latest_bundle_artifact: bundle.latest_bundle_artifact,
+    })
+}
+
+fn build_resolve_latest_run_projection(
+    out_dir: &Path,
+    script_result: Option<&UiScriptResultV1>,
+) -> ResolveLatestRunProjection {
     let latest_run_id = script_result.as_ref().map(|r| r.run_id).filter(|v| *v != 0);
     let latest_run_dir = latest_run_id.and_then(|id| {
         let dir = out_dir.join(id.to_string());
         dir.is_dir().then_some(dir)
     });
 
-    let (latest_bundle_dir, latest_bundle_dir_source) =
-        resolve_latest_bundle_dir_for_out_dir(out_dir, script_result.as_ref());
-    let latest_bundle_artifact = latest_bundle_dir
-        .as_deref()
-        .map(crate::resolve_bundle_artifact_path);
-
-    Ok(ResolveLatestOutput {
-        base_out_dir: session.base_out_dir.clone(),
-        out_dir: out_dir.clone(),
-        session_id: session.session_id.clone(),
+    ResolveLatestRunProjection {
         latest_run_id,
         latest_run_dir,
+    }
+}
+
+fn build_resolve_latest_bundle_projection(
+    out_dir: &Path,
+    script_result: Option<&UiScriptResultV1>,
+) -> ResolveLatestBundleProjection {
+    let (latest_bundle_dir, latest_bundle_dir_source) =
+        resolve_latest_bundle_dir_for_out_dir(out_dir, script_result);
+    let latest_bundle_artifact = latest_bundle_dir
+        .as_deref()
+        .map(crate::resolve_bundle_artifact_path)
+        .filter(|path| path.is_file());
+
+    ResolveLatestBundleProjection {
         latest_bundle_dir,
         latest_bundle_dir_source,
-        latest_bundle_artifact: latest_bundle_artifact.filter(|p| p.is_file()),
-    })
+        latest_bundle_artifact,
+    }
 }
 
 pub(crate) fn try_read_script_result_v1(path: &Path) -> Option<UiScriptResultV1> {
@@ -488,8 +526,9 @@ pub(crate) fn resolve_latest_bundle_dir_from_base_or_session_out_dir(
 ) -> Result<(PathBuf, Option<String>, &'static str), String> {
     let resolved = resolve_session_out_dir_for_base_dir(base_or_session_out_dir, within_session)?;
     let script_result = try_read_script_result_v1(&resolved.out_dir.join("script.result.json"));
-    let (dir, source) =
-        resolve_latest_bundle_dir_for_out_dir(&resolved.out_dir, script_result.as_ref());
+    let bundle = build_resolve_latest_bundle_projection(&resolved.out_dir, script_result.as_ref());
+    let dir = bundle.latest_bundle_dir;
+    let source = bundle.latest_bundle_dir_source;
     let Some(dir) = dir else {
         return Err(format!(
             "no diagnostics bundle found under {}",
@@ -773,5 +812,76 @@ mod tests {
         assert!(lines.iter().any(|line| {
             line == "  latest_bundle_dir_source: script.result.json:last_bundle_dir"
         }));
+    }
+
+    #[test]
+    fn build_resolve_latest_run_projection_uses_existing_run_dir() {
+        let root = make_temp_dir("fret-diag-resolve-latest-run-projection");
+        let run_dir = root.join("777");
+        std::fs::create_dir_all(&run_dir).expect("create run dir");
+        let script = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 777,
+            updated_unix_ms: 1,
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: Some("ok".to_string()),
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+
+        let projection = build_resolve_latest_run_projection(&root, Some(&script));
+
+        assert_eq!(projection.latest_run_id, Some(777));
+        assert_eq!(projection.latest_run_dir, Some(run_dir));
+    }
+
+    #[test]
+    fn build_resolve_latest_bundle_projection_filters_missing_bundle_artifact() {
+        let root = make_temp_dir("fret-diag-resolve-latest-bundle-projection");
+        let bundle_dir = root.join("777-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        let script = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 777,
+            updated_unix_ms: 1,
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: Some("ok".to_string()),
+            reason: None,
+            evidence: None,
+            last_bundle_dir: Some("777-bundle".to_string()),
+            last_bundle_artifact: None,
+        };
+
+        let projection = build_resolve_latest_bundle_projection(&root, Some(&script));
+
+        assert_eq!(projection.latest_bundle_dir, Some(bundle_dir));
+        assert_eq!(
+            projection.latest_bundle_dir_source,
+            Some("script.result.json:last_bundle_dir")
+        );
+        assert_eq!(projection.latest_bundle_artifact, None);
+    }
+
+    #[test]
+    fn resolve_latest_bundle_dir_from_base_or_session_out_dir_uses_bundle_projection() {
+        let root = make_temp_dir("fret-diag-resolve-latest-from-base");
+        let bundle_dir = root.join("888-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.schema2.json"), b"{}" as &[u8])
+            .expect("write bundle artifact");
+        write_script_result(&root, 888, "888-bundle");
+
+        let resolved = resolve_latest_bundle_dir_from_base_or_session_out_dir(&root, None)
+            .expect("resolve latest bundle dir from out dir");
+
+        assert_eq!(resolved.0, bundle_dir);
+        assert_eq!(resolved.1, None);
+        assert_eq!(resolved.2, "script.result.json:last_bundle_dir");
     }
 }

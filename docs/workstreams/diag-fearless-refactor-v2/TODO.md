@@ -105,6 +105,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - latest landing: `diag_campaign` now builds share-manifest payload sections through dedicated source/selection/counters/share helpers, so `build_campaign_share_manifest_payload` no longer open-codes the full JSON object shape inline and payload-section shaping gains direct regression coverage
     - latest landing: `diag_campaign` now routes share-manifest combined-zip mutation through dedicated field-building and share-section apply helpers, so `apply_campaign_share_manifest_combined_zip` no longer splices the update values inline and final share-field mutation gains direct helper-level regression coverage
     - latest landing: `commands::artifacts` now routes meta canonical-path/default-out resolution through dedicated meta-sidecar, bundle-dir, and bundle-path helpers, so `resolve_meta_artifact_paths` no longer mixes all three source kinds inline and each path gains direct helper-level regression coverage
+    - latest landing: `commands::resolve` now routes latest run and bundle projection through dedicated helpers, so `resolve_latest_for_out_dir` and `resolve_latest_bundle_dir_from_base_or_session_out_dir` no longer re-derive the same latest-bundle/run fields inline and the projection logic gains direct helper-level regression coverage
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.

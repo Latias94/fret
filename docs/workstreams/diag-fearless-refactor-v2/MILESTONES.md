@@ -147,9 +147,13 @@ Progress update:
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.
+- `commands::resolve` has now landed another normalization seam around `diag resolve latest` output assembly:
+  - latest run projection now routes through a dedicated helper,
+  - latest bundle projection now routes through a dedicated helper reused by `resolve_latest_for_out_dir` and `resolve_latest_bundle_dir_from_base_or_session_out_dir`,
+  - helper-level regression coverage now locks existing-run-dir projection, missing-artifact filtering, and base/session latest-bundle reuse without invoking the full command.
 - The next decision point in this area is no longer whether `diag_campaign` still needs another small share slice; the higher-ROI
   follow-up is now the remaining artifact resolution/materialization holdouts in `commands::artifacts`
-  and `commands::resolve` before presentation-surface follow-up work.
+  plus the last `commands::resolve` session/latest normalization holdouts before presentation-surface follow-up work.
 
 Exit criteria:
 
