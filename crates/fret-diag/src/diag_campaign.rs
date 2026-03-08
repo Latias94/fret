@@ -109,6 +109,12 @@ struct CampaignJsonWritePlan {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignExecutionStartPlan {
+    execution: CampaignExecutionPlan,
+    manifest_write: CampaignJsonWritePlan,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignBatchArtifactWritePlan {
     batch: CampaignBatchPlan,
     manifest_write: CampaignJsonWritePlan,
@@ -1181,12 +1187,12 @@ fn execute_campaign(
     campaign: &CampaignDefinition,
     ctx: &CampaignRunContext,
 ) -> CampaignExecutionReport {
-    let plan = build_campaign_execution_plan(campaign, ctx);
+    let start_plan = build_campaign_execution_start_plan(campaign, ctx);
     let outcome = normalize_campaign_execution_outcome(
-        execute_campaign_inner(campaign, ctx, &plan),
+        execute_campaign_inner(campaign, ctx, &start_plan),
         campaign.items.len(),
     );
-    build_campaign_execution_report(campaign, &plan, outcome)
+    build_campaign_execution_report(campaign, &start_plan.execution, outcome)
 }
 
 fn normalize_campaign_execution_outcome(
@@ -1249,27 +1255,49 @@ fn build_campaign_report_aggregate_artifacts(
 fn execute_campaign_inner(
     campaign: &CampaignDefinition,
     ctx: &CampaignRunContext,
-    plan: &CampaignExecutionPlan,
+    start_plan: &CampaignExecutionStartPlan,
 ) -> Result<CampaignExecutionOutcome, String> {
-    ensure_campaign_execution_dirs(plan)?;
+    execute_campaign_start_plan(start_plan)?;
 
-    write_campaign_manifest(
-        &plan.campaign_root,
-        campaign,
-        &plan.run_id,
-        plan.created_unix_ms,
-        ctx,
-    )?;
-
-    let item_results = execute_campaign_items(campaign, plan, ctx)?;
-    let finalization = finalize_campaign_execution(campaign, plan, &item_results, ctx)?;
+    let item_results = execute_campaign_items(campaign, &start_plan.execution, ctx)?;
+    let finalization =
+        finalize_campaign_execution(campaign, &start_plan.execution, &item_results, ctx)?;
 
     Ok(build_campaign_execution_outcome(
         campaign,
-        plan,
+        &start_plan.execution,
         &item_results,
         finalization,
     ))
+}
+
+#[cfg(test)]
+fn build_campaign_execution_start_plan_at(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+    created_unix_ms: u64,
+) -> CampaignExecutionStartPlan {
+    let execution = build_campaign_execution_plan_at(campaign, ctx, created_unix_ms);
+    CampaignExecutionStartPlan {
+        manifest_write: build_campaign_manifest_write_plan(&execution, campaign, ctx),
+        execution,
+    }
+}
+
+fn build_campaign_execution_start_plan(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+) -> CampaignExecutionStartPlan {
+    let execution = build_campaign_execution_plan(campaign, ctx);
+    CampaignExecutionStartPlan {
+        manifest_write: build_campaign_manifest_write_plan(&execution, campaign, ctx),
+        execution,
+    }
+}
+
+fn execute_campaign_start_plan(start_plan: &CampaignExecutionStartPlan) -> Result<(), String> {
+    ensure_campaign_execution_dirs(&start_plan.execution)?;
+    write_campaign_json_plan(&start_plan.manifest_write)
 }
 
 fn build_campaign_execution_outcome(
@@ -2589,16 +2617,21 @@ fn campaign_report_to_json(report: &CampaignExecutionReport) -> serde_json::Valu
     campaign_report_json(report, CampaignReportPathMode::ResultArtifact)
 }
 
-fn write_campaign_manifest(
-    campaign_root: &Path,
+fn build_campaign_manifest_write_plan(
+    plan: &CampaignExecutionPlan,
     campaign: &CampaignDefinition,
-    run_id: &str,
-    created_unix_ms: u64,
     ctx: &CampaignRunContext,
-) -> Result<(), String> {
-    let manifest_path = campaign_root.join("campaign.manifest.json");
-    let payload = campaign_manifest_payload(campaign_root, campaign, run_id, created_unix_ms, ctx);
-    write_json_value(&manifest_path, &payload)
+) -> CampaignJsonWritePlan {
+    CampaignJsonWritePlan {
+        output_path: plan.campaign_root.join("campaign.manifest.json"),
+        payload: campaign_manifest_payload(
+            &plan.campaign_root,
+            campaign,
+            &plan.run_id,
+            plan.created_unix_ms,
+            ctx,
+        ),
+    }
 }
 
 fn build_campaign_batch_manifest_write_plan(
@@ -4988,6 +5021,66 @@ mod tests {
             )
         );
         assert!(error.contains(&plan.campaign_root.display().to_string()));
+    }
+
+    #[test]
+    fn build_campaign_manifest_write_plan_uses_manifest_payload_and_output_path() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let campaign = sample_campaign_definition();
+        let plan = build_campaign_execution_plan_at(&campaign, &ctx, 42);
+
+        let write_plan = build_campaign_manifest_write_plan(&plan, &campaign, &ctx);
+
+        assert_eq!(
+            write_plan.output_path,
+            plan.campaign_root.join("campaign.manifest.json")
+        );
+        assert_eq!(
+            write_plan.payload,
+            campaign_manifest_payload(
+                &plan.campaign_root,
+                &campaign,
+                &plan.run_id,
+                plan.created_unix_ms,
+                &ctx,
+            )
+        );
+    }
+
+    #[test]
+    fn build_campaign_execution_start_plan_reuses_execution_and_manifest_setup() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let campaign = sample_campaign_definition();
+
+        let start_plan = build_campaign_execution_start_plan_at(&campaign, &ctx, 42);
+
+        assert_eq!(start_plan.execution.run_id, "42");
+        assert_eq!(
+            start_plan.execution.campaign_root,
+            root.join("diag-out")
+                .join("campaigns")
+                .join("ui-gallery-smoke")
+                .join("42")
+        );
+        assert_eq!(
+            start_plan.manifest_write.output_path,
+            start_plan
+                .execution
+                .campaign_root
+                .join("campaign.manifest.json")
+        );
+        assert_eq!(
+            start_plan.manifest_write.payload,
+            campaign_manifest_payload(
+                &start_plan.execution.campaign_root,
+                &campaign,
+                &start_plan.execution.run_id,
+                start_plan.execution.created_unix_ms,
+                &ctx,
+            )
+        );
     }
 
     #[test]
