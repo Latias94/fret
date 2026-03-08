@@ -59,6 +59,7 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 
 For new app authors, keep the default authoring model small:
 
+- `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
 - `on_action_notify_models` for most typed UI actions,
 - `on_action_notify_transient` when an action must trigger an `App`-only effect in `render()`,
 - `on_activate*` only for local pressable/widget glue.
