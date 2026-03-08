@@ -564,6 +564,12 @@ real editors.
 - `event_keyboard.rs` now also routes pan-activation hold/release through the private
   `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming, release, and
   paint invalidation no longer stay embedded in the retained keyboard router.
+- `event_keyboard.rs` now routes text-input gating, multi-selection
+  modifier sync, and keydown/up dispatch ordering through the private
+  `canvas/widget/event_keyboard_state.rs` and
+  `canvas/widget/event_keyboard_route.rs` seams, so retained keyboard entry handling no
+  longer keeps state priming and top-level key routing embedded in one surface.
+  paint invalidation no longer stay embedded in the retained keyboard router.
 - `retained_widget.rs` now routes semantics / layout / prepaint through the private
   `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value assembly,
   diagnostics-anchor child layout, queue drain-on-layout, and cull-window tracking no
@@ -982,6 +988,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_inertia.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_auto_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`

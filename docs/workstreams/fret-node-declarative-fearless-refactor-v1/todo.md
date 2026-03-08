@@ -499,6 +499,12 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `event_keyboard.rs` now also routes pan-activation hold/release through the
     private `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming,
     release, and paint invalidation no longer stay embedded in the retained keyboard router.
+  - Progress: `event_keyboard.rs` now routes text-input gating, multi-selection
+    modifier sync, and keydown/up dispatch ordering through the private
+    `canvas/widget/event_keyboard_state.rs` and
+    `canvas/widget/event_keyboard_route.rs` seams, so retained keyboard entry handling no
+    longer keeps state priming and top-level key routing embedded in one surface.
+    release, and paint invalidation no longer stay embedded in the retained keyboard router.
   - Progress: `retained_widget.rs` now routes semantics / layout / prepaint through the
     private `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value
     assembly, diagnostics-anchor child layout, queue drain-on-layout, and cull-window
