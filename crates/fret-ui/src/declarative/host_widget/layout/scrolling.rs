@@ -1533,7 +1533,7 @@ impl ElementHostWidget {
             axis: props.axis,
         });
 
-        let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
+        let mut content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         // When running the post-layout extents prototype, install an overflow context so wrapper
         // widgets can probe their descendants with `MaxContent` on the scroll axis. This is a
@@ -1582,6 +1582,7 @@ impl ElementHostWidget {
         });
 
         if !is_probe_layout {
+            let mut relayout_with_updated_content_bounds = false;
             // If we didn't do a deep unbounded probe for `max_child` this frame, scroll extents can
             // be temporarily pinned to cached values even if descendants overflow the forced
             // `content_bounds` rect (common with wrapper-heavy trees like docs pages and tab
@@ -1664,6 +1665,7 @@ impl ElementHostWidget {
                 changed_grow = true;
             }
             if changed_grow {
+                relayout_with_updated_content_bounds = true;
                 if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
                     eprintln!(
                         "scroll extent grew element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed=({:.1},{:.1}) viewport=({:.1},{:.1}) pending_probe={} must_probe={}",
@@ -1778,6 +1780,7 @@ impl ElementHostWidget {
                 }
 
                 if changed {
+                    relayout_with_updated_content_bounds = true;
                     handle.set_content_size_internal(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset_internal(prev);
@@ -1837,6 +1840,39 @@ impl ElementHostWidget {
                         },
                     );
                 }
+            }
+
+            if relayout_with_updated_content_bounds {
+                // Keep wrapper/layout-barrier geometry in sync with the corrected scroll content
+                // extent in the same frame. Without this pass, the scroll handle can expose the
+                // new range while outer shells (cards, panels, etc.) still retain stale bounds.
+                content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
+                cx.with_overflow_context(overflow_ctx, |cx| {
+                    if !is_probe_layout {
+                        let solve_started = profile_cfg.is_some().then(Instant::now);
+                        match cx.children {
+                            [child] => {
+                                cx.solve_barrier_child_root_if_needed(*child, content_bounds);
+                            }
+                            children => {
+                                let roots: Vec<(NodeId, Rect)> =
+                                    children.iter().map(|&c| (c, content_bounds)).collect();
+                                cx.solve_barrier_child_roots_if_needed(&roots);
+                            }
+                        }
+                        if let Some(started) = solve_started {
+                            t_solve_barrier += started.elapsed();
+                        }
+                    }
+
+                    let layout_started = profile_cfg.is_some().then(Instant::now);
+                    for &child in cx.children {
+                        let _ = cx.layout_in(child, content_bounds);
+                    }
+                    if let Some(started) = layout_started {
+                        t_layout_children += started.elapsed();
+                    }
+                });
             }
 
             if observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit {

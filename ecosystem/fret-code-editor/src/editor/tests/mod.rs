@@ -1,7 +1,17 @@
 use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use super::{input, paint};
-use fret_core::Point;
+use fret_app::App;
+use fret_core::{
+    AppWindowId, Event, FrameId, MaterialRegistrationError, MaterialService, Modifiers,
+    PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect,
+    Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+};
+use fret_runtime::TickId;
+use fret_ui::tree::UiTree;
+use fret_ui_kit::declarative::windowed_rows_surface::{
+    WindowedRowsSurfaceDiagnosticsStore, WindowedRowsSurfaceWindowTelemetry,
+};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -39,6 +49,150 @@ impl fret_ui::action::UiActionHost for TestHost {
 
 impl fret_ui::action::UiFocusActionHost for TestHost {
     fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
+}
+
+#[derive(Default)]
+struct FakeServices;
+
+impl TextService for FakeServices {
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        _constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        (
+            TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(10.0), Px(16.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: TextBlobId) {}
+}
+
+impl PathService for FakeServices {
+    fn prepare(
+        &mut self,
+        _commands: &[PathCommand],
+        _style: PathStyle,
+        _constraints: PathConstraints,
+    ) -> (PathId, PathMetrics) {
+        (PathId::default(), PathMetrics::default())
+    }
+
+    fn release(&mut self, _path: PathId) {}
+}
+
+impl SvgService for FakeServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+        SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+        true
+    }
+}
+
+impl MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
+fn editor_ui_bounds() -> Rect {
+    Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(360.0)),
+    )
+}
+
+fn render_editor_scroll_audit_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut FakeServices,
+    window: AppWindowId,
+    handle: CodeEditorHandle,
+) {
+    let bounds = editor_ui_bounds();
+    let root = fret_ui::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "code-editor-scroll-audit",
+        |cx| {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.size.width = fret_ui::element::Length::Fill;
+            layout.size.height = fret_ui::element::Length::Px(Px(180.0));
+            vec![cx.container(
+                fret_ui::element::ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        CodeEditor::new(handle.clone())
+                            .key(0)
+                            .overscan(8)
+                            .viewport_test_id("code-editor-scroll-audit-viewport")
+                            .into_element(cx),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds, 1.0);
+}
+
+fn node_by_test_id<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> &'a fret_core::SemanticsNode {
+    snap.nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(test_id))
+        .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
+}
+
+fn bounds_by_test_id(ui: &UiTree<App>, snap: &fret_core::SemanticsSnapshot, test_id: &str) -> Rect {
+    let node = node_by_test_id(snap, test_id);
+    ui.debug_node_visual_bounds(node.id)
+        .or_else(|| ui.debug_node_bounds(node.id))
+        .unwrap_or(node.bounds)
+}
+
+fn center_of(bounds: Rect) -> Point {
+    Point::new(
+        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+    )
+}
+
+fn windowed_rows_telemetry(app: &App, window: AppWindowId) -> WindowedRowsSurfaceWindowTelemetry {
+    let store = app
+        .global::<WindowedRowsSurfaceDiagnosticsStore>()
+        .expect("windowed rows diagnostics store");
+    let windows = store
+        .windows_for_window(window, app.frame_id())
+        .expect("windowed rows telemetry for frame");
+    assert_eq!(
+        windows.len(),
+        1,
+        "expected one windowed rows surface telemetry entry"
+    );
+    windows[0]
 }
 
 fn row_geom_key_for_tests(text: &Arc<str>) -> geom::RowGeomKey {
@@ -3697,6 +3851,87 @@ fn page_down_moves_by_viewport_rows_and_scrolls() {
         .display_point_to_byte(&st.buffer, DisplayPoint::new(2, 0));
     assert_eq!(st.selection.caret(), expected);
     assert_eq!(scroll.offset().y, Px(20.0));
+}
+
+#[test]
+fn editor_viewport_wheel_scroll_updates_inner_window_without_bounds_drift() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut services = FakeServices::default();
+    let text = (0..240)
+        .map(|idx| format!("fn line_{idx:03}() {{ println!(\"scroll {idx:03}\"); }}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let handle = CodeEditorHandle::new(text);
+
+    app.set_tick_id(TickId(1));
+    app.set_frame_id(FrameId(1));
+    render_editor_scroll_audit_frame(&mut ui, &mut app, &mut services, window, handle.clone());
+    app.set_tick_id(TickId(2));
+    app.set_frame_id(FrameId(2));
+    render_editor_scroll_audit_frame(&mut ui, &mut app, &mut services, window, handle.clone());
+
+    let snap = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot before wheel");
+    let before_bounds = bounds_by_test_id(&ui, &snap, "code-editor-scroll-audit-viewport");
+    let before = windowed_rows_telemetry(&app, window);
+    assert!(
+        before.visible_count > 0,
+        "expected visible rows before wheel, telemetry={before:?}"
+    );
+    assert!(
+        before.offset_y.0.abs() <= 0.01,
+        "expected initial inner viewport offset near zero, telemetry={before:?}"
+    );
+    assert!(
+        (before_bounds.size.height.0 - before.viewport_height.0).abs() <= 0.01,
+        "expected viewport test_id bounds to match visible viewport height: bounds={before_bounds:?} telemetry={before:?}"
+    );
+    assert!(
+        before.content_height.0 > before_bounds.size.height.0 + 0.01,
+        "expected content to be taller than the visible viewport in this regression fixture: bounds={before_bounds:?} telemetry={before:?}"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: center_of(before_bounds),
+            delta: Point::new(Px(0.0), Px(-120.0)),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    app.set_tick_id(TickId(3));
+    app.set_frame_id(FrameId(3));
+    render_editor_scroll_audit_frame(&mut ui, &mut app, &mut services, window, handle);
+
+    let snap = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot after wheel");
+    let after_bounds = bounds_by_test_id(&ui, &snap, "code-editor-scroll-audit-viewport");
+    let after = windowed_rows_telemetry(&app, window);
+    assert!(
+        after.offset_y.0 > before.offset_y.0 + 0.01,
+        "expected wheel to advance editor inner viewport offset: before={before:?} after={after:?}"
+    );
+    assert!(
+        after.visible_start.unwrap_or(0) >= before.visible_start.unwrap_or(0),
+        "expected visible row window to stay monotonic after wheel: before={before:?} after={after:?}"
+    );
+    assert!(
+        (after_bounds.origin.x.0 - before_bounds.origin.x.0).abs() <= 0.01
+            && (after_bounds.origin.y.0 - before_bounds.origin.y.0).abs() <= 0.01
+            && (after_bounds.size.width.0 - before_bounds.size.width.0).abs() <= 0.01
+            && (after_bounds.size.height.0 - before_bounds.size.height.0).abs() <= 0.01,
+        "expected editor viewport bounds to stay stable while inner scroll moves: before={before_bounds:?} after={after_bounds:?}"
+    );
 }
 
 #[test]

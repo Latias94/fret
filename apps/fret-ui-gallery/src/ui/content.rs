@@ -833,11 +833,15 @@ fn page_preview(
             shadcn::CardDescription::new("Interactive preview for validating behaviors.")
                 .into_element(cx),
         ])
-        .into_element(cx),
-        shadcn::CardContent::new(body).into_element(cx),
+        .into_element(cx)
+        .test_id("ui-gallery-preview-card-header"),
+        shadcn::CardContent::new(body)
+            .into_element(cx)
+            .test_id("ui-gallery-preview-card-content"),
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+    .test_id("ui-gallery-preview-card")
 }
 
 fn preview_ai_unwired(

@@ -25,8 +25,8 @@ use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActio
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{
-    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps, SemanticsProps,
-    TextInputRegionProps,
+    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps,
+    SemanticsDecoration, SemanticsProps, TextInputRegionProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::windowed_rows_surface::{
@@ -2991,17 +2991,12 @@ impl CodeEditor {
                     },
                 ));
 
-                vec![windowed_rows_surface_with_pointer_region(
+                let surface = windowed_rows_surface_with_pointer_region(
                     cx,
                     surface_props,
                     pointer_props,
                     handlers,
-                    Some(SemanticsProps {
-                        role: fret_core::SemanticsRole::Viewport,
-                        label: Some(Arc::<str>::from("Editor viewport")),
-                        test_id: viewport_test_id.clone(),
-                        ..Default::default()
-                    }),
+                    None,
                     move |painter, row, rect| {
                         if cell_w.get().0 <= 0.0 {
                             let scope = painter.key_scope(&"fret-code-editor-cell-width");
@@ -3039,7 +3034,18 @@ impl CodeEditor {
                             caret_color,
                         );
                     },
-                )]
+                );
+
+                if let Some(test_id) = viewport_test_id.clone() {
+                    let surface = surface.attach_semantics(
+                        SemanticsDecoration::default()
+                            .label("Editor viewport")
+                            .test_id(test_id),
+                    );
+                    vec![surface]
+                } else {
+                    vec![surface]
+                }
             })
         })
     }

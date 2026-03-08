@@ -2057,6 +2057,114 @@ fn scroll_probe_cache_shrinks_to_observed_bounds_when_probe_overmeasures() {
 }
 
 #[test]
+fn scroll_post_layout_growth_relayouts_child_root_same_frame() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureSmallLayoutLarge {
+        measured: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureSmallLayoutLarge {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.scroll_extents_post_layout = true;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-growth-relayout",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node = ui.children(root)[0];
+    let leaf = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(320.0)),
+    });
+    let child_root = ui.create_node(MeasureSmallLayoutLarge {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        child: leaf,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(320.0)),
+        ),
+    });
+    ui.set_children(child_root, vec![leaf]);
+    ui.set_children(scroll_node, vec![child_root]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let child_root_bounds = ui.debug_node_bounds(child_root).expect("child root bounds");
+    let leaf_bounds = ui.debug_node_bounds(leaf).expect("leaf bounds");
+    let content = scroll_handle.content_size();
+
+    assert!(
+        (content.height.0 - 320.0).abs() <= 0.5,
+        "expected post-layout observed overflow to grow content height immediately: content={content:?} child_root={child_root_bounds:?} leaf={leaf_bounds:?}"
+    );
+    assert!(
+        child_root_bounds.size.height.0 + 0.5 >= leaf_bounds.size.height.0,
+        "expected child root geometry to relayout against the grown content bounds in the same frame: child_root={child_root_bounds:?} leaf={leaf_bounds:?} content={content:?}"
+    );
+}
+
+#[test]
 fn scroll_extent_updates_when_descendant_invalidated_but_child_root_cleared() {
     let mut app = TestHost::new();
     let show_more = app.models_mut().insert(false);

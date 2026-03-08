@@ -17,6 +17,9 @@ syntax-all = ["syntax", "fret-syntax/tree-sitter-languages"]
 syntax-rust = ["syntax", "fret-syntax/lang-rust"]
 syntax-markdown = ["syntax", "fret-syntax/lang-md"]
 
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }

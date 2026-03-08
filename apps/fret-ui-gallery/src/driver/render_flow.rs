@@ -342,9 +342,9 @@ fn render_root_contents(
 mod tests {
     use super::*;
     use fret_core::{
-        AppWindowId, Event, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
-        PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect, Size, SvgId,
-        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect,
+        Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
 
@@ -405,13 +405,20 @@ mod tests {
         }
     }
 
+    fn find_node_by_test_id<'a>(
+        snap: &'a fret_core::SemanticsSnapshot,
+        test_id: &str,
+    ) -> Option<&'a fret_core::SemanticsNode> {
+        snap.nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+    }
+
     fn node_by_test_id<'a>(
         snap: &'a fret_core::SemanticsSnapshot,
         test_id: &str,
     ) -> &'a fret_core::SemanticsNode {
-        snap.nodes
-            .iter()
-            .find(|node| node.test_id.as_deref() == Some(test_id))
+        find_node_by_test_id(snap, test_id)
             .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
     }
 
@@ -466,12 +473,37 @@ mod tests {
     }
 
     fn visual_bounds_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> Rect {
-        let node_id = node_id_by_test_id(rendered, test_id);
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after layout");
+        let node = node_by_test_id(snapshot, test_id);
         rendered
             .state
             .ui
-            .debug_node_visual_bounds(node_id)
-            .unwrap_or_else(|| panic!("missing visual bounds for test_id={test_id}"))
+            .debug_node_visual_bounds(node.id)
+            .or_else(|| rendered.state.ui.debug_node_bounds(node.id))
+            .or(Some(node.bounds))
+            .unwrap_or_else(|| panic!("missing visual/layout bounds for test_id={test_id}"))
+    }
+
+    fn visual_bounds_by_test_id_if_present(
+        rendered: &RenderedGalleryPage,
+        test_id: &str,
+    ) -> Option<Rect> {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after layout");
+        let node = find_node_by_test_id(snapshot, test_id)?;
+        rendered
+            .state
+            .ui
+            .debug_node_visual_bounds(node.id)
+            .or_else(|| rendered.state.ui.debug_node_bounds(node.id))
+            .or(Some(node.bounds))
     }
 
     fn render_gallery_page(page: &str) -> RenderedGalleryPage {
@@ -501,9 +533,12 @@ mod tests {
         rendered
     }
 
-    fn assert_page_bottom_clamps_to_viewport_bottom(page: &str, page_root_test_id: &str) {
-        let mut rendered = render_gallery_page(page);
-        let initial_page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+    fn scroll_gallery_page_to_bottom(
+        rendered: &mut RenderedGalleryPage,
+        page: &str,
+        tracked_test_id: &str,
+    ) -> (Rect, Rect, Rect) {
+        let initial_page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
         let mut last_page_y = initial_page_bounds.origin.y.0;
         let mut moved = false;
         let mut stable_frames = 0usize;
@@ -528,9 +563,9 @@ mod tests {
                 }),
             );
 
-            render_gallery_frame(&mut rendered);
+            render_gallery_frame(rendered);
 
-            let page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+            let page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
             if page_bounds.origin.y.0 < last_page_y - 0.5 {
                 moved = true;
                 stable_frames = 0;
@@ -542,7 +577,7 @@ mod tests {
             let viewport_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
             let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
             if moved && (page_bottom - viewport_bottom).abs() <= 2.0 {
-                return;
+                return (initial_page_bounds, viewport_bounds, page_bounds);
             }
             if moved && stable_frames >= 3 {
                 break;
@@ -550,7 +585,7 @@ mod tests {
         }
 
         let viewport_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
-        let page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+        let page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
 
         let viewport_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
         let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
@@ -564,12 +599,107 @@ mod tests {
             (page_bottom - viewport_bottom).abs() <= 2.0,
             "expected gallery content to clamp cleanly at the viewport bottom for page={page}: viewport={viewport_bounds:?} page={page_bounds:?} page_bottom={page_bottom} viewport_bottom={viewport_bottom}"
         );
+
+        (initial_page_bounds, viewport_bounds, page_bounds)
     }
 
-    fn scroll_test_id_into_gallery_viewport(rendered: &mut RenderedGalleryPage, target_test_id: &str) {
-        for _ in 0..64 {
-            let gallery_viewport = visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
-            let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+    fn assert_page_bottom_clamps_to_viewport_bottom(page: &str, tracked_test_id: &str) {
+        let mut rendered = render_gallery_page(page);
+        let _ = scroll_gallery_page_to_bottom(&mut rendered, page, tracked_test_id);
+    }
+
+    fn assert_preview_card_content_contains_page_bottom(page: &str, page_root_test_id: &str) {
+        let mut rendered = render_gallery_page(page);
+        let (initial_page_bounds, viewport_bounds, _) =
+            scroll_gallery_page_to_bottom(&mut rendered, page, "ui-gallery-preview-card");
+
+        let page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+
+        let card_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card");
+        let header_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-header");
+        let content_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-content");
+
+        let card_bottom = card_bounds.origin.y.0 + card_bounds.size.height.0;
+        let content_bottom = content_bounds.origin.y.0 + content_bounds.size.height.0;
+        let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
+
+        assert!(
+            content_bottom + 1.0 >= page_bottom,
+            "expected preview card content to contain the scrolled page bottom for page={page}: initial_page={initial_page_bounds:?} viewport={viewport_bounds:?} card={card_bounds:?} header={header_bounds:?} content={content_bounds:?} page={page_bounds:?}"
+        );
+        assert!(
+            card_bottom + 1.0 >= content_bottom,
+            "expected preview card root to contain its content after scrolling to bottom for page={page}: initial_page={initial_page_bounds:?} viewport={viewport_bounds:?} card={card_bounds:?} header={header_bounds:?} content={content_bounds:?} page={page_bounds:?}"
+        );
+    }
+
+    fn scroll_test_id_into_gallery_viewport(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+    ) {
+        let mut last_gallery_scroll_y: Option<f64> = None;
+        let mut stable_missing_frames = 0usize;
+
+        for _ in 0..96 {
+            let gallery_viewport =
+                visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
+            let target_bounds = visual_bounds_by_test_id_if_present(rendered, target_test_id);
+            let gallery_snapshot =
+                rendered.state.ui.semantics_snapshot().expect(
+                    "expected semantics snapshot while scrolling target into gallery viewport",
+                );
+            let gallery_scroll = node_by_test_id(gallery_snapshot, "ui-gallery-content-viewport")
+                .extra
+                .scroll;
+
+            let Some(target_bounds) = target_bounds else {
+                let current_gallery_scroll_y = gallery_scroll.y.unwrap_or(0.0);
+                if let Some(last) = last_gallery_scroll_y {
+                    if (current_gallery_scroll_y - last).abs() <= 0.01 {
+                        stable_missing_frames += 1;
+                    } else {
+                        stable_missing_frames = 0;
+                    }
+                }
+                last_gallery_scroll_y = Some(current_gallery_scroll_y);
+
+                if stable_missing_frames >= 3 {
+                    let matching_test_ids: Vec<String> = gallery_snapshot
+                        .nodes
+                        .iter()
+                        .filter_map(|node| node.test_id.as_ref())
+                        .filter(|test_id| {
+                            (target_test_id.contains("markdown") && test_id.contains("markdown"))
+                                || (target_test_id.contains("code-editor")
+                                    && test_id.contains("code-editor"))
+                        })
+                        .take(24)
+                        .cloned()
+                        .collect();
+                    panic!(
+                        "expected target to appear in semantics after scrolling gallery viewport: target_test_id={target_test_id} gallery_viewport={gallery_viewport:?} gallery_scroll={gallery_scroll:?} matching_test_ids={matching_test_ids:?}"
+                    );
+                }
+
+                let wheel_pos = Point::new(
+                    Px(gallery_viewport.origin.x.0 + gallery_viewport.size.width.0 * 0.5),
+                    Px(gallery_viewport.origin.y.0 + gallery_viewport.size.height.0 * 0.5),
+                );
+                rendered.state.ui.dispatch_event(
+                    &mut rendered.app,
+                    &mut rendered.services,
+                    &Event::Pointer(PointerEvent::Wheel {
+                        position: wheel_pos,
+                        delta: Point::new(Px(0.0), Px(-480.0)),
+                        modifiers: Modifiers::default(),
+                        pointer_id: PointerId(0),
+                        pointer_type: PointerType::Mouse,
+                    }),
+                );
+                render_gallery_frame(rendered);
+                continue;
+            };
+
             let target_center_y = target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5;
             let visible_top = gallery_viewport.origin.y.0;
             let visible_bottom = visible_top + gallery_viewport.size.height.0;
@@ -602,9 +732,136 @@ mod tests {
         }
 
         let gallery_viewport = visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
-        let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+        let target_bounds = visual_bounds_by_test_id_if_present(rendered, target_test_id);
         panic!(
             "expected target to become visible inside gallery viewport before interaction: target_test_id={target_test_id} gallery_viewport={gallery_viewport:?} target_bounds={target_bounds:?}"
+        );
+    }
+
+    fn click_test_id_center(rendered: &mut RenderedGalleryPage, target_test_id: &str) {
+        let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+        let position = Point::new(
+            Px(target_bounds.origin.x.0 + target_bounds.size.width.0 * 0.5),
+            Px(target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5),
+        );
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::Pointer(PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(1),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        render_gallery_frame(rendered);
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::Pointer(PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_id: PointerId(1),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        render_gallery_frame(rendered);
+    }
+
+    fn wheel_test_id_center(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+        delta: Point,
+        steps: usize,
+    ) {
+        for _ in 0..steps {
+            let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+            let position = Point::new(
+                Px(target_bounds.origin.x.0 + target_bounds.size.width.0 * 0.5),
+                Px(target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5),
+            );
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position,
+                    delta,
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_gallery_frame(rendered);
+        }
+    }
+
+    fn assert_inner_viewport_vertical_scroll_is_owned_by_editor(
+        page: &str,
+        viewport_test_id: &str,
+    ) {
+        let mut rendered = render_gallery_page(page);
+        scroll_test_id_into_gallery_viewport(&mut rendered, viewport_test_id);
+
+        let before_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before inner editor scroll");
+        let before_gallery_scroll = node_by_test_id(before_snapshot, "ui-gallery-content-viewport")
+            .extra
+            .scroll;
+        let before_inner_scroll = node_by_test_id(before_snapshot, viewport_test_id)
+            .extra
+            .scroll;
+        let before_viewport_bounds = visual_bounds_by_test_id(&rendered, viewport_test_id);
+
+        assert!(
+            before_inner_scroll.y_max.unwrap_or(0.0) > 0.01,
+            "expected editor viewport to have vertical overflow before wheel input: page={page} viewport_test_id={viewport_test_id} before_inner_scroll={before_inner_scroll:?} before_gallery_scroll={before_gallery_scroll:?} bounds={before_viewport_bounds:?}"
+        );
+
+        wheel_test_id_center(
+            &mut rendered,
+            viewport_test_id,
+            Point::new(Px(0.0), Px(-240.0)),
+            8,
+        );
+
+        let after_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after inner editor wheel input");
+        let after_gallery_scroll = node_by_test_id(after_snapshot, "ui-gallery-content-viewport")
+            .extra
+            .scroll;
+        let after_inner_scroll = node_by_test_id(after_snapshot, viewport_test_id)
+            .extra
+            .scroll;
+        let after_viewport_bounds = visual_bounds_by_test_id(&rendered, viewport_test_id);
+
+        assert!(
+            after_inner_scroll.y.unwrap_or(0.0) > before_inner_scroll.y.unwrap_or(0.0) + 0.01,
+            "expected wheel input over the editor viewport to advance the editor's own scroll state: page={page} viewport_test_id={viewport_test_id} before_inner_scroll={before_inner_scroll:?} after_inner_scroll={after_inner_scroll:?} before_gallery_scroll={before_gallery_scroll:?} after_gallery_scroll={after_gallery_scroll:?} before_bounds={before_viewport_bounds:?} after_bounds={after_viewport_bounds:?}"
+        );
+        assert!(
+            (after_gallery_scroll.y.unwrap_or(0.0) - before_gallery_scroll.y.unwrap_or(0.0)).abs()
+                <= 0.01,
+            "expected the outer gallery viewport not to consume wheel input while the inner editor viewport can still scroll: page={page} viewport_test_id={viewport_test_id} before_gallery_scroll={before_gallery_scroll:?} after_gallery_scroll={after_gallery_scroll:?} before_inner_scroll={before_inner_scroll:?} after_inner_scroll={after_inner_scroll:?}"
+        );
+        assert!(
+            (after_viewport_bounds.origin.y.0 - before_viewport_bounds.origin.y.0).abs() <= 0.01
+                && (after_viewport_bounds.size.height.0 - before_viewport_bounds.size.height.0)
+                    .abs()
+                    <= 0.01,
+            "expected inner editor scrolling to keep the editor viewport geometry stable inside the page: page={page} viewport_test_id={viewport_test_id} before_bounds={before_viewport_bounds:?} after_bounds={after_viewport_bounds:?} before_gallery_scroll={before_gallery_scroll:?} after_gallery_scroll={after_gallery_scroll:?}"
         );
     }
 
@@ -630,7 +887,191 @@ mod tests {
         ];
 
         for (page, page_root_test_id) in cases {
-            assert_page_bottom_clamps_to_viewport_bottom(page, page_root_test_id);
+            let _ = page_root_test_id;
+            assert_page_bottom_clamps_to_viewport_bottom(page, "ui-gallery-preview-card");
+        }
+    }
+
+    #[test]
+    fn gallery_preview_card_contains_avatar_and_card_page_content_at_bottom() {
+        let cases = [
+            (PAGE_AVATAR, "ui-gallery-avatar"),
+            (PAGE_CARD, "ui-gallery-card"),
+        ];
+
+        for (page, page_root_test_id) in cases {
+            assert_preview_card_content_contains_page_bottom(page, page_root_test_id);
+        }
+    }
+
+    #[test]
+    fn nested_scroll_area_vertical_wheel_bubbles_from_inner_x_viewport_to_outer_y_viewport() {
+        let mut rendered = render_gallery_page(PAGE_SCROLL_AREA);
+        let outer_viewport_test_id = "ui-gallery-scroll-area-nested-outer-viewport";
+        let inner_viewport_test_id = "ui-gallery-scroll-area-nested-inner-viewport";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, inner_viewport_test_id);
+
+        let before_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before nested scroll routing check");
+        let before_outer_scroll = node_by_test_id(before_snapshot, outer_viewport_test_id)
+            .extra
+            .scroll;
+        let before_inner_scroll = node_by_test_id(before_snapshot, inner_viewport_test_id)
+            .extra
+            .scroll;
+
+        assert!(
+            before_outer_scroll.y_max.unwrap_or(0.0) > 0.01,
+            "expected nested outer viewport to be vertically scrollable before routing check: outer_scroll={before_outer_scroll:?}"
+        );
+        assert!(
+            before_inner_scroll.x_max.unwrap_or(0.0) > 0.01,
+            "expected nested inner viewport to be horizontally scrollable before routing check: inner_scroll={before_inner_scroll:?}"
+        );
+
+        for _ in 0..6 {
+            let viewport = visual_bounds_by_test_id(&rendered, inner_viewport_test_id);
+            let wheel_pos = Point::new(
+                Px(viewport.origin.x.0 + viewport.size.width.0 * 0.5),
+                Px(viewport.origin.y.0 + viewport.size.height.0 * 0.5),
+            );
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-240.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_gallery_frame(&mut rendered);
+        }
+
+        let after_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after nested scroll routing wheel input");
+        let after_outer_scroll = node_by_test_id(after_snapshot, outer_viewport_test_id)
+            .extra
+            .scroll;
+        let after_inner_scroll = node_by_test_id(after_snapshot, inner_viewport_test_id)
+            .extra
+            .scroll;
+
+        assert!(
+            after_outer_scroll.y.unwrap_or(0.0) > before_outer_scroll.y.unwrap_or(0.0) + 0.01,
+            "expected vertical wheel input over the inner X-scroll viewport to bubble into the outer Y-scroll viewport: before_outer={before_outer_scroll:?} after_outer={after_outer_scroll:?} before_inner={before_inner_scroll:?} after_inner={after_inner_scroll:?}"
+        );
+        assert!(
+            (after_inner_scroll.x.unwrap_or(0.0) - before_inner_scroll.x.unwrap_or(0.0)).abs()
+                <= 0.01,
+            "expected inner X-scroll viewport not to consume a dominant vertical wheel gesture: before_inner={before_inner_scroll:?} after_inner={after_inner_scroll:?} before_outer={before_outer_scroll:?} after_outer={after_outer_scroll:?}"
+        );
+    }
+
+    #[test]
+    fn expand_at_bottom_scroll_area_gains_scroll_range_and_scrolls_after_toggle() {
+        let mut rendered = render_gallery_page(PAGE_SCROLL_AREA);
+        let viewport_test_id = "ui-gallery-scroll-area-expand-at-bottom-viewport";
+        let toggle_test_id = "ui-gallery-scroll-area-expand-at-bottom-toggle";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, viewport_test_id);
+
+        let before_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before expand-at-bottom toggle");
+        let before_scroll = node_by_test_id(before_snapshot, viewport_test_id)
+            .extra
+            .scroll;
+
+        assert!(
+            before_scroll.y_max.unwrap_or(0.0) <= 0.01,
+            "expected expand-at-bottom viewport to start without vertical overflow: before_scroll={before_scroll:?}"
+        );
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, toggle_test_id);
+        click_test_id_center(&mut rendered, toggle_test_id);
+        scroll_test_id_into_gallery_viewport(&mut rendered, viewport_test_id);
+
+        let expanded_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after expand-at-bottom toggle");
+        let expanded_scroll = node_by_test_id(expanded_snapshot, viewport_test_id)
+            .extra
+            .scroll;
+
+        assert!(
+            expanded_scroll.y_max.unwrap_or(0.0) > before_scroll.y_max.unwrap_or(0.0) + 0.01,
+            "expected expand-at-bottom toggle to grow the viewport scroll range immediately: before_scroll={before_scroll:?} expanded_scroll={expanded_scroll:?}"
+        );
+        assert!(
+            expanded_scroll.y.unwrap_or(0.0) <= before_scroll.y.unwrap_or(0.0) + 0.01,
+            "expected toggling extra rows at the bottom not to spuriously move the current offset: before_scroll={before_scroll:?} expanded_scroll={expanded_scroll:?}"
+        );
+
+        for _ in 0..8 {
+            let viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
+            let wheel_pos = Point::new(
+                Px(viewport.origin.x.0 + viewport.size.width.0 * 0.5),
+                Px(viewport.origin.y.0 + viewport.size.height.0 * 0.5),
+            );
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-240.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_gallery_frame(&mut rendered);
+        }
+
+        let after_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after scrolling expanded viewport");
+        let after_scroll = node_by_test_id(after_snapshot, viewport_test_id)
+            .extra
+            .scroll;
+
+        assert!(
+            after_scroll.y.unwrap_or(0.0) > expanded_scroll.y.unwrap_or(0.0) + 0.01,
+            "expected wheel input to scroll the expand-at-bottom viewport after growth at the bottom: before_scroll={before_scroll:?} expanded_scroll={expanded_scroll:?} after_scroll={after_scroll:?}"
+        );
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn editor_inner_viewports_scroll_without_advancing_gallery_page() {
+        let cases = [
+            (
+                PAGE_MARKDOWN_EDITOR_SOURCE,
+                "ui-gallery-markdown-editor-viewport",
+            ),
+            (PAGE_CODE_EDITOR_MVP, "ui-gallery-code-editor-mvp-viewport"),
+            (
+                PAGE_CODE_EDITOR_MVP,
+                "ui-gallery-code-editor-a11y-selection-wrap-gate-viewport",
+            ),
+        ];
+
+        for (page, viewport_test_id) in cases {
+            assert_inner_viewport_vertical_scroll_is_owned_by_editor(page, viewport_test_id);
         }
     }
 
@@ -648,7 +1089,9 @@ mod tests {
             .ui
             .semantics_snapshot()
             .expect("expected semantics snapshot after initial render");
-        let before_viewport_scroll = node_by_test_id(before_snapshot, viewport_test_id).extra.scroll;
+        let before_viewport_scroll = node_by_test_id(before_snapshot, viewport_test_id)
+            .extra
+            .scroll;
         let before_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
         assert!(
             before_viewport.size.height.0 > 0.01,
@@ -680,7 +1123,9 @@ mod tests {
             .ui
             .semantics_snapshot()
             .expect("expected semantics snapshot after wheel scrolling");
-        let after_viewport_scroll = node_by_test_id(after_snapshot, viewport_test_id).extra.scroll;
+        let after_viewport_scroll = node_by_test_id(after_snapshot, viewport_test_id)
+            .extra
+            .scroll;
         let after_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
         assert!(
             after_viewport_scroll.y.unwrap_or(0.0) > before_viewport_scroll.y.unwrap_or(0.0) + 0.01,

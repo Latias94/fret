@@ -1,3 +1,5 @@
+#[cfg(test)]
+use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -22,7 +24,7 @@ pub(crate) struct RuntimeTaffyDumpConfig {
     pub(crate) out_dir: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) interactive_resize_text_width_cache_entries: usize,
     pub(crate) keep_alive_view_cache_scratch_disabled: bool,
@@ -90,8 +92,42 @@ pub(crate) enum LayoutEngineSweepPolicy {
 }
 
 pub(crate) fn ui_runtime_config() -> &'static UiRuntimeEnvConfig {
+    #[cfg(test)]
+    if let Some(config) = UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| *slot.borrow()) {
+        return config;
+    }
+
     static CONFIG: OnceLock<UiRuntimeEnvConfig> = OnceLock::new();
     CONFIG.get_or_init(UiRuntimeEnvConfig::from_env)
+}
+
+#[cfg(test)]
+thread_local! {
+    static UI_RUNTIME_CONFIG_TEST_OVERRIDE: RefCell<Option<&'static UiRuntimeEnvConfig>> =
+        const { RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) struct UiRuntimeConfigTestOverrideGuard;
+
+#[cfg(test)]
+impl Drop for UiRuntimeConfigTestOverrideGuard {
+    fn drop(&mut self) {
+        UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| {
+            slot.borrow_mut().take();
+        });
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn scoped_ui_runtime_config_test_override(
+    config: UiRuntimeEnvConfig,
+) -> UiRuntimeConfigTestOverrideGuard {
+    let leaked: &'static UiRuntimeEnvConfig = Box::leak(Box::new(config));
+    UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| {
+        *slot.borrow_mut() = Some(leaked);
+    });
+    UiRuntimeConfigTestOverrideGuard
 }
 
 impl UiRuntimeEnvConfig {

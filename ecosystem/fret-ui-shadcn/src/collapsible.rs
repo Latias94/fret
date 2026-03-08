@@ -415,6 +415,15 @@ pub fn collapsible_uncontrolled<H: UiHost>(
     Collapsible::uncontrolled(default_open).into_element_with_open_model(cx, trigger, content)
 }
 
+/// Upstream-shaped Collapsible primitives (`Collapsible`/`CollapsibleTrigger`/`CollapsibleContent`).
+///
+/// We keep these in a nested module to preserve the existing ergonomic builder surface at
+/// `fret_ui_shadcn::Collapsible` while also exposing a shadcn/Radix-style children API via
+/// `fret_ui_shadcn::collapsible::primitives`.
+pub mod primitives {
+    pub use crate::collapsible_primitives::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -942,5 +951,16 @@ mod tests {
             trigger_node.flags.expanded,
             "custom trigger should expose expanded=true while open"
         );
+    }
+
+    #[test]
+    fn collapsible_nested_primitives_surface_is_exposed() {
+        let _ = crate::collapsible::primitives::Collapsible::new();
+        let _ = crate::collapsible::primitives::CollapsibleTrigger::new(Vec::<
+            fret_ui::element::AnyElement,
+        >::new());
+        let _ = crate::collapsible::primitives::CollapsibleContent::new(Vec::<
+            fret_ui::element::AnyElement,
+        >::new());
     }
 }
