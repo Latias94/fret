@@ -7,7 +7,7 @@ description: "This skill should be used when the user asks to \"align Material 3
 
 ## When to use
 
-- A Material-ish component does not match expected Material 3 behavior (states, focus, dismiss, keyboard nav, motion, density, field choreography).
+- A Material-ish component does not match expected Material 3 behavior (states, focus, dismiss, keyboard nav, motion, density, or field choreography).
 - You want to port a Material 3 (or “Material 3 Expressive”) component recipe into Fret without leaking policy into `crates/*`.
 - You need a repeatable parity workflow: upstream reference → Fret layer mapping → regression gate.
 - The task touches Material-specific foundations such as state layers, ripple, floating labels, motion schemes, active indicators, or touch-target sizing.
@@ -63,32 +63,23 @@ Defaults if unclear:
 
 ## Quick start
 
-1. Decide the source-of-truth ordering (spec vs Compose vs MUI vs Base UI) before touching code.
-2. Study one mature in-tree exemplar before inventing a new parity workflow.
-3. Map the mismatch to the correct layer (mechanism vs shared Material foundation vs recipe).
+1. Decide the source-of-truth ordering before touching code.
+2. Inspect one mature in-tree exemplar before inventing a new parity workflow.
+3. Read the two reference notes listed below and map the mismatch to the correct Fret layer.
 4. Land a gate (test and/or `tools/diag-scripts/*.json`) with stable `test_id`.
 
 ## Workflow
 
-### 0) Study a mature exemplar first (important)
+### 0) Read the two reference notes first
 
-Before changing a Material component, inspect at least one Fret component that already lands parity work cleanly.
+Use these notes to keep the main workflow lean:
 
-Recommended exemplars:
+- Reference stack + in-tree exemplars:
+  - `.agents/skills/fret-material-source-alignment/references/material-reference-stack.md`
+- Field-family high-ROI checklist:
+  - `.agents/skills/fret-material-source-alignment/references/material-field-family-checklist.md`
 
-- shadcn Select audit: `docs/audits/shadcn-select.md`
-- shadcn Select recipe: `ecosystem/fret-ui-shadcn/src/select.rs`
-- shared Select primitive/policy surface: `ecosystem/fret-ui-kit/src/primitives/select.rs`
-- Material 3 Select recipe: `ecosystem/fret-ui-material3/src/select.rs`
-- Material 3 exposed dropdown recipe: `ecosystem/fret-ui-material3/src/exposed_dropdown.rs`
-
-What to learn from these exemplars:
-
-- how Fret splits mechanism vs policy vs recipe,
-- how stable `test_id` surfaces are derived for trigger/listbox/items,
-- how semantics outcomes are asserted (`ComboBox`, `ListBox`, `active_descendant`, `controls`, `expanded`),
-- how overlay sizing/width floors/probes are handled without leaking policy into `crates/*`,
-- how parity work leaves behind a 3-pack: repro, gate, evidence.
+When the component belongs to the field family (`TextField`, `Select`, `Autocomplete`, `ExposedDropdown`, `DatePicker`, `TimePicker`), read both before coding.
 
 ### 1) Pick the upstream reference stack explicitly
 
@@ -100,38 +91,6 @@ Use the right source for the right kind of parity:
 - **Base UI**: accessibility-first headless part composition.
 
 If sources disagree, document the chosen ordering in the change.
-
-Suggested default ordering:
-
-1. Material spec for UX and token truth.
-2. Compose Material3 for toolkit-style state machines and motion semantics.
-3. MUI for web-specific composition/interaction details.
-4. Base UI for part composition and a11y fallback patterns.
-
-Optional local snapshot references under `repo-ref/`:
-
-- `repo-ref/material-ui`
-- `repo-ref/compose-multiplatform-core`
-- `repo-ref/base-ui`
-- `repo-ref/ui` and `repo-ref/primitives` when the Material component reuses the same overlay/listbox/menu semantics already proven in shadcn/Radix work.
-
-### 1.25) Run the field-family checklist first
-
-For `Select`, `Autocomplete`, `ExposedDropdown`, and `TextField` work, most regressions are not “just styling”.
-Check these before touching tokens:
-
-- floating label choreography (resting → focused/open/populated),
-- supporting text and error text ownership,
-- leading/trailing icon placement and a11y labels,
-- active indicator / outline / container height outcomes,
-- menu width floor and overlay width policy,
-- query ↔ selected value synchronization,
-- typeahead timing (`typeaheadDelay`-style behavior),
-- `open_on_focus` / blur synchronization / dialog-vs-anchored presentation,
-- overlay bounds within the viewport/window,
-- stable trigger/listbox/option `test_id`s for automation.
-
-These are already represented in the current Material 3 recipes and diag scripts; use them as templates instead of inventing new naming/gating conventions.
 
 ### 2) Map the work to the right Fret layer (non-negotiable)
 
@@ -251,6 +210,9 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Material workstream context: `docs/workstreams/material3-refactor-plan.md`, `docs/workstreams/material3-todo.md`
 - Material mechanism/foundation ADR: `docs/adr/0226-material3-state-layer-and-ripple-primitives.md`
+- Reference notes:
+  - `.agents/skills/fret-material-source-alignment/references/material-reference-stack.md`
+  - `.agents/skills/fret-material-source-alignment/references/material-field-family-checklist.md`
 - Material foundation code:
   - `ecosystem/fret-ui-material3/src/foundation/`
   - `ecosystem/fret-ui-material3/src/interaction/`
@@ -274,14 +236,15 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Gallery harness/pages:
   - `apps/fret-ui-gallery/src/ui/pages/material3/`
   - `apps/fret-ui-gallery/src/ui/snippets/material3/`
-- Optional upstream snapshots: `repo-ref/material-ui`, `repo-ref/compose-multiplatform-core`, `repo-ref/base-ui`
+- Optional upstream snapshots: `repo-ref/material-ui`, `repo-ref/base-ui`, `repo-ref/ui`, `repo-ref/primitives`
 
 ## Examples
 
 - Example: align a Material 3 field-family overlay
   - User says: "Make this Material exposed dropdown feel like Material Web / Compose Material3."
   - Actions:
-    - inspect `docs/audits/shadcn-select.md` plus the in-tree Material `select` / `exposed_dropdown` recipes,
+    - inspect the reference stack note plus the field-family checklist,
+    - inspect one Fret-side exemplar before changing code,
     - choose a source-of-truth ordering (spec + Compose + MUI),
     - keep overlay/listbox policy in the right ecosystem layer,
     - lock width floor, filtering/typeahead, a11y, and bounds with targeted tests/scripts.
