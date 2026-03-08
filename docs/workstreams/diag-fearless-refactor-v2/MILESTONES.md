@@ -141,9 +141,12 @@ Progress update:
 - `diag_campaign` has now landed another share-manifest seam around payload section shaping:
   - `build_campaign_share_manifest_payload` now consumes dedicated source/selection/counters/share sections,
   - helper-level regression coverage now locks section-level field shaping without going through the full write-plan path.
+- `diag_campaign` has now landed another share-manifest seam around combined-zip field mutation:
+  - `apply_campaign_share_manifest_combined_zip` now routes through dedicated field-building and share-section apply helpers,
+  - helper-level regression coverage now locks combined-zip field projection plus section-local mutation without going through the full finalize path.
 - The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
-  follow-up is the remaining final materialization/update holdouts around share payload mutation and
-  artifact handoff before shifting to artifact materialization or
+  follow-up is the remaining final materialization/update holdouts around share artifact handoff and
+  any residual write-time mutation before shifting to artifact materialization or
   presentation-surface follow-up work.
 
 Exit criteria:

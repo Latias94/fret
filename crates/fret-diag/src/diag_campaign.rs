@@ -143,6 +143,12 @@ struct CampaignShareManifestPayloadSections {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignShareManifestCombinedZipFields {
+    combined_zip: serde_json::Value,
+    combined_zip_error: serde_json::Value,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignResultPayloadSections {
     run: serde_json::Value,
     counters: serde_json::Value,
@@ -2227,27 +2233,46 @@ fn apply_campaign_share_manifest_combined_zip(
     payload: &mut serde_json::Value,
     outcome: &CampaignCombinedZipOutcome,
 ) {
-    if let Some(share) = payload
-        .get_mut("share")
-        .and_then(|value| value.as_object_mut())
-    {
-        share.insert(
-            "combined_zip".to_string(),
-            outcome
-                .path
-                .as_ref()
-                .map(|path| serde_json::Value::String(path.display().to_string()))
-                .unwrap_or(serde_json::Value::Null),
-        );
-        share.insert(
-            "combined_zip_error".to_string(),
-            outcome
-                .error
-                .clone()
-                .map(serde_json::Value::String)
-                .unwrap_or(serde_json::Value::Null),
+    if let Some(share) = campaign_share_manifest_share_section_mut(payload) {
+        apply_campaign_share_manifest_combined_zip_fields(
+            share,
+            &build_campaign_share_manifest_combined_zip_fields(outcome),
         );
     }
+}
+
+fn build_campaign_share_manifest_combined_zip_fields(
+    outcome: &CampaignCombinedZipOutcome,
+) -> CampaignShareManifestCombinedZipFields {
+    CampaignShareManifestCombinedZipFields {
+        combined_zip: outcome
+            .path
+            .as_ref()
+            .map(|path| serde_json::Value::String(path.display().to_string()))
+            .unwrap_or(serde_json::Value::Null),
+        combined_zip_error: outcome
+            .error
+            .clone()
+            .map(serde_json::Value::String)
+            .unwrap_or(serde_json::Value::Null),
+    }
+}
+
+fn campaign_share_manifest_share_section_mut(
+    payload: &mut serde_json::Value,
+) -> Option<&mut serde_json::Map<String, serde_json::Value>> {
+    payload.get_mut("share").and_then(|value| value.as_object_mut())
+}
+
+fn apply_campaign_share_manifest_combined_zip_fields(
+    share: &mut serde_json::Map<String, serde_json::Value>,
+    fields: &CampaignShareManifestCombinedZipFields,
+) {
+    share.insert("combined_zip".to_string(), fields.combined_zip.clone());
+    share.insert(
+        "combined_zip_error".to_string(),
+        fields.combined_zip_error.clone(),
+    );
 }
 
 fn build_campaign_share_manifest_item(
@@ -3804,6 +3829,58 @@ mod tests {
                 .get("item_id")
                 .and_then(|value| value.as_str()),
             Some("failed-item")
+        );
+    }
+
+    #[test]
+    fn build_campaign_share_manifest_combined_zip_fields_uses_path_and_error() {
+        let outcome = CampaignCombinedZipOutcome {
+            path: Some(PathBuf::from("share/combined-failures.zip")),
+            error: Some("zip warning".to_string()),
+        };
+
+        let fields = build_campaign_share_manifest_combined_zip_fields(&outcome);
+
+        assert_eq!(
+            fields.combined_zip.as_str(),
+            Some("share/combined-failures.zip")
+        );
+        assert_eq!(fields.combined_zip_error.as_str(), Some("zip warning"));
+    }
+
+    #[test]
+    fn apply_campaign_share_manifest_combined_zip_fields_updates_only_zip_keys() {
+        let mut share = serde_json::Map::from_iter([
+            (
+                "combined_zip".to_string(),
+                serde_json::Value::String("old.zip".to_string()),
+            ),
+            (
+                "combined_zip_error".to_string(),
+                serde_json::Value::String("old error".to_string()),
+            ),
+            (
+                "workflow_hint".to_string(),
+                serde_json::Value::String("keep me".to_string()),
+            ),
+        ]);
+        let fields = CampaignShareManifestCombinedZipFields {
+            combined_zip: serde_json::Value::String("share/new.zip".to_string()),
+            combined_zip_error: serde_json::Value::Null,
+        };
+
+        apply_campaign_share_manifest_combined_zip_fields(&mut share, &fields);
+
+        assert_eq!(
+            share.get("combined_zip").and_then(|value| value.as_str()),
+            Some("share/new.zip")
+        );
+        assert!(share
+            .get("combined_zip_error")
+            .is_some_and(|value| value.is_null()));
+        assert_eq!(
+            share.get("workflow_hint").and_then(|value| value.as_str()),
+            Some("keep me")
         );
     }
 
