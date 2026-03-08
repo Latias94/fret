@@ -101,20 +101,22 @@ Portable profiles we treat as regression gates:
 
 ## State management (authoring ergonomics)
 
-Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalidation, driver-boundary inbox draining),
-so the default authoring story lives in ecosystem crates.
+Fret’s kernel/runtime primitives are intentionally small (`Model<T>`, tracked invalidation,
+driver-boundary inbox draining), so the default app-authoring story lives in ecosystem crates and is
+now taught as `LocalState` + view runtime + typed actions.
 
 - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new todo`, `cargo run -p fretboard -- new simple-todo`
+  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
   - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
+  - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
   - `cx.on_action_notify_models::<A>(|models| ...)` - default for most typed UI actions.
   - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.

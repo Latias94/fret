@@ -10,6 +10,18 @@ Desktop-first, batteries-included entry points for building UI apps with Fret.
 This is an **ecosystem-level** crate. It intentionally provides a small, ergonomic surface for
 applications while keeping the framework/kernel crates (`crates/*`) policy-light.
 
+## Boundary note
+
+`fret` is the golden-path authoring facade for application code. It is intentionally **not** the
+repo?s canonical example host.
+
+- Use `docs/examples/README.md` for the canonical learning/index path.
+- Use `examples/README.md` as the GitHub-friendly portal.
+- Keep runnable lessons in `apps/fret-cookbook/examples/`, component coverage in
+  `apps/fret-ui-gallery`, and heavier platform/app demos in their owning app crates.
+
+This keeps the facade teachable while leaving example/tooling ownership outside the crate.
+
 For repository overview / architecture docs, see the monorepo README:
 https://github.com/Latias94/fret
 
@@ -57,12 +69,18 @@ fret = { path = "../fret", default-features = false, features = ["desktop", "sha
 ```rust,ignore
 use fret::prelude::*;
 
+struct HelloView;
+
+impl View for HelloView {
+    fn render(&mut self, _cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        shadcn::Label::new("Hello from Fret!").into()
+    }
+}
+
 fn main() -> fret::Result<()> {
     FretApp::new("hello")
         .window("Hello", (560.0, 360.0))
-        .ui(|_app, _window| (), |cx, _st| {
-            shadcn::Label::new("Hello from Fret!").into_element(cx).into()
-        })?
+        .view::<HelloView>()?
         .run()
 }
 ```
@@ -96,10 +114,10 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 ## Choosing a native entry path
 
-- App authors (default recommendation): `fret::App::new(...).window(...).ui(...)?`
-- App authors with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
-- View runtime authors: `fret::App::new(...).window(...).view::<V>()?`
-- View runtime authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
+- App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
+- App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
+- Closure-style UI surface (still available): `fret::App::new(...).window(...).ui(...)?`
+- Closure-style UI surface with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
