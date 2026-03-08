@@ -89,12 +89,11 @@ impl View for CommandsKeymapBasicsView {
             .unwrap_or_else(|| "Unbound".to_string());
 
         let row_shortcut = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Shortcut:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Shortcut:"),
                 shadcn::Badge::new(shortcut)
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .test_id(TEST_ID_SHORTCUT)
-                    .into_element(cx),
+                    .test_id(TEST_ID_SHORTCUT),
             ]
         })
         .gap(Space::N2)
@@ -102,45 +101,45 @@ impl View for CommandsKeymapBasicsView {
         .into_element(cx);
 
         let row_enabled = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Command state:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Command state:"),
                 shadcn::Badge::new(enabled_label)
                     .variant(if enabled {
                         shadcn::BadgeVariant::Default
                     } else {
                         shadcn::BadgeVariant::Destructive
                     })
-                    .test_id(TEST_ID_ENABLED)
-                    .into_element(cx),
+                    .test_id(TEST_ID_ENABLED),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_allow = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Allow command:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Allow command:"),
                 shadcn::Switch::new(self.allow_command.clone())
-                    .test_id(TEST_ID_ALLOW)
-                    .into_element(cx),
+                    .test_id(TEST_ID_ALLOW),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
             .action(act::TogglePanel)
             .a11y_role(SemanticsRole::Button)
-            .test_id(TEST_ID_DISPATCH)
-            .into_element(cx);
+            .test_id(TEST_ID_DISPATCH);
 
-        let left = ui::v_flex(|_cx| [row_shortcut, row_enabled, row_allow, dispatch_button])
-            .gap(Space::N3)
-            .w_full()
-            .into_element(cx);
+        let left = ui::v_flex_build(|cx, out| {
+            out.push_ui(cx, row_shortcut);
+            out.push_ui(cx, row_enabled);
+            out.push_ui(cx, row_allow);
+            out.push_ui(cx, dispatch_button);
+        })
+        .gap(Space::N3)
+        .w_full()
+        .into_element(cx);
 
         let panel_state_text = cx
             .text(format!(
@@ -150,8 +149,7 @@ impl View for CommandsKeymapBasicsView {
             .test_id(TEST_ID_PANEL_STATE);
         let panel_open_indicator = shadcn::Switch::new(self.panel_open.clone())
             .disabled(true)
-            .test_id(TEST_ID_PANEL_OPEN)
-            .into_element(cx);
+            .test_id(TEST_ID_PANEL_OPEN);
 
         let panel_body = ui::v_flex(|cx| {
             let desc = if panel_open {
@@ -161,12 +159,9 @@ impl View for CommandsKeymapBasicsView {
             };
             [
                 panel_state_text,
-                ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Open:").into_element(cx),
-                        panel_open_indicator,
-                    ]
-                })
+                ui::h_flex(
+                    |cx| ui::children![cx; shadcn::Label::new("Open:"), panel_open_indicator],
+                )
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
@@ -174,8 +169,7 @@ impl View for CommandsKeymapBasicsView {
                 cx.text(desc),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -190,8 +184,8 @@ impl View for CommandsKeymapBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(panel_body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, panel_body);
                 }),
             );
         })
@@ -201,8 +195,7 @@ impl View for CommandsKeymapBasicsView {
 
         let body = ui::h_flex(|cx| ui::children![cx; left, panel])
             .gap(Space::N6)
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -219,16 +212,16 @@ impl View for CommandsKeymapBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })
         .ui()
         .w_full()
         .max_w(Px(860.0))
-        .into_element(cx)
-        .key_context("cookbook.commands_keymap_basics");
+        .key_context("cookbook.commands_keymap_basics")
+        .into_element(cx);
 
         cx.on_action_notify_models::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();

@@ -1,7 +1,7 @@
 # Action-First Authoring - Post-v1 / v2 Authoring Proposal
 
 Status: Draft recommendation
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 Related:
 
@@ -258,6 +258,57 @@ Recommended stance:
 
 - `vflex().gap(8).child(...).child(...)`
 - `hflex().children(...)`
+
+---
+
+## 8) “v1 best practice today” vs “v2 target” (side-by-side mental model)
+
+This section is intentionally about what authors should do **today** (v1), and what we want the
+default to feel like **after** v2 lands.
+
+### v1 best practice today (in-tree teaching surfaces)
+
+- State: keep shared state in explicit `Model<T>` (including `cx.use_state::<T>()` which is model-backed in v1).
+- Derivations/async: use `use_selector` / `use_query` as hooks.
+- Actions: bind stable IDs (`.action(act::Save)`), register handlers via `cx.on_action_*` helpers.
+- Composition: prefer late-landing child collection (`ui::children![cx; ...]` + `*_::build(...)` where available).
+- Invalidation: `notify()` is available and remains correct; most rerenders should come from tracked writes and observed deps, not manual `notify()` calls.
+
+Example (v1, late-landing card + children collection):
+
+```rust,ignore
+let shortcut = "Ctrl+S".to_string();
+let row = ui::h_flex(|cx| {
+    ui::children![cx;
+        shadcn::Label::new("Shortcut:"),
+        shadcn::Badge::new(shortcut)
+            .variant(shadcn::BadgeVariant::Secondary),
+    ]
+})
+.gap(Space::N2)
+.items_center()
+.into_element(cx);
+
+let card = shadcn::Card::build(|cx, out| {
+    out.push_ui(cx, shadcn::CardHeader::build(|cx, out| {
+        out.push_ui(cx, shadcn::CardTitle::new("Title"));
+    }));
+    out.push_ui(cx, shadcn::CardContent::build(|_cx, out| out.push(row)));
+})
+.ui()
+.w_full()
+.into_element(cx);
+```
+
+### v2 target (best-practice authoring surface)
+
+- State: local state should feel like plain Rust (`use_local`), and should not require `Model<T>` unless state is intentionally shared.
+- Events: prefer `.on_click(cx.dispatch(act::Save))` / `cx.listener(...)` shapes where they reduce boilerplate, while keeping `ActionId` as the cross-frontend identity.
+- Composition: builder-first `vflex().child(...)` style should become the default and remove most `ui::children!` usage from common demos/templates.
+- Invalidation: state writes should request rerender implicitly; `notify()` remains a low-level escape hatch for imperative integrations and cache-oriented invalidation.
+
+The purpose of v2 is to land these ergonomics wins while keeping the v1 layering and diagnostics
+closure intact.
 - `stack().child(...)`
 
 ### Escape hatches that remain valid

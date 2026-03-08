@@ -1,7 +1,7 @@
 ﻿# Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 Related:
 
@@ -233,12 +233,20 @@ ID format:
       - `apps/fret-cookbook/examples/undo_basics.rs`
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
+      - `apps/fret-cookbook/examples/customv1_basics.rs`
+      - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
+      - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
       - `apps/fret-cookbook/examples/router_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+      - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
+      - `apps/fret-cookbook/examples/drop_shadow_basics.rs`
+      - `apps/fret-cookbook/examples/overlay_basics.rs`
+      - `apps/fret-cookbook/examples/toast_basics.rs`
+      - `apps/fret-cookbook/examples/query_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
     - Inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
@@ -285,6 +293,48 @@ ID format:
     - `tools/diag-scripts/viewport/embedded-demo/embedded-viewport-demo-input-forwarding.json` (input forwarding smoke)
     - `ecosystem/fret/src/interop/embedded_viewport.rs`
     - `ecosystem/fret/src/app_entry.rs`
+
+- [~] AFA-adopt-045 Reduce “early element landing” noise in cookbook demos (polish pass).
+  - Goal: prefer late-landing child collection (`ui::children![cx; ...]`, `*_::build(...)`) and keep
+    `test_id` / key-context / semantics patches on the builder path whenever possible.
+  - Non-goal (for this pass): introducing a new UI macro/DSL or replacing `ui::children!` with a new
+    mandatory composition language (that is a post-v1/v2 ergonomics decision).
+  - Evidence (recent slice):
+    - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - `apps/fret-cookbook/examples/form_basics.rs`
+    - `apps/fret-cookbook/examples/async_inbox_basics.rs`
+    - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+    - `apps/fret-cookbook/examples/router_basics.rs`
+    - `apps/fret-cookbook/examples/undo_basics.rs`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fret-cookbook/examples/virtual_list_basics.rs`
+    - `apps/fret-cookbook/examples/customv1_basics.rs`
+    - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
+    - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
+    - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+    - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
+    - `apps/fret-cookbook/examples/drop_shadow_basics.rs`
+    - `apps/fret-cookbook/examples/overlay_basics.rs`
+    - `apps/fret-cookbook/examples/toast_basics.rs`
+    - `apps/fret-cookbook/examples/query_basics.rs`
+    - `apps/fret-cookbook/examples/chart_interactions_basics.rs`
+    - `apps/fret-cookbook/examples/docking_basics.rs`
+    - `apps/fret-cookbook/examples/hello_counter.rs`
+    - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
+    - `apps/fret-cookbook/examples/gizmo_basics.rs`
+    - `apps/fret-cookbook/examples/theme_switching_basics.rs`
+    - `apps/fret-cookbook/examples/simple_todo.rs`
+    - `apps/fret-cookbook/examples/drag_basics.rs`
+    - `apps/fret-cookbook/examples/effects_layer_basics.rs`
+    - `apps/fret-cookbook/examples/text_input_basics.rs`
+  - Follow-up polish (same slice, 2026-03-07): late-landing cleanup continued on already-listed `assets_reload_epoch_basics`, `undo_basics`, and `embedded_viewport_basics` to keep builder-first composition consistent after the broader cookbook sweep.
+  - Additional 2026-03-07 polish: trimmed remaining builder-path noise in those same pages (button/test_id ordering, alert/header late-landing, and small row composition cleanup) without changing their runtime contracts.
+  - Additional 2026-03-07 follow-up: `icons_and_assets_basics` now keeps the page header, card shells, image/svg status rows, and the final content stack on the late-landing builder path, while `customv1_basics` folds `panel_shell(...)`, the preview/body stacks, and the top-level card body into `push_ui()` so only semantics-driven controls and the final scaffold boundary still land eagerly.
+  - Additional 2026-03-07 follow-up: `simple_todo`, `assets_reload_epoch_basics`, and `embedded_viewport_basics` now keep their toolbar/header rows, card content stacks, and most panel shells on the builder path too; the remaining eager landings are largely the final scaffold/card boundaries plus semantics- or host-bound nodes (progress/meter badges, viewport surfaces, and inline asset error text).
+  - Additional 2026-03-07 follow-up: `undo_basics`, `hello_counter`, and `drop_shadow_basics` now keep most shortcut/action rows, header/content stacks, and staged grid composition on the late-landing path as well; their remaining eager boundaries are mostly semantics-heavy value badges, effect-layer/card footer boundaries, and the final scaffold surface.
+  - Additional 2026-03-07 follow-up: `external_texture_import_basics` and `utility_window_materials_windows` now keep their card headers, control/content stacks, and most inline status text/buttons on the builder path too; their remaining eager boundaries are mainly semantics meters, viewport/material root surfaces, and final scaffold/card shells.
+  - Additional 2026-03-07 follow-up: `drag_basics`, `query_basics`, and `commands_keymap_basics` now keep their headers, action rows, and card-content stacks mostly on the builder path as well; remaining eager landings are mainly semantics counters, pointer-region/container boundaries, and a few fixed-array panel-body rows that still need concrete `AnyElement` values.
+  - Additional 2026-03-07 follow-up: `date_picker_basics` and `router_basics` now keep their card headers, selected/location rows, and card-content stacks on the late-landing path too; the remaining eager boundaries are mostly the date-picker/widget host boundary, router outlet leaf rendering, and the final scaffold/card surface.
 
 ---
 
@@ -387,6 +437,7 @@ practical steps:
   - Goal: measure whether a builder-only path materially improves density without helper sprawl.
   - Evidence target: compare `hello_counter_demo` or `query_demo` against the current default path.
   - Update (as of 2026-03-06): `fret-ui-kit::ui::UiElementSinkExt`, `UiChildIntoElement`, and `ui::*_build` sinks now power builder-first `query_demo` and `query_async_tokio_demo` variants while also letting `ui::children!` / `push_ui()` accept nested layout builders plus host-bound `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` values without an extra `.into_element(cx)` cliff. That same card-builder path now also covers the `fretboard` todo/simple-todo templates plus `commands_keymap_basics`, `form_basics`, and `async_inbox_basics` through the generic `.ui()` patch path; `ecosystem/fret-ui-shadcn/src/layout.rs` now exposes `container_vstack_build(...)` / `container_hstack_build(...)` / `container_hstack_centered_build(...)` so the first older helper family can stay on the same late-landing pipeline; `ecosystem/fret-ui-shadcn/src/table.rs` plus `ecosystem/fret-genui-shadcn/src/resolver/data.rs` now extend that same pattern into the table composite stack (`Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)`) for GenUI-driven data tables; `TableCell::build(child)` now serves as the first single-child late-landing sample (also reflected in the UI Gallery typography table snippet); `DialogTrigger::build(...)` / `SheetTrigger::build(...)` / `DrawerTrigger::build(...)` now bring the first overlay-trigger wrappers onto the same child pipeline for sink-based / direct late-landing paths and the `Dialog` / `Sheet` composition builders accept those `*_Trigger::build(...)` values directly; the wider overlay single-child family now follows the same shape too (`PopoverTrigger::build(...)`, `PopoverAnchor::build(...)`, `HoverCardTrigger::build(...)`, `HoverCardAnchor::build(...)`, `TooltipTrigger::build(...)`, `TooltipAnchor::build(...)`); `Popover::build(...)` now removes the next popover root landing cliff while letting `PopoverContent::test_id(...)` stay on the late-landing path; `DropdownMenuTrigger::build(...)` plus `DropdownMenu::build(...)` / `DropdownMenu::build_parts(...)` now bring the first composite menu root onto that same late-landing path; and `HoverCard::build(...)` / `HoverCard::build_controllable(...)` / `Tooltip::build(...)` keep the same root-level direction, with `Tooltip::new(...)` accepting `TooltipContent` directly. The UI Gallery now teaches the intended overlay paths through `apps/fret-ui-gallery/src/ui/snippets/hover_card/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/align.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/rtl.rs`, `apps/fret-ui-gallery/src/ui/snippets/popover/with_form.rs`, `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/*.rs`, and `apps/fret-ui-gallery/src/ui/snippets/tooltip/demo.rs`. Remaining gap: broader composite APIs beyond the first dropdown-menu path and the remaining eager-only wrappers still sit outside the modern child pipeline.
+  - Update (as of 2026-03-07): `Dialog::compose().content_with(...)` / `Sheet::compose().content_with(...)` support deferred content authoring so `DialogClose::from_scope()` / `SheetClose::from_scope()` can be used inside composed content without forcing eager `into_element(cx)` landing.
 - [ ] AFA-postv1-003 Investigate widget-local action sugar (`listener` / `dispatch` / `shortcut`)
   without expanding the default helper surface prematurely.
   - Goal: keep action-first semantics while lowering local event-wiring noise.

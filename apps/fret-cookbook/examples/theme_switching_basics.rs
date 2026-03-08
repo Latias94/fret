@@ -63,21 +63,22 @@ impl View for ThemeSwitchingBasicsView {
             _ => "Light",
         };
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Theme switching basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal example that toggles between shadcn New York v4 Light/Dark.",
-            )
-            .into_element(cx),
-        ])
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Theme switching basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A minimal example that toggles between shadcn New York v4 Light/Dark.",
+                ),
+            );
+        })
         .into_element(cx);
 
         let scheme_row = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Active scheme:").into_element(cx),
-                shadcn::Badge::new(scheme_label)
-                    .into_element(cx)
-                    .test_id(TEST_ID_SCHEME),
+            ui::children![
+                cx;
+                shadcn::Label::new("Active scheme:"),
+                shadcn::Badge::new(scheme_label).test_id(TEST_ID_SCHEME),
             ]
         })
         .gap(Space::N2)
@@ -94,8 +95,8 @@ impl View for ThemeSwitchingBasicsView {
                     .test_id(TEST_ID_TOGGLE_DARK),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .into_element(cx)
-            .test_id(TEST_ID_TOGGLE);
+            .test_id(TEST_ID_TOGGLE)
+            .into_element(cx);
 
         // Avoid `ui::h_flex` here: its internal flex sizing forces `width: fill` by default, which
         // can cause children to get a much larger hit box than intended.
@@ -104,44 +105,62 @@ impl View for ThemeSwitchingBasicsView {
             .w_full()
             .into_element(cx);
 
-        let sample = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Sample surface").into_element(cx),
-                shadcn::CardDescription::new("Buttons + tokens should match the active scheme.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::h_flex(|cx| {
-                [
-                    shadcn::Button::new("Default").into_element(cx),
-                    shadcn::Button::new("Outline")
-                        .variant(shadcn::ButtonVariant::Outline)
+        let sample = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Sample surface"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Buttons + tokens should match the active scheme.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::h_flex(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::Button::new("Default"),
+                                shadcn::Button::new("Outline")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                                shadcn::Button::new("Secondary")
+                                    .variant(shadcn::ButtonVariant::Secondary),
+                            ]
+                        })
+                        .gap(Space::N2)
                         .into_element(cx),
-                    shadcn::Button::new("Secondary")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .into_element(cx)
-        .test_id(TEST_ID_SAMPLE_CARD);
+        .test_id(TEST_ID_SAMPLE_CARD)
+        .into_element(cx);
 
-        let content_body = ui::v_flex(|_cx| [scheme_row, toggle_row, sample])
-            .gap(Space::N5)
-            .w_full()
-            .into_element(cx);
-        let content = shadcn::CardContent::new([content_body]).into_element(cx);
-
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(560.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::v_flex(|cx| ui::children![cx; scheme_row, toggle_row, sample])
+                            .gap(Space::N5)
+                            .w_full()
+                            .into_element(cx),
+                    );
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(560.0))
+        .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

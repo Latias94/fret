@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
@@ -175,6 +175,63 @@ surface from the post-v1 density goals:
   `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
+
+### Late-landing child composition (v1 best practice)
+
+Avoid forcing early `into_element(cx)` when the only reason is “I need a `Vec<AnyElement>` now”.
+Prefer collecting children at `into_element(cx)` time:
+
+- layout wrappers: prefer `ui::children![cx; ...]` inside `ui::{h_flex,v_flex}(|cx| ...)` closures.
+- shadcn composites: prefer `*_::build(...)` variants when available:
+  - `Card::build(...)`, `CardHeader::build(...)`, `CardContent::build(...)`
+  - `Table::build(...)`, `TableRow::build(...)`, `TableCell::build(child)`
+  - overlay triggers like `DialogTrigger::build(...)`, `SheetTrigger::build(...)`.
+
+Example (card, late-landing):
+
+```rust,ignore
+let card = shadcn::Card::build(|cx, out| {
+    out.push_ui(
+        cx,
+        shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Title"));
+            out.push_ui(cx, shadcn::CardDescription::new("Description"));
+        }),
+    );
+    out.push_ui(
+        cx,
+        shadcn::CardContent::build(|_cx, out| {
+            out.push(body);
+        }),
+    );
+})
+.ui()
+.w_full()
+.into_element(cx);
+```
+
+### Overlay composition note (Dialog/Sheet)
+
+When composing shadcn overlays via `.compose()`, prefer `.content_with(|cx| ...)` when the content
+needs to resolve scope-only affordances such as `DialogClose::from_scope()` / `SheetClose::from_scope()`.
+
+This keeps authoring on the late-landing pipeline while allowing the close affordance to resolve
+its `open` model from the active overlay scope.
+
+Example:
+
+```rust,ignore
+use fret_ui_shadcn as shadcn;
+
+shadcn::Dialog::new(open.clone())
+    .compose()
+    .trigger(shadcn::DialogTrigger::build(shadcn::Button::new("Open")))
+    .content_with(|cx| {
+        let close = shadcn::DialogClose::from_scope().into_element(cx);
+        shadcn::DialogContent::new(vec![close]).into_element(cx)
+    })
+    .into_element(cx);
+```
 
 ### Helper visibility policy (docs/templates)
 
@@ -398,6 +455,19 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
   - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
     - Internal policy/helper code that still wants a sink-based composition path can use `container_vstack_build(...)` / `container_hstack_build(...)` in `ecosystem/fret-ui-shadcn::layout` to stay on the same late-landing child pipeline without rebuilding a temporary `Vec<AnyElement>`.
+    - Example (closest behavior match):
+
+```rust,ignore
+// Before:
+// stack::container_vstack(cx, props, stack_props, children)
+
+// After (explicit composition):
+ui::container(|cx| {
+    vec![ui::v_stack(|_cx| children).layout(stack_layout)]
+})
+.layout(container_layout)
+.into_element(cx);
+```
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
   identity stable and reduce allocation noise.
 - For table-like composite trees, prefer `Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` when the children naturally come from loops or generated data; when the final cell child is itself a builder, prefer `TableCell::build(child)` over early `into_element(cx)` and keep `TableCell::new(child)` only for already-landed `AnyElement` values.

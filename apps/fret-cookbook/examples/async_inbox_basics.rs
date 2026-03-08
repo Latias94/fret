@@ -213,7 +213,6 @@ impl View for AsyncInboxBasicsView {
             .icon(IconId::new_static("ui.play"))
             .disabled(running)
             .action(act::Start)
-            .into_element(cx)
             .test_id(TEST_ID_START);
 
         let cancel_button = shadcn::Button::new("Cancel")
@@ -222,7 +221,6 @@ impl View for AsyncInboxBasicsView {
             .icon(IconId::new_static("ui.x"))
             .disabled(!running)
             .action(act::Cancel)
-            .into_element(cx)
             .test_id(TEST_ID_CANCEL);
 
         let clear_log_button = shadcn::Button::new("Clear log")
@@ -230,31 +228,26 @@ impl View for AsyncInboxBasicsView {
             .size(shadcn::ButtonSize::Sm)
             .icon(IconId::new_static("ui.trash"))
             .action(act::ClearLog)
-            .into_element(cx)
             .test_id(TEST_ID_CLEAR_LOG);
 
         let status_row = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Status:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Status:"),
                 shadcn::Badge::new(status.as_ref())
                     .variant(if running {
                         shadcn::BadgeVariant::Default
                     } else {
                         shadcn::BadgeVariant::Secondary
                     })
-                    .into_element(cx)
                     .test_id(TEST_ID_STATUS),
                 shadcn::Badge::new(format!("Dropped oldest: {}", inbox_stats.dropped_oldest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+                    .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new(format!("Dropped newest: {}", inbox_stats.dropped_newest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+                    .variant(shadcn::BadgeVariant::Secondary),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let progress_el = shadcn::Progress::new(self.st.progress.clone())
             .a11y_label("Background job progress")
@@ -263,26 +256,23 @@ impl View for AsyncInboxBasicsView {
             .test_id(TEST_ID_PROGRESS);
 
         let progress_label = cx.text(format!("{progress:.0}%"));
-        let progress_row = ui::h_flex(|_cx| [progress_el, progress_label])
+        let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
             .gap(Space::N3)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let log = shadcn::Textarea::new(self.st.log.clone())
             .a11y_label("Inbox log")
             .placeholder("Log…")
             .disabled(true)
             .min_height(Px(240.0))
-            .into_element(cx)
             .test_id(TEST_ID_LOG);
 
-        let controls = ui::v_flex(|_cx| [start_button, cancel_button, clear_log_button])
-            .gap(Space::N2)
-            .into_element(cx);
+        let controls =
+            ui::v_flex(|cx| ui::children![cx; start_button, cancel_button, clear_log_button])
+                .gap(Space::N2);
 
-        let body = ui::v_flex(|_cx| [status_row, progress_row, controls, log])
-            .gap(Space::N3)
-            .into_element(cx);
+        let body = ui::v_flex(|cx| ui::children![cx; status_row, progress_row, controls, log])
+            .gap(Space::N3);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -299,8 +289,8 @@ impl View for AsyncInboxBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })

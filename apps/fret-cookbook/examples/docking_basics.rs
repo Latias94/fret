@@ -194,20 +194,28 @@ impl DockPanelRegistry<App> for DockingBasicsPanelRegistry {
             bounds,
             &root_name,
             |cx| {
-                let body = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new(title).into_element(cx),
-                        shadcn::CardDescription::new(
-                            "Dock content is app-owned (registry-driven), while docking UI/policy lives in fret-docking.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![cx.text(
-                        "Try: click tabs, drag tabs, drag the splitter, right-click a tab.",
-                    )])
-                    .into_element(cx),
-                ])
+                let body = shadcn::Card::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::CardHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::CardTitle::new(title));
+                            out.push_ui(
+                                cx,
+                                shadcn::CardDescription::new(
+                                    "Dock content is app-owned (registry-driven), while docking UI/policy lives in fret-docking.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push_ui(
+                        cx,
+                        shadcn::CardContent::build(|cx, out| {
+                            out.push(cx.text(
+                                "Try: click tabs, drag tabs, drag the splitter, right-click a tab.",
+                            ));
+                        }),
+                    );
+                })
                 .ui()
                 .w_full()
                 .h_full()
@@ -312,15 +320,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
     let (active_right_index, right_count) =
         active_tab_state(cx.app, st.layout_ids.right_tabs).unwrap_or((0, 0));
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Docking basics").into_element(cx),
-        shadcn::CardDescription::new(
-            "Minimal retained dock host + app-owned panel registry + runner dock_op wiring.",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
     let toolbar = ui::h_flex(|cx| {
         let left_max = (left_count.saturating_sub(1)) as f64;
         let right_max = (right_count.saturating_sub(1)) as f64;
@@ -347,32 +346,28 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
                     .numeric_range(0.0, right_max),
             );
 
-        vec![
+        ui::children![
+            cx;
             shadcn::Button::new("Reset layout")
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(CMD_RESET_LAYOUT)
-                .test_id(TEST_ID_RESET_LAYOUT)
-                .into_element(cx),
+                .test_id(TEST_ID_RESET_LAYOUT),
             shadcn::Button::new("Activate Hierarchy")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ACTIVATE_HIERARCHY)
-                .test_id(TEST_ID_ACTIVATE_HIERARCHY)
-                .into_element(cx),
+                .test_id(TEST_ID_ACTIVATE_HIERARCHY),
             shadcn::Button::new("Activate Inspector")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ACTIVATE_INSPECTOR)
-                .test_id(TEST_ID_ACTIVATE_INSPECTOR)
-                .into_element(cx),
+                .test_id(TEST_ID_ACTIVATE_INSPECTOR),
             shadcn::Button::new("Activate Editor")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ACTIVATE_EDITOR)
-                .test_id(TEST_ID_ACTIVATE_EDITOR)
-                .into_element(cx),
+                .test_id(TEST_ID_ACTIVATE_EDITOR),
             shadcn::Button::new("Activate Console")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ACTIVATE_CONSOLE)
-                .test_id(TEST_ID_ACTIVATE_CONSOLE)
-                .into_element(cx),
+                .test_id(TEST_ID_ACTIVATE_CONSOLE),
             active_left_badge,
             active_right_badge,
         ]
@@ -399,17 +394,33 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
             vec![cx.retained_subtree(props)]
         });
 
-    let content = ui::v_flex(|_cx| vec![toolbar, dock_host])
-        .gap(Space::N3)
-        .w_full()
-        .h_full()
-        .min_w_0()
-        .into_element(cx);
-
-    let card = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new("Docking basics"));
+                out.push_ui(
+                    cx,
+                    shadcn::CardDescription::new(
+                        "Minimal retained dock host + app-owned panel registry + runner dock_op wiring.",
+                    ),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|cx, out| {
+                out.push(
+                    ui::v_flex(|cx| ui::children![cx; toolbar, dock_host])
+                        .gap(Space::N3)
+                        .w_full()
+                        .h_full()
+                        .min_w_0()
+                        .into_element(cx),
+                );
+            }),
+        );
+    })
     .ui()
     .w_full()
     .h_full()
@@ -497,8 +508,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(shadcn::install_app)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }

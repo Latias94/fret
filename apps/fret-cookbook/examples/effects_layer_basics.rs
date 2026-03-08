@@ -82,8 +82,9 @@ impl View for EffectsLayerBasicsView {
         };
 
         let preview_content = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("EffectLayer preview").into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
                     let tile = |cx: &mut ElementContext<'_, App>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
@@ -93,7 +94,8 @@ impl View for EffectsLayerBasicsView {
                             .rounded_md()
                             .into_element(cx)
                     };
-                    [
+                    ui::children![
+                        cx;
                         tile(cx, ColorRef::Color(theme.color_token("chart.1"))),
                         tile(cx, ColorRef::Color(theme.color_token("chart.2"))),
                         tile(cx, ColorRef::Color(theme.color_token("chart.3"))),
@@ -102,8 +104,7 @@ impl View for EffectsLayerBasicsView {
                 })
                 .gap(Space::N2)
                 .into_element(cx),
-                shadcn::Label::new("Toggle an effect above. This is a mechanism-level API.")
-                    .into_element(cx),
+                shadcn::Label::new("Toggle an effect above. This is a mechanism-level API."),
             ]
         })
         .gap(Space::N3)
@@ -136,17 +137,9 @@ impl View for EffectsLayerBasicsView {
                 .test_id(TEST_ID_PREVIEW)
         };
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Effects layer basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal example showing `EffectLayer` + `EffectChain` (Pixelate, Blur).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let controls = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 button(cx, "None", EffectKind::None, act::None.into(), TEST_ID_NONE),
                 button(
                     cx,
@@ -161,17 +154,31 @@ impl View for EffectsLayerBasicsView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([
-            controls,
-            ui::v_flex(|_cx| [preview]).gap(Space::N3).into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Effects layer basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A minimal example showing `EffectLayer` + `EffectChain` (Pixelate, Blur).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(controls);
+                    out.push(ui::v_flex(|cx| ui::children![cx; preview]).gap(Space::N3).into_element(cx));
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(520.0))
         .into_element(cx);
-
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(520.0))
-            .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }

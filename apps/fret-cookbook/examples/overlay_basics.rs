@@ -106,28 +106,26 @@ impl View for OverlayBasicsView {
             cx,
             move |cx| {
                 let content = ui::v_flex(|cx| {
-                    let bump = shadcn::Button::new("Bump underlay")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .action(act::BumpUnderlay)
-                        .a11y_role(SemanticsRole::Button)
-                        .test_id(TEST_ID_UNDERLAY_BUMP)
-                        .into_element(cx);
-
-                    [
+                    ui::children![
+                        cx;
                         shadcn::Button::new("Open dialog")
                             .variant(shadcn::ButtonVariant::Outline)
                             .action(act::OpenDialog)
                             .a11y_role(SemanticsRole::Button)
-                            .test_id(TEST_ID_DIALOG_TRIGGER)
-                            .into_element(cx),
+                            .test_id(TEST_ID_DIALOG_TRIGGER),
                         ui::v_flex(|cx| {
-                            [
+                            ui::children![
+                                cx;
                                 cx.text(format!("Shortcut: {shortcut}"))
                                     .test_id(TEST_ID_UNDERLAY_SHORTCUT),
                                 cx.text(format!("Underlay: {enabled_label}")),
                                 cx.text(format!("Underlay bumps: {bumps}"))
                                     .test_id(TEST_ID_UNDERLAY_BUMPS),
-                                bump,
+                                shadcn::Button::new("Bump underlay")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .action(act::BumpUnderlay)
+                                    .a11y_role(SemanticsRole::Button)
+                                    .test_id(TEST_ID_UNDERLAY_BUMP),
                             ]
                         })
                         .gap(Space::N2)
@@ -138,42 +136,51 @@ impl View for OverlayBasicsView {
                 .items_center()
                 .into_element(cx);
 
-                shadcn::Card::new([
-                    shadcn::CardHeader::new([
-                        shadcn::CardTitle::new("Overlay basics").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "A minimal Dialog example with stable test IDs.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new([content]).into_element(cx),
-                ])
+                shadcn::Card::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::CardHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::CardTitle::new("Overlay basics"));
+                            out.push_ui(
+                                cx,
+                                shadcn::CardDescription::new(
+                                    "A minimal Dialog example with stable test IDs.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push_ui(
+                        cx,
+                        shadcn::CardContent::build(|_cx, out| {
+                            out.push(content);
+                        }),
+                    );
+                })
                 .ui()
                 .w_full()
                 .max_w(Px(520.0))
                 .into_element(cx)
             },
             move |cx| {
-                shadcn::DialogContent::new([
-                    shadcn::DialogHeader::new([
-                        shadcn::DialogTitle::new("Hello overlays").into_element(cx),
+                shadcn::DialogContent::new(ui::children![
+                    cx;
+                    shadcn::DialogHeader::new(ui::children![
+                        cx;
+                        shadcn::DialogTitle::new("Hello overlays"),
                         shadcn::DialogDescription::new(
                             "This is a minimal dialog example with stable test IDs.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(dialog_open_for_footer.clone())
-                        .into_element(cx)])
-                    .into_element(cx),
+                        ),
+                    ]),
+                    shadcn::DialogFooter::new(ui::children![
+                        cx;
+                        shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(dialog_open_for_footer.clone()),
+                    ]),
                     // Order matters: `DialogClose` is absolutely-positioned and should be the last
                     // child so it stays above the Dialog content in hit testing.
                     shadcn::DialogClose::new(dialog_open_for_close.clone())
-                        .test_id(TEST_ID_DIALOG_CLOSE)
-                        .into_element(cx),
+                        .test_id(TEST_ID_DIALOG_CLOSE),
                 ])
                 .test_id(TEST_ID_DIALOG_CONTENT)
                 .into_element(cx)

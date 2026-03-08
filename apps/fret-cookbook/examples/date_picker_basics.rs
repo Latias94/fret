@@ -27,14 +27,15 @@ impl View for DatePickerBasicsView {
             .map(|d| d.to_string())
             .unwrap_or_else(|| "<none>".to_string());
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Date picker basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal DatePicker example (controlled models: open/month/selected).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Date picker basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A minimal DatePicker example (controlled models: open/month/selected).",
+                ),
+            );
+        });
 
         let picker = shadcn::DatePicker::new_controllable(
             cx.elements(),
@@ -48,25 +49,33 @@ impl View for DatePickerBasicsView {
         .test_id(TEST_ID_PICKER);
 
         let selected_row = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Selected:").into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Label::new("Selected:"),
                 shadcn::Badge::new(selected)
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx)
                     .test_id(TEST_ID_SELECTED),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let card = shadcn::Card::new([
-            header,
-            shadcn::CardContent::new([ui::v_flex(|_cx| [picker, selected_row])
-                .gap(Space::N3)
-                .into_element(cx)])
-            .into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex_build(|cx, out| {
+                            out.push(picker);
+                            out.push_ui(cx, selected_row);
+                        })
+                        .gap(Space::N3),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
         .max_w(Px(720.0))
