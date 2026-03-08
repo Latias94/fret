@@ -25,7 +25,7 @@ v1 succeeded as an architectural reset:
 - default teaching surfaces converged on a smaller helper set.
 
 However, v1 did **not** fully reach the original GPUI/Zed-style authoring density goal. The current
-repo still exposes five recurring friction points in medium demos and the simple-todo baseline:
+repo still exposes five recurring friction points in medium demos and the current simple-todo starter/default path:
 
 1. `LocalState<T>` is still model-backed, so view-owned state does not yet feel like plain-Rust
    fields or collections.

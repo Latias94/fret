@@ -128,7 +128,7 @@ Mitigation / gates:
 
 Symptoms:
 
-- templates teach MVU-only, docs mention actions/views, gallery uses string commands,
+- historical docs/templates drift across authoring eras (for example older MVU-era wording, partial action/view terminology, or stale command-language references),
 - duplicated APIs linger and confuse new contributors.
 
 Mitigation / gates:
