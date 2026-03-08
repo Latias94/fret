@@ -1,6 +1,6 @@
 # Onboarding Ergonomics + Ecosystem Interop — TODOs (v1)
 
-Status: Active
+Status: Historical reference (superseded by action-first v2 onboarding docs)
 
 This tracker focuses on improvements that make Fret easier to learn and easier to adopt, while
 preserving the “mechanism vs policy” split.
@@ -8,6 +8,8 @@ preserving the “mechanism vs policy” split.
 Design note:
 
 - `docs/workstreams/onboarding-ergonomics-v1.md`
+
+Status note (2026-03-08): this tracker predates the in-tree action-first/view-runtime convergence. Keep it as historical planning context only; current onboarding/default-path work is tracked in `docs/workstreams/action-first-authoring-fearless-refactor-v1/`.
 
 ## Decisions (2026-02-15)
 
@@ -27,7 +29,7 @@ Design note:
 ## A. Onboarding Ladder (docs-first)
 
 - [x] ONB-docs-001 Add a “First hour” onboarding doc (native-first).
-  - Must include: dependencies, minimal MVU, keyed lists, invalidation cheat sheet.
+  - Must include: dependencies, minimal view runtime + typed actions, keyed lists, invalidation cheat sheet.
   - Evidence anchors:
     - `README.md` (quick start)
     - `docs/first-hour.md`
@@ -35,7 +37,7 @@ Design note:
     - `docs/ui-ergonomics-and-interop.md` (interop tiering)
 
 - [x] ONB-docs-002 Update `docs/examples/todo-app-golden-path.md` to explicitly position:
-  - “simple-todo” as the Step 1 baseline (Model + MVU),
+  - “simple-todo” as the Step 1 baseline (view runtime + typed actions + keyed lists; current starter path uses `LocalState<Vec<_>>` for view-owned lists),
   - “todo” as Step 2/3 (selector + query).
 
 - [x] ONB-docs-003 Add a short “Invalidation rules of thumb” section.
@@ -60,7 +62,7 @@ Design note:
 
 - [x] ONB-tpl-010 Add `simple-todo` template.
   - Scope:
-    - `Model<T>` + MVU typed messages
+    - `LocalState<T>` + typed actions
     - shadcn components
     - keyed list rendering
     - no selector/query dependencies
@@ -172,14 +174,14 @@ Design note:
 
 ## E. Action-first/view-runtime clarity
 
- - [x] ONB-mvu-040 Document the MVU “tick refresh” posture and its implications.
+ - [x] ONB-mvu-040 Keep the historical MVU “tick refresh” posture documented as archive context only.
    - Evidence:
      - `ecosystem/fret/src/view.rs`
      - `docs/examples/todo-app-golden-path.md`
 
 - [ ] ONB-view-041 Explore whether any additional ?more precise invalidation? guidance is needed.
   - Decision gate:
-    - do we keep MVU always “simple + safe”, and push perf apps toward manual driver wiring?
+    - do we need any extra guidance beyond the current action-first/view-runtime default path for advanced invalidation/perf-sensitive apps?
 
 ---
 

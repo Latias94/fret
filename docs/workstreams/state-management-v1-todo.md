@@ -93,4 +93,5 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
 - `[x]` Add component ecosystem integration workstream + milestone tracker.
   - Evidence anchor: `docs/workstreams/component-ecosystem-state-integration-v1.md`
   - Evidence anchor: `docs/workstreams/component-ecosystem-state-integration-v1-todo.md`
-- `[ ]` Sweep remaining historical docs that still mention removed MVU-era routing surfaces.
+- `[~]` Sweep remaining historical docs that still mention removed MVU-era routing surfaces.
+  - Update (2026-03-08): `docs/workstreams/onboarding-ergonomics-v1.md`, `docs/workstreams/onboarding-ergonomics-v1-milestones.md`, and `docs/workstreams/onboarding-ergonomics-v1-todo.md` are now explicitly marked as historical/superseded, while `docs/workstreams/example-suite-fearless-refactor-v1/inventory.md` now describes `hello_counter` / `simple_todo` with the post-v1 terminology.
