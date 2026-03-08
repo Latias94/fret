@@ -657,6 +657,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     grid metrics/tile scratch preparation, and pattern-size validation through the private
     `canvas/widget/paint_grid_plan_support.rs` seam, so retained grid-plan reducers
     no longer keep paint planning helpers embedded in one surface.
+  - Progress: `cursor.rs` now routes interaction gating and concrete resize/edge-anchor
+    cursor resolution through the private `canvas/widget/cursor_gate.rs` and
+    `canvas/widget/cursor_resolve.rs` seams, so retained cursor reducers
+    no longer keep cursor eligibility checks and hit resolution embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -121,6 +121,8 @@ mod commit;
 mod commit_legacy;
 mod context_menu;
 mod cursor;
+mod cursor_gate;
+mod cursor_resolve;
 mod delete;
 mod delete_ops_builder;
 mod delete_predicates;
