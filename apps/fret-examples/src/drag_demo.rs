@@ -99,17 +99,19 @@ impl DragDemoDriver {
                 .label("P B")
                 .show_value(true),
             ],
-            drag_rects: vec![DragRect::new(
-                0x5241u64,
-                DataRect {
-                    x_min: 35.0,
-                    x_max: 65.0,
-                    y_min: -0.25,
-                    y_max: 0.25,
-                },
-                YAxis::Left,
-            )
-            .label("window")],
+            drag_rects: vec![
+                DragRect::new(
+                    0x5241u64,
+                    DataRect {
+                        x_min: 35.0,
+                        x_max: 65.0,
+                        y_min: -0.25,
+                        y_max: 0.25,
+                    },
+                    YAxis::Left,
+                )
+                .label("window"),
+            ],
             ..Default::default()
         };
 

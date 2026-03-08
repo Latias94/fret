@@ -7,7 +7,7 @@ use fret_diag_protocol::{
 
 use super::{
     PendingScript, UiDiagnosticsService, display_path, format_bundle_dump_note,
-    push_script_event_log, read_touch_stamp, sanitize_label, unix_ms_now,
+    push_script_event_log, read_touch_stamp, sanitize_label, touch_file, unix_ms_now,
 };
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -28,6 +28,43 @@ pub(super) struct PendingForceDumpRequest {
     pub(super) script_run_id: Option<u64>,
     pub(super) script_step_index: Option<u32>,
     pub(super) request_id: Option<u64>,
+}
+
+pub(super) fn best_effort_update_script_result_last_bundle_artifact(
+    service: &mut UiDiagnosticsService,
+    script_run_id: u64,
+    dumped_dir: &Path,
+) {
+    let Ok(bytes) = std::fs::read(&service.cfg.script_result_path) else {
+        return;
+    };
+    let Ok(mut result) = serde_json::from_slice::<UiScriptResultV1>(&bytes) else {
+        return;
+    };
+    if result.run_id != script_run_id {
+        return;
+    }
+
+    let bundle_dir = display_path(&service.cfg.out_dir, dumped_dir);
+    let artifact = service.last_dump_artifact_stats.clone();
+    let should_write = result.last_bundle_dir.as_deref() != Some(bundle_dir.as_str())
+        || result.last_bundle_artifact.is_none();
+    if !should_write {
+        return;
+    }
+
+    result.updated_unix_ms = unix_ms_now();
+    result.last_bundle_dir = Some(bundle_dir);
+    result.last_bundle_artifact = artifact;
+    service.write_script_result(result.clone());
+
+    if !cfg!(target_arch = "wasm32") {
+        let bundle_script_result_path = dumped_dir.join("script.result.json");
+        if let Ok(serialized) = serde_json::to_vec_pretty(&result) {
+            let _ = std::fs::write(&bundle_script_result_path, serialized);
+            let _ = touch_file(&service.cfg.script_result_trigger_path);
+        }
+    }
 }
 
 fn warn_fs_once(
@@ -108,6 +145,7 @@ impl UiDiagnosticsService {
                         },
                     );
                 }
+                best_effort_update_script_result_last_bundle_artifact(self, script_run_id, dir);
             }
             return dumped;
         }

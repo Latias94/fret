@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-retained-analysis.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-preview-only-memory-retained-analysis.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-preview-only-memory-retained-analysis.json"
+  ]
+}

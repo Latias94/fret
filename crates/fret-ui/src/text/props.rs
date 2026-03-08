@@ -1,7 +1,7 @@
 use crate::ThemeSnapshot;
 use fret_core::{
     AttributedText, FontId, Px, TextAlign, TextInput, TextLineHeightPolicy, TextOverflow,
-    TextSlant, TextSpan, TextStyle, TextWrap,
+    TextSlant, TextSpan, TextStyle, TextStyleRefinement, TextWrap,
 };
 
 pub(crate) fn default_text_style(theme: ThemeSnapshot) -> TextStyle {
@@ -19,9 +19,21 @@ pub(crate) fn default_text_style(theme: ThemeSnapshot) -> TextStyle {
     }
 }
 
-pub(crate) fn resolve_text_style(theme: ThemeSnapshot, explicit: Option<TextStyle>) -> TextStyle {
-    let mut style = explicit.unwrap_or_else(|| default_text_style(theme.clone()));
-    if style.line_height.is_none() {
+pub(crate) fn resolve_text_style(
+    theme: ThemeSnapshot,
+    explicit: Option<TextStyle>,
+    inherited: Option<&TextStyleRefinement>,
+) -> TextStyle {
+    let mut style = if let Some(explicit) = explicit {
+        explicit
+    } else {
+        let mut style = default_text_style(theme.clone());
+        if let Some(inherited) = inherited {
+            style.refine(inherited);
+        }
+        style
+    };
+    if style.line_height.is_none() && style.line_height_em.is_none() {
         style.line_height = Some(derive_default_line_height(theme, &style));
     }
     style
@@ -40,8 +52,7 @@ pub(crate) fn build_text_input_attributed(
 
 pub(crate) fn text_wrap_none_measure_fingerprint_plain(
     text: &std::sync::Arc<str>,
-    explicit_style: Option<&TextStyle>,
-    theme_revision: u64,
+    resolved_style: &TextStyle,
     overflow: TextOverflow,
     align: TextAlign,
     scale_factor: f32,
@@ -52,24 +63,17 @@ pub(crate) fn text_wrap_none_measure_fingerprint_plain(
     state = mix_u64(state, text.as_ref().as_ptr() as usize as u64);
     state = mix_u64(state, text.len() as u64);
     state = mix_u64(state, font_stack_key);
-    state = mix_u64(state, theme_revision);
     state = mix_f32(state, scale_factor);
     state = mix_text_wrap(state, TextWrap::None);
     state = mix_text_overflow(state, overflow);
     state = mix_text_align(state, align);
-    if let Some(style) = explicit_style {
-        state = mix_u64(state, 1);
-        state = mix_text_style(state, style);
-    } else {
-        state = mix_u64(state, 0);
-    }
+    state = mix_text_style(state, resolved_style);
     state
 }
 
 pub(crate) fn text_wrap_none_measure_fingerprint_rich(
     rich: &AttributedText,
-    explicit_style: Option<&TextStyle>,
-    theme_revision: u64,
+    resolved_style: &TextStyle,
     overflow: TextOverflow,
     align: TextAlign,
     scale_factor: f32,
@@ -81,17 +85,11 @@ pub(crate) fn text_wrap_none_measure_fingerprint_rich(
     state = mix_u64(state, rich.text.len() as u64);
     state = mix_u64(state, spans_shaping_fingerprint(rich.spans.as_ref()));
     state = mix_u64(state, font_stack_key);
-    state = mix_u64(state, theme_revision);
     state = mix_f32(state, scale_factor);
     state = mix_text_wrap(state, TextWrap::None);
     state = mix_text_overflow(state, overflow);
     state = mix_text_align(state, align);
-    if let Some(style) = explicit_style {
-        state = mix_u64(state, 1);
-        state = mix_text_style(state, style);
-    } else {
-        state = mix_u64(state, 0);
-    }
+    state = mix_text_style(state, resolved_style);
     state
 }
 
@@ -144,6 +142,71 @@ fn mix_font_id(mut state: u64, font: &FontId) -> u64 {
             mix_bytes(state, name.as_bytes())
         }
     }
+}
+
+pub(crate) fn text_style_refinement_fingerprint(refinement: &TextStyleRefinement) -> u64 {
+    let mut state = 0u64;
+    state = mix_u64(state, 3);
+
+    state = mix_u64(state, refinement.font.is_some() as u64);
+    if let Some(font) = refinement.font.as_ref() {
+        state = mix_font_id(state, font);
+    }
+
+    state = mix_u64(state, refinement.size.is_some() as u64);
+    if let Some(size) = refinement.size {
+        state = mix_px(state, size);
+    }
+
+    state = mix_u64(state, refinement.weight.is_some() as u64);
+    if let Some(weight) = refinement.weight {
+        state = mix_u64(state, u64::from(weight.0));
+    }
+
+    state = mix_u64(state, refinement.slant.is_some() as u64);
+    if let Some(slant) = refinement.slant {
+        state = mix_text_slant(state, slant);
+    }
+
+    state = mix_option_px(state, refinement.line_height);
+    state = mix_option_f32(state, refinement.line_height_em);
+
+    state = mix_u64(state, refinement.line_height_policy.is_some() as u64);
+    if let Some(policy) = refinement.line_height_policy {
+        state = mix_u64(
+            state,
+            match policy {
+                fret_core::TextLineHeightPolicy::ExpandToFit => 1,
+                fret_core::TextLineHeightPolicy::FixedFromStyle => 2,
+            },
+        );
+    }
+
+    state = mix_option_f32(state, refinement.letter_spacing_em);
+
+    state = mix_u64(state, refinement.vertical_placement.is_some() as u64);
+    if let Some(vertical_placement) = refinement.vertical_placement {
+        state = mix_u64(
+            state,
+            match vertical_placement {
+                fret_core::TextVerticalPlacement::CenterMetricsBox => 1,
+                fret_core::TextVerticalPlacement::BoundsAsLineBox => 2,
+            },
+        );
+    }
+
+    state = mix_u64(state, refinement.leading_distribution.is_some() as u64);
+    if let Some(leading_distribution) = refinement.leading_distribution {
+        state = mix_u64(
+            state,
+            match leading_distribution {
+                fret_core::TextLeadingDistribution::Even => 1,
+                fret_core::TextLeadingDistribution::Proportional => 2,
+            },
+        );
+    }
+
+    state
 }
 
 fn mix_text_style(mut state: u64, style: &TextStyle) -> u64 {
@@ -394,7 +457,7 @@ mod tests {
             ..Default::default()
         };
 
-        let resolved = resolve_text_style(theme, Some(style));
+        let resolved = resolve_text_style(theme, Some(style), None);
         let got = resolved.line_height.unwrap().0;
         let expected = 10.0_f32 * (16.0_f32 / 13.0_f32);
         assert!(

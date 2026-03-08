@@ -130,7 +130,8 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
     where
         T: Copy,
     {
-        self.cx.get_model_copied(self.local.model(), self.invalidation)
+        self.cx
+            .get_model_copied(self.local.model(), self.invalidation)
     }
 
     pub fn copied_or(self, default: T) -> T
@@ -151,7 +152,8 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
     where
         T: Clone,
     {
-        self.cx.get_model_cloned(self.local.model(), self.invalidation)
+        self.cx
+            .get_model_cloned(self.local.model(), self.invalidation)
     }
 
     pub fn cloned_or(self, default: T) -> T
@@ -176,7 +178,8 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
     }
 
     pub fn read_ref<R>(self, f: impl FnOnce(&T) -> R) -> Result<R, ModelUpdateError> {
-        self.cx.read_model_ref(self.local.model(), self.invalidation, f)
+        self.cx
+            .read_model_ref(self.local.model(), self.invalidation, f)
     }
 
     pub fn read<R>(self, f: impl FnOnce(&mut H, &T) -> R) -> Result<R, ModelUpdateError> {
@@ -369,7 +372,10 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 
     /// Observe and read a model-backed local state handle.
-    pub fn watch_local<'m, T: Any>(&'m mut self, local: &'m LocalState<T>) -> WatchedLocal<'m, 'm, 'a, H, T> {
+    pub fn watch_local<'m, T: Any>(
+        &'m mut self,
+        local: &'m LocalState<T>,
+    ) -> WatchedLocal<'m, 'm, 'a, H, T> {
         WatchedLocal {
             cx: self.cx,
             local,

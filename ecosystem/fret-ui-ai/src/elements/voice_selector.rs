@@ -9,9 +9,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
@@ -101,30 +99,6 @@ fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
             });
             model
         })
-}
-
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        font: FontId::default(),
-        size: theme.metric_required("component.text.sm_px"),
-        weight,
-        slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.sm_line_height")),
-        letter_spacing_em: None,
-        ..Default::default()
-    })
-}
-
-fn text_xs(theme: &Theme) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        font: FontId::default(),
-        size: theme.metric_required("component.text.xs_px"),
-        weight: FontWeight::NORMAL,
-        slant: Default::default(),
-        line_height: Some(theme.metric_required("component.text.xs_line_height")),
-        letter_spacing_em: None,
-        ..Default::default()
-    })
 }
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -254,6 +228,59 @@ impl VoiceSelector {
     pub fn on_value_change(mut self, cb: OnVoiceSelectorValueChange) -> Self {
         self.on_value_change = Some(cb);
         self
+    }
+
+    /// Rust-friendly compound entrypoint for the upstream JSX children shape.
+    pub fn into_element_with_children<H, F>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        F: Fn(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement) + Clone + 'static,
+    {
+        let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
+            .open(self.open.clone())
+            .default_open(self.default_open)
+            .open_model(cx);
+
+        let value = controllable_state::use_controllable_model(cx, self.value.clone(), || {
+            self.default_value.clone()
+        })
+        .model();
+
+        let query = query_model(cx);
+        let controller = VoiceSelectorController {
+            voices: self.voices.clone(),
+            value: value.clone(),
+            open: open.clone(),
+            query: query.clone(),
+            on_value_change: self.on_value_change.clone(),
+        };
+
+        let controller_for_trigger = controller.clone();
+        let controller_for_content = controller;
+        let children_for_trigger = children.clone();
+        let children_for_content = children;
+
+        Dialog::new(open.clone()).into_element(
+            cx,
+            move |cx| {
+                cx.with_state(VoiceSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_trigger.clone());
+                });
+                let (trigger, _) = children_for_trigger(cx);
+                trigger
+            },
+            move |cx| {
+                cx.with_state(VoiceSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_content.clone());
+                });
+                let (_, content) = children_for_content(cx);
+                content
+            },
+        )
     }
 
     pub fn into_element<H: UiHost + 'static>(
@@ -618,7 +645,14 @@ impl VoiceSelectorList {
                         let name_el = cx.text_props(TextProps {
                             layout: Default::default(),
                             text: name,
-                            style: Some(text_sm(&theme, FontWeight::MEDIUM)),
+                            style: Some(typography::preset_text_style_with_overrides(
+                                &theme,
+                                typography::TypographyPreset::control_ui(
+                                    typography::UiTextSize::Sm,
+                                ),
+                                Some(FontWeight::MEDIUM),
+                                None,
+                            )),
                             color: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
@@ -629,7 +663,14 @@ impl VoiceSelectorList {
                             cx.text_props(TextProps {
                                 layout: Default::default(),
                                 text: d,
-                                style: Some(text_xs(&theme)),
+                                style: Some(typography::preset_text_style_with_overrides(
+                                    &theme,
+                                    typography::TypographyPreset::control_ui(
+                                        typography::UiTextSize::Xs,
+                                    ),
+                                    Some(FontWeight::NORMAL),
+                                    None,
+                                )),
                                 color: Some(muted_fg(&theme)),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Ellipsis,
@@ -722,7 +763,12 @@ impl VoiceSelectorName {
         let mut element = cx.text_props(TextProps {
             layout: decl_style::layout_style(&theme, self.layout),
             text: self.text,
-            style: Some(text_sm(&theme, FontWeight::MEDIUM)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::MEDIUM),
+                None,
+            )),
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
@@ -775,17 +821,23 @@ impl VoiceSelectorDescription {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let mut element = cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout),
-            text: self.text,
-            style: Some(text_xs(&theme)),
-            color: Some(muted_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let theme = Theme::global(&*cx.app).snapshot();
+        let mut element = typography::scope_description_text_with_fallbacks(
+            cx.text_props(TextProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                text: self.text,
+                style: None,
+                color: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+            &theme,
+            "component.voice_selector.description",
+            Some("component.text.xs_px"),
+            Some("component.text.xs_line_height"),
+        );
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -828,7 +880,12 @@ impl VoiceSelectorAge {
         let mut element = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
-            style: Some(text_xs(&theme)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
@@ -930,7 +987,12 @@ impl VoiceSelectorBullet {
         let mut element = cx.text_props(TextProps {
             layout: Default::default(),
             text: Arc::<str>::from("•"),
-            style: Some(text_xs(&theme)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: Some(border_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -1036,7 +1098,12 @@ impl VoiceSelectorAccent {
         let mut element = cx.text_props(TextProps {
             layout: Default::default(),
             text: Arc::<str>::from(emoji),
-            style: Some(text_xs(&theme)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -1196,7 +1263,12 @@ impl VoiceSelectorValue {
         let mut out = cx.text_props(TextProps {
             layout: Default::default(),
             text,
-            style: Some(text_sm(&theme, FontWeight::NORMAL)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
@@ -1264,6 +1336,20 @@ impl VoiceSelectorButton {
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, TextProps};
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, needle)),
+        }
+    }
+
     #[test]
     fn voice_selector_list_entries_mode_captures_entries() {
         let list = VoiceSelectorList::new_entries([CommandItem::new("Alloy")]);
@@ -1271,6 +1357,43 @@ mod tests {
             VoiceSelectorListMode::Entries(entries) => assert_eq!(entries.len(), 1),
             VoiceSelectorListMode::Auto => panic!("expected entries mode"),
         }
+    }
+
+    #[test]
+    fn voice_selector_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            VoiceSelectorDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected VoiceSelectorDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.voice_selector.description",
+                Some("component.text.xs_px"),
+                Some("component.text.xs_line_height"),
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
@@ -1294,5 +1417,78 @@ mod tests {
         assert_eq!(voice_selector_accent_emoji(Some("american")), Some("🇺🇸"));
         assert_eq!(voice_selector_accent_emoji(Some("british")), Some("🇬🇧"));
         assert_eq!(voice_selector_accent_emoji(Some("unknown")), None);
+    }
+
+    #[test]
+    fn voice_selector_surfaces_use_shared_typography_presets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controller = VoiceSelectorController {
+            voices: std::sync::Arc::from([VoiceSelectorVoice::new("alloy", "Alloy")]),
+            value: app.models_mut().insert(None),
+            open: app.models_mut().insert(false),
+            query: app.models_mut().insert(String::new()),
+            on_value_change: None,
+        };
+
+        let element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(320.0), Px(160.0)),
+            ),
+            "test",
+            |cx| {
+                cx.with_state(VoiceSelectorProviderState::default, |st| {
+                    st.controller = Some(controller.clone());
+                });
+                ui::v_stack(|cx| {
+                    vec![
+                        VoiceSelectorValue::new()
+                            .placeholder("Pick a voice")
+                            .into_element(cx),
+                        VoiceSelectorName::new("Alloy").into_element(cx),
+                        VoiceSelectorAge::new("Adult").into_element(cx),
+                        VoiceSelectorAccent::new()
+                            .value("american")
+                            .into_element(cx),
+                    ]
+                })
+                .into_element(cx)
+            },
+        );
+
+        let theme = Theme::global(&app).clone();
+        let expected_sm_normal = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+        let expected_sm_medium = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::MEDIUM),
+            None,
+        ));
+        let expected_xs_normal = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+
+        let value = find_text_by_content(&element, "Pick a voice").expect("voice value text");
+        assert_eq!(value.style, expected_sm_normal);
+
+        let name = find_text_by_content(&element, "Alloy").expect("voice name text");
+        assert_eq!(name.style, expected_sm_medium);
+
+        let age = find_text_by_content(&element, "Adult").expect("voice age text");
+        assert_eq!(age.style, expected_xs_normal.clone());
+
+        let accent = find_text_by_content(&element, "🇺🇸").expect("voice accent text");
+        assert_eq!(accent.style, expected_xs_normal);
     }
 }

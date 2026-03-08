@@ -145,6 +145,13 @@ impl Renderer {
             postprocess,
             &mut frame_perf,
         );
+        self.sync_path_intermediate_for_plan(
+            device,
+            viewport_size,
+            format,
+            path_samples,
+            &plan.passes,
+        );
         plan.debug_validate();
         if self.render_plan_strict_output_clear {
             plan.debug_validate_first_output_write_is_clear();

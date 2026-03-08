@@ -12,6 +12,7 @@ use std::{
 
 use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
 use fret_render_text::decorations::{TextDecorationMetricsPx, decorations_for_lines};
+use fret_render_text::geometry::TextLineCluster;
 
 #[cfg(test)]
 use fret_render_text::cache_keys::spans_paint_fingerprint;
@@ -89,6 +90,41 @@ pub struct TextShape {
     pub caret_stops: Arc<[(usize, Px)]>,
     pub missing_glyphs: u32,
     pub(crate) font_faces: Arc<[TextFontFaceUsage]>,
+}
+
+fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
+    let mul = |len: usize, item_size: usize| -> u64 {
+        ((len as u128) * (item_size as u128)).min(u64::MAX as u128) as u64
+    };
+
+    let mut bytes: u64 = (std::mem::size_of::<TextShape>() as u128).min(u64::MAX as u128) as u64;
+
+    bytes = bytes.saturating_add(mul(
+        shape.glyphs.len(),
+        std::mem::size_of::<GlyphInstance>(),
+    ));
+    bytes = bytes.saturating_add(mul(shape.lines.len(), std::mem::size_of::<TextLine>()));
+    bytes = bytes.saturating_add(mul(
+        shape.caret_stops.len(),
+        std::mem::size_of::<(usize, Px)>(),
+    ));
+    bytes = bytes.saturating_add(mul(
+        shape.font_faces.len(),
+        std::mem::size_of::<TextFontFaceUsage>(),
+    ));
+
+    for line in shape.lines.iter() {
+        bytes = bytes.saturating_add(mul(
+            line.caret_stops.capacity(),
+            std::mem::size_of::<(usize, Px)>(),
+        ));
+        bytes = bytes.saturating_add(mul(
+            line.clusters().len(),
+            std::mem::size_of::<TextLineCluster>(),
+        ));
+    }
+
+    bytes
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -1006,6 +1042,53 @@ impl TextSystem {
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextPerfSnapshot {
         let font_db = self.parley_shaper.font_db_diagnostics_snapshot();
+        let mut shape_cache_bytes_estimate_total: u64 = 0;
+        let mut seen_shapes: HashSet<usize> = HashSet::new();
+
+        let mut add_shape = |shape: &Arc<TextShape>| {
+            let ptr = Arc::as_ptr(shape) as usize;
+            if !seen_shapes.insert(ptr) {
+                return;
+            }
+            shape_cache_bytes_estimate_total = shape_cache_bytes_estimate_total
+                .saturating_add(estimate_text_shape_heap_bytes(shape.as_ref()));
+        };
+
+        for shape in self.shape_cache.values() {
+            add_shape(shape);
+        }
+        for blob in self.blobs.values() {
+            add_shape(&blob.shape);
+        }
+
+        let mut blob_paint_palette_bytes_estimate_total: u64 = 0;
+        let mut blob_decorations_bytes_estimate_total: u64 = 0;
+        let mut seen_palettes: HashSet<usize> = HashSet::new();
+        let mut seen_decorations: HashSet<usize> = HashSet::new();
+
+        for blob in self.blobs.values() {
+            if let Some(palette) = blob.paint_palette.as_ref() {
+                let ptr = palette.as_ptr() as usize;
+                if seen_palettes.insert(ptr) {
+                    blob_paint_palette_bytes_estimate_total =
+                        blob_paint_palette_bytes_estimate_total.saturating_add(
+                            ((palette.len() as u128)
+                                * (std::mem::size_of::<Option<fret_core::Color>>() as u128))
+                                .min(u64::MAX as u128) as u64,
+                        );
+                }
+            }
+            let ptr = blob.decorations.as_ptr() as usize;
+            if seen_decorations.insert(ptr) {
+                blob_decorations_bytes_estimate_total = blob_decorations_bytes_estimate_total
+                    .saturating_add(
+                        ((blob.decorations.len() as u128)
+                            * (std::mem::size_of::<TextDecoration>() as u128))
+                            .min(u64::MAX as u128) as u64,
+                    );
+            }
+        }
+
         fret_core::RendererTextPerfSnapshot {
             frame_id,
             font_stack_key: self.font_stack_key,
@@ -1017,6 +1100,9 @@ impl TextSystem {
             blob_cache_entries: self.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
             measure_cache_buckets: self.measure.buckets_len() as u64,
+            shape_cache_bytes_estimate_total,
+            blob_paint_palette_bytes_estimate_total,
+            blob_decorations_bytes_estimate_total,
             unwrapped_layout_cache_entries: 0,
             frame_unwrapped_layout_cache_hits: 0,
             frame_unwrapped_layout_cache_misses: 0,

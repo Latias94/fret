@@ -57,6 +57,7 @@ pub struct Shimmer {
     duration_secs: f32,
     spread: f32,
     text_style: Option<TextStyle>,
+    use_resolved_passive_text: bool,
     wrap: TextWrap,
     role: SemanticsRole,
     test_id: Option<Arc<str>>,
@@ -83,6 +84,7 @@ impl Shimmer {
             duration_secs: 2.0,
             spread: 2.0,
             text_style: None,
+            use_resolved_passive_text: false,
             wrap: TextWrap::None,
             role: SemanticsRole::Text,
             test_id: None,
@@ -106,6 +108,15 @@ impl Shimmer {
     /// (e.g. shadcn CardTitle/CardDescription in AI Elements).
     pub fn text_style(mut self, style: TextStyle) -> Self {
         self.text_style = Some(style);
+        self
+    }
+
+    /// Resolve base/overlay typography from the passive-text cascade of the surrounding subtree.
+    ///
+    /// This keeps the legacy explicit `.text_style(...)` path intact, but allows semantic call
+    /// sites (e.g. streaming card descriptions) to reuse inherited text-style / foreground scopes.
+    pub fn use_resolved_passive_text(mut self) -> Self {
+        self.use_resolved_passive_text = true;
         self
     }
 
@@ -141,7 +152,9 @@ impl Shimmer {
         let duration_secs = self.duration_secs;
         let spread = self.spread;
 
-        let style = match self.text_style {
+        let use_resolved_passive_text = self.use_resolved_passive_text;
+        let explicit_style = self.text_style;
+        let legacy_style = match explicit_style.clone() {
             Some(style) => style,
             None => {
                 let font_size = theme
@@ -158,8 +171,7 @@ impl Shimmer {
                 }
             }
         };
-        let style = typography::as_control_text(style);
-        let style_for_paint = style.clone();
+        let legacy_style = typography::as_control_text(legacy_style);
 
         cx.semantics(
             SemanticsProps {
@@ -170,19 +182,30 @@ impl Shimmer {
             },
             move |cx| {
                 let theme = Theme::global(&*cx.app).clone();
-                let base_color = resolve_muted_foreground(&theme);
-
-                let base = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::clone(&text),
-                    style: Some(style.clone()),
-                    color: Some(base_color),
-                    wrap,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                });
+                let base = if use_resolved_passive_text {
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::clone(&text),
+                        style: explicit_style.clone(),
+                        color: None,
+                        wrap,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: fret_ui::element::TextInkOverflow::None,
+                    })
+                } else {
+                    let base_color = resolve_muted_foreground(&theme);
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::clone(&text),
+                        style: Some(legacy_style.clone()),
+                        color: Some(base_color),
+                        wrap,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: fret_ui::element::TextInkOverflow::None,
+                    })
+                };
 
                 let canvas_layout = decl_style::layout_style(
                     &theme,
@@ -234,6 +257,12 @@ impl Shimmer {
                         if x1 <= x0 {
                             return;
                         }
+
+                        let style_for_paint = if use_resolved_passive_text {
+                            painter.resolved_passive_text_style(explicit_style.clone())
+                        } else {
+                            legacy_style.clone()
+                        };
 
                         let constraints = TextConstraints {
                             max_width: Some(bounds.size.width),
@@ -297,5 +326,388 @@ impl Shimmer {
                 vec![base, overlay]
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Color, FontWeight, MaterialDescriptor, MaterialId, MaterialRegistrationError,
+        MaterialService, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Rect, Scene, SceneOp, Size, SvgId, SvgService, TextBlobId, TextLineHeightPolicy,
+        TextService, TextStyleRefinement,
+    };
+    use fret_ui::UiTree;
+    use fret_ui::declarative::render_root;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum CallPhase {
+        Layout,
+        Paint,
+    }
+
+    #[derive(Debug, Clone)]
+    struct RecordedTextCall {
+        phase: CallPhase,
+        text: Arc<str>,
+        style: TextStyle,
+        constraints: TextConstraints,
+        metrics: fret_core::TextMetrics,
+    }
+
+    #[derive(Default)]
+    struct RecordingServices {
+        phase: Option<CallPhase>,
+        measured: Vec<RecordedTextCall>,
+        prepared: Vec<RecordedTextCall>,
+    }
+
+    impl RecordingServices {
+        fn set_phase(&mut self, phase: CallPhase) {
+            self.phase = Some(phase);
+        }
+
+        fn current_phase(&self) -> CallPhase {
+            self.phase
+                .expect("recording phase must be set before layout/paint")
+        }
+
+        fn unpack_input(input: &TextInput) -> (Arc<str>, TextStyle) {
+            match input {
+                TextInput::Plain { text, style } => (Arc::clone(text), style.clone()),
+                TextInput::Attributed { text, base, .. } => (Arc::clone(text), base.clone()),
+                _ => panic!("unsupported non-exhaustive TextInput variant in shimmer test"),
+            }
+        }
+
+        fn synthetic_metrics(
+            text: &str,
+            style: &TextStyle,
+            constraints: TextConstraints,
+        ) -> fret_core::TextMetrics {
+            let line_height = style
+                .line_height
+                .or_else(|| style.line_height_em.map(|em| Px(style.size.0 * em)))
+                .unwrap_or(Px(style.size.0 * 1.4));
+            let approx_glyph_width = (style.size.0 * 0.55).max(1.0);
+            let natural_width = text.chars().count() as f32 * approx_glyph_width;
+            let wrap_bias = match constraints.wrap {
+                TextWrap::None => 0.0,
+                TextWrap::Word => 0.11,
+                TextWrap::Balance => 0.21,
+                TextWrap::WordBreak => 0.31,
+                TextWrap::Grapheme => 0.41,
+            };
+            let max_width = constraints.max_width.map(|w| w.0.max(1.0));
+            let lines = match (constraints.wrap, max_width) {
+                (TextWrap::None, _) => 1.0,
+                (_, Some(limit)) => (natural_width / limit).ceil().max(1.0),
+                (_, None) => 1.0,
+            };
+            let width = max_width
+                .map(|limit| natural_width.min(limit))
+                .unwrap_or(natural_width)
+                .max(1.0);
+            let baseline = Px((line_height.0 * 0.7)
+                + style.weight.0 as f32 * 0.001
+                + max_width.unwrap_or(0.0) * 0.002
+                + wrap_bias);
+            fret_core::TextMetrics {
+                size: Size::new(Px(width), Px((line_height.0 * lines).max(line_height.0))),
+                baseline,
+            }
+        }
+
+        fn find_call(
+            &self,
+            phase: CallPhase,
+            text: &str,
+            expected_constraints: TextConstraints,
+        ) -> &RecordedTextCall {
+            self.measured
+                .iter()
+                .find(|call| {
+                    call.phase == phase
+                        && call.text.as_ref() == text
+                        && call.constraints == expected_constraints
+                })
+                .expect("expected matching text call")
+        }
+    }
+
+    impl TextService for RecordingServices {
+        fn prepare(
+            &mut self,
+            input: &TextInput,
+            constraints: TextConstraints,
+        ) -> (TextBlobId, fret_core::TextMetrics) {
+            let (text, style) = Self::unpack_input(input);
+            let metrics = Self::synthetic_metrics(text.as_ref(), &style, constraints);
+            self.prepared.push(RecordedTextCall {
+                phase: self.current_phase(),
+                text,
+                style,
+                constraints,
+                metrics,
+            });
+            (TextBlobId::default(), metrics)
+        }
+
+        fn measure(
+            &mut self,
+            input: &TextInput,
+            constraints: TextConstraints,
+        ) -> fret_core::TextMetrics {
+            let (text, style) = Self::unpack_input(input);
+            let metrics = Self::synthetic_metrics(text.as_ref(), &style, constraints);
+            self.measured.push(RecordedTextCall {
+                phase: self.current_phase(),
+                text,
+                style,
+                constraints,
+                metrics,
+            });
+            metrics
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for RecordingServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for RecordingServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for RecordingServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn shimmer_resolved_mode_keeps_wrap_overflow_and_baseline_aligned() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let text: Arc<str> = Arc::<str>::from("wrapped shimmer parity gate");
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(160.0), Px(140.0)),
+        );
+        let expected_constraints = TextConstraints {
+            max_width: Some(Px(64.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let inherited = TextStyleRefinement {
+            font: Some(FontId::ui()),
+            size: Some(Px(17.0)),
+            weight: Some(FontWeight::SEMIBOLD),
+            line_height: Some(Px(25.0)),
+            line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
+            ..Default::default()
+        };
+        let base_color = Color {
+            r: 0.35,
+            g: 0.42,
+            b: 0.58,
+            a: 1.0,
+        };
+        let overlay_color = Color {
+            r: 0.96,
+            g: 0.97,
+            b: 0.98,
+            a: 1.0,
+        };
+        let mut services = RecordingServices::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shimmer-resolved-wrap-overflow-baseline",
+            |cx| {
+                let mut group = fret_ui::element::ContainerProps::default();
+                group.layout.size.width = fret_ui::element::Length::Px(Px(64.0));
+
+                let mut text_props = fret_ui::element::TextProps::new(Arc::clone(&text));
+                text_props.layout.size.width = fret_ui::element::Length::Px(Px(64.0));
+                text_props.wrap = TextWrap::Word;
+                text_props.overflow = TextOverflow::Clip;
+
+                let theme = Theme::global(&*cx.app).clone();
+                let canvas_layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .absolute()
+                        .inset_px(Px(0.0))
+                        .size_full(),
+                );
+                let overlay_text = Arc::clone(&text);
+
+                vec![
+                    cx.container(group, move |cx| {
+                        let overlay_text = Arc::clone(&overlay_text);
+                        vec![
+                            cx.text_props(text_props.clone()),
+                            cx.canvas(
+                                CanvasProps {
+                                    layout: canvas_layout,
+                                    cache_policy: Default::default(),
+                                },
+                                move |painter| {
+                                    let bounds = painter.bounds();
+                                    if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
+                                        return;
+                                    }
+
+                                    let style_for_paint = painter.resolved_passive_text_style(None);
+                                    let constraints = TextConstraints {
+                                        max_width: Some(bounds.size.width),
+                                        wrap: TextWrap::Word,
+                                        overflow: TextOverflow::Clip,
+                                        align: fret_core::TextAlign::Start,
+                                        scale_factor: painter.scale_factor(),
+                                    };
+                                    let baseline = {
+                                        let (services, _scene) = painter.services_and_scene();
+                                        let input = TextInput::plain(
+                                            Arc::clone(&overlay_text),
+                                            style_for_paint.clone(),
+                                        );
+                                        services.text().measure(&input, constraints).baseline
+                                    };
+                                    let origin = Point::new(
+                                        bounds.origin.x,
+                                        Px(bounds.origin.y.0 + baseline.0),
+                                    );
+                                    let raster_scale_factor = painter.scale_factor();
+
+                                    painter.with_clip_rect(bounds, |p| {
+                                        p.shared_text(
+                                            DrawOrder(0),
+                                            origin,
+                                            Arc::clone(&overlay_text),
+                                            style_for_paint.clone(),
+                                            overlay_color,
+                                            CanvasTextConstraints {
+                                                max_width: Some(bounds.size.width),
+                                                wrap: TextWrap::Word,
+                                                overflow: TextOverflow::Clip,
+                                            },
+                                            raster_scale_factor,
+                                        );
+                                    });
+                                },
+                            ),
+                        ]
+                    })
+                    .inherit_text_style(inherited.clone())
+                    .inherit_foreground(base_color),
+                ]
+            },
+        );
+        ui.set_root(root);
+
+        services.set_phase(CallPhase::Layout);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        services.set_phase(CallPhase::Paint);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let layout_measure =
+            services.find_call(CallPhase::Layout, text.as_ref(), expected_constraints);
+        let paint_measure =
+            services.find_call(CallPhase::Paint, text.as_ref(), expected_constraints);
+
+        let layout_prepare = services
+            .prepared
+            .iter()
+            .find(|record| {
+                record.phase == CallPhase::Layout
+                    && record.text.as_ref() == text.as_ref()
+                    && record.constraints == expected_constraints
+            })
+            .expect("expected base text prepare to use the wrapped constraints");
+        let paint_prepare = services
+            .prepared
+            .iter()
+            .find(|record| {
+                record.phase == CallPhase::Paint
+                    && record.text.as_ref() == text.as_ref()
+                    && record.constraints == expected_constraints
+            })
+            .expect("expected overlay shared_text prepare to use the wrapped constraints");
+
+        assert_eq!(layout_measure.style, layout_prepare.style);
+        assert_eq!(paint_measure.style, layout_prepare.style);
+        assert_eq!(paint_prepare.style, layout_prepare.style);
+        assert_eq!(layout_measure.constraints, expected_constraints);
+        assert_eq!(paint_measure.constraints, expected_constraints);
+        assert_eq!(layout_prepare.constraints, expected_constraints);
+        assert_eq!(paint_prepare.constraints, expected_constraints);
+
+        let mut base_origin = None;
+        let mut overlay_origin = None;
+        for op in scene.ops() {
+            if let SceneOp::Text { origin, paint, .. } = op {
+                match paint.paint {
+                    fret_core::scene::Paint::Solid(color) if color == base_color => {
+                        base_origin = Some(*origin);
+                    }
+                    fret_core::scene::Paint::Solid(color) if color == overlay_color => {
+                        overlay_origin = Some(*origin);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let base_origin = base_origin.expect("expected base text scene op");
+        let overlay_origin = overlay_origin.expect("expected overlay text scene op");
+        assert!(
+            (base_origin.y.0 - overlay_origin.y.0).abs() < 0.01,
+            "expected base and overlay baselines to stay aligned; base={base_origin:?} overlay={overlay_origin:?}",
+        );
+        assert!(
+            (overlay_origin.y.0 - paint_measure.metrics.baseline.0).abs() < 0.01,
+            "expected overlay origin to follow the measured baseline; origin={overlay_origin:?} baseline={:?}",
+            paint_measure.metrics.baseline,
+        );
     }
 }

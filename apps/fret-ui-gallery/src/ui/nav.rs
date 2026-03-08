@@ -1,7 +1,22 @@
 use super::*;
 use fret_ui::scroll::ScrollHandle;
 
-fn matches_query(query: &str, item: &PageSpec) -> bool {
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct NavVisibilitySummary {
+    pub visible_groups_count: u64,
+    pub visible_items_count: u64,
+    pub visible_ai_items_count: u64,
+    pub visible_tags_count: u64,
+    pub max_group_items_count: u64,
+    pub visible_string_bytes_estimate_total: u64,
+}
+
+struct VisibleNavGroup {
+    title: &'static str,
+    items: Vec<&'static PageSpec>,
+}
+
+pub(crate) fn matches_query(query: &str, item: &PageSpec) -> bool {
     let q = query.trim();
     if q.is_empty() {
         return true;
@@ -39,6 +54,91 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
         .any(|t| t.to_ascii_lowercase().contains(&q_lower) || matches_norm(t))
 }
 
+fn collect_visible_nav_groups(query: &str) -> Vec<VisibleNavGroup> {
+    let mut groups: Vec<VisibleNavGroup> = Vec::new();
+    let mut deferred_ai_items: Vec<&'static PageSpec> = Vec::new();
+    let mut inserted_ai_group = false;
+
+    for group in PAGE_GROUPS {
+        let mut group_items: Vec<&'static PageSpec> = Vec::new();
+        for item in group.items {
+            if !matches_query(query, item) {
+                continue;
+            }
+            if item.id.starts_with("ai_") {
+                deferred_ai_items.push(item);
+            } else {
+                group_items.push(item);
+            }
+        }
+
+        if !group_items.is_empty() {
+            groups.push(VisibleNavGroup {
+                title: group.title,
+                items: group_items,
+            });
+        }
+
+        if group.title == "Shadcn" && !inserted_ai_group {
+            if !deferred_ai_items.is_empty() {
+                groups.push(VisibleNavGroup {
+                    title: "AI Elements",
+                    items: std::mem::take(&mut deferred_ai_items),
+                });
+            }
+            inserted_ai_group = true;
+        }
+    }
+
+    if !inserted_ai_group && !deferred_ai_items.is_empty() {
+        groups.push(VisibleNavGroup {
+            title: "AI Elements",
+            items: deferred_ai_items,
+        });
+    }
+
+    groups
+}
+
+pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
+    let groups = collect_visible_nav_groups(query);
+    let mut summary = NavVisibilitySummary {
+        visible_groups_count: groups.len() as u64,
+        ..Default::default()
+    };
+
+    for group in groups {
+        summary.visible_string_bytes_estimate_total = summary
+            .visible_string_bytes_estimate_total
+            .saturating_add(group.title.len() as u64);
+        summary.max_group_items_count = summary.max_group_items_count.max(group.items.len() as u64);
+
+        for item in group.items {
+            summary.visible_items_count = summary.visible_items_count.saturating_add(1);
+            summary.visible_tags_count = summary
+                .visible_tags_count
+                .saturating_add(item.tags.len() as u64);
+            if item.id.starts_with("ai_") {
+                summary.visible_ai_items_count = summary.visible_ai_items_count.saturating_add(1);
+            }
+            summary.visible_string_bytes_estimate_total = summary
+                .visible_string_bytes_estimate_total
+                .saturating_add(item.id.len() as u64)
+                .saturating_add(item.label.len() as u64)
+                .saturating_add(item.title.len() as u64)
+                .saturating_add(item.origin.len() as u64)
+                .saturating_add(item.command.len() as u64);
+            for tag in item.tags {
+                summary.visible_string_bytes_estimate_total = summary
+                    .visible_string_bytes_estimate_total
+                    .saturating_add(tag.len() as u64);
+            }
+        }
+    }
+
+    summary
+}
+
 pub(crate) fn sidebar_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -46,6 +146,7 @@ pub(crate) fn sidebar_view(
     query: &str,
     nav_query: Model<String>,
     selected_page: Model<Arc<str>>,
+    workspace_tabs: Model<Vec<Arc<str>>>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -101,12 +202,21 @@ pub(crate) fn sidebar_view(
 
                 group_items.push(cx.keyed(item.id, |cx| {
                     let selected_page_for_activate = selected_page.clone();
+                    let workspace_tabs_for_activate = workspace_tabs.clone();
                     let page_id_for_activate: Arc<str> = Arc::from(item.id);
 
                     let on_activate: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
                             let _ = host.models_mut().update(&selected_page_for_activate, |v| {
                                 *v = page_id_for_activate.clone();
+                            });
+                            let _ = host.models_mut().update(&workspace_tabs_for_activate, |t| {
+                                if !t
+                                    .iter()
+                                    .any(|id| id.as_ref() == page_id_for_activate.as_ref())
+                                {
+                                    t.push(page_id_for_activate.clone());
+                                }
                             });
                             host.request_redraw(action_cx.window);
                             // `request_redraw()` may be coalesced or fail to wake the event loop on some
@@ -152,30 +262,8 @@ pub(crate) fn sidebar_view(
     };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
-    let mut deferred_ai_items: Vec<&'static PageSpec> = Vec::new();
-    let mut inserted_ai_group = false;
-
-    for group in PAGE_GROUPS {
-        let mut group_items: Vec<&'static PageSpec> = Vec::new();
-        for item in group.items {
-            if item.id.starts_with("ai_") {
-                deferred_ai_items.push(item);
-                continue;
-            }
-            group_items.push(item);
-        }
-
-        push_group(cx, group.title, &group_items, &mut nav_sections);
-
-        if group.title == "Shadcn" && !inserted_ai_group {
-            push_group(cx, "AI Elements", &deferred_ai_items, &mut nav_sections);
-            deferred_ai_items.clear();
-            inserted_ai_group = true;
-        }
-    }
-
-    if !inserted_ai_group {
-        push_group(cx, "AI Elements", &deferred_ai_items, &mut nav_sections);
+    for group in collect_visible_nav_groups(query) {
+        push_group(cx, group.title, &group.items, &mut nav_sections);
     }
 
     let nav_body = ui::v_flex(move |_cx| nav_sections)
@@ -263,5 +351,38 @@ mod tests {
     fn nav_search_rejects_non_matching_terms() {
         assert!(!matches_query("accordion", &ITEM));
         assert!(!matches_query("chart", &ITEM));
+    }
+
+    #[test]
+    fn nav_visibility_summary_counts_items_for_empty_query() {
+        let summary = nav_visibility_summary("");
+        let expected_items = PAGE_GROUPS
+            .iter()
+            .flat_map(|group| group.items.iter())
+            .count() as u64;
+        let expected_ai_items = PAGE_GROUPS
+            .iter()
+            .flat_map(|group| group.items.iter())
+            .filter(|item| item.id.starts_with("ai_"))
+            .count() as u64;
+
+        assert_eq!(summary.visible_items_count, expected_items);
+        assert_eq!(summary.visible_ai_items_count, expected_ai_items);
+        assert!(summary.visible_groups_count > 0);
+        assert!(summary.max_group_items_count > 0);
+        assert!(summary.visible_string_bytes_estimate_total > 0);
+    }
+
+    #[test]
+    fn nav_visibility_summary_shrinks_for_filtered_query() {
+        let full = nav_visibility_summary("");
+        let filtered = nav_visibility_summary("card");
+
+        assert!(filtered.visible_items_count > 0);
+        assert!(filtered.visible_items_count < full.visible_items_count);
+        assert!(filtered.visible_groups_count <= full.visible_groups_count);
+        assert!(
+            filtered.visible_string_bytes_estimate_total < full.visible_string_bytes_estimate_total
+        );
     }
 }

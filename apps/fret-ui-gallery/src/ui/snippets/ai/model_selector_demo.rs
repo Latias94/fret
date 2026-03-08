@@ -116,122 +116,118 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let model_selector = ui_ai::ModelSelector::new()
         .open_model(open.clone())
-        .into_element(
-            cx,
-            move |cx, open| {
-                let logo = selected_model
-                    .map(|m| ui_ai::ModelSelectorLogo::new(m.chef_slug).into_element(cx));
-                let name =
-                    selected_model.map(|m| ui_ai::ModelSelectorName::new(m.name).into_element(cx));
-                let mut content: Vec<AnyElement> = Vec::new();
-                if let Some(logo) = logo {
-                    content.push(logo);
-                }
-                if let Some(name) = name {
-                    content.push(name);
-                }
+        .into_element_with_children(cx, move |cx, open| {
+            let logo =
+                selected_model.map(|m| ui_ai::ModelSelectorLogo::new(m.chef_slug).into_element(cx));
+            let name =
+                selected_model.map(|m| ui_ai::ModelSelectorName::new(m.name).into_element(cx));
+            let mut trigger_content: Vec<AnyElement> = Vec::new();
+            if let Some(logo) = logo {
+                trigger_content.push(logo);
+            }
+            if let Some(name) = name {
+                trigger_content.push(name);
+            }
 
-                ui_ai::ModelSelectorTrigger::new(
-                    open,
-                    shadcn::Button::new("Select model")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .content_justify(Justify::Between)
-                        .refine_layout(LayoutRefinement::default().w_px(fret_core::Px(200.0)))
-                        .children(content)
-                        .into_element(cx),
+            let trigger = ui_ai::ModelSelectorTrigger::new(
+                open.clone(),
+                shadcn::Button::new("Select model")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .content_justify(Justify::Between)
+                    .refine_layout(LayoutRefinement::default().w_px(fret_core::Px(200.0)))
+                    .children(trigger_content)
+                    .into_element(cx),
+            )
+            .test_id("ui-ai-model-selector-trigger")
+            .into_element(cx);
+
+            let on_select = |value: &'static str| -> fret_ui::action::OnActivate {
+                let selected = selected.clone();
+                let query = query.clone();
+                let open = open.clone();
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host
+                        .models_mut()
+                        .update(&selected, |v| *v = Arc::<str>::from(value));
+                    let _ = host.models_mut().update(&query, |v| v.clear());
+                    let _ = host.models_mut().update(&open, |v| *v = false);
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                })
+            };
+
+            let make_item = |cx: &mut ElementContext<'_, H>, model: DemoModel| {
+                let is_selected = model.id == selected_now.as_ref();
+                let logos = ui_ai::ModelSelectorLogoGroup::new(
+                    model
+                        .providers
+                        .iter()
+                        .map(|p| ui_ai::ModelSelectorLogo::new(*p).into_element(cx)),
                 )
-                .test_id("ui-ai-model-selector-trigger")
-                .into_element(cx)
-            },
-            move |cx, open| {
-                let on_select = |value: &'static str| -> fret_ui::action::OnActivate {
-                    let selected = selected.clone();
-                    let query = query.clone();
-                    let open = open.clone();
-                    Arc::new(move |host, action_cx, _reason| {
-                        let _ = host
-                            .models_mut()
-                            .update(&selected, |v| *v = Arc::<str>::from(value));
-                        let _ = host.models_mut().update(&query, |v| v.clear());
-                        let _ = host.models_mut().update(&open, |v| *v = false);
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
-                    })
-                };
+                .into_element(cx);
 
-                let make_item = |cx: &mut ElementContext<'_, H>, model: DemoModel| {
-                    let is_selected = model.id == selected_now.as_ref();
-                    let logos = ui_ai::ModelSelectorLogoGroup::new(
-                        model
-                            .providers
-                            .iter()
-                            .map(|p| ui_ai::ModelSelectorLogo::new(*p).into_element(cx)),
-                    )
-                    .into_element(cx);
+                let name = ui_ai::ModelSelectorName::new(model.name).into_element(cx);
 
-                    let name = ui_ai::ModelSelectorName::new(model.name).into_element(cx);
+                let check = shadcn::icon::icon_with(
+                    cx,
+                    fret_icons::ids::ui::CHECK,
+                    Some(fret_core::Px(16.0)),
+                    None,
+                );
+                let check = cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![check]);
 
-                    let check = shadcn::icon::icon_with(
-                        cx,
-                        fret_icons::ids::ui::CHECK,
-                        Some(fret_core::Px(16.0)),
-                        None,
-                    );
-                    let check =
-                        cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![check]);
+                let mut item = ui_ai::ModelSelectorItem::new(model.name)
+                    .value(model.id)
+                    .children([logos, name, check])
+                    .on_select_action(on_select(model.id));
 
-                    let mut item = ui_ai::ModelSelectorItem::new(model.name)
-                        .value(model.id)
-                        .children([logos, name, check])
-                        .on_select_action(on_select(model.id));
-
-                    match model.id {
-                        "openai-gpt-4o-mini" => {
-                            item = item.test_id("ui-ai-model-selector-item-openai-gpt-4o-mini")
-                        }
-                        "anthropic-claude-3-5-sonnet" => {
-                            item = item
-                                .test_id("ui-ai-model-selector-item-anthropic-claude-3-5-sonnet")
-                        }
-                        "google-gemini-2-0-flash" => {
-                            item = item.test_id("ui-ai-model-selector-item-google-gemini-2-0-flash")
-                        }
-                        _ => {}
+                match model.id {
+                    "openai-gpt-4o-mini" => {
+                        item = item.test_id("ui-ai-model-selector-item-openai-gpt-4o-mini")
                     }
-
-                    item
-                };
-
-                let mut chefs: Vec<&'static str> = Vec::new();
-                for model in MODELS {
-                    if !chefs.contains(&model.chef) {
-                        chefs.push(model.chef);
+                    "anthropic-claude-3-5-sonnet" => {
+                        item = item.test_id("ui-ai-model-selector-item-anthropic-claude-3-5-sonnet")
                     }
+                    "google-gemini-2-0-flash" => {
+                        item = item.test_id("ui-ai-model-selector-item-google-gemini-2-0-flash")
+                    }
+                    _ => {}
                 }
 
-                let mut groups = Vec::new();
-                for chef in chefs {
-                    let mut items = Vec::new();
-                    for model in MODELS.iter().copied().filter(|m| m.chef == chef) {
-                        items.push(make_item(cx, model));
-                    }
-                    groups.push(ui_ai::ModelSelectorGroup::new(items).heading(chef).into());
-                }
+                item
+            };
 
-                ui_ai::ModelSelectorContent::new([
-                    ui_ai::ModelSelectorInput::new(query.clone())
-                        .placeholder("Search models...")
-                        .input_test_id("ui-ai-model-selector-input")
-                        .into_element(cx),
-                    ui_ai::ModelSelectorList::new_entries(groups)
-                        .empty_text("No models found.")
-                        .query_model(query.clone())
-                        .into_element(cx),
-                ])
-                .test_id_root("ui-ai-model-selector-content")
-                .into_element(cx)
-            },
-        );
+            let mut chefs: Vec<&'static str> = Vec::new();
+            for model in MODELS {
+                if !chefs.contains(&model.chef) {
+                    chefs.push(model.chef);
+                }
+            }
+
+            let mut groups = Vec::new();
+            for chef in chefs {
+                let mut items = Vec::new();
+                for model in MODELS.iter().copied().filter(|m| m.chef == chef) {
+                    items.push(make_item(cx, model));
+                }
+                groups.push(ui_ai::ModelSelectorGroup::new(items).heading(chef).into());
+            }
+
+            let content = ui_ai::ModelSelectorContent::new([
+                ui_ai::ModelSelectorInput::new(query.clone())
+                    .placeholder("Search models...")
+                    .input_test_id("ui-ai-model-selector-input")
+                    .into_element(cx),
+                ui_ai::ModelSelectorList::new_entries(groups)
+                    .empty_text("No models found.")
+                    .query_model(query.clone())
+                    .into_element(cx),
+            ])
+            .test_id_root("ui-ai-model-selector-content")
+            .into_element(cx);
+
+            (trigger, content)
+        });
 
     ui::v_flex(move |cx| {
         vec![

@@ -115,6 +115,54 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn sonner_toast_title_style() -> TextStyle {
+    typography::with_intent(
+        TextStyle {
+            font: FontId::default(),
+            size: Px(13.0),
+            weight: FontWeight(500),
+            line_height: Some(Px(13.0 * 1.5)),
+            ..Default::default()
+        },
+        TextIntent::Control,
+    )
+}
+
+fn sonner_toast_description_style() -> TextStyle {
+    typography::with_intent(
+        TextStyle {
+            font: FontId::default(),
+            size: Px(13.0),
+            weight: FontWeight(400),
+            line_height: Some(Px(13.0 * 1.4)),
+            ..Default::default()
+        },
+        TextIntent::Control,
+    )
+}
+
+fn toast_description_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    typography::scope_text_style_with_color(
+        cx.text_props(fret_ui::element::TextProps {
+            layout: fret_ui::element::LayoutStyle::default(),
+            text,
+            style: None,
+            color: None,
+            wrap: fret_core::TextWrap::Word,
+            overflow: fret_core::TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        }),
+        typography::composable_refinement_from_style(style),
+        foreground,
+    )
+}
+
 fn toast_position_key(position: ToastPosition) -> u8 {
     match position {
         ToastPosition::TopLeft => 0,
@@ -2734,51 +2782,29 @@ pub fn render<H: UiHost + 'static>(
                                                     // - toast box: `font-size: 13px`
                                                     // - title: `font-weight: 500`, `line-height: 1.5`
                                                     // - description: `font-weight: 400`, `line-height: 1.4`
-                                                    let title_style = typography::with_intent(
-                                                        TextStyle {
-                                                            font: FontId::default(),
-                                                            size: Px(13.0),
-                                                            weight: FontWeight(500),
-                                                            line_height: Some(Px(13.0 * 1.5)),
-                                                            ..Default::default()
-                                                        },
-                                                        TextIntent::Control,
-                                                    );
-                                                    let desc_style = typography::with_intent(
-                                                        TextStyle {
-                                                            font: FontId::default(),
-                                                            size: Px(13.0),
-                                                            weight: FontWeight(400),
-                                                            line_height: Some(Px(13.0 * 1.4)),
-                                                            ..Default::default()
-                                                        },
-                                                        TextIntent::Control,
-                                                    );
+                                                    let title_style = sonner_toast_title_style();
+                                                    let desc_style = sonner_toast_description_style();
 
-                                                        let title = cx.text_props(fret_ui::element::TextProps {
-                                                            layout: fret_ui::element::LayoutStyle::default(),
-                                                            text: toast.title.clone(),
-                                                            style: Some(title_style),
-                                                            color: Some(fg),
-                                                            wrap: fret_core::TextWrap::None,
-                                                            overflow: fret_core::TextOverflow::Clip,
-                                                            align: fret_core::TextAlign::Start,
-                                                            ink_overflow: fret_ui::element::TextInkOverflow::None,
-                                                        });
+                                                    let title = cx.text_props(fret_ui::element::TextProps {
+                                                        layout: fret_ui::element::LayoutStyle::default(),
+                                                        text: toast.title.clone(),
+                                                        style: Some(title_style),
+                                                        color: Some(fg),
+                                                        wrap: fret_core::TextWrap::None,
+                                                        overflow: fret_core::TextOverflow::Clip,
+                                                        align: fret_core::TextAlign::Start,
+                                                        ink_overflow: fret_ui::element::TextInkOverflow::None,
+                                                    });
 
                                                     let mut content_children: Vec<AnyElement> = vec![title];
-                                                        if let Some(desc) = toast.description.clone() {
-                                                            content_children.push(cx.text_props(fret_ui::element::TextProps {
-                                                                layout: fret_ui::element::LayoutStyle::default(),
-                                                                text: desc,
-                                                                style: Some(desc_style),
-                                                                color: Some(fg_muted),
-                                                                wrap: fret_core::TextWrap::Word,
-                                                                overflow: fret_core::TextOverflow::Clip,
-                                                                align: fret_core::TextAlign::Start,
-                                                                ink_overflow: fret_ui::element::TextInkOverflow::None,
-                                                            }));
-                                                        }
+                                                    if let Some(desc) = toast.description.clone() {
+                                                        content_children.push(toast_description_text(
+                                                            cx,
+                                                            desc,
+                                                            &desc_style,
+                                                            fg_muted,
+                                                        ));
+                                                    }
 
                                                     let content = cx.column(
                                                         fret_ui::element::ColumnProps {
@@ -3250,4 +3276,61 @@ pub fn render<H: UiHost + 'static>(
     indexed.sort_by_key(|(idx, layer)| (layer_priorities.get(layer).copied().unwrap_or(0), *idx));
     let next_order: Vec<UiLayerId> = indexed.into_iter().map(|(_, id)| id).collect();
     ui.reorder_layers_in_paint_order(next_order);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_element<'a>(element: &'a AnyElement, expected: &str) -> Option<&'a AnyElement> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == expected => Some(element),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, expected)),
+        }
+    }
+
+    #[test]
+    fn toast_description_scopes_inherited_text_style_without_leaf_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let muted = Color::from_srgb_hex_rgb(0x667788);
+        let style = sonner_toast_description_style();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                toast_description_text(cx, Arc::<str>::from("Toast description"), &style, muted)
+            });
+
+        let text = find_text_element(&element, "Toast description")
+            .expect("expected toast description text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected toast description leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+
+        assert_eq!(
+            text.inherited_text_style.as_ref(),
+            Some(&typography::composable_refinement_from_style(&style))
+        );
+        assert_eq!(text.inherited_foreground, Some(muted));
+    }
 }

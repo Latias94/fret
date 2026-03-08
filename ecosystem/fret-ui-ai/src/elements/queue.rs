@@ -950,21 +950,21 @@ impl QueueItemDescription {
         } else {
             muted_fg
         };
-
-        let style = TextStyle {
-            ..typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(&theme)
-        };
+        let refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
 
         let mut layout = decl_style::layout_style(&theme, self.layout);
         layout.margin.left = MarginEdge::Px(MetricRef::space(Space::N6).resolve(&theme));
 
-        let el = if self.completed {
+        let mut el = if self.completed {
             let rich = rich_strikethrough(&self.text, fg);
             cx.styled_text_props(StyledTextProps {
                 layout,
                 rich,
-                style: Some(style),
-                color: Some(fg),
+                style: None,
+                color: None,
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
@@ -974,14 +974,15 @@ impl QueueItemDescription {
             cx.text_props(TextProps {
                 layout,
                 text: self.text,
-                style: Some(style),
-                color: Some(fg),
+                style: None,
+                color: None,
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
                 ink_overflow: Default::default(),
             })
         };
+        el = typography::scope_text_style_with_color(el, refinement, fg);
 
         if let Some(test_id) = self.test_id {
             el.attach_semantics(
@@ -1395,5 +1396,79 @@ impl QueueItemFile {
             );
         }
         el
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use fret_ui::{Theme, ThemeConfig};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(480.0)),
+        )
+    }
+
+    #[test]
+    fn queue_item_description_scopes_inherited_typography_for_plain_and_completed_states() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Queue Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.text.xs_px".to_string(), 12.0),
+                    ("component.text.xs_line_height".to_string(), 16.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#99aabb".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).snapshot();
+        let expected_refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let expected_fg = typography::muted_foreground_color(&theme);
+
+        let plain = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            QueueItemDescription::new("Pending").into_element(cx)
+        });
+        let ElementKind::Text(props) = &plain.kind else {
+            panic!("expected plain QueueItemDescription to build Text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(plain.inherited_foreground, Some(expected_fg));
+        assert_eq!(
+            plain.inherited_text_style,
+            Some(expected_refinement.clone())
+        );
+
+        let completed =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                QueueItemDescription::new("Done")
+                    .completed(true)
+                    .into_element(cx)
+            });
+        let ElementKind::StyledText(props) = &completed.kind else {
+            panic!("expected completed QueueItemDescription to build StyledText");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            completed.inherited_foreground,
+            Some(alpha(expected_fg, 0.4))
+        );
+        assert_eq!(completed.inherited_text_style, Some(expected_refinement));
     }
 }

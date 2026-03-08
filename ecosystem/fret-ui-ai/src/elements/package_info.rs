@@ -726,16 +726,8 @@ impl PackageInfoDescription {
         let text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(typography::as_control_text(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token("component.text.sm_px"),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("component.text.sm_line_height")),
-                letter_spacing_em: None,
-                ..Default::default()
-            })),
-            color: Some(muted_fg(&theme)),
+            style: None,
+            color: None,
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -748,9 +740,15 @@ impl PackageInfoDescription {
             .min_w_0()
             .mt(Space::N2)
             .merge(self.layout);
-        cx.container(
-            decl_style::container_props(&theme, chrome, layout),
-            move |_cx| vec![text],
+        typography::scope_description_text_with_fallbacks(
+            cx.container(
+                decl_style::container_props(&theme, chrome, layout),
+                move |_cx| vec![text],
+            ),
+            &theme,
+            "component.package_info.description",
+            Some("component.text.sm_px"),
+            Some("component.text.sm_line_height"),
         )
     }
 }
@@ -954,5 +952,73 @@ impl PackageInfoDependency {
             decl_style::container_props(&theme, self.chrome, self.layout),
             move |_cx| vec![row],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use fret_ui::{Theme, ThemeConfig};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(480.0)),
+        )
+    }
+
+    #[test]
+    fn package_info_description_scopes_inherited_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "PackageInfo Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.text.sm_px".to_string(), 13.0),
+                    ("component.text.sm_line_height".to_string(), 18.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#667788".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                PackageInfoDescription::new("Package summary").into_element(cx)
+            });
+
+        let ElementKind::Container(_) = &element.kind else {
+            panic!("expected PackageInfoDescription to build a Container root");
+        };
+        let child = element.children.first().expect("expected text child");
+        let ElementKind::Text(props) = &child.kind else {
+            panic!("expected PackageInfoDescription child to be Text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Grapheme);
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(
+            element.inherited_text_style,
+            Some(typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.package_info.description",
+                Some("component.text.sm_px"),
+                Some("component.text.sm_line_height"),
+            ))
+        );
     }
 }

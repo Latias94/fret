@@ -295,23 +295,37 @@ impl EnvironmentVariablesHeader {
 }
 
 /// Title text aligned with AI Elements `EnvironmentVariablesTitle`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariablesTitle {
-    text: Option<Arc<str>>,
+    content: EnvironmentVariablesTitleContent,
     test_id: Option<Arc<str>>,
+}
+
+#[derive(Debug)]
+enum EnvironmentVariablesTitleContent {
+    Default,
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl EnvironmentVariablesTitle {
     pub fn new() -> Self {
         Self {
-            text: None,
+            content: EnvironmentVariablesTitleContent::Default,
             test_id: None,
         }
     }
 
     pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.text = Some(text.into());
+        self.content = EnvironmentVariablesTitleContent::Text(text.into());
         self
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: EnvironmentVariablesTitleContent::Children(children.into_iter().collect()),
+            test_id: None,
+        }
     }
 
     pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
@@ -322,9 +336,6 @@ impl EnvironmentVariablesTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_token("foreground");
-        let text = self
-            .text
-            .unwrap_or_else(|| Arc::<str>::from("Environment Variables"));
 
         let px = theme.metric_token("font.size");
         let style = typography::as_control_text(TextStyle {
@@ -336,26 +347,46 @@ impl EnvironmentVariablesTitle {
             letter_spacing_em: None,
             ..Default::default()
         });
+        let refinement = typography::composable_refinement_from_style(&style);
 
-        let el = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text,
-            style: Some(style),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let mut el = match self.content {
+            EnvironmentVariablesTitleContent::Default => cx
+                .foreground_scope(fg, move |cx| {
+                    vec![
+                        fret_ui_kit::ui::raw_text("Environment Variables")
+                            .wrap(TextWrap::None)
+                            .overflow(TextOverflow::Clip)
+                            .into_element(cx),
+                    ]
+                })
+                .inherit_foreground(fg)
+                .inherit_text_style(refinement),
+            EnvironmentVariablesTitleContent::Text(text) => cx
+                .foreground_scope(fg, move |cx| {
+                    vec![
+                        fret_ui_kit::ui::raw_text(text)
+                            .wrap(TextWrap::None)
+                            .overflow(TextOverflow::Clip)
+                            .into_element(cx),
+                    ]
+                })
+                .inherit_foreground(fg)
+                .inherit_text_style(refinement),
+            EnvironmentVariablesTitleContent::Children(children) => cx
+                .foreground_scope(fg, move |_cx| children)
+                .inherit_foreground(fg)
+                .inherit_text_style(refinement),
+        };
 
         let Some(test_id) = self.test_id else {
             return el;
         };
-        el.attach_semantics(
+        el = el.attach_semantics(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Text)
                 .test_id(test_id),
-        )
+        );
+        el
     }
 }
 
@@ -1100,6 +1131,78 @@ mod tests {
         el.children
             .iter()
             .any(|child| any_descendant_matches(child, f))
+    }
+
+    fn has_scoped_text_style(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: fret_core::Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_scoped_text_style(child, refinement, foreground))
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, text: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, text)),
+        }
+    }
+
+    #[test]
+    fn environment_variables_title_children_scope_inherited_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariablesTitle::new_children([cx.text("Secrets")])
+                    .test_id("env-title")
+                    .into_element(cx)
+            });
+
+        let text = find_text_element(&element, "Secrets").expect("expected nested title text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected env title leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("env-title")
+        );
+
+        let theme = Theme::global(&app).clone();
+        let style = typography::as_control_text(TextStyle {
+            font: FontId::default(),
+            size: theme.metric_token("font.size"),
+            weight: FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: Some(theme.metric_token("font.line_height")),
+            letter_spacing_em: None,
+            ..Default::default()
+        });
+        let expected_refinement = typography::composable_refinement_from_style(&style);
+        let expected_foreground = theme.color_token("foreground");
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_foreground
+        ));
     }
 
     #[test]

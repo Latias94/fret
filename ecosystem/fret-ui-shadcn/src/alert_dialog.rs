@@ -4,20 +4,21 @@ use fret_core::{
     Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
+use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -1211,15 +1212,6 @@ fn patch_alert_dialog_title_text_style_recursive(
     );
 }
 
-fn patch_alert_dialog_description_text_style_recursive(
-    el: &mut AnyElement,
-    px: Px,
-    line_height: Px,
-    color: Color,
-) {
-    patch_alert_dialog_text_style_recursive(el, px, line_height, FontWeight::NORMAL, color, 0.0);
-}
-
 #[derive(Debug)]
 pub struct AlertDialogTitle {
     content: AlertDialogTitleContent,
@@ -1332,51 +1324,24 @@ impl AlertDialogDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
-
-        let px = theme
-            .metric_by_key("component.alert_dialog.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.alert_dialog.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
         let description = match self.content {
-            AlertDialogDescriptionContent::Text(text) => ui::text(text)
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_weight(FontWeight::NORMAL)
-                .text_color(ColorRef::Color(fg))
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip)
-                .into_element(cx),
-            AlertDialogDescriptionContent::Children(mut children) => {
-                for child in &mut children {
-                    patch_alert_dialog_description_text_style_recursive(child, px, line_height, fg);
-                }
-
-                match children.len() {
-                    0 => ui::text("")
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_weight(FontWeight::NORMAL)
-                        .text_color(ColorRef::Color(fg))
-                        .wrap(TextWrap::Word)
-                        .overflow(TextOverflow::Clip)
-                        .into_element(cx),
-                    1 => children.pop().expect("children.len() == 1"),
-                    _ => ui::v_flex(move |_cx| children)
-                        .gap(Space::N0)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx),
-                }
-            }
+            AlertDialogDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.alert_dialog.description",
+            ),
+            AlertDialogDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.alert_dialog.description",
+            ),
         };
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
@@ -1622,18 +1587,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
@@ -1781,7 +1746,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_dialog_description_children_patch_rich_text_with_description_typography() {
+    fn alert_dialog_description_children_scope_rich_text_with_description_typography() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1802,34 +1767,27 @@ mod tests {
 
         let props = find_first_styled_text(&element)
             .expect("expected AlertDialogDescription children to keep the rich text node");
-        let style = props.style.as_ref().expect(
-            "expected AlertDialogDescription children to receive explicit description text style",
-        );
-        let theme = Theme::global(&app).snapshot();
-        let expected_px = theme
-            .metric_by_key("component.alert_dialog.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let expected_line_height = theme
-            .metric_by_key("component.alert_dialog.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-        let expected_fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
 
-        assert_eq!(style.size, expected_px);
-        assert_eq!(style.weight, fret_core::FontWeight::NORMAL);
-        assert_eq!(style.line_height, Some(expected_line_height));
-        assert_eq!(style.letter_spacing_em, Some(0.0));
-        assert_eq!(props.color, Some(expected_fg));
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert_dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
     }
 
     #[test]
-    fn alert_dialog_description_children_preserve_interactive_spans() {
+    fn alert_dialog_description_children_preserve_interactive_spans_under_description_scope() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1857,15 +1815,23 @@ mod tests {
 
         let props = find_first_selectable_text(&element)
             .expect("expected AlertDialogDescription children to keep selectable text nodes");
-        let theme = Theme::global(&app).snapshot();
-        let expected_fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
 
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(props.interactive_spans.len(), 1);
         assert_eq!(props.interactive_spans[0].tag.as_ref(), "retention-policy");
-        assert_eq!(props.color, Some(expected_fg));
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert_dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
     }
@@ -2106,21 +2072,23 @@ mod tests {
             |cx| {
                 let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
 
-                vec![AlertDialog::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(AlertDialogPortal::new())
-                    .overlay(AlertDialogOverlay::new())
-                    .content_with(|cx| {
-                        let footer = AlertDialogFooter::new(vec![
-                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                            AlertDialogAction::from_scope("Continue").into_element(cx),
-                        ])
-                        .into_element(cx);
+                vec![
+                    AlertDialog::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(AlertDialogPortal::new())
+                        .overlay(AlertDialogOverlay::new())
+                        .content_with(|cx| {
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                                AlertDialogAction::from_scope("Continue").into_element(cx),
+                            ])
+                            .into_element(cx);
 
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                            AlertDialogContent::new(vec![footer]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3552,6 +3520,39 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let _ = AlertDialogAction::from_scope("Continue").into_element(cx);
         });
+    }
+
+    #[test]
+    fn alert_dialog_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogDescription::new("Description").into_element(cx)
+        });
+
+        let fret_ui::element::ElementKind::Text(props) = &element.kind else {
+            panic!("expected AlertDialogDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert_dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]

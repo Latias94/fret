@@ -684,13 +684,13 @@ impl SchemaDisplayDescription {
         props.border_color = Some(border_color(&theme));
 
         let text = self.text;
-        cx.container(props, move |cx| {
-            vec![
-                ui::text(text)
-                    .text_color(ColorRef::Color(muted_fg(&theme)))
-                    .into_element(cx),
-            ]
-        })
+        typography::scope_description_text_with_fallbacks(
+            cx.container(props, move |cx| vec![ui::raw_text(text).into_element(cx)]),
+            &theme,
+            "component.schema_display.description",
+            Some("component.text.sm_px"),
+            Some("component.text.sm_line_height"),
+        )
     }
 }
 
@@ -1363,13 +1363,13 @@ fn schema_inline_description<H: UiHost>(
     }
     .into();
 
-    cx.container(props, move |cx| {
-        vec![
-            ui::text(text)
-                .text_color(ColorRef::Color(muted_fg(theme)))
-                .into_element(cx),
-        ]
-    })
+    typography::scope_description_text_with_fallbacks(
+        cx.container(props, move |cx| vec![ui::raw_text(text).into_element(cx)]),
+        theme,
+        "component.schema_display.description",
+        Some("component.text.sm_px"),
+        Some("component.text.sm_line_height"),
+    )
 }
 
 fn schema_section_trigger<H: UiHost + 'static>(
@@ -1668,4 +1668,131 @@ fn schema_property_list_from_vec<H: UiHost + 'static>(
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N0)
         .into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use fret_ui::{Theme, ThemeConfig};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(480.0)),
+        )
+    }
+
+    #[test]
+    fn schema_display_description_scopes_inherited_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Schema Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.text.sm_px".to_string(), 13.0),
+                    ("component.text.sm_line_height".to_string(), 18.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#556677".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                SchemaDisplayDescription::new("Schema summary").into_element(cx)
+            });
+
+        let ElementKind::Container(_) = &element.kind else {
+            panic!("expected SchemaDisplayDescription to build a Container root");
+        };
+        let child = element.children.first().expect("expected raw text child");
+        let ElementKind::Text(props) = &child.kind else {
+            panic!("expected SchemaDisplayDescription child to be Text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(
+            element.inherited_text_style,
+            Some(typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.schema_display.description",
+                Some("component.text.sm_px"),
+                Some("component.text.sm_line_height"),
+            ))
+        );
+    }
+
+    #[test]
+    fn schema_inline_description_scopes_inherited_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Schema Inline Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.text.sm_px".to_string(), 13.0),
+                    ("component.text.sm_line_height".to_string(), 18.0),
+                ]),
+                colors: std::collections::HashMap::from([(
+                    "muted-foreground".to_string(),
+                    "#445566".to_string(),
+                )]),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                schema_inline_description(
+                    cx,
+                    &theme,
+                    Arc::from("Inline description"),
+                    Px(24.0),
+                    Px(4.0),
+                    Px(0.0),
+                )
+            });
+
+        let ElementKind::Container(_) = &element.kind else {
+            panic!("expected schema_inline_description to build a Container root");
+        };
+        let child = element.children.first().expect("expected raw text child");
+        let ElementKind::Text(props) = &child.kind else {
+            panic!("expected schema_inline_description child to be Text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_foreground,
+            Some(typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(
+            element.inherited_text_style,
+            Some(typography::description_text_refinement_with_fallbacks(
+                &theme,
+                "component.schema_display.description",
+                Some("component.text.sm_px"),
+                Some("component.text.sm_line_height"),
+            ))
+        );
+    }
 }

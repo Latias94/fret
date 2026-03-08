@@ -431,6 +431,16 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     Effect::Redraw(window) => {
                         if let Some(state) = self.windows.get(window) {
                             state.window.request_redraw();
+                            self.app.with_global_mut_untracked(
+                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record(
+                                        window,
+                                        self.frame_id,
+                                        fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+                                    );
+                                },
+                            );
                             // Some platforms may not wake the event loop for `request_redraw()`
                             // alone; scheduling a one-shot RAF ensures the first frame presents
                             // without requiring any input events.
@@ -537,8 +547,17 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.insert(window);
-                        if let Some(state) = self.windows.get(window) {
-                            state.window.request_redraw();
+                        if self.windows.contains_key(window) {
+                            self.app.with_global_mut_untracked(
+                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record(
+                                        window,
+                                        self.frame_id,
+                                        fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
+                                    );
+                                },
+                            );
                         }
                     }
                     Effect::SetTimer { .. } => {
@@ -1835,6 +1854,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             surface,
                                             want_surface_composited_alpha,
                                         );
+                                        let surface_record = super::render::capture_surface_config_diagnostics_record(
+                                            &surface.config,
+                                        );
+                                        let _ = surface;
+                                        let _ = state;
+                                        self.record_surface_config_snapshot(window, surface_record);
                                     }
                                 }
 
@@ -1922,14 +1947,34 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             if self.streaming_uploads.has_pending() {
                 match self.streaming_uploads.pending_redraw_hint() {
                     Some(windows) if windows.is_empty() => {
-                        for (_id, state) in self.windows.iter() {
+                        for (window, state) in self.windows.iter() {
                             state.window.request_redraw();
+                            self.app.with_global_mut_untracked(
+                                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                |store, _app| {
+                                    store.record(
+                                        window,
+                                        self.frame_id,
+                                        fret_runtime::RunnerFrameDriveReason::StreamingPendingRedrawAll,
+                                    );
+                                },
+                            );
                         }
                     }
                     Some(windows) => {
                         for window in windows {
                             if let Some(state) = self.windows.get(window) {
                                 state.window.request_redraw();
+                                self.app.with_global_mut_untracked(
+                                    fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record(
+                                            window,
+                                            self.frame_id,
+                                            fret_runtime::RunnerFrameDriveReason::StreamingPendingRedrawWindow,
+                                        );
+                                    },
+                                );
                             }
                         }
                     }

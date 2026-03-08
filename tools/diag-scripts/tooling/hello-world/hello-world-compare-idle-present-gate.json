@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "hello_world_compare: idle present gate",
+    "tags": ["hello-world", "compare", "idle", "present", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Exploratory compare-demo idle-present probe; final apples-to-apples gate still needs a no-frame wait path."
+    ],
+    "env_defaults": {
+      "FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_TO_DIAG_DIR": 1,
+      "FRET_HELLO_WORLD_COMPARE_INTERNAL_SAMPLE_AT_SECS": "2,3,4",
+      "FRET_HELLO_WORLD_COMPARE_EXIT_AFTER_SECS": 7.0,
+      "FRET_HELLO_WORLD_COMPARE_INTERNAL_TOP_N": 8
+    }
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "hello_world_compare.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_ms", "n_ms": 4300 },
+    { "type": "capture_bundle", "label": "hello-world-compare-idle-present-gate" }
+  ]
+}

@@ -111,20 +111,23 @@ use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
     compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
-    normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file, resolve_threshold,
-    run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
-    wait_for_files_with_extensions,
+    maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
+    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
 use gates::{
-    CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
-    RenderTextAtlasBytesGateResult, RenderTextFontDbGateResult, RenderTextFontDbThresholds,
-    RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult, ResourceFootprintGateResult,
-    ResourceFootprintThresholds, WgpuHubCountsGateResult, WgpuHubCountsThresholds,
-    WgpuMetalAllocatedSizeGateResult, check_code_editor_memory_thresholds,
+    CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, LinearBytesVsImagesGateResult,
+    LinearBytesVsImagesThreshold, RedrawHitchesGateResult, RenderTextAtlasBytesGateResult,
+    RenderTextFontDbGateResult, RenderTextFontDbThresholds, RendererGpuBudgetThresholds,
+    RendererGpuBudgetsGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
+    WgpuHubCountsGateResult, WgpuHubCountsThresholds, WgpuMetalAllocatedSizeGateResult,
+    check_code_editor_memory_thresholds,
+    check_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images,
     check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_render_text_font_db_thresholds, check_renderer_gpu_budget_thresholds,
     check_resource_footprint_thresholds, check_wgpu_hub_counts_thresholds,
+    check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images,
     check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
@@ -395,6 +398,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut lint_eps_px: f32 = 0.5;
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
+    let mut check_memory_p90_max: Vec<(String, u64)> = Vec::new();
+    let mut repeat_compare_enabled: bool = true;
     let mut reuse_launch: bool = false;
     let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
@@ -428,6 +433,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
     let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
+    let mut max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images: Option<
+        LinearBytesVsImagesThreshold,
+    > = None;
     let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
     let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
     let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
@@ -443,11 +451,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_wgpu_hub_render_pipelines: Option<u64> = None;
     let mut max_wgpu_hub_shader_modules: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
+    let mut max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images: Option<
+        LinearBytesVsImagesThreshold,
+    > = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_render_text_registered_font_blobs_total_bytes: Option<u64> = None;
     let mut max_render_text_registered_font_blobs_count: Option<u64> = None;
     let mut max_render_text_shape_cache_entries: Option<u64> = None;
     let mut max_render_text_blob_cache_entries: Option<u64> = None;
+    let mut max_render_text_shape_cache_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_paint_palette_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_decorations_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
     let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
@@ -539,6 +553,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
@@ -1036,6 +1051,39 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .max(1);
                 i += 1;
             }
+            "--no-compare" => {
+                repeat_compare_enabled = false;
+                i += 1;
+            }
+            "--check-memory-p90-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-memory-p90-max".to_string());
+                };
+                let v = v.trim();
+                let (key, bytes_str) = if let Some((a, b)) = v.split_once(':') {
+                    (a.trim(), b.trim())
+                } else if let Some((a, b)) = v.split_once('=') {
+                    (a.trim(), b.trim())
+                } else {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                };
+                if key.is_empty() || bytes_str.is_empty() {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                }
+                let bytes = bytes_str.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-memory-p90-max: invalid bytes (expected u64)"
+                        .to_string()
+                })?;
+                check_memory_p90_max.push((key.to_string(), bytes));
+                i += 1;
+            }
             "--max-top-total-us" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1235,6 +1283,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images"
+                            .to_string(),
+                    );
+                };
+                max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images = Some(
+                    parse_linear_bytes_vs_images_threshold(
+                        &v,
+                        "--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images",
+                    )?,
+                );
+                i += 1;
+            }
             "--max-macos-io-surface-dirty-bytes" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1421,6 +1485,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images"
+                            .to_string(),
+                    );
+                };
+                max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images = Some(
+                    parse_linear_bytes_vs_images_threshold(
+                        &v,
+                        "--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images",
+                    )?,
+                );
+                i += 1;
+            }
             "--max-render-text-atlas-bytes-live-estimate-total" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1488,6 +1568,51 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_render_text_blob_cache_entries = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --max-render-text-blob-cache-entries".to_string()
                 })?);
+                i += 1;
+            }
+            "--max-render-text-shape-cache-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_shape_cache_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-paint-palette-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_paint_palette_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-decorations-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_decorations_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string()
+                    })?);
                 i += 1;
             }
             "--max-code-editor-buffer-len-bytes" => {
@@ -2110,6 +2235,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
                 i += 1;
             }
+            "--check-hello-world-compare-idle-present-max-delta" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string(),
+                    );
+                };
+                check_hello_world_compare_idle_present_max_delta =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
             "--check-gc-sweep-liveness" => {
                 check_gc_sweep_liveness = true;
                 i += 1;
@@ -2521,6 +2661,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_render_text_registered_font_blobs_count,
         max_render_text_shape_cache_entries,
         max_render_text_blob_cache_entries,
+        max_render_text_shape_cache_bytes_estimate_total,
+        max_render_text_blob_paint_palette_bytes_estimate_total,
+        max_render_text_blob_decorations_bytes_estimate_total,
     };
 
     let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
@@ -2550,16 +2693,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         );
     }
     if sub != "repro"
-        && (resource_footprint_thresholds.any() || renderer_gpu_budget_thresholds.any())
+        && (resource_footprint_thresholds.any()
+            || renderer_gpu_budget_thresholds.any()
+            || max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images.is_some())
     {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
-    if sub != "repro" && max_wgpu_metal_current_allocated_size_bytes.is_some() {
+    if sub != "repro"
+        && (max_wgpu_metal_current_allocated_size_bytes.is_some()
+            || max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images.is_some())
+    {
         return Err(
-            "--max-wgpu-metal-current-allocated-size-bytes is only supported with `diag repro` for now"
+            "--max-wgpu-metal-current-allocated-size-bytes/--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images is only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2577,7 +2725,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "repro" && render_text_font_db_thresholds.any() {
         return Err(
-            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries are only supported with `diag repro` for now"
+            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries/--max-render-text-shape-cache-bytes-estimate-total/--max-render-text-blob-paint-palette-bytes-estimate-total/--max-render-text-blob-decorations-bytes-estimate-total are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -3020,6 +3168,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
         check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
         check_hover_layout_max: check_hover_layout_max.clone(),
+        check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3222,6 +3371,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_high_priority,
                 launch_write_bundle_json,
                 perf_repeat,
+                check_memory_p90_max: check_memory_p90_max.clone(),
+                compare_enabled: repeat_compare_enabled,
                 compare_eps_px,
                 compare_ignore_bounds,
                 compare_ignore_scene_fingerprint,
@@ -3261,11 +3412,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_markers: renderdoc_markers.clone(),
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
+                max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images,
                 renderer_gpu_budget_thresholds,
                 code_editor_memory_thresholds,
                 render_text_font_db_thresholds,
                 wgpu_hub_counts_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
+                max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,
                 checks: run_checks.clone(),
@@ -3306,6 +3459,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
                 check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
                 check_hover_layout_max: check_hover_layout_max.clone(),
+                check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3633,6 +3787,43 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
         "0" | "false" | "False" | "FALSE" => Ok(false),
         _ => Err(()),
     }
+}
+
+fn parse_linear_bytes_vs_images_threshold(
+    s: &str,
+    flag: &str,
+) -> Result<LinearBytesVsImagesThreshold, String> {
+    // Format: "<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]"
+    let parts: Vec<&str> = s
+        .split(',')
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+        .collect();
+    if parts.len() < 2 || parts.len() > 3 {
+        return Err(format!(
+            "invalid value for {flag}: expected \"<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]\""
+        ));
+    }
+
+    let intercept_bytes: u64 = parts[0]
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag}: invalid intercept_bytes (expected u64)"))?;
+    let slope_ppm: u64 = parts[1]
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag}: invalid slope_ppm (expected u64)"))?;
+    let headroom_bytes: u64 = if parts.len() >= 3 {
+        parts[2].parse::<u64>().map_err(|_| {
+            format!("invalid value for {flag}: invalid headroom_bytes (expected u64)")
+        })?
+    } else {
+        0
+    };
+
+    Ok(LinearBytesVsImagesThreshold {
+        intercept_bytes,
+        slope_ppm,
+        headroom_bytes,
+    })
 }
 
 pub(crate) fn script_requests_screenshots(script: &Path) -> bool {

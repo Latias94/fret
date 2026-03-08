@@ -108,7 +108,8 @@ pub use text::{
     TextFontAxisSetting, TextFontFamilyConfig, TextFontFeatureSetting, TextInkMetrics, TextInput,
     TextInputRef, TextLeadingDistribution, TextLineHeightPolicy, TextLineMetrics, TextMetrics,
     TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
-    TextStrutStyle, TextStyle, TextVerticalPlacement, TextWrap, UnderlineStyle,
+    TextStrutStyle, TextStyle, TextStyleRefinement, TextVerticalPlacement, TextWrap,
+    UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

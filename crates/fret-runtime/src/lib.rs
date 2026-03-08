@@ -45,8 +45,12 @@ pub mod menu;
 pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
+pub mod redraw_request_diagnostics;
 pub mod runner_accessibility_diagnostics;
+pub mod runner_frame_drive_diagnostics;
 pub mod runner_platform_window_receiver_diagnostics;
+pub mod runner_present_diagnostics;
+pub mod runner_surface_config_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod runner_window_lifecycle_diagnostics;
 pub mod runner_window_style_diagnostics;
@@ -61,6 +65,7 @@ pub mod window_command_action_availability;
 pub mod window_command_availability;
 pub mod window_command_enabled;
 pub mod window_command_gating;
+pub mod window_global_change_diagnostics;
 pub mod window_input_arbitration;
 pub mod window_input_context;
 pub mod window_key_context_stack;
@@ -153,12 +158,26 @@ pub use model::{
 };
 pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
+pub use redraw_request_diagnostics::{
+    RedrawRequestCallsiteCount, WindowRedrawRequestAggregateSnapshot,
+    WindowRedrawRequestDiagnosticsStore, WindowRedrawRequestWindowSnapshot,
+};
 pub use runner_accessibility_diagnostics::{
     RunnerAccessibilityDiagnosticsStore, RunnerAccessibilitySnapshot,
+};
+pub use runner_frame_drive_diagnostics::{
+    RunnerFrameDriveAggregateSnapshot, RunnerFrameDriveDiagnosticsStore, RunnerFrameDriveReason,
+    RunnerFrameDriveReasonCount, RunnerFrameDriveWindowSnapshot,
 };
 pub use runner_platform_window_receiver_diagnostics::{
     RunnerPlatformWindowReceiverAtCursorSnapshotV1, RunnerPlatformWindowReceiverAtCursorSourceV1,
     RunnerPlatformWindowReceiverDiagnosticsStore,
+};
+pub use runner_present_diagnostics::{
+    RunnerPresentAggregateSnapshot, RunnerPresentDiagnosticsStore, RunnerPresentWindowSnapshot,
+};
+pub use runner_surface_config_diagnostics::{
+    RunnerSurfaceConfigDiagnosticsStore, RunnerSurfaceConfigWindowSnapshot,
 };
 pub use runner_surface_lifecycle_diagnostics::{
     RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
@@ -191,6 +210,10 @@ pub use window_command_gating::{
     best_effort_snapshot_for_window, best_effort_snapshot_for_window_with_input_ctx_fallback,
     command_is_enabled_for_window_with_input_ctx_fallback, snapshot_for_window,
     snapshot_for_window_with_input_ctx_fallback,
+};
+pub use window_global_change_diagnostics::{
+    WindowGlobalChangeAggregateSnapshot, WindowGlobalChangeDiagnosticsStore,
+    WindowGlobalChangeNameCount, WindowGlobalChangeWindowSnapshot,
 };
 pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointerOcclusion};
 pub use window_input_context::WindowInputContextService;

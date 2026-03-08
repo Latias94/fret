@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

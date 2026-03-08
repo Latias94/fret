@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Corners, Edges, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle,
-    TextWrap,
-};
+use fret_core::{Corners, Edges, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
@@ -23,14 +20,6 @@ use fret_ui_kit::{
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
 
 use crate::model::SourceItem;
-
-fn text_xs_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style.slant = TextSlant::Normal;
-    style
-}
 
 #[derive(Clone)]
 /// A collapsible list view for assistant sources/references (AI Elements `sources.tsx`-style).
@@ -223,7 +212,12 @@ impl SourcesBlock {
                         LayoutRefinement::default().flex_grow(1.0).min_w_0(),
                     ),
                     text: item.title.clone(),
-                    style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
+                    style: Some(typography::preset_text_style_with_overrides(
+                        &list_theme,
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                        Some(FontWeight::MEDIUM),
+                        None,
+                    )),
                     color: Some(row_title_color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
@@ -312,7 +306,12 @@ impl SourcesBlock {
                     cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
                         text: excerpt,
-                        style: Some(text_xs_style(&list_theme, FontWeight::NORMAL)),
+                        style: Some(typography::preset_text_style_with_overrides(
+                            &list_theme,
+                            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                            Some(FontWeight::NORMAL),
+                            None,
+                        )),
                         color: Some(excerpt_color),
                         wrap: TextWrap::Word,
                         overflow: TextOverflow::Clip,
@@ -384,7 +383,12 @@ impl SourcesBlock {
                         LayoutRefinement::default().flex_grow(1.0).min_w_0(),
                     ),
                     text: label_text,
-                    style: Some(text_xs_style(&trigger_theme, FontWeight::MEDIUM)),
+                    style: Some(typography::preset_text_style_with_overrides(
+                        &trigger_theme,
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                        Some(FontWeight::MEDIUM),
+                        None,
+                    )),
                     color: Some(title_color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
@@ -574,5 +578,54 @@ mod tests {
         assert_eq!(label.layout.flex.shrink, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn sources_block_uses_shared_xs_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title = "Alpha";
+        let excerpt = "Supporting excerpt text.";
+        let trigger = "Used 1 sources";
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "sources-style", |cx| {
+                SourcesBlock::new([SourceItem::new("source-1", title).excerpt(excerpt)])
+                    .default_open(true)
+                    .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let title_text = find_text_by_content(&el, title).expect("sources block title text");
+        let excerpt_text = find_text_by_content(&el, excerpt).expect("sources block excerpt text");
+        let trigger_text = find_text_by_content(&el, trigger).expect("sources block trigger text");
+
+        assert_eq!(
+            title_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::MEDIUM),
+                None,
+            ))
+        );
+        assert_eq!(
+            excerpt_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                None,
+            ))
+        );
+        assert_eq!(
+            trigger_text.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::MEDIUM),
+                None,
+            ))
+        );
     }
 }

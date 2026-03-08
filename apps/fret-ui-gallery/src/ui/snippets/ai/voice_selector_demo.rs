@@ -153,133 +153,129 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let selector = ui_ai::VoiceSelector::from_arc(voices)
         .open_model(open.clone())
         .value_model(value.clone())
-        .into_element(
-            cx,
-            move |cx| {
-                let trigger_content = if let Some(voice) = selected_voice {
-                    ui::h_row(move |cx| {
-                        vec![
-                            ui_ai::VoiceSelectorName::new(voice.name).into_element(cx),
-                            ui_ai::VoiceSelectorAccent::new()
-                                .value(voice.accent)
-                                .into_element(cx),
-                            ui_ai::VoiceSelectorBullet::new().into_element(cx),
-                            ui_ai::VoiceSelectorAge::new(voice.age).into_element(cx),
-                            ui_ai::VoiceSelectorBullet::new().into_element(cx),
-                            ui_ai::VoiceSelectorGender::new()
-                                .value(voice.gender)
-                                .into_element(cx),
-                        ]
-                    })
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items(Items::Center)
-                    .into_element(cx)
-                } else {
-                    ui_ai::VoiceSelectorValue::new()
-                        .placeholder("Select a voice...")
-                        .into_element(cx)
-                };
-
-                let button = shadcn::Button::new("")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .min_w_0()
-                            .max_w(Px(320.0)),
-                    )
-                    .children([trigger_content])
-                    .into_element(cx);
-
-                ui_ai::VoiceSelectorTrigger::new(button)
-                    .test_id("ui-ai-voice-selector-demo-trigger")
-                    .into_element(cx)
-            },
-            move |cx| {
-                let mut items = Vec::new();
-                for voice in DEMO_VOICES {
-                    let value_model = value.clone();
-                    let open_model = open.clone();
-                    let playing_model = playing.clone();
-                    let id = Arc::<str>::from(voice.id);
-                    let voice_id = voice.id;
-
-                    let on_select: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _| {
-                            let _ = host
-                                .models_mut()
-                                .update(&value_model, |v| *v = Some(id.clone()));
-                            let _ = host.models_mut().update(&open_model, |v| *v = false);
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        });
-
-                    let on_preview: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _| {
-                            let _ = host.models_mut().update(&playing_model, |v| {
-                                if v.as_deref() == Some(voice_id) {
-                                    *v = None;
-                                } else {
-                                    *v = Some(Arc::<str>::from(voice_id));
-                                }
-                            });
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        });
-
-                    let is_playing = playing_now.as_deref() == Some(voice.id);
-                    let row = ui::h_row(move |cx| {
-                        vec![
-                            ui_ai::VoiceSelectorPreview::new()
-                                .playing(is_playing)
-                                .on_play_action(on_preview)
-                                .test_id(format!("ui-ai-voice-selector-demo-preview-{}", voice.id))
-                                .into_element(cx),
-                            ui_ai::VoiceSelectorName::new(voice.name).into_element(cx),
-                            ui_ai::VoiceSelectorDescription::new(voice.description)
-                                .into_element(cx),
-                            ui_ai::VoiceSelectorBullet::new().into_element(cx),
-                            ui_ai::VoiceSelectorAccent::new()
-                                .value(voice.accent)
-                                .into_element(cx),
-                            ui_ai::VoiceSelectorBullet::new().into_element(cx),
-                            ui_ai::VoiceSelectorAge::new(voice.age).into_element(cx),
-                            ui_ai::VoiceSelectorBullet::new().into_element(cx),
-                            ui_ai::VoiceSelectorGender::new()
-                                .value(voice.gender)
-                                .into_element(cx),
-                        ]
-                    })
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items(Items::Center)
-                    .into_element(cx);
-
-                    items.push(
-                        ui_ai::VoiceSelectorItem::new(voice.name)
-                            .value(voice.id)
-                            .keywords([voice.description, voice.gender, voice.accent, voice.age])
-                            .test_id(format!("ui-ai-voice-selector-demo-item-{}", voice.id))
-                            .on_select_action(on_select)
-                            .children([row]),
-                    );
-                }
-
-                ui_ai::VoiceSelectorContent::new([
-                    ui_ai::VoiceSelectorInput::new()
-                        .test_id("ui-ai-voice-selector-demo-input")
-                        .into_element(cx),
-                    ui_ai::VoiceSelectorList::new_entries(items)
-                        .empty_text("No voices found.")
-                        .refine_scroll_layout(LayoutRefinement::default().max_h(Px(280.0)))
-                        .into_element(cx),
-                ])
-                .test_id_root("ui-ai-voice-selector-demo-content")
-                .refine_layout(LayoutRefinement::default().max_w(Px(448.0)))
+        .into_element_with_children(cx, move |cx| {
+            let trigger_content = if let Some(voice) = selected_voice {
+                ui::h_row(move |cx| {
+                    vec![
+                        ui_ai::VoiceSelectorName::new(voice.name).into_element(cx),
+                        ui_ai::VoiceSelectorAccent::new()
+                            .value(voice.accent)
+                            .into_element(cx),
+                        ui_ai::VoiceSelectorBullet::new().into_element(cx),
+                        ui_ai::VoiceSelectorAge::new(voice.age).into_element(cx),
+                        ui_ai::VoiceSelectorBullet::new().into_element(cx),
+                        ui_ai::VoiceSelectorGender::new()
+                            .value(voice.gender)
+                            .into_element(cx),
+                    ]
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items(Items::Center)
                 .into_element(cx)
-            },
-        );
+            } else {
+                ui_ai::VoiceSelectorValue::new()
+                    .placeholder("Select a voice...")
+                    .into_element(cx)
+            };
+
+            let button = shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .max_w(Px(320.0)),
+                )
+                .children([trigger_content])
+                .into_element(cx);
+
+            let trigger = ui_ai::VoiceSelectorTrigger::new(button)
+                .test_id("ui-ai-voice-selector-demo-trigger")
+                .into_element(cx);
+
+            let mut items = Vec::new();
+            for voice in DEMO_VOICES {
+                let value_model = value.clone();
+                let open_model = open.clone();
+                let playing_model = playing.clone();
+                let id = Arc::<str>::from(voice.id);
+                let voice_id = voice.id;
+
+                let on_select: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _| {
+                    let _ = host
+                        .models_mut()
+                        .update(&value_model, |v| *v = Some(id.clone()));
+                    let _ = host.models_mut().update(&open_model, |v| *v = false);
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                });
+
+                let on_preview: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _| {
+                        let _ = host.models_mut().update(&playing_model, |v| {
+                            if v.as_deref() == Some(voice_id) {
+                                *v = None;
+                            } else {
+                                *v = Some(Arc::<str>::from(voice_id));
+                            }
+                        });
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                    });
+
+                let is_playing = playing_now.as_deref() == Some(voice.id);
+                let row = ui::h_row(move |cx| {
+                    vec![
+                        ui_ai::VoiceSelectorPreview::new()
+                            .playing(is_playing)
+                            .on_play_action(on_preview)
+                            .test_id(format!("ui-ai-voice-selector-demo-preview-{}", voice.id))
+                            .into_element(cx),
+                        ui_ai::VoiceSelectorName::new(voice.name).into_element(cx),
+                        ui_ai::VoiceSelectorDescription::new(voice.description).into_element(cx),
+                        ui_ai::VoiceSelectorBullet::new().into_element(cx),
+                        ui_ai::VoiceSelectorAccent::new()
+                            .value(voice.accent)
+                            .into_element(cx),
+                        ui_ai::VoiceSelectorBullet::new().into_element(cx),
+                        ui_ai::VoiceSelectorAge::new(voice.age).into_element(cx),
+                        ui_ai::VoiceSelectorBullet::new().into_element(cx),
+                        ui_ai::VoiceSelectorGender::new()
+                            .value(voice.gender)
+                            .into_element(cx),
+                    ]
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items(Items::Center)
+                .into_element(cx);
+
+                items.push(
+                    ui_ai::VoiceSelectorItem::new(voice.name)
+                        .value(voice.id)
+                        .keywords([voice.description, voice.gender, voice.accent, voice.age])
+                        .test_id(format!("ui-ai-voice-selector-demo-item-{}", voice.id))
+                        .on_select_action(on_select)
+                        .children([row]),
+                );
+            }
+
+            let content = ui_ai::VoiceSelectorContent::new([
+                ui_ai::VoiceSelectorInput::new()
+                    .test_id("ui-ai-voice-selector-demo-input")
+                    .into_element(cx),
+                ui_ai::VoiceSelectorList::new_entries(items)
+                    .empty_text("No voices found.")
+                    .refine_scroll_layout(LayoutRefinement::default().max_h(Px(280.0)))
+                    .into_element(cx),
+            ])
+            .test_id_root("ui-ai-voice-selector-demo-content")
+            .refine_layout(LayoutRefinement::default().max_w(Px(448.0)))
+            .into_element(cx);
+
+            (trigger, content)
+        });
 
     ui::v_flex(move |cx| {
         vec![

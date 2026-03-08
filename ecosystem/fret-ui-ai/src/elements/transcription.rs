@@ -4,9 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate};
 use fret_ui::element::{
@@ -83,18 +81,6 @@ fn primary(theme: &Theme) -> Color {
     theme
         .color_by_key("primary")
         .unwrap_or_else(|| theme.color_token("foreground"))
-}
-
-fn text_sm(theme: &Theme) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        font: FontId::default(),
-        size: theme.metric_token("component.text.sm_px"),
-        weight: FontWeight::NORMAL,
-        slant: Default::default(),
-        line_height: Some(theme.metric_token("component.text.sm_line_height")),
-        letter_spacing_em: None,
-        ..Default::default()
-    })
 }
 
 fn is_blank(s: &str) -> bool {
@@ -349,7 +335,14 @@ impl TranscriptionSegment {
         let test_id = self.test_id;
         let layout = self.layout;
 
-        let style = self.text_style.unwrap_or_else(|| text_sm(&theme));
+        let style = self.text_style.unwrap_or_else(|| {
+            typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(fret_core::FontWeight::NORMAL),
+                None,
+            )
+        });
         let text = seg.text.clone();
 
         cx.pressable_with_id_props(move |cx, st, _id| {
@@ -470,7 +463,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
         let override_style = TextStyle {
-            font: FontId::default(),
+            font: fret_core::FontId::default(),
             size: Px(18.0),
             line_height: Some(Px(28.0)),
             ..Default::default()
@@ -505,5 +498,36 @@ mod tests {
 
         assert_eq!(style.size, Px(18.0));
         assert_eq!(style.line_height, Some(Px(28.0)));
+    }
+
+    #[test]
+    fn transcription_segment_default_text_uses_shared_sm_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "transcription-default-style",
+            |cx| Transcription::from_arc(single_segment()).into_element(cx),
+        );
+
+        let segment = el.children.first().expect("expected segment child");
+        let text = segment.children.first().expect("expected text child");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected segment content to render as text");
+        };
+
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            props.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(fret_core::FontWeight::NORMAL),
+                None,
+            ))
+        );
     }
 }

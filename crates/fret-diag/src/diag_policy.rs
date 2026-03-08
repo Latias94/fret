@@ -1,6 +1,18 @@
 // Policy helpers for selecting diagnostics gates per script.
 use std::path::Path;
 
+pub(crate) fn hello_world_compare_script_prefers_external_no_diag_post_run(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(name, "hello-world-compare-idle-present-gate.json")
+}
+
+pub(crate) fn hello_world_compare_script_idle_present_max_delta(script: &Path) -> Option<u64> {
+    hello_world_compare_script_prefers_external_no_diag_post_run(script).then_some(1)
+}
+
 pub(crate) fn bundle_paint_cache_hit_test_only_replay_maxes(
     bundle_path: &Path,
     warmup_frames: u64,

@@ -6,8 +6,10 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
@@ -413,10 +415,6 @@ fn patch_alert_title_text_style_recursive(el: &mut AnyElement, px: Px, line_heig
     patch_alert_text_style_recursive(el, px, line_height, FontWeight::MEDIUM);
 }
 
-fn patch_alert_description_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
-    patch_alert_text_style_recursive(el, px, line_height, FontWeight::NORMAL);
-}
-
 #[derive(Debug)]
 pub struct AlertDescription {
     content: AlertDescriptionContent,
@@ -444,36 +442,25 @@ impl AlertDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let px = theme
-            .metric_by_key("component.alert.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.alert.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => ui::text(text)
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_weight(FontWeight::NORMAL)
-                .wrap(TextWrap::Word)
-                .into_element(cx)
-                .inherit_foreground(fg),
-            AlertDescriptionContent::Children(mut children) => {
-                for child in &mut children {
-                    patch_alert_description_text_style_recursive(child, px, line_height);
-                }
-
+            AlertDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
+            AlertDescriptionContent::Children(children) => scope_description_text(
                 ui::v_flex(move |_cx| children)
                     .gap(Space::N1)
                     .items_start()
                     .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx)
-                    .inherit_foreground(fg)
-            }
+                    .into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
         }
     }
 }
@@ -504,6 +491,16 @@ mod tests {
             .find_map(find_first_inherited_foreground_node)
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
     fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
         if let ElementKind::StyledText(props) = &el.kind {
             return Some(props);
@@ -518,6 +515,40 @@ mod tests {
             return Some(props);
         }
         el.children.iter().find_map(find_first_selectable_text)
+    }
+
+    #[test]
+    fn alert_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDescription::new_children([cx.text("Nested body")]).into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Nested body").expect("expected nested text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested alert description child to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
@@ -620,7 +651,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_description_children_patch_rich_text_with_description_typography() {
+    fn alert_description_children_scope_rich_text_with_description_typography() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -642,30 +673,27 @@ mod tests {
 
         let props = find_first_styled_text(&element)
             .expect("expected AlertDescription children to keep the rich text node");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
 
-        let style = props.style.as_ref().expect(
-            "expected AlertDescription children to receive explicit description text style",
-        );
         let theme = Theme::global(&app).snapshot();
-        let expected_px = theme
-            .metric_by_key("component.alert.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let expected_line_height = theme
-            .metric_by_key("component.alert.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-        assert_eq!(style.size, expected_px);
-        assert_eq!(style.weight, FontWeight::NORMAL);
-        assert_eq!(style.line_height, Some(expected_line_height));
-        assert_eq!(style.letter_spacing_em, Some(0.0));
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
     }
 
     #[test]
-    fn alert_description_children_preserve_interactive_spans() {
+    fn alert_description_children_preserve_interactive_spans_under_description_scope() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -692,8 +720,23 @@ mod tests {
 
         let props = find_first_selectable_text(&element)
             .expect("expected AlertDescription children to keep selectable text nodes");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(props.interactive_spans.len(), 1);
         assert_eq!(props.interactive_spans[0].tag.as_ref(), "support-article");
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]

@@ -1250,19 +1250,14 @@ impl TableCaption {
         let text = self.text;
 
         cx.container(props, move |cx| {
-            let mut caption_text = ui::text(text)
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(fg))
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip);
-            if let Some(line_height) = style.line_height {
-                caption_text = caption_text.line_height_px(line_height);
-            }
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                caption_text = caption_text.letter_spacing_em(letter_spacing_em);
-            }
-            vec![caption_text.into_element(cx)]
+            vec![typography::scope_text_style_with_color(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                typography::composable_refinement_from_style(&style),
+                fg,
+            )]
         })
     }
 }
@@ -1647,6 +1642,49 @@ mod tests {
             assert_eq!(actual.line_height, expected.line_height);
             assert_eq!(actual.weight, expected.weight);
         });
+    }
+
+    #[test]
+    fn table_caption_scopes_inherited_text_style_without_leaf_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+            match &el.kind {
+                ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+                _ => el
+                    .children
+                    .iter()
+                    .find_map(|child| find_text_element(child, needle)),
+            }
+        }
+
+        let caption = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            TableCaption::new("caption").into_element(cx)
+        });
+
+        let text =
+            find_text_element(&caption, "caption").expect("expected table caption text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected table caption leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+
+        let theme = Theme::global(&app);
+        assert_eq!(
+            text.inherited_text_style.as_ref(),
+            Some(&typography::composable_refinement_from_style(
+                &table_text_style(theme)
+            ))
+        );
+        assert_eq!(text.inherited_foreground, Some(muted_fg(theme)));
     }
 
     #[test]

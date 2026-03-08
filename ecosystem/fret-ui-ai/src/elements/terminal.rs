@@ -345,12 +345,33 @@ impl TerminalHeader {
     }
 }
 
-#[derive(Clone)]
 pub struct TerminalTitle {
-    label: Arc<str>,
+    content: TerminalTitleContent,
     icon: IconId,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
+}
+
+enum TerminalTitleContent {
+    Label(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+impl std::fmt::Debug for TerminalTitle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("TerminalTitle");
+        match &self.content {
+            TerminalTitleContent::Label(label) => debug.field("label", &label.as_ref()),
+            TerminalTitleContent::Children(children) => {
+                debug.field("children_len", &children.len())
+            }
+        };
+        debug
+            .field("icon", &self.icon)
+            .field("layout", &self.layout)
+            .field("chrome", &self.chrome)
+            .finish()
+    }
 }
 
 impl Default for TerminalTitle {
@@ -362,7 +383,16 @@ impl Default for TerminalTitle {
 impl TerminalTitle {
     pub fn new() -> Self {
         Self {
-            label: Arc::<str>::from("Terminal"),
+            content: TerminalTitleContent::Label(Arc::<str>::from("Terminal")),
+            icon: IconId::new_static("lucide.terminal"),
+            layout: LayoutRefinement::default().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: TerminalTitleContent::Children(children.into_iter().collect()),
             icon: IconId::new_static("lucide.terminal"),
             layout: LayoutRefinement::default().min_w_0(),
             chrome: ChromeRefinement::default(),
@@ -370,7 +400,7 @@ impl TerminalTitle {
     }
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
-        self.label = label.into();
+        self.content = TerminalTitleContent::Label(label.into());
         self
     }
 
@@ -392,27 +422,35 @@ impl TerminalTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = color(&theme, "component.terminal.muted_fg", zinc_400());
+        let refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
 
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
-        let text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.label,
-            style: Some(
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
-                    .resolve(&theme),
-            ),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let content = match self.content {
+            TerminalTitleContent::Label(label) => vec![
+                icon,
+                fret_ui_kit::ui::raw_text(label)
+                    .wrap(TextWrap::None)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+            ],
+            TerminalTitleContent::Children(children) => {
+                let mut row = Vec::with_capacity(children.len() + 1);
+                row.push(icon);
+                row.extend(children);
+                row
+            }
+        };
 
-        ui::h_row(move |_cx| vec![icon, text])
+        ui::h_row(move |_cx| content)
             .layout(self.layout)
             .items(Items::Center)
             .gap(Space::N2)
             .into_element(cx)
+            .inherit_foreground(fg)
+            .inherit_text_style(refinement)
     }
 }
 
@@ -455,12 +493,20 @@ impl TerminalStatus {
             return cx.text("");
         }
 
+        let theme = Theme::global(&*cx.app).clone();
+        let status_fg = color(&theme, "component.terminal.muted_fg", zinc_400());
         let children = if self.children.is_empty() {
-            vec![
+            vec![fret_ui_kit::typography::scope_text_style_with_color(
                 Shimmer::new(Arc::<str>::from("Streaming"))
+                    .use_resolved_passive_text()
                     .refine_layout(LayoutRefinement::default().w_px(Px(64.0)))
                     .into_element(cx),
-            ]
+                typography::preset_text_refinement(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                ),
+                status_fg,
+            )]
         } else {
             self.children
         };
@@ -945,5 +991,123 @@ impl TerminalContent {
             scroll = scroll.viewport_test_id(test_id);
         }
         scroll.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn has_scoped_text_style(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: fret_core::Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_scoped_text_style(child, refinement, foreground))
+    }
+
+    #[test]
+    fn terminal_title_children_scope_inherited_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                TerminalTitle::new_children([cx.text("Build Output")]).into_element(cx)
+            });
+
+        let theme = fret_ui::Theme::global(&app).clone();
+        let expected_refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
+        let expected_fg = color(&theme, "component.terminal.muted_fg", zinc_400());
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_fg
+        ));
+
+        let text =
+            find_text_by_content(&element, "Build Output").expect("expected terminal title text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected terminal title leaf to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+    }
+
+    #[test]
+    fn terminal_status_default_streaming_message_scopes_inherited_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let output = app.models_mut().insert(String::new());
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.with_state(TerminalProviderState::default, |st| {
+                    st.controller = Some(TerminalController {
+                        output: output.clone(),
+                        is_streaming: true,
+                        auto_scroll: true,
+                        on_clear: None,
+                    });
+                });
+                TerminalStatus::new().into_element(cx)
+            });
+
+        let theme = fret_ui::Theme::global(&app).clone();
+        let expected_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let expected_fg = color(&theme, "component.terminal.muted_fg", zinc_400());
+
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_fg
+        ));
+
+        let text = find_text_by_content(&element, "Streaming")
+            .expect("expected default terminal streaming label");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf under the scoped terminal status");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
     }
 }

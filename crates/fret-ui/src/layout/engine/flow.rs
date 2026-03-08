@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use crate::UiHost;
 use crate::declarative::frame::{
-    ElementInstance, element_record_for_node, layout_style_for_node, with_element_record_for_node,
+    ElementInstance, element_record_for_node, inherited_text_style_for_node, layout_style_for_node,
+    with_element_record_for_node,
 };
 use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
@@ -722,15 +723,17 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree.node_text_wrap_none_measure_cache(node)
                 && cached_size != Size::default()
             {
-                let theme_revision = crate::Theme::global(&*app).revision();
+                let theme = crate::Theme::global(&*app).snapshot();
+                let inherited_text_style = inherited_text_style_for_node(app, window, node);
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let font_stack_key = app
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
                     &props.text,
-                    props.style.as_ref(),
-                    theme_revision,
+                    &resolved_style,
                     props.overflow,
                     props.align,
                     sf,
@@ -786,15 +789,17 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree.node_text_wrap_none_measure_cache(node)
                 && cached_size != Size::default()
             {
-                let theme_revision = crate::Theme::global(&*app).revision();
+                let theme = crate::Theme::global(&*app).snapshot();
+                let inherited_text_style = inherited_text_style_for_node(app, window, node);
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let font_stack_key = app
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                     &props.rich,
-                    props.style.as_ref(),
-                    theme_revision,
+                    &resolved_style,
                     props.overflow,
                     props.align,
                     sf,
@@ -850,15 +855,17 @@ fn build_flow_subtree_impl<H: UiHost>(
                     tree.node_text_wrap_none_measure_cache(node)
                 && cached_size != Size::default()
             {
-                let theme_revision = crate::Theme::global(&*app).revision();
+                let theme = crate::Theme::global(&*app).snapshot();
+                let inherited_text_style = inherited_text_style_for_node(app, window, node);
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
                 let font_stack_key = app
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                     &props.rich,
-                    props.style.as_ref(),
-                    theme_revision,
+                    &resolved_style,
                     props.overflow,
                     props.align,
                     sf,

@@ -37,20 +37,6 @@ fn border_muted(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("border"))
 }
 
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style
-}
-
-fn text_xs(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style
-}
-
 fn chevron_down_icon_rotated<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     progress: f32,
@@ -320,7 +306,14 @@ impl TaskTrigger {
                         let title = cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: title,
-                            style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                            style: Some(typography::preset_text_style_with_overrides(
+                                &theme,
+                                typography::TypographyPreset::control_ui(
+                                    typography::UiTextSize::Sm,
+                                ),
+                                Some(FontWeight::NORMAL),
+                                None,
+                            )),
                             color: None,
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
@@ -486,7 +479,12 @@ impl TaskItem {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let text_style = text_sm(&theme, FontWeight::NORMAL);
+        let text_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        );
         let children = self
             .children
             .into_iter()
@@ -549,7 +547,12 @@ impl TaskItemFile {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let text_style = text_xs(&theme, FontWeight::NORMAL);
+        let text_style = typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        );
         let children = self
             .children
             .into_iter()
@@ -606,6 +609,16 @@ mod tests {
             .find_map(find_first_inherited_foreground_node)
     }
 
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
     #[test]
     fn task_trigger_default_row_attaches_foreground_without_wrapper() {
         let window = AppWindowId::default();
@@ -630,5 +643,61 @@ mod tests {
                 "expected task trigger default row to attach inherited foreground without inserting a ForegroundScope"
             );
         });
+    }
+
+    #[test]
+    fn task_surfaces_use_shared_typography_presets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "task-style", |cx| {
+            let open = cx.app.models_mut().insert(true);
+            ui::v_stack(|cx| {
+                vec![
+                    TaskTrigger::new("Search docs").into_element_with_open(cx, open, true),
+                    TaskItem::new([cx.text("Gather requirements")]).into_element(cx),
+                    TaskItemFile::new([cx.text("Cargo.toml")]).into_element(cx),
+                ]
+            })
+            .into_element(cx)
+        });
+
+        let theme = Theme::global(&app).clone();
+        let trigger_title = find_text_by_content(&el, "Search docs").expect("task trigger text");
+        assert_eq!(
+            trigger_title.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            ))
+        );
+
+        let task_item = find_text_by_content(&el, "Gather requirements").expect("task item text");
+        assert_eq!(
+            task_item.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            ))
+        );
+
+        let file_name = find_text_by_content(&el, "Cargo.toml").expect("task item file text");
+        assert_eq!(
+            file_name.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::NORMAL),
+                None,
+            ))
+        );
     }
 }

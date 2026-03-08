@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, ColorScheme, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+    Color, ColorScheme, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
@@ -12,13 +12,6 @@ use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::Spinner;
-
-fn text_xs_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style
-}
 
 fn muted_fg(theme: &Theme) -> Color {
     theme
@@ -440,7 +433,12 @@ impl Persona {
             let label = cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: Arc::from(format!("{} / {}", self.variant.label(), self.state.label())),
-                style: Some(text_xs_style(&theme, FontWeight::MEDIUM)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                    Some(FontWeight::MEDIUM),
+                    None,
+                )),
                 color: Some(palette.label_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
@@ -497,6 +495,16 @@ mod tests {
         }
     }
 
+    fn find_text_by_content<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, needle)),
+        }
+    }
+
     #[test]
     fn persona_stamps_test_id_without_extra_semantics_wrapper() {
         let window = AppWindowId::default();
@@ -536,5 +544,31 @@ mod tests {
 
         assert!(contains_text(&element, "Custom orb"));
         assert!(contains_text(&element, "Obsidian / Thinking"));
+    }
+
+    #[test]
+    fn persona_label_uses_shared_xs_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Persona::new(PersonaState::Speaking)
+                    .variant(PersonaVariant::Halo)
+                    .show_label(true)
+                    .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let label = find_text_by_content(&element, "Halo / Speaking").expect("persona label text");
+        assert_eq!(
+            label.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                Some(FontWeight::MEDIUM),
+                None,
+            ))
+        );
     }
 }

@@ -43,7 +43,7 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-item-alloy" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-voice-selector-demo-item-liam" } },
     {
       "type": "wait_until",
       "predicate": {
