@@ -191,6 +191,8 @@ mod menu_session;
 mod move_ops;
 mod node_drag;
 mod node_drag_constraints;
+mod node_drag_constraints_anchor;
+mod node_drag_constraints_extent;
 mod node_drag_preview;
 mod node_drag_snap;
 mod node_layout;

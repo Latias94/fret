@@ -619,6 +619,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/pointer_up_node_drag_parent.rs` and
     `canvas/widget/pointer_up_node_drag_ops.rs` seams, so retained node-drag
     release reducers no longer stay embedded in one mixed surface.
+  - Progress: `node_drag_constraints.rs` now routes anchor/rect clamping and
+    multi-drag extent constraint helpers through the private
+    `canvas/widget/node_drag_constraints_anchor.rs` and
+    `canvas/widget/node_drag_constraints_extent.rs` seams, so retained node-drag
+    geometry helpers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
