@@ -63,5 +63,5 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-dialog")]
 }

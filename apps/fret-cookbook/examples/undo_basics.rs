@@ -207,45 +207,31 @@ impl View for UndoBasicsView {
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Undo basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Shows an app-owned undo/redo history wired to edit.undo/edit.redo commands.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let row_shortcuts = ui::v_flex(|cx| {
-            [
+            ui::children![cx;
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Undo shortcut:").into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Undo shortcut:"),
                         shadcn::Badge::new(undo_shortcut)
                             .variant(shadcn::BadgeVariant::Secondary)
-                            .into_element(cx)
                             .test_id(TEST_ID_UNDO_SHORTCUT),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Redo shortcut:").into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Redo shortcut:"),
                         shadcn::Badge::new(redo_shortcut)
                             .variant(shadcn::BadgeVariant::Secondary)
-                            .into_element(cx)
                             .test_id(TEST_ID_REDO_SHORTCUT),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let value_el = ui::text(format!("{value}"))
             .text_base()
@@ -259,104 +245,99 @@ impl View for UndoBasicsView {
                     .numeric_value(value as f64),
             );
 
-        let row_value = ui::v_flex(|cx| [shadcn::Label::new("Value").into_element(cx), value_el])
-            .gap(Space::N1)
-            .into_element(cx);
+        let row_value = ui::v_flex(|cx| ui::children![cx; shadcn::Label::new("Value"), value_el])
+            .gap(Space::N1);
 
         let row_edits = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("-1")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::Dec)
-                    .into_element(cx)
                     .test_id(TEST_ID_DEC),
                 shadcn::Button::new("+1")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::Inc)
-                    .into_element(cx)
                     .test_id(TEST_ID_INC),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
-                    .into_element(cx)
                     .test_id(TEST_ID_RESET),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_undo = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("Undo")
                     .disabled(!can_undo)
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Undo)
-                    .into_element(cx)
                     .test_id(TEST_ID_UNDO),
                 shadcn::Button::new("Redo")
                     .disabled(!can_redo)
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Redo)
-                    .into_element(cx)
                     .test_id(TEST_ID_REDO),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_coalesce = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Coalesce nudges (key = \"value\"):").into_element(cx),
-                shadcn::Switch::new(self.coalesce.clone())
-                    .test_id(TEST_ID_COALESCE)
-                    .into_element(cx),
-                shadcn::Badge::new(coalesce_label)
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Label::new("Coalesce nudges (key = \"value\"):"),
+                shadcn::Switch::new(self.coalesce.clone()).test_id(TEST_ID_COALESCE),
+                shadcn::Badge::new(coalesce_label).variant(shadcn::BadgeVariant::Secondary),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_next = ui::v_flex(|cx| {
-            [
+            ui::children![cx;
                 ui::text(format!("Next undo: {next_undo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx)
                     .test_id(TEST_ID_NEXT_UNDO),
                 ui::text(format!("Next redo: {next_redo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx)
                     .test_id(TEST_ID_NEXT_REDO),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
-        let content = ui::v_flex(|_cx| {
-            [
-                row_shortcuts,
-                row_value,
-                row_edits,
-                row_undo,
-                row_coalesce,
-                row_next,
-            ]
+        let content = ui::v_flex(|cx| {
+            ui::children![cx; row_shortcuts, row_value, row_edits, row_undo, row_coalesce, row_next]
         })
-        .gap(Space::N4)
-        .into_element(cx);
+        .gap(Space::N4);
 
-        let card =
-            shadcn::Card::new([header, shadcn::CardContent::new([content]).into_element(cx)])
-                .ui()
-                .w_full()
-                .max_w(Px(760.0))
-                .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Undo basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Shows an app-owned undo/redo history wired to edit.undo/edit.redo commands.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(760.0))
+        .into_element(cx);
 
         cx.on_action_notify_models::<act::Inc>({
             let value = self.value.clone();

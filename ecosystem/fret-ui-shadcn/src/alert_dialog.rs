@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap,
+};
 use fret_runtime::Model;
+use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
@@ -72,6 +75,78 @@ impl AlertDialogOverlay {
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default, Clone)]
+struct AlertDialogHandleState {
+    active_trigger: Option<Model<Option<GlobalElementId>>>,
+    content_element: Option<Model<Option<GlobalElementId>>>,
+}
+
+#[derive(Clone)]
+pub struct AlertDialogHandle {
+    open: Model<bool>,
+    active_trigger: Model<Option<GlobalElementId>>,
+    content_element: Model<Option<GlobalElementId>>,
+}
+
+impl std::fmt::Debug for AlertDialogHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogHandle")
+            .field("open", &"<model>")
+            .field("active_trigger", &"<model>")
+            .field("content_element", &"<model>")
+            .finish()
+    }
+}
+
+impl AlertDialogHandle {
+    pub fn new<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> Self {
+        Self::new_controllable(cx, Some(open), false)
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_alert_dialog::AlertDialogRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+
+        let state = cx.with_state(AlertDialogHandleState::default, |st| st.clone());
+        let active_trigger = match state.active_trigger {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
+                cx.with_state(AlertDialogHandleState::default, |st| {
+                    st.active_trigger = Some(model.clone())
+                });
+                model
+            }
+        };
+        let content_element = match state.content_element {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(None::<GlobalElementId>);
+                cx.with_state(AlertDialogHandleState::default, |st| {
+                    st.content_element = Some(model.clone())
+                });
+                model
+            }
+        };
+
+        Self {
+            open,
+            active_trigger,
+            content_element,
+        }
+    }
+
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
+    }
+}
 
 /// Tracks the currently rendering alert dialog content scope.
 ///
@@ -151,6 +226,7 @@ fn alert_dialog_open_change_events(
 #[derive(Clone)]
 pub struct AlertDialog {
     open: Model<bool>,
+    handle: Option<AlertDialogHandle>,
     overlay_color: Option<Color>,
     window_padding: Space,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -163,6 +239,7 @@ impl std::fmt::Debug for AlertDialog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AlertDialog")
             .field("open", &"<model>")
+            .field("handle", &self.handle.is_some())
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
@@ -180,6 +257,7 @@ impl AlertDialog {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            handle: None,
             overlay_color: None,
             window_padding: Space::N4,
             on_open_auto_focus: None,
@@ -204,6 +282,19 @@ impl AlertDialog {
             .default_open(default_open)
             .open_model(cx);
         Self::new(open)
+    }
+
+    pub fn from_handle(handle: AlertDialogHandle) -> Self {
+        Self {
+            open: handle.open_model(),
+            handle: Some(handle),
+            overlay_color: None,
+            window_padding: Space::N4,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
+        }
     }
 
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
@@ -271,23 +362,17 @@ impl AlertDialog {
     ) -> AnyElement {
         let dialog = overlay.apply_to(self);
         let open_for_trigger = dialog.open.clone();
+        let handle_for_trigger = dialog.handle.clone();
         dialog.into_element(
             cx,
             move |cx| {
-                let trigger_el = trigger(cx).into_element(cx);
-                let open = open_for_trigger.clone();
-                cx.pressable_add_on_activate_for(
-                    trigger_el.id,
-                    Arc::new(
-                        move |host: &mut dyn fret_ui::action::UiActionHost,
-                              acx: fret_ui::action::ActionCx,
-                              _reason: fret_ui::action::ActivateReason| {
-                            let _ = host.models_mut().update(&open, |v| *v = true);
-                            host.request_redraw(acx.window);
-                        },
-                    ),
-                );
-                trigger_el
+                let trigger = trigger(cx);
+                let trigger = if let Some(handle) = handle_for_trigger.clone() {
+                    trigger.handle(handle)
+                } else {
+                    trigger.with_open_model(open_for_trigger.clone())
+                };
+                trigger.into_element(cx)
             },
             content,
         )
@@ -312,6 +397,16 @@ impl AlertDialog {
 
             let trigger = trigger(cx);
             let id = trigger.id;
+            let request_trigger = self
+                .handle
+                .as_ref()
+                .and_then(|handle| {
+                    cx.watch_model(&handle.active_trigger)
+                        .paint()
+                        .copied()
+                        .unwrap_or(None)
+                })
+                .unwrap_or(id);
             let overlay_root_name = radix_alert_dialog::alert_dialog_root_name(id);
             let prev_content_element =
                 cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
@@ -455,6 +550,14 @@ impl AlertDialog {
                 );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
+                    if let Some(handle) = self.handle.as_ref() {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&handle.content_element, |value| {
+                                *value = Some(content_element)
+                            });
+                    }
                     cx.with_state(AlertDialogA11yState::default, |st| {
                         st.content_element = Some(content_element)
                     });
@@ -472,7 +575,7 @@ impl AlertDialog {
 
                 let request = radix_alert_dialog::alert_dialog_modal_request_with_options(
                     id,
-                    id,
+                    request_trigger,
                     self.open.clone(),
                     overlay_presence,
                     options,
@@ -563,9 +666,15 @@ impl<H: UiHost> AlertDialogComposition<H> {
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let trigger = self
-            .trigger
-            .expect("AlertDialog::compose().trigger(...) must be provided before into_element()");
+        let trigger = match self.trigger {
+            Some(trigger) => trigger,
+            None if self.dialog.handle.is_some() => {
+                AlertDialogTrigger::new(cx.container(ContainerProps::default(), |_cx| Vec::new()))
+            }
+            None => {
+                panic!("AlertDialog::compose().trigger(...) must be provided before into_element()")
+            }
+        };
         let content = self
             .content
             .expect("AlertDialog::compose().content(...) must be provided before into_element()");
@@ -596,16 +705,78 @@ impl<H: UiHost> AlertDialogComposition<H> {
 #[derive(Debug)]
 pub struct AlertDialogTrigger {
     child: AnyElement,
+    handle: Option<AlertDialogHandle>,
+    open_model: Option<Model<bool>>,
 }
 
 impl AlertDialogTrigger {
     pub fn new(child: AnyElement) -> Self {
-        Self { child }
+        Self {
+            child,
+            handle: None,
+            open_model: None,
+        }
+    }
+
+    pub fn handle(mut self, handle: AlertDialogHandle) -> Self {
+        self.handle = Some(handle);
+        self
+    }
+
+    fn with_open_model(mut self, open_model: Model<bool>) -> Self {
+        self.open_model = Some(open_model);
+        self
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.child
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut child = self.child;
+        let child_id = child.id;
+
+        if let Some(handle) = self.handle {
+            let open = cx
+                .watch_model(&handle.open)
+                .paint()
+                .copied()
+                .unwrap_or(false);
+            let content_element = cx
+                .watch_model(&handle.content_element)
+                .paint()
+                .copied()
+                .unwrap_or(None);
+            let open_model = handle.open.clone();
+            let active_trigger = handle.active_trigger.clone();
+            cx.pressable_add_on_activate_for(
+                child_id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let _ = host.models_mut().update(&open_model, |value| *value = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&active_trigger, |value| *value = Some(child_id));
+                        host.request_redraw(acx.window);
+                    },
+                ),
+            );
+            child =
+                radix_alert_dialog::apply_alert_dialog_trigger_a11y(child, open, content_element);
+        } else if let Some(open_model) = self.open_model {
+            cx.pressable_add_on_activate_for(
+                child_id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let _ = host.models_mut().update(&open_model, |value| *value = true);
+                        host.request_redraw(acx.window);
+                    },
+                ),
+            );
+        }
+
+        child
     }
 }
 
@@ -967,14 +1138,102 @@ impl AlertDialogFooter {
 }
 
 /// shadcn/ui `AlertDialogTitle` (v4).
-#[derive(Debug, Clone)]
+fn patch_alert_dialog_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    weight: FontWeight,
+    color: Color,
+    letter_spacing_em: f32,
+) {
+    fn patch_text_style(
+        style: &mut Option<fret_core::TextStyle>,
+        px: Px,
+        line_height: Px,
+        weight: FontWeight,
+        letter_spacing_em: f32,
+    ) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = weight;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        style_value.letter_spacing_em = Some(letter_spacing_em);
+        *style = Some(style_value);
+    }
+
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+            props.color = Some(color);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::StyledText(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+            props.color = Some(color);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::SelectableText(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+            props.color = Some(color);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_alert_dialog_text_style_recursive(
+            child,
+            px,
+            line_height,
+            weight,
+            color,
+            letter_spacing_em,
+        );
+    }
+}
+
+fn patch_alert_dialog_title_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: Color,
+) {
+    patch_alert_dialog_text_style_recursive(
+        el,
+        px,
+        line_height,
+        FontWeight::SEMIBOLD,
+        color,
+        -0.02,
+    );
+}
+
+#[derive(Debug)]
 pub struct AlertDialogTitle {
-    text: Arc<str>,
+    content: AlertDialogTitleContent,
+}
+
+#[derive(Debug)]
+enum AlertDialogTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl AlertDialogTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: AlertDialogTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: AlertDialogTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -993,48 +1252,97 @@ impl AlertDialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let title = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_semibold()
-            .letter_spacing_em(-0.02)
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Heading)
-                    .level(2),
-            );
+        let title = match self.content {
+            AlertDialogTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_weight(FontWeight::SEMIBOLD)
+                .letter_spacing_em(-0.02)
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .into_element(cx),
+            AlertDialogTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_alert_dialog_title_text_style_recursive(child, px, line_height, fg);
+                }
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .letter_spacing_em(-0.02)
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(TextWrap::Word)
+                        .overflow(TextOverflow::Clip)
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Heading)
+                .level(2),
+        );
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
 }
 
 /// shadcn/ui `AlertDialogDescription` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogDescription {
-    text: Arc<str>,
+    content: AlertDialogDescriptionContent,
+}
+
+#[derive(Debug)]
+enum AlertDialogDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl AlertDialogDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: AlertDialogDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: AlertDialogDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-
-        let description = scope_description_text(
-            ui::raw_text(self.text)
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip)
-                .into_element(cx),
-            &theme,
-            "component.alert_dialog.description",
-        );
+        let description = match self.content {
+            AlertDialogDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.alert_dialog.description",
+            ),
+            AlertDialogDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.alert_dialog.description",
+            ),
+        };
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -1043,9 +1351,10 @@ impl AlertDialogDescription {
 /// shadcn/ui `AlertDialogAction` (v4).
 ///
 /// This is a convenience wrapper that closes the dialog on click.
-#[derive(Clone)]
 pub struct AlertDialogAction {
     label: Arc<str>,
+    a11y_label: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     open: Option<Model<bool>>,
     variant: ButtonVariant,
     disabled: bool,
@@ -1056,6 +1365,8 @@ impl std::fmt::Debug for AlertDialogAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AlertDialogAction")
             .field("label", &self.label)
+            .field("a11y_label", &self.a11y_label)
+            .field("children_len", &self.children.len())
             .field("open", &"<model>")
             .field("variant", &self.variant)
             .field("disabled", &self.disabled)
@@ -1071,6 +1382,8 @@ impl AlertDialogAction {
     pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self {
         Self {
             label: label.into(),
+            a11y_label: None,
+            children: Vec::new(),
             open: Some(open),
             variant: ButtonVariant::Default,
             disabled: false,
@@ -1090,11 +1403,28 @@ impl AlertDialogAction {
     pub fn from_scope(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            a11y_label: None,
+            children: Vec::new(),
             open: None,
             variant: ButtonVariant::Default,
             disabled: false,
             test_id: None,
         }
+    }
+
+    /// Replaces the default text label with custom button contents.
+    ///
+    /// The semantic label still defaults to the string passed to `new(...)` / `from_scope(...)`.
+    /// Use `a11y_label(...)` when the visual children no longer describe the action clearly.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Overrides the semantic label used for accessibility and automation.
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
     }
 
     /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
@@ -1125,7 +1455,11 @@ impl AlertDialogAction {
         let mut button = Button::new(self.label)
             .variant(self.variant)
             .disabled(self.disabled)
-            .toggle_model(open);
+            .toggle_model(open)
+            .children(self.children);
+        if let Some(a11y_label) = self.a11y_label {
+            button = button.a11y_label(a11y_label);
+        }
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
         }
@@ -1136,9 +1470,10 @@ impl AlertDialogAction {
 /// shadcn/ui `AlertDialogCancel` (v4).
 ///
 /// This is a convenience wrapper that closes the dialog on click.
-#[derive(Clone)]
 pub struct AlertDialogCancel {
     label: Arc<str>,
+    a11y_label: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     open: Option<Model<bool>>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -1148,6 +1483,8 @@ impl std::fmt::Debug for AlertDialogCancel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AlertDialogCancel")
             .field("label", &self.label)
+            .field("a11y_label", &self.a11y_label)
+            .field("children_len", &self.children.len())
             .field("open", &"<model>")
             .field("disabled", &self.disabled)
             .finish()
@@ -1162,6 +1499,8 @@ impl AlertDialogCancel {
     pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self {
         Self {
             label: label.into(),
+            a11y_label: None,
+            children: Vec::new(),
             open: Some(open),
             disabled: false,
             test_id: None,
@@ -1180,10 +1519,27 @@ impl AlertDialogCancel {
     pub fn from_scope(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            a11y_label: None,
+            children: Vec::new(),
             open: None,
             disabled: false,
             test_id: None,
         }
+    }
+
+    /// Replaces the default text label with custom button contents.
+    ///
+    /// The semantic label still defaults to the string passed to `new(...)` / `from_scope(...)`.
+    /// Use `a11y_label(...)` when the visual children no longer describe the cancellation action clearly.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Overrides the semantic label used for accessibility and automation.
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
     }
 
     /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
@@ -1210,7 +1566,11 @@ impl AlertDialogCancel {
         let mut button = Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)
-            .toggle_model(open);
+            .toggle_model(open)
+            .children(self.children);
+        if let Some(a11y_label) = self.a11y_label {
+            button = button.a11y_label(a11y_label);
+        }
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
         }
@@ -1240,6 +1600,32 @@ mod tests {
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
+    }
+
+    fn find_first_selectable_text(
+        el: &AnyElement,
+    ) -> Option<&fret_ui::element::SelectableTextProps> {
+        if let ElementKind::SelectableText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_selectable_text)
+    }
+
+    fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => true,
+            _ => el
+                .children
+                .iter()
+                .any(|child| contains_plain_text(child, needle)),
+        }
+    }
 
     #[test]
     fn alert_dialog_new_controllable_uses_controlled_model_when_provided() {
@@ -1304,6 +1690,231 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn alert_dialog_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = fret_core::AttributedText::new(
+                Arc::<str>::from("Delete project and revoke shared access?"),
+                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                    "Delete project and revoke shared access?".len(),
+                )]),
+            );
+
+            AlertDialogTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let ElementKind::StyledText(props) = &element.kind else {
+            panic!(
+                "expected AlertDialogTitle children root to stay a StyledText, got {:?}",
+                element.kind
+            );
+        };
+
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected AlertDialogTitle children to receive explicit title text style");
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.alert_dialog.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.alert_dialog.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let expected_fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, fret_core::FontWeight::SEMIBOLD);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(style.letter_spacing_em, Some(-0.02));
+        assert_eq!(props.color, Some(expected_fg));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_dialog_description_children_scope_rich_text_with_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = fret_core::AttributedText::new(
+                Arc::<str>::from("Export an audit archive before deleting the project."),
+                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                    "Export an audit archive before deleting the project.".len(),
+                )]),
+            );
+
+            AlertDialogDescription::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected AlertDialogDescription children to keep the rich text node");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert_dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_dialog_description_children_preserve_interactive_spans_under_description_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = fret_core::AttributedText::new(
+                Arc::<str>::from("Review the retention policy"),
+                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                    "Review the retention policy".len(),
+                )]),
+            );
+
+            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+            props.interactive_spans =
+                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                    range: 0.."Review the retention policy".len(),
+                    tag: Arc::<str>::from("retention-policy"),
+                }]);
+
+            AlertDialogDescription::new_children([cx.selectable_text_props(props)]).into_element(cx)
+        });
+
+        let props = find_first_selectable_text(&element)
+            .expect("expected AlertDialogDescription children to keep selectable text nodes");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(props.interactive_spans.len(), 1);
+        assert_eq!(props.interactive_spans[0].tag.as_ref(), "retention-policy");
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert_dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_dialog_action_children_override_visual_label_but_keep_semantic_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let visual = ui::h_row(|cx| {
+                vec![
+                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    ui::text("Delete now").into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
+
+            AlertDialogAction::new("Delete project", open.clone())
+                .children([visual])
+                .test_id("alert-dialog-action-custom")
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected AlertDialogAction to render a Pressable root");
+        };
+
+        assert_eq!(
+            props.a11y.test_id.as_deref(),
+            Some("alert-dialog-action-custom")
+        );
+        assert_eq!(props.a11y.label.as_deref(), Some("Delete project"));
+        assert!(contains_plain_text(&element, "Delete now"));
+        assert!(!contains_plain_text(&element, "Delete project"));
+    }
+
+    #[test]
+    fn alert_dialog_cancel_children_can_override_a11y_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let visual = ui::h_row(|cx| {
+                vec![
+                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    ui::text("Back to safety").into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
+
+            AlertDialogCancel::new("Cancel", open.clone())
+                .children([visual])
+                .a11y_label("Cancel deletion")
+                .test_id("alert-dialog-cancel-custom")
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected AlertDialogCancel to render a Pressable root");
+        };
+
+        assert_eq!(
+            props.a11y.test_id.as_deref(),
+            Some("alert-dialog-cancel-custom")
+        );
+        assert_eq!(props.a11y.label.as_deref(), Some("Cancel deletion"));
+        assert!(contains_plain_text(&element, "Back to safety"));
+        assert!(!contains_plain_text(&element, "Cancel"));
     }
 
     #[derive(Default)]
@@ -2942,6 +3553,140 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn alert_dialog_handle_detached_trigger_restores_focus_to_last_activated_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let cancel_id = Rc::new(Cell::new(None::<fret_ui::elements::GlobalElementId>));
+        let handle_open = Rc::new(std::cell::RefCell::new(None::<Model<bool>>));
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame: u64| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut detached_trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "alert-dialog-detached-trigger-handle",
+                |cx| {
+                    let handle = AlertDialogHandle::new_controllable(cx, None, false);
+                    *handle_open.borrow_mut() = Some(handle.open_model());
+
+                    let detached_trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(140.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            detached_trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let detached_trigger = AlertDialogTrigger::new(detached_trigger)
+                        .handle(handle.clone())
+                        .into_element(cx);
+
+                    let cancel_id_out = cancel_id.clone();
+                    let dialog = AlertDialog::from_handle(handle)
+                        .compose()
+                        .content_with(move |cx| {
+                            let action = AlertDialogAction::from_scope("Delete").into_element(cx);
+                            let cancel = AlertDialogCancel::from_scope("Cancel").into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+                            AlertDialogContent::new(vec![action, cancel]).into_element(cx)
+                        })
+                        .into_element(cx);
+
+                    vec![detached_trigger, dialog]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            detached_trigger_id.expect("detached trigger id")
+        };
+
+        let detached_trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let open_model = handle_open
+            .borrow()
+            .as_ref()
+            .cloned()
+            .expect("handle open model");
+        assert_eq!(app.models().get_copied(&open_model), Some(true));
+
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let cancel = cancel_id.get().expect("cancel id");
+        let cancel_node =
+            fret_ui::elements::node_for_element(&mut app, window, cancel).expect("cancel node");
+        assert_eq!(ui.focus(), Some(cancel_node));
+
+        let detached_trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, detached_trigger)
+                .expect("detached trigger node");
+        let _ = app.models_mut().update(&open_model, |value| *value = false);
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+        ) + 1;
+        for frame in 3..=(2 + settle_frames) {
+            let _ = render_frame(&mut ui, &mut app, &mut services, frame);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+        assert_eq!(ui.focus(), Some(detached_trigger_node));
     }
 
     #[test]

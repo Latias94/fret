@@ -13,7 +13,7 @@ Outcome:
 Deliverables:
 
 - A v2 umbrella workstream note.
-- A boundary map for runtime, tooling, transport, artifacts, and GUI.
+- A boundary map for runtime, tooling, transport, artifacts, and GUI (`CRATE_AND_MODULE_MAP.md`).
 - A documented decision that DevTools GUI is included as a consumer lane.
 
 Exit criteria:
@@ -30,6 +30,28 @@ Deliverables:
 
 - A hotspot inventory for runtime/tooling.
 - A short list of next seam extractions with rationale and risk.
+- A phased implementation roadmap (`IMPLEMENTATION_ROADMAP.md`).
+
+Progress update:
+
+- `diag_suite` has now landed thirteen consecutive seam slices around post-run and result-summary orchestration:
+  - core default check planning,
+  - editor/markdown/text default check planning,
+  - explicit-or-policy post-run trigger planning,
+  - retained-vlist script override planning,
+  - suite success/failure summary emit factoring,
+  - per-script row payload shaping,
+  - failure finalization around stop/emit/return-exit paths,
+  - tooling-failure handling around script-result writes plus row/finalize wiring,
+  - script-outcome handling for failed/unexpected/lint-failed branches,
+  - per-script context assembly for stage/reason accounting plus evidence/lint preparation,
+  - transport result decoding around `dump_label`, `run_script_over_transport`, and `tooling.suite.error` fallback,
+  - script-execution block assembly for prewarm/prelude/load-script wiring,
+  - per-script launch env/default assembly plus connected transport acquisition.
+- The next remaining high-ROI seam in this area is the remaining per-script execution dispatch
+  closure around `SuiteScriptExecutionBlockContext` assembly plus
+  `execute_suite_script_iteration_block` invocation rather than re-expanding execution control in
+  `cmd_suite`.
 
 Exit criteria:
 
@@ -41,17 +63,36 @@ Outcome:
 
 - Diagnostics outputs are described as one coherent artifact system.
 
+Progress update:
+
+- The first consolidated artifact and evidence contract now exists in
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- The workstream now names source-of-truth artifacts, derived/index artifacts, optional evidence,
+  and presentation-facing projections explicitly.
+- The remaining gap in this milestone is adoption and enforcement across older notes and any future
+  artifact additions.
+
 Deliverables:
 
 - A canonical artifact taxonomy.
 - Compatibility and bounded-evidence policy.
 - A defined “first-open” artifact set for everyday triage.
+- Primary note: `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
 
 Exit criteria:
 
 - Humans and tools can perform common triage without assuming the raw largest artifact is always required.
 
 ## M3 — Regression orchestration model chosen
+
+Progress update:
+
+- The initial summary/evidence contract is no longer doc-only.
+- `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
+  `regression.summary.json` as an additive artifact.
+- `diag matrix` also leaves behind `matrix.summary.json` for compare-oriented consumers.
+- The remaining gap in this milestone is campaign aggregation and tighter reason/evidence
+  vocabulary standardization.
 
 Outcome:
 
@@ -62,6 +103,8 @@ Deliverables:
 - A documented lane model (`smoke`, `correctness`, `matrix`, `perf`, `nightly/full`).
 - A metadata plan for suites/scripts.
 - A summary/evidence contract for orchestrated runs.
+- Initial design note: `REGRESSION_CAMPAIGN_V1.md`.
+- Initial summary schema note: `REGRESSION_SUMMARY_SCHEMA_V1.md`.
 
 Exit criteria:
 

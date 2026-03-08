@@ -44,5 +44,5 @@ pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-sidebar")]
 }

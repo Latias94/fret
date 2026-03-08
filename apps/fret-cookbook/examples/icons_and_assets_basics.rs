@@ -122,140 +122,142 @@ impl View for IconsAndAssetsBasicsView {
                 .push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Icons + assets basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Icon packs (lucide), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Icons + assets basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "Icon packs (lucide), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
+                ),
+            );
+        });
 
         let actions = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("Bump assets reload epoch")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.reset"))
                     .action(act::BumpReload)
-                    .into_element(cx)
                     .test_id(TEST_ID_BUMP_RELOAD),
                 shadcn::Badge::new("Tip: edit the files under `assets/` and click reload.")
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
         .items_center()
         .justify_center()
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
         let icon_row =
             |cx: &mut ElementContext<'_, App>, title: &str, ids: [IconId; 3]| -> AnyElement {
                 let buttons = ui::h_flex(|cx| {
-                    [
+                    ui::children![cx;
                         shadcn::Button::new("Search")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[0].clone())
-                            .into_element(cx),
+                            .leading_icon(ids[0].clone()),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[1].clone())
-                            .into_element(cx),
+                            .leading_icon(ids[1].clone()),
                         shadcn::Button::new("Copy")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[2].clone())
-                            .into_element(cx),
+                            .leading_icon(ids[2].clone()),
                     ]
                 })
                 .gap(Space::N2)
                 .items_center()
-                .w_full()
-                .into_element(cx);
+                .w_full();
 
-                ui::v_flex(|cx| [shadcn::Label::new(title).into_element(cx), buttons])
+                ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), buttons])
                     .gap(Space::N2)
                     .w_full()
                     .into_element(cx)
             };
 
-        let icons_panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Icons").into_element(cx),
-                shadcn::CardDescription::new(
-                    "IconId is renderer-agnostic. Packs register data; components consume semantic ids (ui.*).",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx: &mut ElementContext<'_, App>| {
-                let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
-                let preload = cx
-                    .app
-                    .global::<fret::prelude::icon::IconSvgPreloadDiagnostics>()
-                    .copied();
-                let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
-                let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
-                let preload_bytes = preload.map(|v| v.bytes_ready).unwrap_or(0);
+        let icons_panel = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Icons"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "IconId is renderer-agnostic. Packs register data; components consume semantic ids (ui.*).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx: &mut ElementContext<'_, App>| {
+                            let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
+                            let preload = cx
+                                .app
+                                .global::<fret::prelude::icon::IconSvgPreloadDiagnostics>()
+                                .copied();
+                            let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
+                            let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
+                            let preload_bytes = preload.map(|v| v.bytes_ready).unwrap_or(0);
 
-                [
-                    ui::h_flex(|cx| {
-                        [
-                            shadcn::Badge::new(format!("frozen icons: {frozen_len}"))
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                            shadcn::Badge::new(format!(
-                                "preloaded: {preload_entries} ({} KB)",
-                                preload_bytes / 1024
-                            ))
-                            .variant(shadcn::BadgeVariant::Secondary)
-                            .into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                    icon_row(
-                        cx,
-                        "Semantic ids (ui.*)",
-                        [
-                            IconId::new_static("ui.search"),
-                            IconId::new_static("ui.close"),
-                            IconId::new_static("ui.copy"),
-                        ],
-                    ),
-                    icon_row(
-                        cx,
-                        "Vendor ids (lucide.*)",
-                        [
-                            IconId::new_static("lucide.search"),
-                            IconId::new_static("lucide.x"),
-                            IconId::new_static("lucide.copy"),
-                        ],
-                    ),
-                    icon_row(
-                        cx,
-                        "Vendor ids (lucide.*)",
-                        [
-                            IconId::new_static("lucide.search"),
-                            IconId::new_static("lucide.x"),
-                            IconId::new_static("lucide.copy"),
-                        ],
-                    ),
-                ]
-            })
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+                            ui::children![
+                                cx;
+                                ui::h_flex(|cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::Badge::new(format!("frozen icons: {frozen_len}"))
+                                            .variant(shadcn::BadgeVariant::Secondary),
+                                        shadcn::Badge::new(format!(
+                                            "preloaded: {preload_entries} ({} KB)",
+                                            preload_bytes / 1024
+                                        ))
+                                        .variant(shadcn::BadgeVariant::Secondary),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_center(),
+                                icon_row(
+                                    cx,
+                                    "Semantic ids (ui.*)",
+                                    [
+                                        IconId::new_static("ui.search"),
+                                        IconId::new_static("ui.close"),
+                                        IconId::new_static("ui.copy"),
+                                    ],
+                                ),
+                                icon_row(
+                                    cx,
+                                    "Vendor ids (lucide.*)",
+                                    [
+                                        IconId::new_static("lucide.search"),
+                                        IconId::new_static("lucide.x"),
+                                        IconId::new_static("lucide.copy"),
+                                    ],
+                                ),
+                                icon_row(
+                                    cx,
+                                    "Vendor ids (lucide.*)",
+                                    [
+                                        IconId::new_static("lucide.search"),
+                                        IconId::new_static("lucide.x"),
+                                        IconId::new_static("lucide.copy"),
+                                    ],
+                                ),
+                            ]
+                        })
+                        .gap(Space::N4)
+                        .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_PANEL_ICONS);
 
         let file_image_state = cx.use_image_source_state(&self.file_image);
@@ -287,58 +289,66 @@ impl View for IconsAndAssetsBasicsView {
             .rounded(Radius::Lg)
             .w_px(Px(160.0))
             .h_px(Px(160.0))
-            .overflow_hidden()
-            .into_element(cx);
+            .overflow_hidden();
 
-            ui::v_flex(|cx| [shadcn::Label::new(title).into_element(cx), box_el])
+            ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), box_el])
                 .gap(Space::N2)
                 .w_full()
                 .into_element(cx)
         };
 
-        let image_panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Images").into_element(cx),
-                shadcn::CardDescription::new(
-                    "File-based decode is async; in-memory RGBA8 is immediate and useful for deterministic demos.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx| {
-                [
-                    ui::h_flex(|cx| {
-                        [
-                            shadcn::Label::new("File image status:").into_element(cx),
-                            shadcn::Badge::new(image_status)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx)
-                                .test_id(TEST_ID_IMAGE_STATUS),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                    ui::h_flex(|cx| {
-                        [
-                            render_image(cx, "From path: `assets/textures/test.jpg`", &file_image_state),
-                            render_image(cx, "From RGBA8 buffer", &memory_image_state),
-                        ]
-                    })
-                    .gap(Space::N4)
-                    .items_center()
-                    .w_full()
-                    .into_element(cx),
-                ]
-            })
-            .gap(Space::N3)
-            .w_full()
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+        let image_panel = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Images"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "File-based decode is async; in-memory RGBA8 is immediate and useful for deterministic demos.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| {
+                            ui::children![
+                                cx;
+                                ui::h_flex(|cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::Label::new("File image status:"),
+                                        shadcn::Badge::new(image_status)
+                                            .variant(shadcn::BadgeVariant::Secondary)
+                                            .test_id(TEST_ID_IMAGE_STATUS),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_center(),
+                                ui::h_flex(|cx| {
+                                    ui::children![
+                                        cx;
+                                        render_image(cx, "From path: `assets/textures/test.jpg`", &file_image_state),
+                                        render_image(cx, "From RGBA8 buffer", &memory_image_state),
+                                    ]
+                                })
+                                .gap(Space::N4)
+                                .items_center()
+                                .w_full(),
+                            ]
+                        })
+                        .gap(Space::N3)
+                        .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_PANEL_IMAGE);
 
         // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
@@ -374,56 +384,73 @@ impl View for IconsAndAssetsBasicsView {
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Lg)
-        .p(Space::N4)
-        .into_element(cx);
+        .p(Space::N4);
 
-        let svg_panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("SVG icon from file").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Loads an icon-style SVG from disk via `SvgFileSource` + `UiAssetsReloadEpoch` (ViewCache-safe dev reload).",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx| {
-                [
-                    ui::h_flex(|cx| {
-                        [
-                            shadcn::Label::new("SVG status:").into_element(cx),
-                            shadcn::Badge::new(svg_status)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx)
-                                .test_id(TEST_ID_SVG_STATUS),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                    svg_box,
-                ]
-            })
-            .gap(Space::N3)
-            .w_full()
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+        let svg_panel = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("SVG icon from file"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Loads an icon-style SVG from disk via `SvgFileSource` + `UiAssetsReloadEpoch` (ViewCache-safe dev reload).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| {
+                            ui::children![
+                                cx;
+                                ui::h_flex(|cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::Label::new("SVG status:"),
+                                        shadcn::Badge::new(svg_status)
+                                            .variant(shadcn::BadgeVariant::Secondary)
+                                            .test_id(TEST_ID_SVG_STATUS),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_center(),
+                                svg_box,
+                            ]
+                        })
+                        .gap(Space::N3)
+                        .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_PANEL_SVG);
 
-        let content = ui::v_flex(|_cx| [actions, icons_panel, svg_panel, image_panel])
-            .gap(Space::N5)
-            .w_full()
-            .into_element(cx);
-
-        let card =
-            shadcn::Card::new([header, shadcn::CardContent::new([content]).into_element(cx)])
-                .ui()
-                .w_full()
-                .max_w(Px(900.0))
-                .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(
+                            |cx| ui::children![cx; actions, icons_panel, svg_panel, image_panel],
+                        )
+                        .gap(Space::N5)
+                        .w_full(),
+                    );
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(900.0))
+        .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

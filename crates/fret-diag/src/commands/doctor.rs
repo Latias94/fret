@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1, UiScriptStageV1};
+use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptStageV1};
 use serde_json::{Value, json};
 
 use super::args::resolve_latest_bundle_dir_path;
+use super::resolve;
 use super::sidecars;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -693,25 +694,6 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
     (items, required_ok, ok)
 }
 
-fn resolve_script_result_path(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct = bundle_dir.join("script.result.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    if let Some(parent) = bundle_dir.parent() {
-        let from_parent = parent.join("script.result.json");
-        if from_parent.is_file() {
-            return Some(from_parent);
-        }
-    }
-    None
-}
-
-fn try_read_script_result_v1(path: &Path) -> Option<UiScriptResultV1> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
-}
-
 fn resolve_manifest_path(bundle_dir: &Path) -> Option<PathBuf> {
     let direct = bundle_dir.join("manifest.json");
     if direct.is_file() {
@@ -825,10 +807,11 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             (None, None)
         };
 
-    let script_result_path = resolve_script_result_path(bundle_dir);
+    let script_result_path =
+        resolve::find_nearest_script_result_json_preferring_evidence(bundle_dir);
     let script_result = script_result_path
         .as_deref()
-        .and_then(try_read_script_result_v1)
+        .and_then(resolve::try_read_script_result_v1)
         .map(|r| {
             let stage = match r.stage {
                 UiScriptStageV1::Queued => "queued",

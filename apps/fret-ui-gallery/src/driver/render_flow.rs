@@ -23,8 +23,6 @@ pub(super) struct PreparedFrame {
     pub(super) cache_content: bool,
     pub(super) content_models: Arc<ui::UiGalleryModels>,
     pub(super) selected_page: Model<Arc<str>>,
-    pub(super) workspace_tabs: Model<Vec<Arc<str>>>,
-    pub(super) workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     pub(super) nav_query: Model<String>,
     pub(super) settings_open: Model<bool>,
     pub(super) settings_menu_bar_os: Model<Option<Arc<str>>>,
@@ -33,7 +31,6 @@ pub(super) struct PreparedFrame {
     pub(super) settings_menu_bar_in_window_open: Model<bool>,
     pub(super) settings_edit_can_undo: Model<bool>,
     pub(super) settings_edit_can_redo: Model<bool>,
-    pub(super) chrome_show_workspace_tab_strip: Model<bool>,
     pub(super) menu_bar_seq: Model<u64>,
     pub(super) inspector_enabled: Model<bool>,
     pub(super) inspector_last_pointer: Model<Option<fret_core::Point>>,
@@ -110,8 +107,6 @@ pub(super) fn begin_frame(
 
     let content_models = Arc::new(state.content_models());
     let selected_page = state.selected_page.clone();
-    let workspace_tabs = state.workspace_tabs.clone();
-    let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
     let nav_query = state.nav_query.clone();
     let settings_open = state.settings_open.clone();
     let settings_menu_bar_os = state.settings_menu_bar_os.clone();
@@ -120,7 +115,6 @@ pub(super) fn begin_frame(
     let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
     let settings_edit_can_undo = state.settings_edit_can_undo.clone();
     let settings_edit_can_redo = state.settings_edit_can_redo.clone();
-    let chrome_show_workspace_tab_strip = state.chrome_show_workspace_tab_strip.clone();
     let menu_bar_seq = state.menu_bar_seq.clone();
     let inspector_enabled = state.inspector_enabled.clone();
     let inspector_last_pointer = state.inspector_last_pointer.clone();
@@ -163,8 +157,6 @@ pub(super) fn begin_frame(
         cache_content,
         content_models,
         selected_page,
-        workspace_tabs,
-        workspace_dirty_tabs,
         nav_query,
         settings_open,
         settings_menu_bar_os,
@@ -173,7 +165,6 @@ pub(super) fn begin_frame(
         settings_menu_bar_in_window_open,
         settings_edit_can_undo,
         settings_edit_can_redo,
-        chrome_show_workspace_tab_strip,
         menu_bar_seq,
         inspector_enabled,
         inspector_last_pointer,
@@ -231,7 +222,6 @@ fn render_root_contents(
         frame.cache_sidebar,
         &frame.nav_query,
         &frame.selected_page,
-        &frame.workspace_tabs,
     );
     let content = shell::content_view(
         cx,
@@ -242,26 +232,15 @@ fn render_root_contents(
         frame.content_models.as_ref(),
     );
 
-    let show_tab_strip = cx
-        .get_model_copied(&frame.chrome_show_workspace_tab_strip, Invalidation::Layout)
-        .unwrap_or(false);
-    let tab_strip = if show_tab_strip && (frame.bisect & BISECT_DISABLE_TAB_STRIP) == 0 {
-        Some(chrome::tab_strip_view(
-            cx,
-            false,
-            &frame.selected_page,
-            &frame.workspace_tabs,
-            &frame.workspace_dirty_tabs,
-        ))
-    } else {
-        None
-    };
-
     let menubar_handle = std::cell::RefCell::new(None);
     let in_window_menu_bar =
         menubar::build_in_window_menu_bar(cx, &frame.menu_bar_seq, &menubar_handle);
 
-    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
+    let top_bar = if in_window_menu_bar.is_empty() {
+        None
+    } else {
+        Some(chrome::top_bar_view(cx, in_window_menu_bar))
+    };
 
     let mut center_layout = fret_ui::element::LayoutStyle::default();
     center_layout.size.width = fret_ui::element::Length::Fill;
@@ -277,7 +256,10 @@ fn render_root_contents(
         |_cx| vec![sidebar, content],
     );
 
-    let mut frame_el = WorkspaceFrame::new(center).top(top_bar);
+    let mut frame_el = WorkspaceFrame::new(center);
+    if let Some(top_bar) = top_bar {
+        frame_el = frame_el.top(top_bar);
+    }
     if frame.show_status_bar {
         let status_bar = status_bar::status_bar_view(
             cx,
@@ -315,7 +297,6 @@ fn render_root_contents(
         frame.settings_menu_bar_in_window_open.clone(),
         frame.settings_edit_can_undo.clone(),
         frame.settings_edit_can_redo.clone(),
-        frame.chrome_show_workspace_tab_strip.clone(),
         &mut content,
     );
 
@@ -355,4 +336,364 @@ fn render_root_contents(
         &frame.inspector_last_pointer,
         content,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{
+        AppWindowId, Event, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect, Size, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
+    use fret_runtime::{FrameId, TickId};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn node_by_test_id<'a>(
+        snap: &'a fret_core::SemanticsSnapshot,
+        test_id: &str,
+    ) -> &'a fret_core::SemanticsNode {
+        snap.nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
+    }
+
+    struct RenderedGalleryPage {
+        window: AppWindowId,
+        frame_index: u64,
+        app: App,
+        state: UiGalleryWindowState,
+        services: FakeServices,
+        bounds: Rect,
+    }
+
+    fn render_gallery_frame(rendered: &mut RenderedGalleryPage) {
+        rendered.frame_index = rendered.frame_index.saturating_add(1);
+        rendered.app.set_tick_id(TickId(rendered.frame_index));
+        rendered.app.set_frame_id(FrameId(rendered.frame_index));
+
+        let frame = begin_frame(&mut rendered.app, rendered.window, &mut rendered.state);
+        let root = render_root(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.window,
+            &mut rendered.state,
+            rendered.bounds,
+            &frame,
+        );
+        end_frame(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.window,
+            &mut rendered.state,
+            rendered.bounds,
+            &frame,
+            root,
+        );
+        rendered.state.ui.request_semantics_snapshot();
+        rendered.state.ui.layout_all(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.bounds,
+            1.0,
+        );
+    }
+
+    fn node_id_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> fret_core::NodeId {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after layout");
+        node_by_test_id(snapshot, test_id).id
+    }
+
+    fn visual_bounds_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> Rect {
+        let node_id = node_id_by_test_id(rendered, test_id);
+        rendered
+            .state
+            .ui
+            .debug_node_visual_bounds(node_id)
+            .unwrap_or_else(|| panic!("missing visual bounds for test_id={test_id}"))
+    }
+
+    fn render_gallery_page(page: &str) -> RenderedGalleryPage {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let state = UiGalleryDriver::build_ui(&mut app, window);
+        let _ = app.models_mut().update(&state.selected_page, |selected| {
+            *selected = Arc::<str>::from(page)
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1080.0), Px(720.0)),
+        );
+        let services = FakeServices;
+
+        let mut rendered = RenderedGalleryPage {
+            window,
+            frame_index: 0,
+            app,
+            state,
+            services,
+            bounds,
+        };
+        render_gallery_frame(&mut rendered);
+        render_gallery_frame(&mut rendered);
+        rendered
+    }
+
+    fn assert_page_bottom_clamps_to_viewport_bottom(page: &str, page_root_test_id: &str) {
+        let mut rendered = render_gallery_page(page);
+        let initial_page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+        let mut last_page_y = initial_page_bounds.origin.y.0;
+        let mut moved = false;
+        let mut stable_frames = 0usize;
+
+        for _ in 0..48 {
+            let viewport_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
+            let wheel_pos = Point::new(
+                Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
+                Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
+            );
+
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-2000.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+
+            render_gallery_frame(&mut rendered);
+
+            let page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+            if page_bounds.origin.y.0 < last_page_y - 0.5 {
+                moved = true;
+                stable_frames = 0;
+            } else {
+                stable_frames += 1;
+            }
+            last_page_y = page_bounds.origin.y.0;
+
+            let viewport_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
+            let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
+            if moved && (page_bottom - viewport_bottom).abs() <= 2.0 {
+                return;
+            }
+            if moved && stable_frames >= 3 {
+                break;
+            }
+        }
+
+        let viewport_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
+        let page_bounds = visual_bounds_by_test_id(&rendered, page_root_test_id);
+
+        let viewport_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
+        let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
+
+        assert!(
+            moved,
+            "expected wheel scrolling to move the gallery page for page={page}: initial_page={initial_page_bounds:?} final_page={page_bounds:?} viewport={viewport_bounds:?}"
+        );
+
+        assert!(
+            (page_bottom - viewport_bottom).abs() <= 2.0,
+            "expected gallery content to clamp cleanly at the viewport bottom for page={page}: viewport={viewport_bounds:?} page={page_bounds:?} page_bottom={page_bottom} viewport_bottom={viewport_bottom}"
+        );
+    }
+
+    fn scroll_test_id_into_gallery_viewport(rendered: &mut RenderedGalleryPage, target_test_id: &str) {
+        for _ in 0..64 {
+            let gallery_viewport = visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
+            let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+            let target_center_y = target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5;
+            let visible_top = gallery_viewport.origin.y.0;
+            let visible_bottom = visible_top + gallery_viewport.size.height.0;
+
+            if target_center_y >= visible_top + 4.0 && target_center_y <= visible_bottom - 4.0 {
+                return;
+            }
+
+            let wheel_pos = Point::new(
+                Px(gallery_viewport.origin.x.0 + gallery_viewport.size.width.0 * 0.5),
+                Px(gallery_viewport.origin.y.0 + gallery_viewport.size.height.0 * 0.5),
+            );
+            let delta_y = if target_center_y > visible_bottom {
+                Px(-480.0)
+            } else {
+                Px(480.0)
+            };
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), delta_y),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_gallery_frame(rendered);
+        }
+
+        let gallery_viewport = visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
+        let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+        panic!(
+            "expected target to become visible inside gallery viewport before interaction: target_test_id={target_test_id} gallery_viewport={gallery_viewport:?} target_bounds={target_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn gallery_component_pages_scroll_to_bottom_without_height_drift() {
+        let cases = [
+            (PAGE_ACCORDION, "ui-gallery-accordion"),
+            (PAGE_AVATAR, "ui-gallery-avatar"),
+            (PAGE_CARD, "ui-gallery-card"),
+            (PAGE_DIALOG, "ui-gallery-dialog"),
+            (PAGE_INPUT, "ui-gallery-input"),
+            (PAGE_INPUT_GROUP, "ui-gallery-input-group"),
+            (PAGE_MENUBAR, "ui-gallery-menubar-component"),
+            (PAGE_NAVIGATION_MENU, "ui-gallery-navigation-menu"),
+            (PAGE_POPOVER, "ui-gallery-popover"),
+            (PAGE_SCROLL_AREA, "ui-gallery-scroll-area"),
+            (PAGE_SELECT, "ui-gallery-select"),
+            (PAGE_SHEET, "ui-gallery-sheet"),
+            (PAGE_SIDEBAR, "ui-gallery-sidebar"),
+            (PAGE_SONNER, "ui-gallery-sonner"),
+            (PAGE_TABS, "ui-gallery-tabs"),
+            (PAGE_TEXTAREA, "ui-gallery-textarea"),
+        ];
+
+        for (page, page_root_test_id) in cases {
+            assert_page_bottom_clamps_to_viewport_bottom(page, page_root_test_id);
+        }
+    }
+
+    #[cfg(feature = "gallery-material3")]
+    #[test]
+    fn material3_top_app_bar_exit_until_collapsed_reacts_to_inner_scroll_viewport() {
+        let mut rendered = render_gallery_page(PAGE_MATERIAL3_TOP_APP_BAR);
+        let viewport_test_id =
+            "ui-gallery-material3-top-app-bar-exit-until-collapsed-scroll-viewport";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, viewport_test_id);
+
+        let before_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial render");
+        let before_viewport_scroll = node_by_test_id(before_snapshot, viewport_test_id).extra.scroll;
+        let before_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
+        assert!(
+            before_viewport.size.height.0 > 0.01,
+            "expected top app bar demo viewport to have non-zero initial height; bounds={before_viewport:?}"
+        );
+
+        for _ in 0..8 {
+            let viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
+            let wheel_pos = Point::new(
+                Px(viewport.origin.x.0 + viewport.size.width.0 * 0.5),
+                Px(viewport.origin.y.0 + viewport.size.height.0 * 0.5),
+            );
+            rendered.state.ui.dispatch_event(
+                &mut rendered.app,
+                &mut rendered.services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-240.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_gallery_frame(&mut rendered);
+        }
+
+        let after_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after wheel scrolling");
+        let after_viewport_scroll = node_by_test_id(after_snapshot, viewport_test_id).extra.scroll;
+        let after_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
+        assert!(
+            after_viewport_scroll.y.unwrap_or(0.0) > before_viewport_scroll.y.unwrap_or(0.0) + 0.01,
+            "expected wheel input to advance the inner scroll viewport before checking app-bar collapse: before_scroll={:?} after_scroll={:?} before_bounds={before_viewport:?} after_bounds={after_viewport:?}",
+            before_viewport_scroll,
+            after_viewport_scroll,
+        );
+        assert!(
+            after_viewport.origin.y.0 + 4.0 < before_viewport.origin.y.0
+                || after_viewport.size.height.0 > before_viewport.size.height.0 + 4.0,
+            "expected exit-until-collapsed bar to free more viewport space after inner scrolling: before={before_viewport:?} after={after_viewport:?} before_scroll={:?} after_scroll={:?}",
+            before_viewport_scroll,
+            after_viewport_scroll,
+        );
+    }
 }

@@ -198,11 +198,10 @@ impl View for VirtualListBasicsView {
                     row_layout.size.height = Length::Px(row_height_at(mapped, tall_rows));
 
                     let content = ui::h_flex(|cx| {
-                        [
+                        ui::children![cx;
                             cx.text(item.label.clone()),
                             shadcn::Badge::new(format!("#{mapped}"))
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
+                                .variant(shadcn::BadgeVariant::Secondary),
                         ]
                     })
                     .gap(Space::N2)
@@ -304,91 +303,73 @@ impl View for VirtualListBasicsView {
             .test_id(TEST_ID_MODE);
 
         let controls = ui::v_flex(|cx| {
-            [
-                ui::h_flex(|cx| [shadcn::Label::new("Measure mode:").into_element(cx)])
-                    .items_center()
-                    .into_element(cx),
+            ui::children![cx;
+                ui::h_flex(|cx| ui::children![cx; shadcn::Label::new("Measure mode:")])
+                    .items_center(),
                 ui::h_row(|_cx| [mode_toggle])
                     .justify_center()
-                    .w_full()
-                    .into_element(cx),
-                shadcn::Separator::new().into_element(cx),
+                    .w_full(),
+                shadcn::Separator::new(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Tall rows:").into_element(cx),
-                        shadcn::Switch::new(self.tall_rows.clone())
-                            .test_id(TEST_ID_TALL_ROWS)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Tall rows:"),
+                        shadcn::Switch::new(self.tall_rows.clone()).test_id(TEST_ID_TALL_ROWS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Reversed:").into_element(cx),
-                        shadcn::Switch::new(self.reversed.clone())
-                            .test_id(TEST_ID_REVERSED)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Reversed:"),
+                        shadcn::Switch::new(self.reversed.clone()).test_id(TEST_ID_REVERSED),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Use index keys (bad):").into_element(cx),
-                        shadcn::Switch::new(self.index_keys.clone())
-                            .test_id(TEST_ID_INDEX_KEYS)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Use index keys (bad):"),
+                        shadcn::Switch::new(self.index_keys.clone()).test_id(TEST_ID_INDEX_KEYS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Key cache: visible only").into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Key cache: visible only"),
                         shadcn::Switch::new(self.visible_only_keys.clone())
-                            .test_id(TEST_ID_VISIBLE_ONLY_KEYS)
-                            .into_element(cx),
+                            .test_id(TEST_ID_VISIBLE_ONLY_KEYS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                shadcn::Separator::new().into_element(cx),
+                .items_center(),
+                shadcn::Separator::new(),
                 shadcn::Button::new("Rotate items (reorder)")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.refresh"))
                     .action(act::RotateItems)
-                    .into_element(cx)
                     .test_id(TEST_ID_ROTATE),
                 shadcn::Button::new(format!("Scroll to item #{TARGET_ID}"))
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.arrow_down"))
                     .action(act::ScrollToTarget)
-                    .into_element(cx)
                     .test_id(TEST_ID_SCROLL_TARGET),
                 ui::h_flex(|cx| {
-                    [
+                    ui::children![cx;
                         shadcn::Input::new(self.jump.clone())
                             .a11y_label("Scroll to index")
                             .placeholder("Index…")
-                            .test_id(TEST_ID_SCROLL_JUMP_INPUT)
-                            .into_element(cx),
+                            .test_id(TEST_ID_SCROLL_JUMP_INPUT),
                         shadcn::Button::new("Go")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
                             .action(act::ScrollJump)
-                            .into_element(cx)
                             .test_id(TEST_ID_SCROLL_JUMP_GO),
                     ]
                 })
-                .gap(Space::N2)
-                .into_element(cx),
+                .gap(Space::N2),
             ]
         })
         .gap(Space::N3)
@@ -399,13 +380,11 @@ impl View for VirtualListBasicsView {
             out.push(controls);
             if index_keys {
                 out.push(
-                    shadcn::Alert::new([
-                        shadcn::AlertTitle::new("Index keys are intentionally wrong")
-                            .into_element(cx),
+                    shadcn::Alert::new(ui::children![cx;
+                        shadcn::AlertTitle::new("Index keys are intentionally wrong"),
                         shadcn::AlertDescription::new(
                             "Virtual lists must use stable keys from the model. Index identity breaks element-local state when the collection reorders.",
-                        )
-                        .into_element(cx),
+                        ),
                     ])
                     .variant(shadcn::AlertVariant::Destructive)
                     .into_element(cx),
@@ -436,20 +415,30 @@ impl View for VirtualListBasicsView {
             .w_full()
             .into_element(cx);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Virtual list basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Keyed virtualization + items_revision. Reorder the list and scroll to items without building 5,000 rows every frame.",
-            )
-            .into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Virtual list basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Keyed virtualization + items_revision. Reorder the list and scroll to items without building 5,000 rows every frame.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(980.0))
         .into_element(cx);
-
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(980.0))
-            .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }

@@ -262,13 +262,15 @@ fn normalize_text_measure_constraints(
     wrap: TextWrap,
 ) -> LayoutConstraints {
     // During intrinsic sizing, parents may pass `available.width = 0` as a placeholder for
-    // "unknown". Treat that as non-definite so shrink-wrapped text can report its natural width
-    // (and avoid pathological mid-word wrapping when `TextWrap::Word` is enabled).
+    // "unknown". Treat that as non-definite for non-fixed-width text so intrinsic probes can
+    // report a natural width/height instead of forcing a zero-width wrap.
     //
     // This mirrors gpui's behavior: text wraps only when a definite width is known/available; for
-    // min/max-content probes, wrap width is omitted.
-    if width != Length::Auto {
-        return constraints;
+    // min/max-content probes, wrap width is omitted. This matters for docs/gallery scaffolds where
+    // descriptive copy often uses `w_full` under intrinsic scroll extent measurement.
+    match width {
+        Length::Px(_) => return constraints,
+        Length::Auto | Length::Fill | Length::Fraction(_) => {}
     }
     if constraints.known.width.is_some() {
         return constraints;
@@ -975,14 +977,12 @@ impl ElementHostWidget {
         // shrink-wrapping layouts.
         let mut constraints = cx.constraints;
         if props.probe_unbounded {
-            if props.axis.scroll_x()
-                && constraints.known.width.is_none()
+            if constraints.known.width.is_none()
                 && constraints.available.width.definite() == Some(Px(0.0))
             {
                 constraints.available.width = AvailableSpace::MaxContent;
             }
-            if props.axis.scroll_y()
-                && constraints.known.height.is_none()
+            if constraints.known.height.is_none()
                 && constraints.available.height.definite() == Some(Px(0.0))
             {
                 constraints.available.height = AvailableSpace::MaxContent;

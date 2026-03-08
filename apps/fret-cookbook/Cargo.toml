@@ -50,7 +50,7 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 
 [features]
 default = []
-cookbook-diag = ["fret/diagnostics"]
+cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
@@ -59,7 +59,12 @@ cookbook-query = ["fret/state-query", "dep:fret-query"]
 cookbook-router = ["dep:fret-router", "dep:fret-router-ui"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
-cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
+cookbook-bootstrap = [
+    "dep:fret-bootstrap",
+    "dep:fret-render",
+    "fret-bootstrap/ui-assets",
+    "fret-bootstrap/icons-ui-semantic-lucide",
+]
 cookbook-docking = ["cookbook-bootstrap", "dep:fret-docking"]
 cookbook-imui = [
     "dep:fret-imui",
@@ -76,7 +81,7 @@ cookbook-interop = [
     "dep:fret-launch",
     "dep:wgpu",
 ]
-cookbook-customv1 = ["cookbook-bootstrap", "dep:fret-render"]
+cookbook-customv1 = ["cookbook-bootstrap", "dep:fret-render", "dep:fret-ui-kit"]
 cookbook-markdown = ["dep:fret-markdown", "dep:fret-code-view"]
 cookbook-canvas = ["dep:fret-canvas"]
 cookbook-chart = ["dep:fret-chart", "dep:delinea", "cookbook-bootstrap"]

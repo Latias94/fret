@@ -46,7 +46,6 @@ pub(crate) fn sidebar_view(
     query: &str,
     nav_query: Model<String>,
     selected_page: Model<Arc<str>>,
-    workspace_tabs: Model<Vec<Arc<str>>>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -102,21 +101,12 @@ pub(crate) fn sidebar_view(
 
                 group_items.push(cx.keyed(item.id, |cx| {
                     let selected_page_for_activate = selected_page.clone();
-                    let workspace_tabs_for_activate = workspace_tabs.clone();
                     let page_id_for_activate: Arc<str> = Arc::from(item.id);
 
                     let on_activate: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
                             let _ = host.models_mut().update(&selected_page_for_activate, |v| {
                                 *v = page_id_for_activate.clone();
-                            });
-                            let _ = host.models_mut().update(&workspace_tabs_for_activate, |t| {
-                                if !t
-                                    .iter()
-                                    .any(|id| id.as_ref() == page_id_for_activate.as_ref())
-                                {
-                                    t.push(page_id_for_activate.clone());
-                                }
                             });
                             host.request_redraw(action_cx.window);
                             // `request_redraw()` may be coalesced or fail to wake the event loop on some

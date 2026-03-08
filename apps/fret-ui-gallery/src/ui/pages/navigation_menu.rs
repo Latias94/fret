@@ -43,5 +43,5 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-navigation-menu")]
 }

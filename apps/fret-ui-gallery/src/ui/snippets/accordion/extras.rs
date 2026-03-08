@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -25,22 +25,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([
             shadcn::AccordionItem::new(
                 "notifications",
-                shadcn::AccordionTrigger::new(vec![cx.text("Notifications")]),
+                shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
+                    .test_id("ui-gallery-accordion-extras-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(vec![shadcn::typography::p(
                     cx,
                     "Configure email, push, and in-app notifications.",
-                )]),
+                )])
+                .test_id("ui-gallery-accordion-extras-multiple-content-notifications"),
             ),
             shadcn::AccordionItem::new(
                 "security",
-                shadcn::AccordionTrigger::new(vec![cx.text("Security")]),
+                shadcn::AccordionTrigger::new(vec![cx.text("Security")])
+                    .test_id("ui-gallery-accordion-extras-multiple-trigger-security"),
                 shadcn::AccordionContent::new(vec![shadcn::typography::p(
                     cx,
                     "Manage passwords, 2FA, and active sessions.",
                 )]),
             ),
         ])
-        .into_element(cx);
+        .into_element(cx)
+        .test_id("ui-gallery-accordion-extras-multiple");
 
     let disabled = shadcn::Accordion::single_uncontrolled(Some("item-1"))
         .collapsible(true)
@@ -141,25 +145,55 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
     });
 
-    let multiple = ui::v_stack(move |cx| {
+    let multiple_section =
+        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Multiple"), multiple])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+    let disabled_section =
+        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Disabled"), disabled])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+    let borders_section =
+        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Borders"), borders])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+    let card_section = ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Card"), card])
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
+
+    let rtl_section = ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "RTL"), rtl])
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-accordion-extras-rtl-section");
+
+    let extras = ui::v_flex(move |_cx| {
         vec![
-            shadcn::typography::h4(cx, "Multiple"),
-            multiple,
-            shadcn::typography::h4(cx, "Disabled"),
-            disabled,
-            shadcn::typography::h4(cx, "Borders"),
-            borders,
-            shadcn::typography::h4(cx, "Card"),
-            card,
-            shadcn::typography::h4(cx, "RTL"),
-            rtl,
+            multiple_section,
+            disabled_section,
+            borders_section,
+            card_section,
+            rtl_section,
         ]
     })
-    .gap(Space::N3)
+    .gap(Space::N4)
     .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
     .test_id("ui-gallery-accordion-extras");
 
-    multiple
+    extras
 }
 // endregion: example

@@ -100,47 +100,41 @@ impl View for FormBasicsView {
         cx.on_action_availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
 
         let name_input = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("Name").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Name"),
                 shadcn::Input::new(self.name.clone())
                     .a11y_label("Name")
                     .placeholder("Jane Doe")
-                    .test_id(TEST_ID_NAME)
-                    .into_element(cx),
+                    .test_id(TEST_ID_NAME),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
         let email_input = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("Email").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Email"),
                 shadcn::Input::new(self.email.clone())
                     .a11y_label("Email")
                     .placeholder("jane@example.com")
                     .submit_command(act::Submit.into())
-                    .test_id(TEST_ID_EMAIL)
-                    .into_element(cx),
+                    .test_id(TEST_ID_EMAIL),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
         let error_row = match error {
-            Some(msg) => shadcn::Alert::new([
-                shadcn::AlertTitle::new("Validation error").into_element(cx),
-                shadcn::AlertDescription::new(msg).into_element(cx),
+            Some(msg) => shadcn::Alert::new(ui::children![cx;
+                shadcn::AlertTitle::new("Validation error"),
+                shadcn::AlertDescription::new(msg),
             ])
             .ui()
-            .test_id(TEST_ID_ERROR)
-            .into_element(cx),
-            None => shadcn::Alert::new([
-                shadcn::AlertTitle::new("OK").into_element(cx),
-                shadcn::AlertDescription::new("Ready to submit.").into_element(cx),
+            .test_id(TEST_ID_ERROR),
+            None => shadcn::Alert::new(ui::children![cx;
+                shadcn::AlertTitle::new("OK"),
+                shadcn::AlertDescription::new("Ready to submit."),
             ])
             .ui()
-            .test_id(TEST_ID_ERROR)
-            .into_element(cx),
+            .test_id(TEST_ID_ERROR),
         };
 
         let valid = shadcn::Badge::new(if can_submit { "Valid" } else { "Invalid" })
@@ -149,8 +143,8 @@ impl View for FormBasicsView {
             } else {
                 shadcn::BadgeVariant::Destructive
             })
-            .into_element(cx)
-            .attach_semantics(
+            .ui()
+            .semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_VALID)
@@ -159,27 +153,24 @@ impl View for FormBasicsView {
             );
 
         let buttons = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Submit)
                     .disabled(!can_submit)
-                    .test_id(TEST_ID_SUBMIT)
-                    .into_element(cx),
+                    .test_id(TEST_ID_SUBMIT),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
-                    .test_id(TEST_ID_RESET)
-                    .into_element(cx),
+                    .test_id(TEST_ID_RESET),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let body = ui::v_flex(|_cx| [name_input, email_input, error_row, valid, buttons])
-            .gap(Space::N3)
-            .into_element(cx);
+        let body =
+            ui::v_flex(|cx| ui::children![cx; name_input, email_input, error_row, valid, buttons])
+                .gap(Space::N3);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -196,8 +187,8 @@ impl View for FormBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })

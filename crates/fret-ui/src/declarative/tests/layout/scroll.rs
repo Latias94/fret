@@ -96,6 +96,124 @@ fn scroll_intrinsic_content_mode_measures_children() {
 }
 
 #[test]
+fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_width_as_unknown() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-zero-placeholder-cross-axis-width",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Fill;
+            scroll.layout.size.height = Length::Auto;
+            scroll.axis = crate::element::ScrollAxis::Y;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = Length::Px(Px(80.0));
+            child.layout.size.height = Length::Px(Px(24.0));
+
+            vec![cx.scroll(scroll, |cx| vec![cx.container(child, |_cx| vec![])])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(0.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let size = ui.measure_in(&mut app, &mut text, scroll, constraints, 1.0);
+
+    assert!(
+        size.width.0 >= 79.5,
+        "expected cross-axis placeholder width to be treated as unknown during scroll probing; size={size:?}"
+    );
+    assert!(
+        size.height.0 >= 23.5,
+        "expected scroll probe height to preserve child height under zero cross-axis placeholder width; size={size:?}"
+    );
+}
+
+#[test]
+fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_height_as_unknown() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-zero-placeholder-cross-axis-height",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Auto;
+            scroll.layout.size.height = Length::Fill;
+            scroll.axis = crate::element::ScrollAxis::X;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = Length::Px(Px(24.0));
+            child.layout.size.height = Length::Px(Px(80.0));
+
+            vec![cx.scroll(scroll, |cx| vec![cx.container(child, |_cx| vec![])])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::MaxContent,
+            AvailableSpace::Definite(Px(0.0)),
+        ),
+    );
+    let size = ui.measure_in(&mut app, &mut text, scroll, constraints, 1.0);
+
+    assert!(
+        size.width.0 >= 23.5,
+        "expected scroll probe width to preserve child width under zero cross-axis placeholder height; size={size:?}"
+    );
+    assert!(
+        size.height.0 >= 79.5,
+        "expected cross-axis placeholder height to be treated as unknown during scroll probing; size={size:?}"
+    );
+}
+
+#[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1194,6 +1312,234 @@ fn scroll_at_end_reuses_cached_extent_when_clean() {
 }
 
 #[test]
+fn scroll_clamped_edge_wheel_does_not_probe_clean_docs_like_tree() {
+    let mut app = TestHost::new();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(56.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn paragraph(cx: &mut ElementContext<'_, TestHost>, text: impl Into<String>) -> AnyElement {
+        let mut props = crate::element::ContainerProps::default();
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        let text = text.into();
+        cx.container(props, move |cx| vec![cx.text(text.clone())])
+    }
+
+    fn section(cx: &mut ElementContext<'_, TestHost>, index: usize) -> AnyElement {
+        let mut section_layout = crate::element::LayoutStyle::default();
+        section_layout.size.width = Length::Fill;
+        section_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+        let mut shell_layout = crate::element::LayoutStyle::default();
+        shell_layout.size.width = Length::Fill;
+        shell_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+        let preview_shell = cx.container(
+            crate::element::ContainerProps {
+                layout: shell_layout,
+                ..Default::default()
+            },
+            move |cx| {
+                let mut list_layout = crate::element::LayoutStyle::default();
+                list_layout.size.width = Length::Fill;
+                list_layout.size.min_width = Some(Length::Px(Px(0.0)));
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        layout: list_layout,
+                        gap: Px(0.0).into(),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        (0..4)
+                            .map(|line| {
+                                cx.text(format!(
+                                    "section {index} line {line} - alert docs preview content"
+                                ))
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        );
+
+        cx.column(
+            crate::element::ColumnProps {
+                layout: section_layout,
+                gap: Px(6.0).into(),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    cx.text(format!("Section {index}")),
+                    paragraph(
+                        cx,
+                        format!(
+                            "Wrapper-heavy doc section {index} with title, description and preview shell"
+                        ),
+                    ),
+                    preview_shell,
+                ]
+            },
+        )
+    }
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                let mut wrapper_layout = crate::element::LayoutStyle::default();
+                wrapper_layout.size.width = Length::Fill;
+                wrapper_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+                let mut body_layout = crate::element::LayoutStyle::default();
+                body_layout.size.width = Length::Fill;
+                body_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+                vec![cx.container(
+                    crate::element::ContainerProps {
+                        layout: wrapper_layout,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.container(
+                            crate::element::ContainerProps {
+                                layout: wrapper_layout,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![cx.column(
+                                    crate::element::ColumnProps {
+                                        layout: body_layout,
+                                        gap: Px(12.0).into(),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        let mut out = Vec::with_capacity(10);
+                                        out.push(paragraph(
+                                            cx,
+                                            "Alert docs intro paragraph mirroring the gallery's centered doc body.",
+                                        ));
+                                        out.extend((0..8).map(|index| section(cx, index)));
+                                        out.push(paragraph(
+                                            cx,
+                                            "Notes: keep alert copy concise, support rich title/description children, and avoid scroll drift at the end.",
+                                        ));
+                                        out
+                                    },
+                                )]
+                            },
+                        )]
+                    },
+                )]
+            },
+        )]
+    }
+
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-edge-wheel-clean-docs-like-tree",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    assert!(max0.0 > 0.0, "expected a non-zero scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    app.advance_frame();
+
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-edge-wheel-clean-docs-like-tree",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let content0 = scroll_handle.content_size().height;
+    let scroll_node0 = ui.children(root1)[0];
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node0),
+        0,
+        "expected clean edge layout to reuse cached extents before the extra wheel"
+    );
+
+    let wheel_pos = fret_core::Point::new(Px(8.0), Px(8.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: wheel_pos,
+            delta: fret_core::Point::new(Px(0.0), Px(-48.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    app.advance_frame();
+
+    let root2 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-edge-wheel-clean-docs-like-tree",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root2);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node1 = ui.children(root2)[0];
+    let content1 = scroll_handle.content_size().height;
+    let max1 = scroll_handle.max_offset().y;
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node1),
+        0,
+        "expected an extra wheel at a clean extent edge not to trigger a new child probe"
+    );
+    assert!(
+        (content1.0 - content0.0).abs() <= 0.5,
+        "expected content extent to remain stable after an extra edge wheel: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        (max1.0 - max0.0).abs() <= 0.5,
+        "expected max offset to remain stable after an extra edge wheel: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
 fn scroll_offset_clamps_when_content_shrinks_below_end() {
     let mut app = TestHost::new();
     let expanded = app.models_mut().insert(true);
@@ -1596,6 +1942,121 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
 }
 
 #[test]
+fn scroll_probe_cache_shrinks_to_observed_bounds_when_probe_overmeasures() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureLargeLayoutSmall {
+        measured: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureLargeLayoutSmall {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-probe-cache-shrink",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node = ui.children(root)[0];
+    let leaf = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(320.0)),
+    });
+    let child = ui.create_node(MeasureLargeLayoutSmall {
+        measured: Size::new(Px(120.0), Px(2000.0)),
+        child: leaf,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(320.0)),
+        ),
+    });
+    ui.set_children(child, vec![leaf]);
+    ui.set_children(scroll_node, vec![child]);
+
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let leaf_bounds = ui.debug_node_bounds(leaf).expect("leaf bounds");
+    let content = scroll_handle.content_size();
+    let max_offset = scroll_handle.max_offset();
+
+    assert!(
+        (leaf_bounds.size.height.0 - 320.0).abs() <= 0.5,
+        "expected laid-out leaf height to match the final layout result, got={leaf_bounds:?}"
+    );
+    assert!(
+        (content.height.0 - 320.0).abs() <= 0.5,
+        "expected final scroll content height to shrink to the observed laid-out bounds: content={content:?} leaf_bounds={leaf_bounds:?} max_offset={max_offset:?}"
+    );
+    assert!(
+        (max_offset.y.0 - 120.0).abs() <= 0.5,
+        "expected max offset to match the shrunken extent: max_offset={max_offset:?} content={content:?} leaf_bounds={leaf_bounds:?}"
+    );
+}
+
+#[test]
 fn scroll_extent_updates_when_descendant_invalidated_but_child_root_cleared() {
     let mut app = TestHost::new();
     let show_more = app.models_mut().insert(false);
@@ -1825,10 +2286,15 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
     let scrollbar_bounds = ui
         .debug_node_bounds(scrollbar_node)
         .expect("scrollbar bounds");
-    let down_pos = fret_core::Point::new(
-        Px(scrollbar_bounds.origin.x.0 + 2.0),
-        Px(scrollbar_bounds.origin.y.0 + 1.0),
-    );
+    let thumb = crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal(
+        scrollbar_bounds,
+        scroll_handle.viewport_size().width,
+        scroll_handle.content_size().width,
+        scroll_handle.offset().x,
+        crate::element::ScrollbarStyle::default().track_padding,
+    )
+    .expect("horizontal thumb rect");
+    let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));
     let move_pos = fret_core::Point::new(Px(down_pos.x.0 + 12.0), down_pos.y);
     ui.dispatch_event(
         &mut app,
@@ -1841,6 +2307,11 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
+    );
+    assert_eq!(
+        ui.captured(),
+        Some(scrollbar_node),
+        "expected horizontal thumb down to capture the pointer on the scrollbar node"
     );
     ui.dispatch_event(
         &mut app,

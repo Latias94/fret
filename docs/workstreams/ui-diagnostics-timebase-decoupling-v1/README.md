@@ -22,6 +22,13 @@ When that happens, the following failure class appears:
 This is a determinism and debuggability gap: **scripts must either progress or fail** with a bounded, machine-readable
 reason code, even when no frames are being presented.
 
+Cross-reference:
+
+- The repo-level artifact/evidence classification and bounded first-open set are defined in
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- This workstream defines liveness and `reason_code=timeout.no_frames` semantics on top of that shared contract;
+  it does not redefine which diagnostics outputs are source-of-truth, derived projections, or optional evidence.
+
 ## Goals
 
 - **Liveness:** a tool-launched run must not hang indefinitely due to “no redraw callbacks”.

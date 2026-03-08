@@ -3,6 +3,14 @@
 Scope: stabilize the `docking-arbitration` diagnostics suite in `--launch` mode on desktop (native),
 with special focus on multi-window tear-off + drag-back sequences.
 
+Cross-reference:
+
+- Repo-level artifact/evidence classification, source-of-truth vs derived outputs, and the bounded
+  first-open set now live in
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- This docking workstream defines docking-specific scripts, assertions, and evidence keys on top of that
+  shared contract; it should not redefine the repo-wide artifact vocabulary locally.
+
 ## Immediate TODOs (next)
 
 - Re-run `fretboard diag suite docking-arbitration` after the 2026-03-03 fixes below and record the new first failure

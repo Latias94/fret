@@ -131,16 +131,15 @@ impl View for CanvasPanZoomBasicsView {
             );
 
         let toolbar = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("Reset view")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::ResetView)
-                    .into_element(cx)
                     .test_id(TEST_ID_RESET_VIEW),
                 shadcn::Button::new("Reset node")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::ResetNode)
-                    .into_element(cx)
                     .test_id(TEST_ID_RESET_NODE),
                 zoom_badge,
                 pan_x,
@@ -152,17 +151,17 @@ impl View for CanvasPanZoomBasicsView {
         .items_center()
         .into_element(cx);
 
-        let hint = shadcn::Alert::new([
-            shadcn::AlertTitle::new("Interactions").into_element(cx),
+        let hint = shadcn::Alert::new(ui::children![
+            cx;
+            shadcn::AlertTitle::new("Interactions"),
             shadcn::AlertDescription::new(
                 "Middle-drag pans. Wheel zooms. Left-drag the rectangle to move it in canvas space.",
-            )
-            .into_element(cx),
+            ),
         ])
         .ui()
         .into_element(cx);
 
-        let canvas = {
+        let canvas: AnyElement = {
             let view_model = self.view.clone();
             let node_origin_model = self.node_origin.clone();
             let drag_model = self.node_drag.clone();
@@ -413,21 +412,31 @@ impl View for CanvasPanZoomBasicsView {
                 .into()
         };
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Canvas pan/zoom basics").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Uses fret-canvas pan/zoom wiring + a tiny app-owned drag tool for one item.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, hint, canvas])
-                .gap(Space::N3)
-                .w_full()
-                .into_element(cx)])
-            .into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Canvas pan/zoom basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Uses fret-canvas pan/zoom wiring + a tiny app-owned drag tool for one item.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::v_flex(|cx| ui::children![cx; toolbar, hint, canvas])
+                            .gap(Space::N3)
+                            .w_full()
+                            .into_element(cx),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
         .max_w(Px(980.0))
