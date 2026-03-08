@@ -28,6 +28,7 @@ Decision context:
 - `migrate-to-view` — should move to `App::view::<V>()` or `App::view_with_hooks::<V>(...)`
 - `move-lower-level` — should likely stop using the facade entry API and drop to bootstrap/driver-level wiring
 - `keep-temporarily` — acceptable bridge user for now, but should not remain in first-contact surfaces
+- `done` ? already migrated to `App::view::<V>()` / `run_view::<V>()`; retained here until the full inventory is burned down
 
 Current conclusion:
 
@@ -52,9 +53,9 @@ Current conclusion:
 
 | File | Current role | Recommended class | Notes |
 |---|---|---|---|
-| `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `migrate-to-view` | no hook seam visible at entry; straightforward migration candidate |
+| `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `done` | migrated on 2026-03-08 to `run_view::<ChartDeclarativeView>()`; confirms a plain declarative chart demo also does not need closure-root `App::ui(...)` |
 | `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `migrate-to-view` | useful as proof that plain IMUI demos do not require closure-root app entry |
-| `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `migrate-to-view` | likely one of the easiest early migrations |
+| `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiHelloView>()`; keep as the first Batch A proof point until the remaining callers are burned down |
 | `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `migrate-to-view` | still appears to be authoring debt rather than a lower-level requirement |
 | `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `migrate-to-view` | good small migration target |
 | `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `migrate-to-view` | useful proof that adapter demos can still live on the default entry path |
@@ -80,9 +81,9 @@ These are not part of the migration table above, but they still matter for polic
 
 These should move first because they are small and make the policy credible quickly:
 
-- `apps/fret-examples/src/imui_hello_demo.rs`
+- `apps/fret-examples/src/imui_hello_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
-- `apps/fret-examples/src/chart_declarative_demo.rs`
+- `apps/fret-examples/src/chart_declarative_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/node_graph_demo.rs`
 
 Success criterion:
