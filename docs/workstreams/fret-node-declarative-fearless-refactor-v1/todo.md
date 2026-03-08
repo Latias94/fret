@@ -571,6 +571,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     non-port picker routing through the private `canvas/widget/sticky_wire_connect.rs` and
     `canvas/widget/sticky_wire_targets.rs` seams, so retained sticky-wire pointer reducers no
     longer stay embedded in one mixed surface.
+  - Progress: `pointer_move_release.rs` now routes pan-release cleanup, right-click
+    pan arming, missing-left-release finalization, and last-pointer-state sync through the
+    private `canvas/widget/pointer_move_release_pan.rs`,
+    `canvas/widget/pointer_move_release_left.rs`, and
+    `canvas/widget/pointer_move_pointer_state.rs` seams, so retained move-release reducers no
+    longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
