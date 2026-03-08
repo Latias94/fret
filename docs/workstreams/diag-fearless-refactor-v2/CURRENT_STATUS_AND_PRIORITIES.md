@@ -115,7 +115,7 @@ Current hotspots worth treating as explicit seam candidates:
 - `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, per-script launch/transport acquisition, execution dispatch, success-path bundle/lint/post-run preparation, result-finalization stage/success helpers, and success-tail orchestration have landed; the remaining holdouts in this file are now mostly one-time setup and session-root-adjacent helpers, so this file is no longer the default next seam target)
 - `crates/fret-diag/src/diag_run.rs` (the first five `cmd_run` seams are now landed: transport result stage normalization, bundle doctor/post-run checks, bundle artifact emission, demo-exit-killed marking, failure dump bundle backfill, bundle-path resolution/wait, filesystem post-run finalization, both transport branch adapters, and the remaining top-level option/policy setup now all reuse dedicated helpers; `cmd_run` is now mostly resolved-path setup plus transport dispatch, so further slicing here should be treated as a diminishing-returns decision rather than the default next step)
 - `crates/fret-diag/src/diag_campaign.rs` (the run/result/report/finalize seams are already in much better shape, and `write_campaign_share_manifest` now routes both per-item evidence planning and the final payload/combined-zip update through dedicated helpers plus named counters/combined-entry/outcome shapes; the next choice here is whether any further share-manifest slicing still pays, or whether the higher-ROI hotspot has moved to another artifact-resolution command)
-- `crates/fret-diag/src/commands/resolve.rs` (`diag resolve latest` now routes option parsing and JSON/text rendering through dedicated pure helpers with direct regression coverage, so the remaining work here is more about deeper artifact/session resolution seams than top-level command-blob cleanup)
+- `crates/fret-diag/src/commands/resolve.rs` (`diag resolve latest` now routes option parsing and JSON/text rendering through dedicated pure helpers with direct regression coverage, the deeper session-resolution path now routes target session-id selection plus existing-session directory validation through dedicated helpers, and `resolve_script_result_json_path_or_latest` now routes latest-vs-src search-start selection through dedicated helpers, so the remaining work here is mostly the last bundle-ref/input normalization seams rather than top-level command-blob cleanup)
 - `crates/fret-diag/src/commands/artifacts.rs` (`cmd_pack` now routes bundle/source resolution and default out-path selection through a dedicated setup helper plus pure out-path logic, the repeated single-bundle emitter commands now also reuse shared bundle-input plus path/json output helpers, `cmd_meta` now routes its human-readable projection through pure report-line helpers, `cmd_lint` now routes bundle/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing the shared JSON artifact writer, and `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper; the larger remaining holdouts here are now mostly any deeper session/bundle resolution seams that still pay better than further emitter slicing)
 
 Recommended next seam choices:
@@ -131,10 +131,11 @@ Recent progress since this note was drafted:
   artifacts, optional evidence, presentation-facing projections, the bounded first-open set, and
   consumer checklists for CLI / GUI / CI / share flows in one place,
 - artifact resolution/materialization now has shared seams for bundle input resolution,
-  `script.result.json` discovery, `diag resolve latest` option/render shaping under
-  `crates/fret-diag/src/commands/resolve.rs`, `commands::artifacts` emitter setup/display
-  shaping for `cmd_pack`, the repeated single-bundle emitters, `cmd_meta`, `cmd_lint`, and
-  `cmd_triage`, plus `commands/artifact.rs` setup/write/exit shaping for `cmd_artifact_lint`,
+  `script.result.json` discovery, `diag resolve latest` option/render shaping, session-target
+  selection / existing-session directory validation, and latest-vs-src script-result search-start
+  normalization under `crates/fret-diag/src/commands/resolve.rs`, `commands::artifacts` emitter
+  setup/display shaping for `cmd_pack`, the repeated single-bundle emitters, `cmd_meta`, `cmd_lint`,
+  and `cmd_triage`, plus `commands/artifact.rs` setup/write/exit shaping for `cmd_artifact_lint`,
 - run planning/context assembly now reuses `ResolvedScriptPaths` and a higher-level
   `ResolvedRunContext` instead of re-threading parallel path and transport arguments,
 - transport dispatch for the main script-driven launch flows now reuses shared filesystem transport

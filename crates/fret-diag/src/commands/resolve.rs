@@ -21,6 +21,11 @@ struct ResolveLatestOutput {
     latest_bundle_artifact: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct ResolveLatestOptions {
+    within_session: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ResolvedBundleInput {
     pub bundle_dir: PathBuf,
@@ -62,17 +67,40 @@ fn cmd_resolve_latest(
     base_out_dir: &Path,
     json: bool,
 ) -> Result<(), String> {
-    let mut within_session: Option<String> = None;
+    let options = parse_resolve_latest_options(rest)?;
 
-    let mut i: usize = 0;
-    while i < rest.len() {
-        match rest[i].as_str() {
+    let base_out_dir = crate::resolve_path(workspace_root, base_out_dir.to_path_buf());
+    let resolved =
+        resolve_session_out_dir_for_base_dir(&base_out_dir, options.within_session.as_deref())?;
+    let out = resolve_latest_for_out_dir(&resolved)?;
+
+    if json {
+        let payload = resolve_latest_output_to_json(&out);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+        );
+        return Ok(());
+    }
+
+    for line in resolve_latest_output_lines(&out) {
+        println!("{line}");
+    }
+
+    Ok(())
+}
+
+fn parse_resolve_latest_options(rest: &[String]) -> Result<ResolveLatestOptions, String> {
+    let mut options = ResolveLatestOptions::default();
+    let mut index: usize = 0;
+    while index < rest.len() {
+        match rest[index].as_str() {
             "--within-session" => {
-                let Some(v) = rest.get(i + 1) else {
+                let Some(value) = rest.get(index + 1) else {
                     return Err("missing value for --within-session".to_string());
                 };
-                within_session = Some(v.to_string());
-                i += 2;
+                options.within_session = Some(value.to_string());
+                index += 2;
             }
             other if other.starts_with('-') => {
                 return Err(format!("unknown diag resolve latest flag: {other}"));
@@ -82,58 +110,53 @@ fn cmd_resolve_latest(
             }
         }
     }
+    Ok(options)
+}
 
-    let base_out_dir = crate::resolve_path(workspace_root, base_out_dir.to_path_buf());
-    let resolved = resolve_session_out_dir_for_base_dir(&base_out_dir, within_session.as_deref())?;
-    let out = resolve_latest_for_out_dir(&resolved)?;
+fn resolve_latest_output_to_json(out: &ResolveLatestOutput) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": 1,
+        "base_out_dir": out.base_out_dir.display().to_string(),
+        "out_dir": out.out_dir.display().to_string(),
+        "session_id": out.session_id,
+        "latest_run_id": out.latest_run_id,
+        "latest_run_dir": out.latest_run_dir.as_ref().map(|p| p.display().to_string()),
+        "latest_bundle_dir": out.latest_bundle_dir.as_ref().map(|p| p.display().to_string()),
+        "latest_bundle_dir_source": out.latest_bundle_dir_source,
+        "latest_bundle_artifact": out.latest_bundle_artifact.as_ref().map(|p| p.display().to_string()),
+    })
+}
 
-    if json {
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "base_out_dir": out.base_out_dir.display().to_string(),
-            "out_dir": out.out_dir.display().to_string(),
-            "session_id": out.session_id,
-            "latest_run_id": out.latest_run_id,
-            "latest_run_dir": out.latest_run_dir.as_ref().map(|p| p.display().to_string()),
-            "latest_bundle_dir": out.latest_bundle_dir.as_ref().map(|p| p.display().to_string()),
-            "latest_bundle_dir_source": out.latest_bundle_dir_source,
-            "latest_bundle_artifact": out.latest_bundle_artifact.as_ref().map(|p| p.display().to_string()),
-        });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
-        );
-        return Ok(());
-    }
-
-    println!("resolve_latest:");
-    println!("  base_out_dir: {}", out.base_out_dir.display());
-    println!("  out_dir: {}", out.out_dir.display());
+fn resolve_latest_output_lines(out: &ResolveLatestOutput) -> Vec<String> {
+    let mut lines = vec![
+        "resolve_latest:".to_string(),
+        format!("  base_out_dir: {}", out.base_out_dir.display()),
+        format!("  out_dir: {}", out.out_dir.display()),
+    ];
     if let Some(id) = out.session_id.as_deref() {
-        println!("  session_id: {}", id);
+        lines.push(format!("  session_id: {id}"));
     }
-    match out.latest_run_id {
-        Some(id) => println!("  latest_run_id: {}", id),
-        None => println!("  latest_run_id: null"),
-    }
-    match out.latest_run_dir.as_deref() {
-        Some(p) => println!("  latest_run_dir: {}", p.display()),
-        None => println!("  latest_run_dir: null"),
-    }
-    match out.latest_bundle_dir.as_deref() {
-        Some(p) => println!("  latest_bundle_dir: {}", p.display()),
-        None => println!("  latest_bundle_dir: null"),
-    }
-    match out.latest_bundle_dir_source {
-        Some(s) => println!("  latest_bundle_dir_source: {}", s),
-        None => println!("  latest_bundle_dir_source: null"),
-    }
-    match out.latest_bundle_artifact.as_deref() {
-        Some(p) => println!("  latest_bundle_artifact: {}", p.display()),
-        None => println!("  latest_bundle_artifact: null"),
-    }
-
-    Ok(())
+    lines.push(match out.latest_run_id {
+        Some(id) => format!("  latest_run_id: {id}"),
+        None => "  latest_run_id: null".to_string(),
+    });
+    lines.push(match out.latest_run_dir.as_deref() {
+        Some(path) => format!("  latest_run_dir: {}", path.display()),
+        None => "  latest_run_dir: null".to_string(),
+    });
+    lines.push(match out.latest_bundle_dir.as_deref() {
+        Some(path) => format!("  latest_bundle_dir: {}", path.display()),
+        None => "  latest_bundle_dir: null".to_string(),
+    });
+    lines.push(match out.latest_bundle_dir_source {
+        Some(source) => format!("  latest_bundle_dir_source: {source}"),
+        None => "  latest_bundle_dir_source: null".to_string(),
+    });
+    lines.push(match out.latest_bundle_artifact.as_deref() {
+        Some(path) => format!("  latest_bundle_artifact: {}", path.display()),
+        None => "  latest_bundle_artifact: null".to_string(),
+    });
+    lines
 }
 
 pub(crate) fn looks_like_diag_session_root(dir: &Path) -> bool {
@@ -198,10 +221,9 @@ pub(crate) fn resolve_script_result_json_path_or_latest(
     out_dir: &Path,
 ) -> Result<PathBuf, String> {
     let Some(src) = src else {
-        let bundle_path =
-            super::args::resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
-        let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-        return find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+        let (bundle_path, start) =
+            resolve_latest_script_result_search_start(workspace_root, out_dir)?;
+        return find_nearest_script_result_json_preferring_evidence(&start).ok_or_else(|| {
             format!(
                 "failed to locate script.result.json near latest bundle: {}",
                 bundle_path.display()
@@ -209,7 +231,32 @@ pub(crate) fn resolve_script_result_json_path_or_latest(
         });
     };
 
-    let start = if src.is_dir() {
+    let start = resolve_script_result_search_start(src);
+    find_nearest_script_result_json_preferring_evidence(&start).ok_or_else(|| {
+        format!(
+            "failed to locate script.result.json near: {}
+\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+            src.display()
+        )
+    })
+}
+
+fn resolve_latest_script_result_search_start(
+    workspace_root: &Path,
+    out_dir: &Path,
+) -> Result<(PathBuf, PathBuf), String> {
+    let bundle_path =
+        super::args::resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
+    let start = bundle_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+    Ok((bundle_path, start))
+}
+
+fn resolve_script_result_search_start(src: &Path) -> PathBuf {
+    if src.is_dir() {
         let direct = src.join("script.result.json");
         if direct.is_file() {
             src.to_path_buf()
@@ -219,20 +266,12 @@ pub(crate) fn resolve_script_result_json_path_or_latest(
     } else if src.is_file()
         && src
             .file_name()
-            .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
+            .is_some_and(|segment| segment.eq_ignore_ascii_case("script.result.json"))
     {
         src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
     } else {
         src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
-    };
-
-    find_nearest_script_result_json_preferring_evidence(&start).ok_or_else(|| {
-        format!(
-            "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-            src.display()
-        )
-    })
+    }
 }
 
 pub(crate) fn resolve_bundle_input_or_latest(
@@ -293,37 +332,60 @@ fn resolve_session_out_dir_for_base_dir(
         });
     }
 
-    let want = within_session.unwrap_or("latest").trim();
-    let sid = if want.is_empty() || want == "latest" {
-        let sessions = crate::session::collect_sessions(base_out_dir)?;
-        let Some(first) = sessions.first() else {
-            return Err(format!(
-                "no sessions found under base_out_dir: {}\n\
-hint: list sessions via `fretboard diag list sessions --dir {}`",
-                base_out_dir.display(),
-                base_out_dir.display()
-            ));
-        };
-        first.session_id.clone()
-    } else {
-        crate::session::sanitize_session_id(want)
-    };
-
-    let out_dir = crate::session::session_out_dir(base_out_dir, &sid);
-    if !out_dir.is_dir() {
-        return Err(format!(
-            "session directory does not exist: {}\n\
-hint: list sessions via `fretboard diag list sessions --dir {}`",
-            out_dir.display(),
-            base_out_dir.display()
-        ));
-    }
+    let session_id = resolve_target_session_id(base_out_dir, within_session)?;
+    let out_dir = resolve_existing_session_out_dir(base_out_dir, &session_id)?;
 
     Ok(ResolvedSessionOutDir {
         base_out_dir: base_out_dir.to_path_buf(),
         out_dir,
-        session_id: Some(sid),
+        session_id: Some(session_id),
     })
+}
+
+fn resolve_target_session_id(
+    base_out_dir: &Path,
+    within_session: Option<&str>,
+) -> Result<String, String> {
+    let want = within_session.unwrap_or("latest").trim();
+    if want.is_empty() || want == "latest" {
+        let sessions = crate::session::collect_sessions(base_out_dir)?;
+        let Some(first) = sessions.first() else {
+            return Err(no_sessions_found_error(base_out_dir));
+        };
+        Ok(first.session_id.clone())
+    } else {
+        Ok(crate::session::sanitize_session_id(want))
+    }
+}
+
+fn resolve_existing_session_out_dir(
+    base_out_dir: &Path,
+    session_id: &str,
+) -> Result<PathBuf, String> {
+    let out_dir = crate::session::session_out_dir(base_out_dir, session_id);
+    if out_dir.is_dir() {
+        Ok(out_dir)
+    } else {
+        Err(missing_session_out_dir_error(base_out_dir, &out_dir))
+    }
+}
+
+fn no_sessions_found_error(base_out_dir: &Path) -> String {
+    format!(
+        "no sessions found under base_out_dir: {}\n\
+hint: list sessions via `fretboard diag list sessions --dir {}`",
+        base_out_dir.display(),
+        base_out_dir.display()
+    )
+}
+
+fn missing_session_out_dir_error(base_out_dir: &Path, out_dir: &Path) -> String {
+    format!(
+        "session directory does not exist: {}\n\
+hint: list sessions via `fretboard diag list sessions --dir {}`",
+        out_dir.display(),
+        base_out_dir.display()
+    )
 }
 
 fn resolve_latest_for_out_dir(
@@ -520,5 +582,150 @@ mod tests {
         assert_eq!(resolved.bundle_dir, bundle_dir);
         assert_eq!(resolved.bundle_artifact, bundle_dir.join("bundle.json"));
         assert_eq!(resolved.artifacts_root, root);
+    }
+
+    #[test]
+    fn parse_resolve_latest_options_accepts_within_session() {
+        let options =
+            parse_resolve_latest_options(&["--within-session".to_string(), "200-1".to_string()])
+                .expect("parse options");
+        assert_eq!(
+            options,
+            ResolveLatestOptions {
+                within_session: Some("200-1".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_resolve_latest_options_rejects_unknown_flag() {
+        let err = parse_resolve_latest_options(&["--wat".to_string()]).expect_err("unknown flag");
+        assert!(err.contains("unknown diag resolve latest flag"));
+    }
+
+    #[test]
+    fn resolve_target_session_id_uses_latest_session_by_default() {
+        let base = make_temp_dir("fret-diag-resolve-target-session-id-latest");
+        let s1 = crate::session::session_out_dir(&base, "100-1");
+        let s2 = crate::session::session_out_dir(&base, "200-1");
+        std::fs::create_dir_all(&s1).expect("create session 1");
+        std::fs::create_dir_all(&s2).expect("create session 2");
+        let _ = crate::util::write_json_value(
+            &s1.join("session.json"),
+            &serde_json::json!({"schema_version":1,"created_unix_ms":100,"pid":1,"session_id":"100-1"}),
+        );
+        let _ = crate::util::write_json_value(
+            &s2.join("session.json"),
+            &serde_json::json!({"schema_version":1,"created_unix_ms":200,"pid":1,"session_id":"200-1"}),
+        );
+
+        let session_id = resolve_target_session_id(&base, None).expect("resolve latest session id");
+
+        assert_eq!(session_id, "200-1");
+    }
+
+    #[test]
+    fn resolve_target_session_id_sanitizes_explicit_session_id() {
+        let session_id = resolve_target_session_id(Path::new("unused-base"), Some("  200-1  "))
+            .expect("sanitize session id");
+
+        assert_eq!(session_id, "200-1");
+    }
+
+    #[test]
+    fn resolve_existing_session_out_dir_errors_for_missing_dir() {
+        let base = make_temp_dir("fret-diag-resolve-session-out-dir-missing");
+        let err =
+            resolve_existing_session_out_dir(&base, "404-1").expect_err("missing session dir");
+
+        assert!(err.contains("session directory does not exist"));
+        assert!(err.contains("fretboard diag list sessions"));
+    }
+
+    #[test]
+    fn resolve_script_result_search_start_prefers_direct_script_result_dir() {
+        let root = make_temp_dir("fret-diag-resolve-script-result-search-start-direct");
+        std::fs::write(root.join("script.result.json"), b"{}" as &[u8])
+            .expect("write script.result");
+
+        let start = resolve_script_result_search_start(&root);
+
+        assert_eq!(start, root);
+    }
+
+    #[test]
+    fn resolve_script_result_search_start_resolves_base_dir_to_latest_bundle_dir() {
+        let base = make_temp_dir("fret-diag-resolve-script-result-search-start-base");
+        let session = crate::session::session_out_dir(&base, "200-1");
+        std::fs::create_dir_all(&session).expect("create session dir");
+        let _ = crate::util::write_json_value(
+            &session.join("session.json"),
+            &serde_json::json!({"schema_version":1,"created_unix_ms":200,"pid":1,"session_id":"200-1"}),
+        );
+        let bundle_dir = session.join("999-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        write_script_result(&session, 999, "999-bundle");
+
+        let start = resolve_script_result_search_start(&base);
+
+        assert_eq!(start, bundle_dir);
+    }
+
+    #[test]
+    fn resolve_latest_script_result_search_start_uses_latest_bundle_parent() {
+        let root = make_temp_dir("fret-diag-resolve-latest-script-result-search-start");
+        let bundle_dir = root.join("123-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.schema2.json"), b"{}")
+            .expect("write bundle artifact");
+        std::fs::write(root.join("latest.txt"), b"123-bundle").expect("write latest.txt");
+
+        let (bundle_path, start) = resolve_latest_script_result_search_start(Path::new("."), &root)
+            .expect("resolve latest script-result search start");
+
+        assert_eq!(bundle_path, bundle_dir.join("bundle.schema2.json"));
+        assert_eq!(start, bundle_dir);
+    }
+
+    #[test]
+    fn resolve_latest_output_helpers_render_expected_fields() {
+        let output = ResolveLatestOutput {
+            base_out_dir: PathBuf::from("diag/base"),
+            out_dir: PathBuf::from("diag/base/sessions/200-1"),
+            session_id: Some("200-1".to_string()),
+            latest_run_id: Some(777),
+            latest_run_dir: Some(PathBuf::from("diag/base/sessions/200-1/777")),
+            latest_bundle_dir: Some(PathBuf::from("diag/base/sessions/200-1/777-bundle")),
+            latest_bundle_dir_source: Some("script.result.json:last_bundle_dir"),
+            latest_bundle_artifact: Some(PathBuf::from(
+                "diag/base/sessions/200-1/777-bundle/bundle.json",
+            )),
+        };
+
+        let payload = resolve_latest_output_to_json(&output);
+        assert_eq!(
+            payload.get("session_id").and_then(|value| value.as_str()),
+            Some("200-1")
+        );
+        assert_eq!(
+            payload
+                .get("latest_run_id")
+                .and_then(|value| value.as_u64()),
+            Some(777)
+        );
+        assert_eq!(
+            payload
+                .get("latest_bundle_dir_source")
+                .and_then(|value| value.as_str()),
+            Some("script.result.json:last_bundle_dir")
+        );
+
+        let lines = resolve_latest_output_lines(&output);
+        assert_eq!(lines.first().map(String::as_str), Some("resolve_latest:"));
+        assert!(lines.iter().any(|line| line == "  session_id: 200-1"));
+        assert!(lines.iter().any(|line| line == "  latest_run_id: 777"));
+        assert!(lines.iter().any(|line| {
+            line == "  latest_bundle_dir_source: script.result.json:last_bundle_dir"
+        }));
     }
 }
