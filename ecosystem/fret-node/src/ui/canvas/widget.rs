@@ -114,6 +114,8 @@ mod command_open_edge;
 mod command_open_group;
 mod command_open_insert;
 mod command_router;
+mod command_router_align;
+mod command_router_nudge;
 mod command_selection;
 mod command_ui;
 mod command_view;

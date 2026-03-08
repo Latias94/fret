@@ -7,6 +7,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
         command: &CommandId,
     ) -> bool {
+        if let Some(request) = super::command_router_nudge::nudge_command_request(command.as_str())
+        {
+            return self.cmd_nudge_selection(cx, snapshot, request.dir, request.fast);
+        }
+
+        if let Some(mode) = super::command_router_align::align_or_distribute_mode(command.as_str())
+        {
+            return self.cmd_align_or_distribute_selection(cx, snapshot, mode);
+        }
+
         match command.as_str() {
             CMD_NODE_GRAPH_OPEN_INSERT_NODE => self.cmd_open_insert_node(cx, snapshot),
             CMD_NODE_GRAPH_CREATE_GROUP => self.cmd_create_group(cx),
@@ -52,68 +62,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             "edit.copy" => self.cmd_copy(cx, snapshot),
             "edit.cut" => self.cmd_cut(cx, snapshot),
             "edit.paste" => self.cmd_paste(cx, snapshot),
-
-            CMD_NODE_GRAPH_NUDGE_LEFT => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 }, false)
-            }
-            CMD_NODE_GRAPH_NUDGE_RIGHT => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 1.0, y: 0.0 }, false)
-            }
-            CMD_NODE_GRAPH_NUDGE_UP => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -1.0 }, false)
-            }
-            CMD_NODE_GRAPH_NUDGE_DOWN => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 1.0 }, false)
-            }
-            CMD_NODE_GRAPH_NUDGE_LEFT_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 }, true)
-            }
-            CMD_NODE_GRAPH_NUDGE_RIGHT_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 1.0, y: 0.0 }, true)
-            }
-            CMD_NODE_GRAPH_NUDGE_UP_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -1.0 }, true)
-            }
-            CMD_NODE_GRAPH_NUDGE_DOWN_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 1.0 }, true)
-            }
-
-            CMD_NODE_GRAPH_ALIGN_LEFT => {
-                self.cmd_align_or_distribute_selection(cx, snapshot, AlignDistributeMode::AlignLeft)
-            }
-            CMD_NODE_GRAPH_ALIGN_RIGHT => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::AlignRight,
-            ),
-            CMD_NODE_GRAPH_ALIGN_TOP => {
-                self.cmd_align_or_distribute_selection(cx, snapshot, AlignDistributeMode::AlignTop)
-            }
-            CMD_NODE_GRAPH_ALIGN_BOTTOM => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::AlignBottom,
-            ),
-            CMD_NODE_GRAPH_ALIGN_CENTER_X => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::AlignCenterX,
-            ),
-            CMD_NODE_GRAPH_ALIGN_CENTER_Y => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::AlignCenterY,
-            ),
-            CMD_NODE_GRAPH_DISTRIBUTE_X => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::DistributeX,
-            ),
-            CMD_NODE_GRAPH_DISTRIBUTE_Y => self.cmd_align_or_distribute_selection(
-                cx,
-                snapshot,
-                AlignDistributeMode::DistributeY,
-            ),
 
             _ => false,
         }

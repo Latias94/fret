@@ -750,6 +750,11 @@ real editors.
   command lookup tables through the private `canvas/widget/keyboard_shortcuts_gate.rs`
   and `canvas/widget/keyboard_shortcuts_map.rs` seams, so retained keyboard shortcut
   reducers no longer keep mixed gating and command mapping embedded in one surface.
+- `command_router.rs` now routes nudge vector lookup and
+  align/distribute mode mapping through the private
+  `canvas/widget/command_router_nudge.rs` and
+  `canvas/widget/command_router_align.rs` seams, so retained command routing no
+  longer keeps repeated movement/alignment command tables embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -836,6 +841,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_connect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_graph.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_view.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router_align.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_router_nudge.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_focus.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_focus_cycle.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_focus_port.rs`

@@ -687,6 +687,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     command lookup tables through the private `canvas/widget/keyboard_shortcuts_gate.rs`
     and `canvas/widget/keyboard_shortcuts_map.rs` seams, so retained keyboard shortcut
     reducers no longer keep mixed gating and command mapping embedded in one surface.
+  - Progress: `command_router.rs` now routes nudge vector lookup and
+    align/distribute mode mapping through the private
+    `canvas/widget/command_router_nudge.rs` and
+    `canvas/widget/command_router_align.rs` seams, so retained command routing no
+    longer keeps repeated movement/alignment command tables embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
