@@ -4,7 +4,7 @@ use crate::registry::campaigns::{
     CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
     CampaignRegistry, campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
 };
-use crate::regression_summary::{RegressionStatusV1, RegressionSummaryV1};
+use crate::regression_summary::{RegressionItemSummaryV1, RegressionStatusV1, RegressionSummaryV1};
 
 const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
 const DIAG_CAMPAIGN_RESULT_KIND_V1: &str = "diag_campaign_result";
@@ -93,6 +93,13 @@ struct CampaignSummaryFinalizePlan {
     summary_path: PathBuf,
     created_unix_ms: u64,
     should_generate_share_manifest: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignSummaryFinalizeOutcome {
+    summarize_error: Option<String>,
+    share_manifest_path: Option<PathBuf>,
+    share_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -858,16 +865,23 @@ fn execute_campaign_run_selection(
     } else {
         None
     };
+
+    Ok(build_campaign_run_outcome(reports, batch))
+}
+
+fn build_campaign_run_outcome(
+    reports: Vec<CampaignExecutionReport>,
+    batch: Option<CampaignBatchArtifacts>,
+) -> CampaignRunOutcome {
     let counters = build_campaign_run_counters(&reports);
     let command_failures =
         collect_campaign_run_failures(&reports, batch.as_ref(), counters.campaigns_failed);
-
-    Ok(CampaignRunOutcome {
+    CampaignRunOutcome {
         reports,
         batch,
         counters,
         command_failures,
-    })
+    }
 }
 
 fn build_campaign_run_counters(reports: &[CampaignExecutionReport]) -> CampaignRunCounters {
@@ -1378,13 +1392,20 @@ fn finalize_campaign_summary_artifacts(
     plan: &CampaignSummaryFinalizePlan,
     ctx: &CampaignRunContext,
 ) -> CampaignSummaryArtifacts {
+    let outcome = execute_campaign_summary_finalize_outcome(plan, ctx);
+    build_campaign_summary_artifacts(plan.created_unix_ms, now_unix_ms(), outcome)
+}
+
+fn execute_campaign_summary_finalize_outcome(
+    plan: &CampaignSummaryFinalizePlan,
+    ctx: &CampaignRunContext,
+) -> CampaignSummaryFinalizeOutcome {
     let summarize_result = diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
         rest: plan.summarize_inputs.clone(),
         workspace_root: ctx.workspace_root.clone(),
         resolved_out_dir: plan.out_dir.clone(),
         stats_json: false,
     });
-    let summarize_error = summarize_result.err();
     let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
         &plan.out_dir,
         &plan.summary_path,
@@ -1393,15 +1414,25 @@ fn finalize_campaign_summary_artifacts(
         ctx.stats_top,
         ctx.warmup_frames,
     );
-    let finished_unix_ms = now_unix_ms();
-    let duration_ms = finished_unix_ms.saturating_sub(plan.created_unix_ms);
 
-    CampaignSummaryArtifacts {
-        finished_unix_ms,
-        duration_ms,
-        summarize_error,
+    CampaignSummaryFinalizeOutcome {
+        summarize_error: summarize_result.err(),
         share_manifest_path,
         share_error,
+    }
+}
+
+fn build_campaign_summary_artifacts(
+    created_unix_ms: u64,
+    finished_unix_ms: u64,
+    outcome: CampaignSummaryFinalizeOutcome,
+) -> CampaignSummaryArtifacts {
+    CampaignSummaryArtifacts {
+        finished_unix_ms,
+        duration_ms: finished_unix_ms.saturating_sub(created_unix_ms),
+        summarize_error: outcome.summarize_error,
+        share_manifest_path: outcome.share_manifest_path,
+        share_error: outcome.share_error,
     }
 }
 
@@ -1640,161 +1671,49 @@ fn write_campaign_share_manifest(
     std::fs::create_dir_all(&share_dir)
         .map_err(|e| format!("failed to create share dir {}: {}", share_dir.display(), e))?;
 
-    let mut bundles_total = 0usize;
-    let mut bundles_packed = 0usize;
-    let mut bundles_missing = 0usize;
-    let mut triage_generated = 0usize;
-    let mut triage_failed = 0usize;
+    let mut counters = CampaignShareManifestCounters::default();
     let mut run_entries = Vec::new();
-    let mut combined_entries: Vec<(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)> =
-        Vec::new();
+    let mut combined_entries = Vec::new();
 
     for item in &summary.items {
         if !include_passed && item.status == RegressionStatusV1::Passed {
             continue;
         }
 
-        let bundle_dir = item
-            .evidence
-            .as_ref()
-            .and_then(|evidence| evidence.bundle_dir.as_deref())
-            .map(PathBuf::from);
-        if bundle_dir.is_none() {
-            bundles_missing = bundles_missing.saturating_add(1);
-        }
-        let (triage_path, triage_error) = if let Some(bundle_dir) = bundle_dir.as_deref() {
-            maybe_write_bundle_triage_json(bundle_dir, stats_top, warmup_frames)
-        } else {
-            (None, None)
-        };
-        let screenshots_manifest = bundle_dir.as_deref().and_then(|bundle_dir| {
-            crate::commands::screenshots::resolve_screenshots_manifest_path(bundle_dir)
-                .map(|(_screenshots_dir, manifest_path)| manifest_path)
+        let share_item = build_campaign_share_manifest_item(CampaignShareManifestItemRequest {
+            item,
+            root_dir,
+            share_dir: &share_dir,
+            bundle_ordinal: counters.bundles_total.saturating_add(1),
+            stats_top,
+            warmup_frames,
         });
-        if triage_path.is_some() {
-            triage_generated = triage_generated.saturating_add(1);
-        }
-        if triage_error.is_some() {
-            triage_failed = triage_failed.saturating_add(1);
-        }
-        let pack_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
-            bundles_total = bundles_total.saturating_add(1);
-            let packet_dir = bundle_dir.join("ai.packet");
-            let ai_packet_result = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
-                None,
-                bundle_dir,
-                &packet_dir,
-                true,
-                stats_top,
-                None,
-                warmup_frames,
-                None,
-            );
-            let share_zip = share_dir.join(format!(
-                "{:02}-{}.ai.zip",
-                bundles_total,
-                zip_safe_component(&item.item_id)
-            ));
-            match ai_packet_result
-                .and_then(|_| crate::pack_ai_packet_dir_to_zip(bundle_dir, &share_zip, root_dir))
-            {
-                Ok(()) => {
-                    bundles_packed = bundles_packed.saturating_add(1);
-                    Ok(share_zip)
-                }
-                Err(error) => Err(error),
-            }
-        } else {
-            Err("item does not expose evidence.bundle_dir".to_string())
-        };
-
-        let pack_path = pack_result.as_ref().ok().cloned();
-        let pack_error = pack_result.as_ref().err().cloned();
-        run_entries.push(serde_json::json!({
-            "item_id": item.item_id,
-            "name": item.name,
-            "status": item.status,
-            "reason_code": item.reason_code,
-            "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
-            "triage_json": triage_path.as_ref().map(|path| path.display().to_string()),
-            "triage_error": triage_error,
-            "screenshots_manifest": screenshots_manifest.as_ref().map(|path| path.display().to_string()),
-            "source_script": item
-                .source
-                .as_ref()
-                .and_then(|source| source.script.clone()),
-            "share_zip": pack_path.as_ref().map(|path| path.display().to_string()),
-            "error": pack_error,
-        }));
-        combined_entries.push((
-            item.item_id.clone(),
-            pack_path,
-            triage_path,
-            screenshots_manifest,
-        ));
+        counters.merge(&share_item.counters);
+        run_entries.push(share_item.run_entry);
+        combined_entries.push(share_item.combined_entry);
     }
 
     let share_manifest_path = share_dir.join("share.manifest.json");
-    let mut payload = serde_json::json!({
-        "schema_version": 1,
-        "kind": DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1,
-        "source": {
-            "root_dir": root_dir.display().to_string(),
-            "summary_path": summary_path.display().to_string(),
-            "campaign_name": summary.campaign.name,
-            "lane": summary.campaign.lane,
-        },
-        "selection": {
-            "include_passed": include_passed,
-        },
-        "counters": {
-            "items_selected": run_entries.len(),
-            "bundles_total": bundles_total,
-            "bundles_packed": bundles_packed,
-            "bundles_missing": bundles_missing,
-            "triage_generated": triage_generated,
-            "triage_failed": triage_failed,
-        },
-        "share": {
-            "share_dir": share_dir.display().to_string(),
-            "workflow_hint": format!(
-                "open {} in DevTools or share {} plus the generated *.ai.zip artifacts",
-                root_dir.display(),
-                summary_path.display()
-            ),
-            "workspace_root": workspace_root.display().to_string(),
-            "combined_zip": serde_json::Value::Null,
-            "combined_zip_error": serde_json::Value::Null,
-        },
-        "items": run_entries,
+    let mut payload = build_campaign_share_manifest_payload(CampaignShareManifestPayloadRequest {
+        root_dir,
+        summary_path,
+        workspace_root,
+        share_dir: &share_dir,
+        summary: &summary,
+        include_passed,
+        counters: &counters,
+        run_entries,
     });
     write_json_value(&share_manifest_path, &payload)?;
 
-    let (combined_zip, combined_zip_error) = write_campaign_combined_failure_zip(
+    let combined_zip_outcome = write_campaign_combined_failure_zip(
         root_dir,
         &share_dir,
         &share_manifest_path,
         summary_path,
         &combined_entries,
     );
-    if let Some(share) = payload
-        .get_mut("share")
-        .and_then(|value| value.as_object_mut())
-    {
-        share.insert(
-            "combined_zip".to_string(),
-            combined_zip
-                .as_ref()
-                .map(|path| serde_json::Value::String(path.display().to_string()))
-                .unwrap_or(serde_json::Value::Null),
-        );
-        share.insert(
-            "combined_zip_error".to_string(),
-            combined_zip_error
-                .map(serde_json::Value::String)
-                .unwrap_or(serde_json::Value::Null),
-        );
-    }
+    apply_campaign_share_manifest_combined_zip(&mut payload, &combined_zip_outcome);
     write_json_value(&share_manifest_path, &payload)?;
     Ok(share_manifest_path)
 }
@@ -1804,15 +1723,13 @@ fn write_campaign_combined_failure_zip(
     share_dir: &Path,
     share_manifest_path: &Path,
     summary_path: &Path,
-    entries: &[(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)],
-) -> (Option<PathBuf>, Option<String>) {
+    entries: &[CampaignCombinedFailureEntry],
+) -> CampaignCombinedZipOutcome {
     if !entries
         .iter()
-        .any(|(_item_id, share_zip, triage_path, screenshots_manifest)| {
-            share_zip.is_some() || triage_path.is_some() || screenshots_manifest.is_some()
-        })
+        .any(CampaignCombinedFailureEntry::has_exported_artifact)
     {
-        return (None, None);
+        return CampaignCombinedZipOutcome::default();
     }
 
     let out_path = share_dir.join("combined-failures.zip");
@@ -1823,8 +1740,14 @@ fn write_campaign_combined_failure_zip(
         summary_path,
         entries,
     ) {
-        Ok(()) => (Some(out_path), None),
-        Err(error) => (None, Some(error)),
+        Ok(()) => CampaignCombinedZipOutcome {
+            path: Some(out_path),
+            error: None,
+        },
+        Err(error) => CampaignCombinedZipOutcome {
+            path: None,
+            error: Some(error),
+        },
     }
 }
 
@@ -1833,7 +1756,7 @@ fn write_campaign_combined_failure_zip_inner(
     out_path: &Path,
     share_manifest_path: &Path,
     summary_path: &Path,
-    entries: &[(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)],
+    entries: &[CampaignCombinedFailureEntry],
 ) -> Result<(), String> {
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -1866,11 +1789,9 @@ fn write_campaign_combined_failure_zip_inner(
         )?;
     }
 
-    for (index, (item_id, share_zip, triage_path, screenshots_manifest)) in
-        entries.iter().enumerate()
-    {
-        let safe_item_id = zip_safe_component(item_id);
-        if let Some(share_zip) = share_zip.as_deref()
+    for (index, entry) in entries.iter().enumerate() {
+        let safe_item_id = zip_safe_component(&entry.item_id);
+        if let Some(share_zip) = entry.share_zip.as_deref()
             && share_zip.is_file()
         {
             add_file_to_zip(
@@ -1880,7 +1801,7 @@ fn write_campaign_combined_failure_zip_inner(
                 options,
             )?;
         }
-        if let Some(triage_path) = triage_path.as_deref()
+        if let Some(triage_path) = entry.triage_path.as_deref()
             && triage_path.is_file()
         {
             add_file_to_zip(
@@ -1890,7 +1811,7 @@ fn write_campaign_combined_failure_zip_inner(
                 options,
             )?;
         }
-        if let Some(screenshots_manifest) = screenshots_manifest.as_deref()
+        if let Some(screenshots_manifest) = entry.screenshots_manifest.as_deref()
             && screenshots_manifest.is_file()
         {
             add_file_to_zip(
@@ -1907,6 +1828,231 @@ fn write_campaign_combined_failure_zip_inner(
 
     zip.finish().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[derive(Debug, Clone, Default)]
+struct CampaignShareManifestCounters {
+    bundles_total: usize,
+    bundles_packed: usize,
+    bundles_missing: usize,
+    triage_generated: usize,
+    triage_failed: usize,
+}
+
+impl CampaignShareManifestCounters {
+    fn merge(&mut self, other: &Self) {
+        self.bundles_total = self.bundles_total.saturating_add(other.bundles_total);
+        self.bundles_packed = self.bundles_packed.saturating_add(other.bundles_packed);
+        self.bundles_missing = self.bundles_missing.saturating_add(other.bundles_missing);
+        self.triage_generated = self.triage_generated.saturating_add(other.triage_generated);
+        self.triage_failed = self.triage_failed.saturating_add(other.triage_failed);
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CampaignCombinedFailureEntry {
+    item_id: String,
+    share_zip: Option<PathBuf>,
+    triage_path: Option<PathBuf>,
+    screenshots_manifest: Option<PathBuf>,
+}
+
+impl CampaignCombinedFailureEntry {
+    fn has_exported_artifact(&self) -> bool {
+        self.share_zip.is_some()
+            || self.triage_path.is_some()
+            || self.screenshots_manifest.is_some()
+    }
+}
+
+struct CampaignShareManifestItemRequest<'a> {
+    item: &'a RegressionItemSummaryV1,
+    root_dir: &'a Path,
+    share_dir: &'a Path,
+    bundle_ordinal: usize,
+    stats_top: usize,
+    warmup_frames: u64,
+}
+
+struct CampaignShareManifestItem {
+    counters: CampaignShareManifestCounters,
+    run_entry: serde_json::Value,
+    combined_entry: CampaignCombinedFailureEntry,
+}
+
+struct CampaignShareManifestPayloadRequest<'a> {
+    root_dir: &'a Path,
+    summary_path: &'a Path,
+    workspace_root: &'a Path,
+    share_dir: &'a Path,
+    summary: &'a RegressionSummaryV1,
+    include_passed: bool,
+    counters: &'a CampaignShareManifestCounters,
+    run_entries: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct CampaignCombinedZipOutcome {
+    path: Option<PathBuf>,
+    error: Option<String>,
+}
+
+fn build_campaign_share_manifest_payload(
+    request: CampaignShareManifestPayloadRequest<'_>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": 1,
+        "kind": DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1,
+        "source": {
+            "root_dir": request.root_dir.display().to_string(),
+            "summary_path": request.summary_path.display().to_string(),
+            "campaign_name": request.summary.campaign.name,
+            "lane": request.summary.campaign.lane,
+        },
+        "selection": {
+            "include_passed": request.include_passed,
+        },
+        "counters": {
+            "items_selected": request.run_entries.len(),
+            "bundles_total": request.counters.bundles_total,
+            "bundles_packed": request.counters.bundles_packed,
+            "bundles_missing": request.counters.bundles_missing,
+            "triage_generated": request.counters.triage_generated,
+            "triage_failed": request.counters.triage_failed,
+        },
+        "share": {
+            "share_dir": request.share_dir.display().to_string(),
+            "workflow_hint": format!(
+                "open {} in DevTools or share {} plus the generated *.ai.zip artifacts",
+                request.root_dir.display(),
+                request.summary_path.display()
+            ),
+            "workspace_root": request.workspace_root.display().to_string(),
+            "combined_zip": serde_json::Value::Null,
+            "combined_zip_error": serde_json::Value::Null,
+        },
+        "items": request.run_entries,
+    })
+}
+
+fn apply_campaign_share_manifest_combined_zip(
+    payload: &mut serde_json::Value,
+    outcome: &CampaignCombinedZipOutcome,
+) {
+    if let Some(share) = payload
+        .get_mut("share")
+        .and_then(|value| value.as_object_mut())
+    {
+        share.insert(
+            "combined_zip".to_string(),
+            outcome
+                .path
+                .as_ref()
+                .map(|path| serde_json::Value::String(path.display().to_string()))
+                .unwrap_or(serde_json::Value::Null),
+        );
+        share.insert(
+            "combined_zip_error".to_string(),
+            outcome
+                .error
+                .clone()
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null),
+        );
+    }
+}
+
+fn build_campaign_share_manifest_item(
+    request: CampaignShareManifestItemRequest<'_>,
+) -> CampaignShareManifestItem {
+    let bundle_dir = request
+        .item
+        .evidence
+        .as_ref()
+        .and_then(|evidence| evidence.bundle_dir.as_deref())
+        .map(PathBuf::from);
+    let mut counters = CampaignShareManifestCounters::default();
+    if bundle_dir.is_none() {
+        counters.bundles_missing = 1;
+    }
+
+    let (triage_path, triage_error) = if let Some(bundle_dir) = bundle_dir.as_deref() {
+        maybe_write_bundle_triage_json(bundle_dir, request.stats_top, request.warmup_frames)
+    } else {
+        (None, None)
+    };
+    let screenshots_manifest = bundle_dir.as_deref().and_then(|bundle_dir| {
+        crate::commands::screenshots::resolve_screenshots_manifest_path(bundle_dir)
+            .map(|(_screenshots_dir, manifest_path)| manifest_path)
+    });
+    if triage_path.is_some() {
+        counters.triage_generated = 1;
+    }
+    if triage_error.is_some() {
+        counters.triage_failed = 1;
+    }
+
+    let pack_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
+        counters.bundles_total = 1;
+        let packet_dir = bundle_dir.join("ai.packet");
+        let ai_packet_result = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+            None,
+            bundle_dir,
+            &packet_dir,
+            true,
+            request.stats_top,
+            None,
+            request.warmup_frames,
+            None,
+        );
+        let share_zip = request.share_dir.join(format!(
+            "{:02}-{}.ai.zip",
+            request.bundle_ordinal,
+            zip_safe_component(&request.item.item_id)
+        ));
+        match ai_packet_result.and_then(|_| {
+            crate::pack_ai_packet_dir_to_zip(bundle_dir, &share_zip, request.root_dir)
+        }) {
+            Ok(()) => {
+                counters.bundles_packed = 1;
+                Ok(share_zip)
+            }
+            Err(error) => Err(error),
+        }
+    } else {
+        Err("item does not expose evidence.bundle_dir".to_string())
+    };
+
+    let pack_path = pack_result.as_ref().ok().cloned();
+    let pack_error = pack_result.as_ref().err().cloned();
+    let run_entry = serde_json::json!({
+        "item_id": request.item.item_id,
+        "name": request.item.name,
+        "status": request.item.status,
+        "reason_code": request.item.reason_code,
+        "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
+        "triage_json": triage_path.as_ref().map(|path| path.display().to_string()),
+        "triage_error": triage_error,
+        "screenshots_manifest": screenshots_manifest.as_ref().map(|path| path.display().to_string()),
+        "source_script": request
+            .item
+            .source
+            .as_ref()
+            .and_then(|source| source.script.clone()),
+        "share_zip": pack_path.as_ref().map(|path| path.display().to_string()),
+        "error": pack_error,
+    });
+
+    CampaignShareManifestItem {
+        counters,
+        run_entry,
+        combined_entry: CampaignCombinedFailureEntry {
+            item_id: request.item.item_id.clone(),
+            share_zip: pack_path,
+            triage_path,
+            screenshots_manifest,
+        },
+    }
 }
 
 fn add_file_to_zip(
@@ -4040,6 +4186,28 @@ mod tests {
     }
 
     #[test]
+    fn build_campaign_summary_artifacts_uses_saturating_duration_and_preserves_outcome() {
+        let artifacts = build_campaign_summary_artifacts(
+            100,
+            88,
+            CampaignSummaryFinalizeOutcome {
+                summarize_error: Some("summary failed".to_string()),
+                share_manifest_path: Some(PathBuf::from("share/manifest.json")),
+                share_error: Some("share failed".to_string()),
+            },
+        );
+
+        assert_eq!(artifacts.finished_unix_ms, 88);
+        assert_eq!(artifacts.duration_ms, 0);
+        assert_eq!(artifacts.summarize_error.as_deref(), Some("summary failed"));
+        assert_eq!(
+            artifacts.share_manifest_path.as_deref(),
+            Some(Path::new("share/manifest.json"))
+        );
+        assert_eq!(artifacts.share_error.as_deref(), Some("share failed"));
+    }
+
+    #[test]
     fn build_campaign_execution_finalization_preserves_summary_outputs() {
         let summary_artifacts = CampaignSummaryArtifacts {
             finished_unix_ms: 55,
@@ -4530,6 +4698,22 @@ mod tests {
             with_selected.get("selection_slug").and_then(|v| v.as_str()),
             Some("ids-ui-gallery-smoke")
         );
+    }
+
+    #[test]
+    fn build_campaign_run_outcome_collects_counters_and_failures() {
+        let mut failed_report = sample_campaign_execution_report("ui-gallery-smoke", false, 3, 1);
+        failed_report.error = Some("suite failed".to_string());
+        failed_report.aggregate.share_error = Some("share failed".to_string());
+        let reports = vec![failed_report];
+
+        let outcome = build_campaign_run_outcome(reports, None);
+
+        assert_eq!(outcome.counters.campaigns_total, 1);
+        assert_eq!(outcome.counters.campaigns_failed, 1);
+        assert_eq!(outcome.command_failures.len(), 2);
+        assert!(outcome.command_failures[0].contains("failed campaign"));
+        assert!(outcome.command_failures[1].contains("share export failed"));
     }
 
     #[test]

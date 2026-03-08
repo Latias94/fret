@@ -97,8 +97,14 @@ Progress update:
   - `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper,
   - `cmd_artifact_lint` now routes artifact-dir/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing a dedicated write helper,
   - helper-level regression coverage now locks the AI-only output-path policy, shared input validation paths, meta-report line shape, lint exit predicate, triage lite out-path policy, tooling-warning attachment behavior, artifact-lint out-path policy, and artifact-dir normalization for `_root` manifests.
-- The next decision point in this area is whether any further `diag_run` slicing is worth it, or whether
-  the higher-ROI seam has now shifted away from `commands/resolve` toward `diag_campaign` or another artifact/materialization holdout.
+- `diag_campaign` has now landed another orchestration seam around run-outcome assembly:
+  - `execute_campaign_run_selection` now routes counters plus command-failure aggregation through a dedicated `build_campaign_run_outcome` helper,
+  - helper-level regression coverage now locks the combined counters/failures outcome shape without relying on command execution.
+- `diag_campaign` has now landed another orchestration seam around summary-finalize materialization:
+  - single-run and batch finalize paths now share `execute_campaign_summary_finalize_outcome` for summarize/share execution plus error capture,
+  - timing/materialization now route through `build_campaign_summary_artifacts`,
+  - helper-level regression coverage now locks saturating duration handling plus outcome preservation without running summarize/share side effects.
+- The next decision point in this area is whether any remaining `diag_campaign` batch/finalize artifact handoff block still pays better than moving on to another orchestration-heavy file.
 
 Exit criteria:
 
