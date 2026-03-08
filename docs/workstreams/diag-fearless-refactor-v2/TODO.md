@@ -95,6 +95,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - latest landing: `diag_campaign` now routes `write_campaign_share_manifest` through dedicated item-planning, payload-build, and combined-zip-finalize helpers plus named counters/combined-entry/outcome shapes, so bundle/triage/share staging and final manifest update no longer expand inline in one artifact-handoff block
     - latest landing: `diag_campaign` now routes `execute_campaign_run_selection` through a dedicated `build_campaign_run_outcome` helper for counters plus command-failure aggregation, so selection/execution/batch-artifact orchestration no longer recomputes those outcome fields inline after report collection
     - latest landing: `diag_campaign` now routes summary-finalize execution through `execute_campaign_summary_finalize_outcome` and timing/materialization through `build_campaign_summary_artifacts`, so single-run and batch finalize flows reuse the same summarize/share outcome seam instead of reassembling it inline inside `finalize_campaign_summary_artifacts`
+    - latest landing: `diag_campaign` now builds a dedicated `CampaignBatchArtifactWritePlan` plus `build_campaign_batch_manifest_write_plan`, so batch manifest output-path/payload shaping and summary-finalize setup are settled before IO rather than being re-derived inline inside `write_campaign_batch_artifacts`
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.

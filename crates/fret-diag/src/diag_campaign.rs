@@ -109,6 +109,13 @@ struct CampaignJsonWritePlan {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignBatchArtifactWritePlan {
+    batch: CampaignBatchPlan,
+    manifest_write: CampaignJsonWritePlan,
+    summary_finalize: CampaignSummaryFinalizePlan,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignResultPayloadSections {
     run: serde_json::Value,
     counters: serde_json::Value,
@@ -1471,31 +1478,50 @@ fn write_campaign_batch_artifacts(
     options: &CampaignRunOptions,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignBatchArtifacts, String> {
-    let plan = build_campaign_batch_plan(options, reports.len(), ctx);
-
-    write_campaign_batch_manifest(
-        &plan.batch_root,
-        &plan.run_id,
-        plan.created_unix_ms,
-        reports,
-        options,
-        ctx,
-    )?;
-
-    finalize_campaign_batch_artifacts(&plan, reports, options, ctx)
+    let write_plan = build_campaign_batch_artifact_write_plan(reports, options, ctx);
+    execute_campaign_batch_artifact_write_plan(&write_plan, reports, options, ctx)
 }
 
-fn finalize_campaign_batch_artifacts(
+fn finalize_campaign_batch_artifacts_with_finalize_plan(
     plan: &CampaignBatchPlan,
+    reports: &[CampaignExecutionReport],
+    options: &CampaignRunOptions,
+    finalize_plan: &CampaignSummaryFinalizePlan,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignBatchArtifacts, String> {
+    let summary_artifacts = finalize_campaign_summary_artifacts(finalize_plan, ctx);
+    write_campaign_batch_result(plan, reports, options, &summary_artifacts, ctx)?;
+
+    Ok(build_campaign_batch_artifacts(plan, summary_artifacts))
+}
+
+fn build_campaign_batch_artifact_write_plan(
+    reports: &[CampaignExecutionReport],
+    options: &CampaignRunOptions,
+    ctx: &CampaignRunContext,
+) -> CampaignBatchArtifactWritePlan {
+    let batch = build_campaign_batch_plan(options, reports.len(), ctx);
+    CampaignBatchArtifactWritePlan {
+        manifest_write: build_campaign_batch_manifest_write_plan(&batch, reports, options, ctx),
+        summary_finalize: build_campaign_batch_summary_finalize_plan(reports, &batch),
+        batch,
+    }
+}
+
+fn execute_campaign_batch_artifact_write_plan(
+    write_plan: &CampaignBatchArtifactWritePlan,
     reports: &[CampaignExecutionReport],
     options: &CampaignRunOptions,
     ctx: &CampaignRunContext,
 ) -> Result<CampaignBatchArtifacts, String> {
-    let finalize_plan = build_campaign_batch_summary_finalize_plan(reports, plan);
-    let summary_artifacts = finalize_campaign_summary_artifacts(&finalize_plan, ctx);
-    write_campaign_batch_result(plan, reports, options, &summary_artifacts, ctx)?;
-
-    Ok(build_campaign_batch_artifacts(plan, summary_artifacts))
+    write_campaign_json_plan(&write_plan.manifest_write)?;
+    finalize_campaign_batch_artifacts_with_finalize_plan(
+        &write_plan.batch,
+        reports,
+        options,
+        &write_plan.summary_finalize,
+        ctx,
+    )
 }
 
 fn build_campaign_execution_summary_finalize_plan(
@@ -2575,18 +2601,23 @@ fn write_campaign_manifest(
     write_json_value(&manifest_path, &payload)
 }
 
-fn write_campaign_batch_manifest(
-    batch_root: &Path,
-    run_id: &str,
-    created_unix_ms: u64,
+fn build_campaign_batch_manifest_write_plan(
+    plan: &CampaignBatchPlan,
     reports: &[CampaignExecutionReport],
     options: &CampaignRunOptions,
     ctx: &CampaignRunContext,
-) -> Result<(), String> {
-    let manifest_path = batch_root.join("batch.manifest.json");
-    let payload =
-        campaign_batch_manifest_payload(batch_root, run_id, created_unix_ms, reports, options, ctx);
-    write_json_value(&manifest_path, &payload)
+) -> CampaignJsonWritePlan {
+    CampaignJsonWritePlan {
+        output_path: plan.batch_root.join("batch.manifest.json"),
+        payload: campaign_batch_manifest_payload(
+            &plan.batch_root,
+            &plan.run_id,
+            plan.created_unix_ms,
+            reports,
+            options,
+            ctx,
+        ),
+    }
 }
 
 fn campaign_manifest_payload(
@@ -4293,6 +4324,84 @@ mod tests {
         assert_eq!(
             batch.aggregate.share_error.as_deref(),
             Some("batch share failed")
+        );
+    }
+
+    #[test]
+    fn build_campaign_batch_manifest_write_plan_uses_batch_manifest_payload_and_output_path() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let options = CampaignRunOptions {
+            campaign_ids: vec!["ui-gallery-smoke".to_string()],
+            filter: CampaignFilterOptions::default(),
+        };
+        let plan = build_campaign_batch_plan_at(&options, 2, &ctx, 77);
+        let reports = vec![
+            sample_campaign_execution_report("ui-gallery-smoke", true, 3, 0),
+            sample_campaign_execution_report("docking-smoke", false, 5, 2),
+        ];
+
+        let write_plan = build_campaign_batch_manifest_write_plan(&plan, &reports, &options, &ctx);
+
+        assert_eq!(
+            write_plan.output_path,
+            plan.batch_root.join("batch.manifest.json")
+        );
+        assert_eq!(
+            write_plan.payload,
+            campaign_batch_manifest_payload(
+                &plan.batch_root,
+                &plan.run_id,
+                plan.created_unix_ms,
+                &reports,
+                &options,
+                &ctx,
+            )
+        );
+    }
+
+    #[test]
+    fn build_campaign_batch_artifact_write_plan_reuses_manifest_and_finalize_seams() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let options = CampaignRunOptions {
+            campaign_ids: vec!["ui-gallery-smoke".to_string()],
+            filter: CampaignFilterOptions::default(),
+        };
+        let reports = vec![
+            sample_campaign_execution_report("ui-gallery-smoke", true, 3, 0),
+            sample_campaign_execution_report("docking-smoke", false, 5, 2),
+        ];
+
+        let write_plan = build_campaign_batch_artifact_write_plan(&reports, &options, &ctx);
+
+        assert_eq!(
+            write_plan.manifest_write.output_path,
+            write_plan.batch.batch_root.join("batch.manifest.json")
+        );
+        assert_eq!(
+            write_plan.summary_finalize.out_dir,
+            write_plan.batch.batch_root
+        );
+        assert_eq!(
+            write_plan.summary_finalize.summary_path,
+            write_plan.batch.summary_path
+        );
+        assert_eq!(
+            write_plan.summary_finalize.created_unix_ms,
+            write_plan.batch.created_unix_ms
+        );
+        assert!(write_plan.summary_finalize.should_generate_share_manifest);
+        assert_eq!(
+            write_plan.manifest_write.payload,
+            campaign_batch_manifest_payload(
+                &write_plan.batch.batch_root,
+                &write_plan.batch.run_id,
+                write_plan.batch.created_unix_ms,
+                &reports,
+                &options,
+                &ctx,
+            )
         );
     }
 

@@ -104,7 +104,11 @@ Progress update:
   - single-run and batch finalize paths now share `execute_campaign_summary_finalize_outcome` for summarize/share execution plus error capture,
   - timing/materialization now route through `build_campaign_summary_artifacts`,
   - helper-level regression coverage now locks saturating duration handling plus outcome preservation without running summarize/share side effects.
-- The next decision point in this area is whether any remaining `diag_campaign` batch/finalize artifact handoff block still pays better than moving on to another orchestration-heavy file.
+- `diag_campaign` has now landed another artifact handoff seam around batch writes:
+  - `write_campaign_batch_artifacts` now builds a dedicated `CampaignBatchArtifactWritePlan`,
+  - batch manifest writing now routes through `build_campaign_batch_manifest_write_plan`,
+  - helper-level regression coverage now locks manifest output-path/payload shaping plus summary-finalize setup reuse without running campaign execution.
+- The next decision point in this area is whether mirroring the same pre-IO setup seam on the single-campaign manifest/execution path still pays better than moving on to another orchestration-heavy file.
 
 Exit criteria:
 
