@@ -640,6 +640,11 @@ real editors.
   `canvas/widget/pointer_move_release_left.rs`, and
   `canvas/widget/pointer_move_pointer_state.rs` seams, so retained move-release reducers no
   longer stay embedded in one mixed surface.
+- `pointer_wheel_viewport.rs` now routes wheel/pinch motion stop,
+  zoom application, and scroll-pan updates through the private
+  `canvas/widget/pointer_wheel_motion.rs`, `canvas/widget/pointer_wheel_zoom.rs`, and
+  `canvas/widget/pointer_wheel_pan.rs` seams, so retained wheel-viewport reducers no longer
+  stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -779,7 +784,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`

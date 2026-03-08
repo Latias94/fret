@@ -577,6 +577,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/pointer_move_release_left.rs`, and
     `canvas/widget/pointer_move_pointer_state.rs` seams, so retained move-release reducers no
     longer stay embedded in one mixed surface.
+  - Progress: `pointer_wheel_viewport.rs` now routes wheel/pinch motion stop,
+    zoom application, and scroll-pan updates through the private
+    `canvas/widget/pointer_wheel_motion.rs`, `canvas/widget/pointer_wheel_zoom.rs`, and
+    `canvas/widget/pointer_wheel_pan.rs` seams, so retained wheel-viewport reducers no longer
+    stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
