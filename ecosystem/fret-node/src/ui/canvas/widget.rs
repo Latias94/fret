@@ -139,6 +139,8 @@ mod group_draw_order;
 mod group_resize;
 mod hit_test;
 mod pointer_down_double_click;
+mod pointer_down_double_click_background;
+mod pointer_down_double_click_edge;
 mod pointer_down_gesture_start;
 mod pointer_move_dispatch;
 mod pointer_move_release;

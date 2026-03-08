@@ -607,6 +607,10 @@ real editors.
   `canvas/widget/insert_execution_point.rs`, `canvas/widget/insert_execution_plan.rs`, and
   `canvas/widget/insert_execution_feedback.rs` seams, so retained insert execution reducers no
   longer stay embedded in one mixed surface.
+- `pointer_down_double_click.rs` now routes background zoom and edge double-click
+  actions through the private `canvas/widget/pointer_down_double_click_background.rs`
+  and `canvas/widget/pointer_down_double_click_edge.rs` seams, so retained double-click reducers no
+  longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -712,6 +716,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_draw_order.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_edge_repair.rs`

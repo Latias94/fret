@@ -544,6 +544,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/insert_execution_point.rs`, `canvas/widget/insert_execution_plan.rs`, and
     `canvas/widget/insert_execution_feedback.rs` seams, so retained insert execution reducers no
     longer stay embedded in one mixed surface.
+  - Progress: `pointer_down_double_click.rs` now routes background zoom and edge
+    double-click actions through the private `canvas/widget/pointer_down_double_click_background.rs`
+    and `canvas/widget/pointer_down_double_click_edge.rs` seams, so retained double-click reducers no
+    longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
