@@ -157,15 +157,15 @@ impl View for TodoView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let draft = cx.use_state::<String>();
-        let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
+        let draft = cx.use_local::<String>();
+        let enabled = !draft.layout(cx).value_or_default().trim().is_empty();
 
         cx.on_action_notify_models::<act::Add>({
             let draft = draft.clone();
-            move |models| models.update(&draft, String::clear).is_ok()
+            move |models| draft.set_in(models, String::new())
         });
 
-        let input = shadcn::Input::new(draft.clone())
+        let input = shadcn::Input::new(&draft)
             .a11y_label("New task")
             .placeholder("Add a task…")
             .submit_command(act::Add.into());

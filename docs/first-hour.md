@@ -36,7 +36,7 @@ cargo run -p fretboard -- dev native --example simple_todo
 
 Why `simple-todo`?
 
-- It is **Model + view runtime + typed actions + keyed lists** only.
+- It is **LocalState + view runtime + typed actions + keyed lists** only.
 - It intentionally does **not** pull in `fret-selector` or `fret-query`.
 
 ## 2) Where to edit
