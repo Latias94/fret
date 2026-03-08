@@ -1,14 +1,14 @@
 ---
 name: fret-framework-maintainer-guide
-description: "This skill should be used when the user asks to \"land a framework change\", \"change a hard contract\", \"update/add an ADR\", \"add diagnostics/perf gates\", or \"do upstream parity work\". Provides a contract-first maintainer playbook for safe evolution (ADRs, boundaries, diag/perf, shadcn/Radix/Base UI alignment, evidence discipline)."
+description: 'This skill should be used when the user asks to "land a framework change", "change a hard contract", "update/add an ADR", "add diagnostics/perf gates", or "do upstream parity work". Provides a contract-first maintainer playbook for safe evolution (ADRs, boundaries, diag/perf, shadcn/Radix/Base UI alignment, evidence discipline).'
 ---
 
 # Fret framework maintainer guide (contract-first)
 
 This skill is the **maintainer entrypoint** for framework development in the Fret mono-repo.
 
-It is intentionally guideline/checklist-oriented (Vercel-style): the goal is to make changes
-reviewable and reversible by leaving the right artifacts behind.
+It is intentionally checklist-oriented: the goal is to make changes reviewable and reversible by
+leaving the right artifacts behind.
 
 ## When to use
 
@@ -35,15 +35,24 @@ Defaults if unclear:
 
 ## Quick start (maintainer loop)
 
-1) Decide the ownership layer (mechanism vs policy vs recipe).
-2) Build a smallest repro (demo/gallery/script).
-3) Add a regression gate (test/script/perf).
-4) Record evidence anchors (paths + key functions + commands).
-5) Run boundary checks and validate skills/docs drift.
+1. Decide the ownership layer (mechanism vs policy vs recipe).
+2. Read the relevant reference note before coding.
+3. Build the smallest repro and add a regression gate.
+4. Update ADR/alignment when the change touches a hard contract.
+5. Validate boundaries, diagnostics evidence, and release impact.
 
 ## Workflow
 
-### 1) Layering decision (non-negotiable)
+### 0) Read the relevant reference note first
+
+Use these notes to keep the main skill lean:
+
+- Contract changes, ADRs, diagnostics, perf gates, and refactors:
+  - `.agents/skills/fret-framework-maintainer-guide/references/contract-change-checklist.md`
+- Motion work, upstream reference mapping, and GPU-first translation notes:
+  - `.agents/skills/fret-framework-maintainer-guide/references/upstream-and-motion-notes.md`
+
+### 1) Decide the ownership layer (non-negotiable)
 
 Rule of thumb:
 
@@ -52,73 +61,27 @@ Rule of thumb:
 
 If the change is “interaction policy”, it almost never belongs in `crates/fret-ui`.
 
-### 1.5) Motion changes (feel + determinism)
+### 2) Lock the smallest repro + gate
 
-If you are changing motion/animation behavior (especially overlays, drawers, sidebars):
+- Prefer a smallest runnable surface first (demo/gallery/script).
+- Add at least one gate for any behavior change:
+  - unit test,
+  - diag script,
+  - perf gate/baseline.
+- Leave evidence anchors and exact commands so reviewers can reproduce the result quickly.
 
-- Optimize for “parity of outcomes” (timing, sequencing, interrupt/re-target rules), not “port the
-  DOM runtime”.
-- Keep authoring in wall-time (`Duration` / `durations_ms` theme tokens), not in “60fps ticks”.
-- Keep motion parameters themeable (durations/easings/springs) so ecosystems can tune “hand feel”
-  without editing code.
-- Require at least one deterministic diag gate under fixed delta:
-  - `fretboard diag run ... --fixed-frame-delta-ms 16`
-  - or `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`
-- Be explicit about the custom renderer differences:
-  - DOM `transform` affects hit-testing; in Fret, choose `RenderTransform` vs `VisualTransform`
-    intentionally to match pointer semantics.
+### 3) Update ADR + alignment when contracts change
 
-Recommended token shapes (current ecosystem direction):
+If the change touches input, focus, overlays, text, diagnostics, or other hard-to-change contracts:
 
-- shadcn recipes: durations + cubic-bezier easings + duration+bounce springs (Flutter-style).
-- Material 3: published tokens are damping ratio + stiffness (motion scheme).
-- Unification is optional; if we unify later, keep both shapes supported and provide a bridge.
+- update/add an ADR under `docs/adr/`, and
+- update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when the ADR is tracked there.
 
-### 2) Contract-first changes (ADRs + alignment)
+### 4) Hand off release-facing changes explicitly
 
-If you change a contract surface (input/focus/overlays/text/diagnostics):
+If the framework change affects publishable crates or release automation:
 
-- Update or add an ADR under `docs/adr/`.
-- If the ADR is already tracked, update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` with:
-  - `Aligned` / `Partially aligned` / `Not implemented`,
-  - 1–3 evidence anchors (paths + tests/scripts).
-
-### 3) Diagnostics and perf gates (evidence discipline)
-
-Treat diagnostics artifacts as first-class regression protection:
-
-- Correctness: `tools/diag-scripts/*.json` (schema v2 preferred) + `capture_bundle`.
-- Perf: `fretboard diag perf` suites or `tools/perf/*` gate scripts + worst bundle paths.
-- Attribution: `fretboard diag stats <bundle.json> --sort time --top 30` plus the exact failing metric/threshold key.
-
-Use `fret-diag-workflow` as the canonical runbook.
-
-### 4) Upstream alignment scope (Radix + shadcn + Base UI)
-
-Use `fret-shadcn-source-alignment` when you want parity work plus gates.
-
-Practical mapping:
-
-- **Radix**: semantics + state-machine outcomes (dismiss/focus/keyboard nav/placement).
-- **shadcn**: composition + taxonomy + sizing defaults (recipes).
-- **Base UI**: headless accessibility patterns and part composition (unstyled primitives, event/state flows).
-
-Use Base UI as an additional reference when DOM-centric assumptions need translating to Fret’s GPU-first
-custom renderer (semantics tree, hit-testing, focus routing, text/IME).
-
-### 5) Refactors (fearless, but gated)
-
-Before/after a refactor that may cross boundaries:
-
-- Run layering checks: `python3 tools/check_layering.py`
-- Add at least one gate for any behavior change (unit test or diag script).
-- If perf is in scope, record a perf gate run + worst bundles (commit-addressable evidence).
-
-### 6) Release-facing changes
-
-If the change affects publishable crates or release automation:
-
-- Use `fret-release-check-and-publish` for preflight checks and publish troubleshooting.
+- use `fret-release-check-and-publish` for preflight checks, version-group decisions, and CI publish troubleshooting.
 
 ## Definition of done (what to leave behind)
 
@@ -130,31 +93,31 @@ If the change affects publishable crates or release automation:
 ## Evidence anchors
 
 - Architecture/layering: `docs/architecture.md`, `docs/dependency-policy.md`
-- Motion foundation workstream: `docs/workstreams/motion-foundation-v1.md`
 - ADRs + alignment: `docs/adr/`, `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - Diagnostics/perf runbook: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 - Upstream parity: `.agents/skills/fret-shadcn-source-alignment/SKILL.md`
-- Base UI (upstream source + docs): https://github.com/mui/base-ui (see `packages/react/src/` and `docs/`)
+- This skill’s references:
+  - `.agents/skills/fret-framework-maintainer-guide/references/contract-change-checklist.md`
+  - `.agents/skills/fret-framework-maintainer-guide/references/upstream-and-motion-notes.md`
 
 ## Examples
 
 - Example: landing a contract change safely
   - User says: "We need to change input/focus behavior—how do we do it safely?"
-  - Actions: write/update the ADR, add a repro + gate + evidence anchors, then enforce boundaries.
-  - Result: a durable contract change that is reviewable.
+  - Actions: update the ADR, add a repro + gate + evidence anchors, then validate boundaries.
+  - Result: a durable contract change that is reviewable and reversible.
 
 ## Common pitfalls
 
-- Landing a behavior change without a gate (regressions return as human-only bugs).
+- Landing a behavior change without a gate.
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui`.
-- Not leaving worst bundle paths for perf work (attribution becomes non-deterministic).
-- Doing parity work without locking it with a test/script (drift returns quickly).
-- Tweaking motion “by feel” without fixed-delta diag gates (flake + no regression signal).
+- Doing parity work without locking it with a test/script.
+- Tweaking motion “by feel” without fixed-delta diag gates.
 
 ## Troubleshooting
 
 - Symptom: behavior change is hard to validate.
-  - Fix: add a minimal scripted repro (`tools/diag-scripts/`) and store the packed bundle as evidence.
+  - Fix: add a minimal scripted repro under `tools/diag-scripts/` and keep the packed bundle as evidence.
 - Symptom: refactor crosses multiple crates.
   - Fix: pull in `fret-boundary-checks` early to avoid portability regressions.
 
