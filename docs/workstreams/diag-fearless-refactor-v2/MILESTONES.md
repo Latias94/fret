@@ -34,7 +34,7 @@ Deliverables:
 
 Progress update:
 
-- `diag_suite` has now landed ten consecutive seam slices around post-run and result-summary orchestration:
+- `diag_suite` has now landed eleven consecutive seam slices around post-run and result-summary orchestration:
   - core default check planning,
   - editor/markdown/text default check planning,
   - explicit-or-policy post-run trigger planning,
@@ -44,10 +44,10 @@ Progress update:
   - failure finalization around stop/emit/return-exit paths,
   - tooling-failure handling around script-result writes plus row/finalize wiring,
   - script-outcome handling for failed/unexpected/lint-failed branches,
-  - per-script context assembly for stage/reason accounting plus evidence/lint preparation.
-- The next remaining high-ROI seam in this area is transport result decoding around `dump_label`,
-  `run_script_over_transport`, and `tooling.suite.error` fallback rather than re-expanding per-script
-  bookkeeping in `cmd_suite`.
+  - per-script context assembly for stage/reason accounting plus evidence/lint preparation,
+  - transport result decoding around `dump_label`, `run_script_over_transport`, and `tooling.suite.error` fallback.
+- The next remaining high-ROI seam in this area is script-execution block assembly for prewarm/
+  prelude/load-script wiring rather than re-expanding transport decoding in `cmd_suite`.
 
 Exit criteria:
 

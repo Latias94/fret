@@ -616,6 +616,146 @@ fn exit_for_suite_script_outcome(
     )
 }
 
+fn build_suite_transport_dump_label(src: &Path, idx: usize) -> String {
+    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
+    let mut sanitized: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    while sanitized.contains("--") {
+        sanitized = sanitized.replace("--", "-");
+    }
+    sanitized = sanitized.trim_matches('-').to_string();
+    if sanitized.is_empty() {
+        sanitized = "script".to_string();
+    }
+    let mut label = format!("suite-{idx:04}-{sanitized}");
+    if label.len() > 80 {
+        label.truncate(80);
+        label = label.trim_matches('-').to_string();
+    }
+    label
+}
+
+fn lower_suite_transport_script_result(
+    script_result: fret_diag_protocol::UiScriptResultV1,
+) -> crate::stats::ScriptResultSummary {
+    let stage = match script_result.stage {
+        fret_diag_protocol::UiScriptStageV1::Passed => "passed",
+        fret_diag_protocol::UiScriptStageV1::Failed => "failed",
+        fret_diag_protocol::UiScriptStageV1::Queued => "queued",
+        fret_diag_protocol::UiScriptStageV1::Running => "running",
+    };
+
+    crate::stats::ScriptResultSummary {
+        run_id: script_result.run_id,
+        stage: Some(stage.to_string()),
+        step_index: script_result.step_index.map(|n| n as u64),
+        reason_code: script_result.reason_code,
+        reason: script_result.reason,
+        last_bundle_dir: script_result.last_bundle_dir,
+    }
+}
+
+fn run_suite_script_over_transport_and_lower(
+    src: &Path,
+    idx: usize,
+    resolved_out_dir: &Path,
+    connected: &ConnectedToolingTransport,
+    script_json: serde_json::Value,
+    trace_chrome: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    script_result_path: &Path,
+    capabilities_check_path: &Path,
+    script_key: &str,
+) -> Result<crate::stats::ScriptResultSummary, String> {
+    let dump_label = build_suite_transport_dump_label(src, idx);
+    let (script_result, _bundle_path) = run_script_over_transport(
+        resolved_out_dir,
+        connected,
+        script_json,
+        true,
+        trace_chrome,
+        Some(dump_label.as_str()),
+        None,
+        timeout_ms,
+        poll_ms,
+        script_result_path,
+        capabilities_check_path,
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            script_result_path,
+            "tooling.run.failed",
+            err,
+            "tooling_error",
+            Some(script_key.to_string()),
+        );
+    })?;
+
+    Ok(lower_suite_transport_script_result(script_result))
+}
+
+fn resolve_suite_transport_error_reason_codes(
+    script_result_path: &Path,
+) -> (Option<String>, String) {
+    let tooling_reason_code = read_json_value(script_result_path).and_then(|v| {
+        v.get("reason_code")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    });
+    let error_reason_code = tooling_reason_code
+        .clone()
+        .unwrap_or_else(|| "tooling.suite.error".to_string());
+    (tooling_reason_code, error_reason_code)
+}
+
+fn finalize_suite_transport_result_error_and_return(
+    child: &mut Option<LaunchedDemo>,
+    stop_demo: bool,
+    resolved_exit_path: &Path,
+    poll_ms: u64,
+    summary_ctx: &SuiteSummaryContext<'_>,
+    stage_counts: &std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &std::collections::BTreeMap<String, u64>,
+    rows: &mut Vec<serde_json::Value>,
+    evidence_aggregate: &suite_summary::SuiteEvidenceAggregate,
+    script_key: &str,
+    script_result_path: &Path,
+    error: &str,
+) -> String {
+    let (tooling_reason_code, error_reason_code) =
+        resolve_suite_transport_error_reason_codes(script_result_path);
+    rows.push(build_suite_tooling_error_row(
+        Some(script_key),
+        "tooling.suite.error",
+        tooling_reason_code.as_deref(),
+        error,
+    ));
+    finalize_suite_failure_and_return(
+        child,
+        stop_demo,
+        resolved_exit_path,
+        poll_ms,
+        summary_ctx,
+        stage_counts,
+        reason_code_counts,
+        rows,
+        evidence_aggregate,
+        "error",
+        Some(error_reason_code.as_str()),
+        None,
+        "suite run failed (see suite.summary.json)",
+    )
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2424,94 +2564,25 @@ hint: list suites via `fretboard diag list suites`"
                 );
             }
 
-            // Always dump a bounded bundle for suite runs so lint and post-run checks can
-            // operate on a local artifact (parity across transports).
-            let dump_label = {
-                let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
-                let mut sanitized: String = stem
-                    .chars()
-                    .map(|c| {
-                        if c.is_ascii_alphanumeric() {
-                            c.to_ascii_lowercase()
-                        } else {
-                            '-'
-                        }
-                    })
-                    .collect();
-                while sanitized.contains("--") {
-                    sanitized = sanitized.replace("--", "-");
-                }
-                sanitized = sanitized.trim_matches('-').to_string();
-                if sanitized.is_empty() {
-                    sanitized = "script".to_string();
-                }
-                let mut label = format!("suite-{idx:04}-{sanitized}");
-                if label.len() > 80 {
-                    label.truncate(80);
-                    label = label.trim_matches('-').to_string();
-                }
-                label
-            };
-
-            let (script_result, _bundle_path) = run_script_over_transport(
+            Ok(run_suite_script_over_transport_and_lower(
+                &src,
+                idx,
                 &resolved_out_dir,
                 connected,
                 script_json,
-                true,
                 trace_chrome,
-                Some(dump_label.as_str()),
-                None,
                 timeout_ms,
                 poll_ms,
                 &resolved_script_result_path,
                 &capabilities_check_path,
-            )
-            .inspect_err(|err| {
-                write_tooling_failure_script_result_if_missing(
-                    &resolved_script_result_path,
-                    "tooling.run.failed",
-                    err,
-                    "tooling_error",
-                    Some(script_key.clone()),
-                );
-            })?;
-
-            let stage = match script_result.stage {
-                fret_diag_protocol::UiScriptStageV1::Passed => "passed",
-                fret_diag_protocol::UiScriptStageV1::Failed => "failed",
-                fret_diag_protocol::UiScriptStageV1::Queued => "queued",
-                fret_diag_protocol::UiScriptStageV1::Running => "running",
-            };
-
-            Ok(crate::stats::ScriptResultSummary {
-                run_id: script_result.run_id,
-                stage: Some(stage.to_string()),
-                step_index: script_result.step_index.map(|n| n as u64),
-                reason_code: script_result.reason_code.clone(),
-                reason: script_result.reason.clone(),
-                last_bundle_dir: script_result.last_bundle_dir.clone(),
-            })
+                script_key.as_str(),
+            )?)
         })();
 
         let result = match result {
             Ok(v) => v,
             Err(e) => {
-                let tooling_reason_code =
-                    read_json_value(&resolved_script_result_path).and_then(|v| {
-                        v.get("reason_code")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
-                    });
-                let error_reason_code = tooling_reason_code
-                    .clone()
-                    .unwrap_or_else(|| "tooling.suite.error".to_string());
-                suite_rows.push(build_suite_tooling_error_row(
-                    Some(script_key.as_str()),
-                    "tooling.suite.error",
-                    tooling_reason_code.as_deref(),
-                    &e,
-                ));
-                return Err(finalize_suite_failure_and_return(
+                return Err(finalize_suite_transport_result_error_and_return(
                     &mut child,
                     !keep_open,
                     &resolved_exit_path,
@@ -2519,12 +2590,11 @@ hint: list suites via `fretboard diag list suites`"
                     &summary_ctx,
                     &suite_stage_counts,
                     &suite_reason_code_counts,
-                    &suite_rows,
+                    &mut suite_rows,
                     &suite_evidence_agg,
-                    "error",
-                    Some(error_reason_code.as_str()),
-                    None,
-                    "suite run failed (see suite.summary.json)",
+                    script_key.as_str(),
+                    &resolved_script_result_path,
+                    &e,
                 ));
             }
         };
