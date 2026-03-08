@@ -566,6 +566,10 @@ real editors.
 - `paint_grid.rs` now routes tile scene-op generation through the private
   `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission and
   focused pattern tests no longer stay embedded in the retained grid cache/router surface.
+- `pointer_up_commit.rs` now routes node-drag release commit
+  assembly through the private `canvas/widget/pointer_up_node_drag.rs` seam and shares
+  pointer-capture teardown via `canvas/widget/pointer_up_finish.rs`, so retained
+  pointer-up finalize logic no longer stays duplicated across commit/pending reducers.
 
 ### Deliverables
 
@@ -639,6 +643,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

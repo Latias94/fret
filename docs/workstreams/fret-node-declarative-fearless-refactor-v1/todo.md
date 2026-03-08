@@ -503,6 +503,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission
     and focused pattern tests no longer stay embedded in the retained grid cache/router
     surface.
+  - Progress: `pointer_up_commit.rs` now routes node-drag release commit
+    assembly through the private `canvas/widget/pointer_up_node_drag.rs` seam and shares
+    pointer-capture teardown via `canvas/widget/pointer_up_finish.rs`, so retained
+    pointer-up finalize logic no longer stays duplicated across commit/pending reducers.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

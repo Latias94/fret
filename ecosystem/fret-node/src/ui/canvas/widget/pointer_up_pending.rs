@@ -13,7 +13,7 @@ pub(super) fn handle_pending_group_drag_release<H: UiHost, M: NodeGraphCanvasMid
         return false;
     }
 
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
     true
 }
 
@@ -25,7 +25,7 @@ pub(super) fn handle_pending_group_resize_release<H: UiHost, M: NodeGraphCanvasM
         return false;
     }
 
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
     true
 }
 
@@ -71,7 +71,7 @@ pub(super) fn handle_pending_node_drag_release<H: UiHost, M: NodeGraphCanvasMidd
         }
     }
 
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
     true
 }
 
@@ -83,7 +83,7 @@ pub(super) fn handle_pending_node_resize_release<H: UiHost, M: NodeGraphCanvasMi
         return false;
     }
 
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
     true
 }
 
@@ -107,12 +107,6 @@ pub(super) fn handle_pending_wire_drag_release<H: UiHost, M: NodeGraphCanvasMidd
         canvas.emit_connect_start(snapshot, &kind);
     }
 
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
     true
-}
-
-fn finish_pointer_up<H: UiHost>(cx: &mut fret_ui::retained_bridge::EventCx<'_, H>) {
-    cx.release_pointer_capture();
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
 }
