@@ -292,6 +292,8 @@ mod timer_motion_shared;
 mod timer_motion_viewport;
 mod toast;
 mod view_math;
+mod view_math_rect;
+mod view_math_viewport;
 mod view_state;
 mod viewport_timer_animation;
 mod viewport_timer_auto_pan;

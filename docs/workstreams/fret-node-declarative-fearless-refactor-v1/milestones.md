@@ -733,6 +733,10 @@ real editors.
   through the private `canvas/widget/paint_searcher_query.rs` and
   `canvas/widget/paint_searcher_rows.rs` seams, so retained searcher paint reducers
   no longer keep all query/list paint phases embedded in one surface.
+- `view_math.rs` now routes viewport/pan-zoom conversion helpers and
+  rect/hit/resize-handle geometry through the private
+  `canvas/widget/view_math_viewport.rs` and `canvas/widget/view_math_rect.rs` seams,
+  so retained view-math utilities no longer keep mixed viewport and hit geometry in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
