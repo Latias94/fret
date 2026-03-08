@@ -139,6 +139,8 @@ Defaults if unclear:
   - Escape hatch: pass `--env FRET_DIAG_ISOLATE_KEYBOARD_INPUT=0` if you intentionally need interactive keyboard input
     during a script run.
 
+## Workflow
+
 ## Quick start (native, recommended)
 
 Run a promoted script by `script_id` (no path required):
