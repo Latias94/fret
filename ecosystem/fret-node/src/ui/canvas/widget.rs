@@ -192,6 +192,8 @@ mod marquee_begin;
 mod marquee_finish;
 mod marquee_pending;
 mod marquee_selection;
+mod marquee_selection_apply;
+mod marquee_selection_query;
 mod menu_session;
 mod move_ops;
 mod node_drag;

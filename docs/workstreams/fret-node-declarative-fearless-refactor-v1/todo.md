@@ -648,6 +648,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/group_resize_apply.rs` and
     `canvas/widget/group_resize_hit.rs` seams, so retained group-resize reducers
     no longer keep geometry math and hit testing embedded in one surface.
+  - Progress: `marquee_selection.rs` now routes marquee query/edge-derivation
+    and selection-state writes through the private
+    `canvas/widget/marquee_selection_query.rs` and
+    `canvas/widget/marquee_selection_apply.rs` seams, so retained marquee reducers
+    no longer keep box-selection geometry and state writes embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
