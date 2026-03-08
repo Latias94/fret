@@ -10,11 +10,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         modifiers: fret_core::Modifiers,
         zoom: f32,
     ) {
-        self.interaction.last_modifiers = modifiers;
-        self.interaction.multi_selection_active = snapshot
-            .interaction
-            .multi_selection_key
-            .is_pressed(modifiers);
+        super::event_pointer_move_state::sync_pointer_move_modifier_state(
+            self, snapshot, modifiers,
+        );
 
         if pointer_move_release::handle_missing_pan_release(self, cx, position, buttons, modifiers)
         {
@@ -32,17 +30,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        if pointer_move_release::seed_or_update_last_pointer_state(self, position, modifiers) {
+        if super::event_pointer_move_state::seed_or_update_last_pointer_state(
+            self, position, modifiers,
+        ) {
             return;
         }
 
-        cursor::update_cursors(self, cx, snapshot, position, zoom);
-
-        pointer_move_dispatch::dispatch_pointer_move_handlers(
+        super::event_pointer_move_tail::dispatch_pointer_move_tail(
             self, cx, snapshot, position, buttons, modifiers, zoom,
         );
-
-        let snapshot = self.sync_view_state(cx.app);
-        self.sync_auto_pan_timer(cx.app, cx.window, &snapshot, cx.bounds);
     }
 }

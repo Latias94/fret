@@ -474,6 +474,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
     release synthesis and move arbitration no longer stay embedded in one retained pointer-move
     router.
+  - Progress: `event_pointer_move.rs` now routes modifier/multi-select state sync,
+    last-pointer seeding, and cursor/auto-pan tail work through the private
+    `canvas/widget/event_pointer_move_state.rs` and
+    `canvas/widget/event_pointer_move_tail.rs` seams, so retained pointer-move routing no
+    longer keeps move-state priming and tail post-dispatch sync embedded in one surface.
   - Progress: `event_pointer_wheel.rs` now routes wheel zoom / pan and pinch viewport
     motion through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so
     viewport-motion cancellation, wheel pan math, and pinch zoom math no longer stay

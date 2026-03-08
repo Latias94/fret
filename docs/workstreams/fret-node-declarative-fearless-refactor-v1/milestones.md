@@ -539,6 +539,11 @@ real editors.
   `canvas/widget/pointer_move_release.rs` and `canvas/widget/pointer_move_dispatch.rs` seams, so
   release synthesis and move arbitration no longer stay embedded in one retained pointer-move
   router.
+- `event_pointer_move.rs` now routes modifier/multi-select state sync,
+  last-pointer seeding, and cursor/auto-pan tail work through the private
+  `canvas/widget/event_pointer_move_state.rs` and
+  `canvas/widget/event_pointer_move_tail.rs` seams, so retained pointer-move routing no
+  longer keeps move-state priming and tail post-dispatch sync embedded in one surface.
 - `event_pointer_wheel.rs` now also routes wheel zoom / pan and pinch viewport motion
   through the private `canvas/widget/pointer_wheel_viewport.rs` seam, so viewport-motion
   cancellation, wheel pan math, and pinch zoom math no longer stay embedded in the retained
@@ -947,6 +952,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_pointer_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_left.rs`

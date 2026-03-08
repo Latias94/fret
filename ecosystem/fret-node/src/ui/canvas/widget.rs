@@ -140,6 +140,8 @@ mod event_pointer_down;
 mod event_pointer_down_route;
 mod event_pointer_down_state;
 mod event_pointer_move;
+mod event_pointer_move_state;
+mod event_pointer_move_tail;
 mod event_pointer_up;
 mod event_pointer_wheel;
 mod event_router;

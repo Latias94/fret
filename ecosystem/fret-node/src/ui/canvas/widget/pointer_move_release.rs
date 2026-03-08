@@ -36,13 +36,3 @@ pub(super) fn handle_missing_left_release<H: UiHost, M: NodeGraphCanvasMiddlewar
         canvas, cx, position, buttons, modifiers,
     )
 }
-
-pub(super) fn seed_or_update_last_pointer_state<M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    position: Point,
-    modifiers: fret_core::Modifiers,
-) -> bool {
-    super::pointer_move_pointer_state::seed_or_update_last_pointer_state(
-        canvas, position, modifiers,
-    )
-}
