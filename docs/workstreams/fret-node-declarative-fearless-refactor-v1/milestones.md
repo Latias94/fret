@@ -578,6 +578,14 @@ real editors.
   work through the private `canvas/widget/retained_widget_runtime.rs` seam, so
   style/skin/paint-override sync, text-input command deferral, middleware handoff, and
   middleware-handled redraw/invalidation no longer stay embedded in the main trait router.
+- `retained_widget_runtime.rs` now further routes retained command / event / paint
+  bridge work through the private
+  `canvas/widget/retained_widget_runtime_command.rs`,
+  `canvas/widget/retained_widget_runtime_event.rs`,
+  `canvas/widget/retained_widget_runtime_paint.rs`, and
+  `canvas/widget/retained_widget_runtime_shared.rs` seams, so runtime theme sync,
+  middleware context assembly, text-input command deferral, and handled invalidation no
+  longer stay embedded in one retained runtime surface.
 - `retained_widget.rs` now also routes command availability through the private
   `canvas/widget/retained_widget_command_availability.rs` seam, so clipboard capability
   gating and selection/content availability checks no longer stay embedded in the main
@@ -995,6 +1003,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_frame.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_command.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_snap.rs`

@@ -718,6 +718,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/command_router_nudge.rs` and
     `canvas/widget/command_router_align.rs` seams, so retained command routing no
     longer keeps repeated movement/alignment command tables embedded in one surface.
+  - Progress: `retained_widget_runtime.rs` now routes retained command/event/paint
+    bridge work through the private
+    `canvas/widget/retained_widget_runtime_command.rs`,
+    `canvas/widget/retained_widget_runtime_event.rs`,
+    `canvas/widget/retained_widget_runtime_paint.rs`, and
+    `canvas/widget/retained_widget_runtime_shared.rs` seams, so runtime theme sync,
+    middleware context assembly, text-input command deferral, and handled invalidation
+    no longer stay embedded in one retained runtime surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
