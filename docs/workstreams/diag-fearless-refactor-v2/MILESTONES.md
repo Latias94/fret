@@ -129,9 +129,13 @@ Progress update:
   - `write_campaign_share_manifest` now consumes a dedicated `CampaignShareManifestItems` aggregate instead of owning the per-item loop inline,
   - `build_campaign_share_manifest_item` now consumes a dedicated `CampaignShareManifestItemArtifacts` snapshot so artifact IO and run-entry shaping stop living in one block,
   - helper-level regression coverage now locks include-passed filtering, missing-bundle artifact handling, and pure run-entry shaping without executing a full campaign share flow.
+- `diag_campaign` has now landed another share-manifest seam around payload planning and finalize handoff:
+  - `write_campaign_share_manifest` now consumes a dedicated `CampaignShareManifestWritePlan` for initial payload/output-path planning,
+  - combined-failure zip update now routes through `finalize_campaign_share_manifest_write`,
+  - helper-level regression coverage now locks write-plan payload/output shaping and finalize-time combined-zip path recording without running a full campaign execution.
 - The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
-  follow-up is the remaining share/export artifact planning inside `build_campaign_share_manifest_item`
-  and adjacent share payload/materialization handoff before shifting to artifact materialization or
+  follow-up is the remaining share/export artifact planning adjacent to
+  `collect_campaign_share_manifest_item_artifacts` and share payload section shaping before shifting to artifact materialization or
   presentation-surface follow-up work.
 
 Exit criteria:

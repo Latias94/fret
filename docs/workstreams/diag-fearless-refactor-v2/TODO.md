@@ -100,6 +100,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - latest landing: `diag_campaign` now builds a dedicated `CampaignExecutionFinalizePlan`, so failure counting plus summary-finalize setup are settled before finalize IO rather than being re-derived inline inside `finalize_campaign_execution`
     - latest landing: `diag_campaign` now routes result normalization plus report construction through `build_campaign_execution_report_from_outcome_result`, so `execute_campaign` no longer rethreads that outcome/report handoff inline after startup execution returns
     - latest landing: `diag_campaign` now builds `CampaignShareManifestItems` plus `CampaignShareManifestItemArtifacts`, so `write_campaign_share_manifest` no longer owns the per-item aggregation loop inline and `build_campaign_share_manifest_item` now separates artifact IO from run-entry shaping with helper-level regression coverage
+    - latest landing: `diag_campaign` now builds a dedicated `CampaignShareManifestWritePlan` and finalizes it through a share-manifest handoff helper, so initial payload/output-path planning and combined-zip update no longer live inline in `write_campaign_share_manifest`
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.

@@ -128,6 +128,12 @@ struct CampaignBatchArtifactWritePlan {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignShareManifestWritePlan {
+    manifest_write: CampaignJsonWritePlan,
+    combined_entries: Vec<CampaignCombinedFailureEntry>,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignResultPayloadSections {
     run: serde_json::Value,
     counters: serde_json::Value,
@@ -1763,38 +1769,34 @@ fn write_campaign_share_manifest(
     std::fs::create_dir_all(&share_dir)
         .map_err(|e| format!("failed to create share dir {}: {}", share_dir.display(), e))?;
 
-    let share_items = build_campaign_share_manifest_items(
+    let mut write_plan = build_campaign_share_manifest_write_plan(
         &summary,
         root_dir,
+        summary_path,
+        workspace_root,
         &share_dir,
         include_passed,
         stats_top,
         warmup_frames,
     );
+    write_json_value(
+        &write_plan.manifest_write.output_path,
+        &write_plan.manifest_write.payload,
+    )?;
 
-    let share_manifest_path = share_dir.join("share.manifest.json");
-    let mut payload = build_campaign_share_manifest_payload(CampaignShareManifestPayloadRequest {
-        root_dir,
-        summary_path,
-        workspace_root,
-        share_dir: &share_dir,
-        summary: &summary,
-        include_passed,
-        counters: &share_items.counters,
-        run_entries: share_items.run_entries,
-    });
-    write_json_value(&share_manifest_path, &payload)?;
-
-    let combined_zip_outcome = write_campaign_combined_failure_zip(
+    finalize_campaign_share_manifest_write(
         root_dir,
         &share_dir,
-        &share_manifest_path,
         summary_path,
-        &share_items.combined_entries,
+        &write_plan.manifest_write.output_path,
+        &mut write_plan.manifest_write.payload,
+        &write_plan.combined_entries,
     );
-    apply_campaign_share_manifest_combined_zip(&mut payload, &combined_zip_outcome);
-    write_json_value(&share_manifest_path, &payload)?;
-    Ok(share_manifest_path)
+    write_json_value(
+        &write_plan.manifest_write.output_path,
+        &write_plan.manifest_write.payload,
+    )?;
+    Ok(write_plan.manifest_write.output_path)
 }
 
 fn write_campaign_combined_failure_zip(
@@ -2051,6 +2053,61 @@ fn build_campaign_share_manifest_payload(
         },
         "items": request.run_entries,
     })
+}
+
+fn build_campaign_share_manifest_write_plan(
+    summary: &RegressionSummaryV1,
+    root_dir: &Path,
+    summary_path: &Path,
+    workspace_root: &Path,
+    share_dir: &Path,
+    include_passed: bool,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> CampaignShareManifestWritePlan {
+    let share_items = build_campaign_share_manifest_items(
+        summary,
+        root_dir,
+        share_dir,
+        include_passed,
+        stats_top,
+        warmup_frames,
+    );
+
+    CampaignShareManifestWritePlan {
+        manifest_write: CampaignJsonWritePlan {
+            output_path: share_dir.join("share.manifest.json"),
+            payload: build_campaign_share_manifest_payload(CampaignShareManifestPayloadRequest {
+                root_dir,
+                summary_path,
+                workspace_root,
+                share_dir,
+                summary,
+                include_passed,
+                counters: &share_items.counters,
+                run_entries: share_items.run_entries,
+            }),
+        },
+        combined_entries: share_items.combined_entries,
+    }
+}
+
+fn finalize_campaign_share_manifest_write(
+    root_dir: &Path,
+    share_dir: &Path,
+    summary_path: &Path,
+    share_manifest_path: &Path,
+    payload: &mut serde_json::Value,
+    entries: &[CampaignCombinedFailureEntry],
+) {
+    let combined_zip_outcome = write_campaign_combined_failure_zip(
+        root_dir,
+        share_dir,
+        share_manifest_path,
+        summary_path,
+        entries,
+    );
+    apply_campaign_share_manifest_combined_zip(payload, &combined_zip_outcome);
 }
 
 fn build_campaign_share_manifest_items(
@@ -3426,6 +3483,101 @@ mod tests {
         assert_eq!(
             run_entry.get("error").and_then(|value| value.as_str()),
             Some("zip warning")
+        );
+    }
+
+    #[test]
+    fn build_campaign_share_manifest_write_plan_uses_output_path_payload_and_items() {
+        let root = temp_test_root("share-manifest-write-plan");
+        let share_dir = root.join("share");
+        std::fs::create_dir_all(&share_dir).expect("create share dir");
+        let summary_path =
+            root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+        let summary = sample_regression_summary(vec![
+            sample_regression_item_summary("passed-item", RegressionStatusV1::Passed, None),
+            sample_regression_item_summary(
+                "failed-item",
+                RegressionStatusV1::FailedDeterministic,
+                None,
+            ),
+        ]);
+
+        let write_plan = build_campaign_share_manifest_write_plan(
+            &summary,
+            &root,
+            &summary_path,
+            &root,
+            &share_dir,
+            false,
+            5,
+            0,
+        );
+
+        assert_eq!(
+            write_plan.manifest_write.output_path,
+            share_dir.join("share.manifest.json")
+        );
+        assert_eq!(
+            write_plan
+                .manifest_write
+                .payload
+                .pointer("/counters/items_selected")
+                .and_then(|value| value.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            write_plan
+                .manifest_write
+                .payload
+                .pointer("/items/0/item_id")
+                .and_then(|value| value.as_str()),
+            Some("failed-item")
+        );
+        assert_eq!(write_plan.combined_entries.len(), 1);
+        assert_eq!(write_plan.combined_entries[0].item_id, "failed-item");
+    }
+
+    #[test]
+    fn finalize_campaign_share_manifest_write_records_combined_zip_path() {
+        let root = temp_test_root("share-manifest-finalize");
+        let share_dir = root.join("share");
+        std::fs::create_dir_all(&share_dir).expect("create share dir");
+        let summary_path = root.join("regression.summary.json");
+        let share_manifest_path = share_dir.join("share.manifest.json");
+        let share_zip = share_dir.join("01-accordion-basic.ai.zip");
+        std::fs::write(&summary_path, b"{}" as &[u8]).expect("write summary");
+        std::fs::write(&share_manifest_path, b"{}" as &[u8]).expect("write manifest");
+        std::fs::write(&share_zip, b"zip" as &[u8]).expect("write share zip");
+        let mut payload = serde_json::json!({
+            "share": {
+                "combined_zip": serde_json::Value::Null,
+                "combined_zip_error": serde_json::Value::Null,
+            }
+        });
+
+        finalize_campaign_share_manifest_write(
+            &root,
+            &share_dir,
+            &summary_path,
+            &share_manifest_path,
+            &mut payload,
+            &[CampaignCombinedFailureEntry {
+                item_id: "accordion-basic".to_string(),
+                share_zip: Some(share_zip),
+                triage_path: None,
+                screenshots_manifest: None,
+            }],
+        );
+
+        let combined_zip = payload
+            .pointer("/share/combined_zip")
+            .and_then(|value| value.as_str())
+            .expect("combined zip path");
+        assert!(PathBuf::from(combined_zip).is_file());
+        assert!(
+            payload
+                .pointer("/share/combined_zip_error")
+                .is_some_and(|value| value.is_null())
         );
     }
 
