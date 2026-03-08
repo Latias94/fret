@@ -138,9 +138,12 @@ Progress update:
   - triage/screenshot collection now routes through a dedicated supporting-artifacts helper,
   - AI-packet/share-zip planning now routes through a dedicated share-zip helper,
   - helper-level regression coverage now locks evidence-path resolution, reuse of existing triage/screenshots artifacts, and missing-bundle share-zip error handling directly.
+- `diag_campaign` has now landed another share-manifest seam around payload section shaping:
+  - `build_campaign_share_manifest_payload` now consumes dedicated source/selection/counters/share sections,
+  - helper-level regression coverage now locks section-level field shaping without going through the full write-plan path.
 - The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
-  follow-up is the remaining share payload section shaping and any last materialization holdouts around
-  `build_campaign_share_manifest_payload` before shifting to artifact materialization or
+  follow-up is the remaining final materialization/update holdouts around share payload mutation and
+  artifact handoff before shifting to artifact materialization or
   presentation-surface follow-up work.
 
 Exit criteria:
