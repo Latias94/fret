@@ -621,6 +621,10 @@ real editors.
   `canvas/widget/focus_nav_ports_hints.rs`, `canvas/widget/focus_nav_ports_center.rs`, and
   `canvas/widget/focus_nav_ports_activation.rs` seams, so retained focused-port reducers no
   longer stay embedded in one mixed surface.
+- `paint_grid.rs` now routes grid paint planning, tile-cache warmup, and cache
+  stats publication through the private `canvas/widget/paint_grid_plan.rs`,
+  `canvas/widget/paint_grid_cache.rs`, and `canvas/widget/paint_grid_stats.rs` seams,
+  so retained grid-paint orchestration no longer stays embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -775,6 +779,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_cache.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_stats.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu.rs`

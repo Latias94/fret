@@ -558,6 +558,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/focus_nav_ports_hints.rs`, `canvas/widget/focus_nav_ports_center.rs`, and
     `canvas/widget/focus_nav_ports_activation.rs` seams, so retained focused-port reducers no
     longer stay embedded in one mixed surface.
+  - Progress: `paint_grid.rs` now routes grid paint planning, tile-cache warmup, and
+    cache stats publication through the private `canvas/widget/paint_grid_plan.rs`,
+    `canvas/widget/paint_grid_cache.rs`, and `canvas/widget/paint_grid_stats.rs` seams,
+    so retained grid-paint orchestration no longer stays embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
