@@ -178,7 +178,9 @@ Check script library drift (taxonomy + redirects + registry):
 
 - `cargo run -p fretboard -- diag doctor scripts`
 
-## Choose a transport
+## Workflow
+
+### 1) Choose a transport
 
 - Native (filesystem-trigger; recommended for day-to-day):
   - Run: `fretboard diag run ... --launch -- <cmd>`
@@ -186,7 +188,7 @@ Check script library drift (taxonomy + redirects + registry):
   - Export: `cargo run -p fret-diag-export -- --script tools/diag-scripts/<script>.json --token <token>`
   - See: `references/web-runner.md`
 
-## Authoring a script (v2-first)
+### 2) Authoring a script (v2-first)
 
 1. Prefer schema v2 for new scripts (more intent-level steps; less flake).
 2. Use stable semantics selectors (`test_id`) rather than pixel coordinates.
@@ -200,7 +202,7 @@ Check script library drift (taxonomy + redirects + registry):
 Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` on pointer-driven steps (capability-gated).
 Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 
-## Run + share artifacts (small-by-default)
+### 3) Run + share artifacts (small-by-default)
 
 - Run one script:
   - `fretboard diag run <script.json|script_id> --launch -- <cmd>`
@@ -219,7 +221,7 @@ Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 - Validate a run directory quickly:
   - `fretboard diag artifact lint <run_dir|manifest.json|script.result.json>`
 
-## Triage without grepping bundle.json
+### 4) Triage without grepping `bundle.json`
 
 Prefer bounded queries over `rg bundle.json`:
 
