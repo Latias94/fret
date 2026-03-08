@@ -213,6 +213,8 @@ mod paint_overlay_elements;
 mod paint_overlay_feedback;
 mod paint_overlay_guides;
 mod paint_overlay_menu;
+mod paint_overlay_toast;
+mod paint_overlay_wire_hint;
 mod paint_overlays;
 mod paint_render_data;
 mod paint_root;

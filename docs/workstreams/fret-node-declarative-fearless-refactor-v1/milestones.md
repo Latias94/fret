@@ -691,6 +691,11 @@ real editors.
   removed-selection cleanup through the private
   `canvas/widget/command_edit_remove.rs` seam, so retained edit command
   reducers no longer keep destructive edit flows embedded in one surface.
+- `paint_overlay_feedback.rs` now routes toast overlay painting and
+  wire-drag hint painting through the private
+  `canvas/widget/paint_overlay_toast.rs` and
+  `canvas/widget/paint_overlay_wire_hint.rs` seams, so retained overlay
+  feedback paint helpers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -803,6 +808,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints_extent.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_edit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_edit_remove.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_feedback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_toast.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_wire_hint.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`
