@@ -2201,6 +2201,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-extras-multiple-compact-layout",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-multiple-compact-layout.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "accordion",
+        "extras",
+        "layout",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
       "required_capabilities": [],

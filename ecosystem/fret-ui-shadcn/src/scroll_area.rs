@@ -60,6 +60,7 @@ pub struct ScrollAreaViewport {
     axis: ScrollAxis,
     probe_unbounded: bool,
     viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
     focus_ring: bool,
     focus_ring_radius: Option<Px>,
     intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
@@ -73,6 +74,7 @@ impl ScrollAreaViewport {
             axis: ScrollAxis::Y,
             probe_unbounded: true,
             viewport_test_id: None,
+            viewport_focus_test_id: None,
             focus_ring: true,
             focus_ring_radius: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
@@ -91,6 +93,12 @@ impl ScrollAreaViewport {
 
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    /// Optional automation anchor for the focusable wrapper used to paint the viewport focus ring.
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
         self
     }
 
@@ -285,6 +293,7 @@ impl ScrollAreaRoot {
                 axis: viewport_axis,
                 probe_unbounded: viewport_probe_unbounded,
                 viewport_test_id,
+                viewport_focus_test_id,
                 focus_ring: viewport_focus_ring,
                 focus_ring_radius: viewport_focus_ring_radius,
                 intrinsic_measure_mode,
@@ -358,6 +367,10 @@ impl ScrollAreaRoot {
                     },
                     move |_cx| viewport_children,
                 );
+                let scroll = match viewport_test_id.clone() {
+                    Some(test_id) => scroll.test_id(test_id),
+                    None => scroll,
+                };
 
                 let scroll_id = scroll.id;
                 let viewport = if viewport_focus_ring {
@@ -390,7 +403,7 @@ impl ScrollAreaRoot {
                                 vec![viewport_scroll]
                             },
                         );
-                        if let Some(test_id) = viewport_test_id.clone() {
+                        if let Some(test_id) = viewport_focus_test_id.clone() {
                             semantics = semantics.test_id(test_id);
                         }
                         (id_out.get().expect("viewport semantics id"), semantics)
@@ -439,10 +452,7 @@ impl ScrollAreaRoot {
                         move |_cx| vec![viewport_semantics],
                     )
                 } else {
-                    match viewport_test_id {
-                        Some(test_id) => scroll.test_id(test_id),
-                        None => scroll,
-                    }
+                    scroll
                 };
 
                 let mut children = vec![viewport];
@@ -677,6 +687,7 @@ pub struct ScrollArea {
     layout: LayoutRefinement,
     scroll_handle: Option<ScrollHandle>,
     viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
 }
 
@@ -694,6 +705,7 @@ impl ScrollArea {
             layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
             viewport_test_id: None,
+            viewport_focus_test_id: None,
             viewport_intrinsic_measure_mode: None,
         }
     }
@@ -737,6 +749,11 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
+        self
+    }
+
     pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
         self.viewport_intrinsic_measure_mode = Some(mode);
         self
@@ -747,6 +764,9 @@ impl ScrollArea {
         let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
         if let Some(test_id) = self.viewport_test_id {
             viewport = viewport.viewport_test_id(test_id);
+        }
+        if let Some(test_id) = self.viewport_focus_test_id {
+            viewport = viewport.viewport_focus_test_id(test_id);
         }
         if let Some(mode) = self.viewport_intrinsic_measure_mode {
             viewport = viewport.intrinsic_measure_mode(mode);
@@ -1008,6 +1028,7 @@ mod tests {
                     let el = ScrollArea::new([cx.text("Row")])
                         .refine_layout(LayoutRefinement::default().size_full())
                         .viewport_test_id("sa.viewport")
+                        .viewport_focus_test_id("sa.viewport.focus")
                         .into_element(cx);
                     let (alpha, always_paint) =
                         find_scroll_area_viewport_ring_alpha_and_always_paint(&el)
@@ -1057,7 +1078,7 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let viewport = node_id_by_test_id(&snap, "sa.viewport");
+        let viewport = node_id_by_test_id(&snap, "sa.viewport.focus");
         ui.set_focus(Some(viewport));
 
         // Frame 2: focused => alpha tweens in (intermediate) and always-paint should be active while animating.

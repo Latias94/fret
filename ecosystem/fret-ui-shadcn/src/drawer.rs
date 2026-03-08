@@ -1591,16 +1591,18 @@ mod tests {
             |cx| {
                 let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
 
-                vec![Drawer::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(DrawerPortal::new())
-                    .overlay(DrawerOverlay::new())
-                    .content_with(|cx| {
-                        let close = DrawerClose::from_scope().into_element(cx);
-                        DrawerContent::new(vec![close]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                vec![
+                    Drawer::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(DrawerPortal::new())
+                        .overlay(DrawerOverlay::new())
+                        .content_with(|cx| {
+                            let close = DrawerClose::from_scope().into_element(cx);
+                            DrawerContent::new(vec![close]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
