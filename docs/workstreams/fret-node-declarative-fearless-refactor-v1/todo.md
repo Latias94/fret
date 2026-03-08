@@ -516,6 +516,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     directional port navigation through the private `canvas/widget/focus_edge_repair.rs`,
     `canvas/widget/focus_draw_order.rs`, and `canvas/widget/focus_port_direction.rs` seams,
     so retained focus-maintenance helpers no longer stay embedded in one mixed utility surface.
+  - Progress: `callbacks.rs` now routes graph commit/delete dispatch, connect lifecycle
+    callbacks, and viewport/node-drag/view-change emissions through the private
+    `canvas/widget/callbacks_graph.rs`, `canvas/widget/callbacks_connect.rs`, and
+    `canvas/widget/callbacks_view.rs` seams, so retained callback orchestration no longer stays
+    embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -579,6 +579,11 @@ real editors.
   directional port navigation through the private `canvas/widget/focus_edge_repair.rs`,
   `canvas/widget/focus_draw_order.rs`, and `canvas/widget/focus_port_direction.rs` seams,
   so retained focus-maintenance helpers no longer stay embedded in one mixed utility surface.
+- `callbacks.rs` now routes graph commit/delete dispatch, connect lifecycle
+  callbacks, and viewport/node-drag/view-change emissions through the private
+  `canvas/widget/callbacks_graph.rs`, `canvas/widget/callbacks_connect.rs`, and
+  `canvas/widget/callbacks_view.rs` seams, so retained callback orchestration no longer stays
+  embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -641,6 +646,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/item_builders.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/callbacks.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/callbacks_connect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/callbacks_graph.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/callbacks_view.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
