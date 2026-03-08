@@ -1,7 +1,5 @@
 use fret_ui::UiHost;
 
-use crate::ops::GraphOp;
-
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
@@ -15,45 +13,13 @@ pub(super) fn handle_node_resize_release<H: UiHost, M: NodeGraphCanvasMiddleware
 
     canvas.interaction.pending_node_resize = None;
 
-    let end_pos = resize.current_node_pos;
-    let end_size = resize.current_size_opt;
-
-    let mut ops: Vec<GraphOp> = Vec::new();
-    if resize.start_node_pos != end_pos {
-        ops.push(GraphOp::SetNodePos {
-            id: resize.node,
-            from: resize.start_node_pos,
-            to: end_pos,
-        });
-    }
-    if resize.start_size_opt != end_size {
-        ops.push(GraphOp::SetNodeSize {
-            id: resize.node,
-            from: resize.start_size_opt,
-            to: end_size,
-        });
-    }
-
-    let group_rect_ops: Vec<GraphOp> = canvas
+    let ops = canvas
         .graph
         .read_ref(cx.app, |graph| {
-            resize
-                .current_groups
-                .iter()
-                .filter_map(|(id, to)| {
-                    let from = graph.groups.get(id).map(|g| g.rect)?;
-                    (from != *to).then_some(GraphOp::SetGroupRect {
-                        id: *id,
-                        from,
-                        to: *to,
-                    })
-                })
-                .collect()
+            super::pointer_up_commit_resize::build_node_resize_ops(&resize, graph)
         })
         .ok()
         .unwrap_or_default();
-    ops.extend(group_rect_ops);
-
     if !ops.is_empty() {
         let _ = canvas.commit_ops(cx.app, cx.window, Some("Resize Node"), ops);
     }
@@ -72,18 +38,9 @@ pub(super) fn handle_group_resize_release<H: UiHost, M: NodeGraphCanvasMiddlewar
 
     canvas.interaction.pending_group_resize = None;
 
-    let end = resize.current_rect;
-    if end != resize.start_rect {
-        let _ = canvas.commit_ops(
-            cx.app,
-            cx.window,
-            Some("Resize Group"),
-            vec![GraphOp::SetGroupRect {
-                id: resize.group,
-                from: resize.start_rect,
-                to: end,
-            }],
-        );
+    let ops = super::pointer_up_commit_resize::build_group_resize_ops(&resize);
+    if !ops.is_empty() {
+        let _ = canvas.commit_ops(cx.app, cx.window, Some("Resize Group"), ops);
     }
 
     super::pointer_up_finish::finish_pointer_up(cx);
@@ -100,32 +57,7 @@ pub(super) fn handle_group_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>
 
     canvas.interaction.pending_group_drag = None;
 
-    let mut ops: Vec<GraphOp> = Vec::new();
-    let end_rect = drag.current_rect;
-    if end_rect != drag.start_rect {
-        ops.push(GraphOp::SetGroupRect {
-            id: drag.group,
-            from: drag.start_rect,
-            to: end_rect,
-        });
-    }
-
-    for (id, start) in &drag.nodes {
-        let end = drag
-            .current_nodes
-            .iter()
-            .find(|(node_id, _)| node_id == id)
-            .map(|(_, p)| *p)
-            .unwrap_or(*start);
-        if end != *start {
-            ops.push(GraphOp::SetNodePos {
-                id: *id,
-                from: *start,
-                to: end,
-            });
-        }
-    }
-
+    let ops = super::pointer_up_commit_group_drag::build_group_drag_ops(&drag);
     if !ops.is_empty() {
         let _ = canvas.commit_ops(cx.app, cx.window, Some("Move Group"), ops);
     }

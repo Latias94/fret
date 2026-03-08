@@ -724,6 +724,11 @@ real editors.
   cursor resolution through the private `canvas/widget/cursor_gate.rs` and
   `canvas/widget/cursor_resolve.rs` seams, so retained cursor reducers
   no longer keep cursor eligibility checks and hit resolution embedded in one surface.
+- `pointer_up_commit.rs` now routes node/group resize commit op assembly
+  and group-drag release ops through the private
+  `canvas/widget/pointer_up_commit_resize.rs` and
+  `canvas/widget/pointer_up_commit_group_drag.rs` seams, so retained pointer-up reducers
+  no longer keep multiple commit builders embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
