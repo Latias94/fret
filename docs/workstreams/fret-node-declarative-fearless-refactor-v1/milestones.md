@@ -560,6 +560,9 @@ real editors.
   the private `canvas/widget/node_drag_snap.rs` and
   `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
   node/group projection no longer stay embedded in the retained drag router.
+- `node_drag.rs` now also routes anchor clamp / extent union / multi-drag
+  extent clamp math through the private `canvas/widget/node_drag_constraints.rs` seam,
+  so node/group constraint math no longer stays embedded in the retained drag router.
 
 ### Deliverables
 
@@ -630,6 +633,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_snap.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

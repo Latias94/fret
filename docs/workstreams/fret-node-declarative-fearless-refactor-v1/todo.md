@@ -495,6 +495,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     through the private `canvas/widget/node_drag_snap.rs` and
     `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
     node/group projection no longer stay embedded in the retained drag router.
+  - Progress: `node_drag.rs` now also routes anchor clamp / extent union /
+    multi-drag extent clamp math through the private
+    `canvas/widget/node_drag_constraints.rs` seam, so node/group constraint math no longer
+    stays embedded in the retained drag router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

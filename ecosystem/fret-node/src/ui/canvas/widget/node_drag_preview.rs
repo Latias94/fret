@@ -46,7 +46,7 @@ pub(super) fn compute_preview_positions<H: UiHost, M: NodeGraphCanvasMiddleware>
                 };
 
                 if !multi_drag && let Some(extent) = snapshot.interaction.node_extent {
-                    target = super::node_drag::clamp_anchor_in_rect_with_size(
+                    target = super::node_drag_constraints::clamp_anchor_in_rect_with_size(
                         target,
                         node_size,
                         extent,
@@ -55,7 +55,7 @@ pub(super) fn compute_preview_positions<H: UiHost, M: NodeGraphCanvasMiddleware>
                 }
 
                 if let Some(NodeExtent::Rect { rect }) = node.extent {
-                    target = super::node_drag::clamp_anchor_in_rect_with_size(
+                    target = super::node_drag_constraints::clamp_anchor_in_rect_with_size(
                         target,
                         node_size,
                         rect,
@@ -72,7 +72,7 @@ pub(super) fn compute_preview_positions<H: UiHost, M: NodeGraphCanvasMiddleware>
                         };
 
                     if clamp_to_parent && let Some(group_rect) = parent_rect {
-                        target = super::node_drag::clamp_anchor_in_rect_with_size(
+                        target = super::node_drag_constraints::clamp_anchor_in_rect_with_size(
                             target,
                             node_size,
                             group_rect,
@@ -85,10 +85,12 @@ pub(super) fn compute_preview_positions<H: UiHost, M: NodeGraphCanvasMiddleware>
                             origin: rect_origin,
                             size: node_size,
                         };
-                        let next = super::node_drag::union_rect(group_rect, child_rect);
+                        let next = super::node_drag_constraints::union_rect(group_rect, child_rect);
                         group_overrides
                             .entry(parent)
-                            .and_modify(|rect| *rect = super::node_drag::union_rect(*rect, next))
+                            .and_modify(|rect| {
+                                *rect = super::node_drag_constraints::union_rect(*rect, next)
+                            })
                             .or_insert(next);
                     }
                 }
