@@ -10,23 +10,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         modifiers: fret_core::Modifiers,
         zoom: f32,
     ) {
-        pointer_wheel_viewport::stop_scroll_viewport_motion(self, cx, snapshot);
-        self.interaction.last_modifiers = modifiers;
-        self.interaction.multi_selection_active = snapshot
-            .interaction
-            .multi_selection_key
-            .is_pressed(modifiers);
-        if searcher::handle_searcher_wheel(self, cx, delta, modifiers, zoom) {
-            return;
-        }
-
-        if pointer_wheel_viewport::handle_scroll_zoom(
+        super::event_pointer_wheel_state::sync_pointer_wheel_modifier_state(
+            self, snapshot, modifiers,
+        );
+        super::event_pointer_wheel_route::route_pointer_wheel(
             self, cx, snapshot, position, delta, modifiers, zoom,
-        ) {
-            return;
-        }
-
-        let _ = pointer_wheel_viewport::handle_scroll_pan(self, cx, snapshot, delta, modifiers);
+        );
     }
 
     pub(super) fn handle_pinch_gesture<H: UiHost>(
@@ -36,7 +25,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         position: Point,
         delta: f32,
     ) {
-        pointer_wheel_viewport::stop_pinch_viewport_motion(self, cx, snapshot);
-        let _ = pointer_wheel_viewport::handle_pinch_zoom(self, cx, snapshot, position, delta);
+        super::event_pointer_wheel_route::route_pinch_gesture(self, cx, snapshot, position, delta);
     }
 }

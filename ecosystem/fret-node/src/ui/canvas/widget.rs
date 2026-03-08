@@ -144,6 +144,8 @@ mod event_pointer_move_state;
 mod event_pointer_move_tail;
 mod event_pointer_up;
 mod event_pointer_wheel;
+mod event_pointer_wheel_route;
+mod event_pointer_wheel_state;
 mod event_router;
 mod event_timer;
 mod focus;
