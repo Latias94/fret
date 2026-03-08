@@ -278,25 +278,12 @@ pub(crate) fn resolve_bundle_input_or_latest(
     src: &Path,
     default_out_dir: &Path,
 ) -> Result<ResolvedBundleInput, String> {
-    let source_path = if src.as_os_str().is_empty() {
-        super::args::resolve_latest_bundle_dir_path(default_out_dir).map_err(|_err| {
-            format!(
-                "no diagnostics bundle found under {}",
-                default_out_dir.display()
-            )
-        })?
-    } else {
-        src.to_path_buf()
-    };
-
-    let source_path = resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&source_path)?;
-    let bundle_dir = crate::resolve_bundle_root_dir(&source_path)?;
-    let bundle_artifact = crate::resolve_bundle_artifact_path(&bundle_dir);
-    let artifacts_root = if bundle_dir.starts_with(default_out_dir) {
-        default_out_dir.to_path_buf()
-    } else {
-        bundle_dir.parent().unwrap_or(default_out_dir).to_path_buf()
-    };
+    let source_path = resolve_bundle_source_path_or_latest(src, default_out_dir)?;
+    let ResolvedBundleRef {
+        bundle_dir,
+        bundle_artifact,
+    } = resolve_bundle_ref_from_source_path(&source_path)?;
+    let artifacts_root = resolve_bundle_artifacts_root(&bundle_dir, default_out_dir);
 
     Ok(ResolvedBundleInput {
         bundle_dir,
@@ -305,14 +292,42 @@ pub(crate) fn resolve_bundle_input_or_latest(
     })
 }
 
-pub(crate) fn resolve_bundle_ref(src: &Path) -> Result<ResolvedBundleRef, String> {
-    let src = resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(src)?;
-    let bundle_dir = crate::resolve_bundle_root_dir(&src)?;
+fn resolve_bundle_source_path_or_latest(
+    src: &Path,
+    default_out_dir: &Path,
+) -> Result<PathBuf, String> {
+    if src.as_os_str().is_empty() {
+        super::args::resolve_latest_bundle_dir_path(default_out_dir).map_err(|_err| {
+            format!(
+                "no diagnostics bundle found under {}",
+                default_out_dir.display()
+            )
+        })
+    } else {
+        Ok(src.to_path_buf())
+    }
+}
+
+fn resolve_bundle_ref_from_source_path(src: &Path) -> Result<ResolvedBundleRef, String> {
+    let resolved_source = resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(src)?;
+    let bundle_dir = crate::resolve_bundle_root_dir(&resolved_source)?;
     let bundle_artifact = crate::resolve_bundle_artifact_path(&bundle_dir);
     Ok(ResolvedBundleRef {
         bundle_dir,
         bundle_artifact,
     })
+}
+
+fn resolve_bundle_artifacts_root(bundle_dir: &Path, default_out_dir: &Path) -> PathBuf {
+    if bundle_dir.starts_with(default_out_dir) {
+        default_out_dir.to_path_buf()
+    } else {
+        bundle_dir.parent().unwrap_or(default_out_dir).to_path_buf()
+    }
+}
+
+pub(crate) fn resolve_bundle_ref(src: &Path) -> Result<ResolvedBundleRef, String> {
+    resolve_bundle_ref_from_source_path(src)
 }
 
 fn resolve_session_out_dir_for_base_dir(
@@ -582,6 +597,37 @@ mod tests {
         assert_eq!(resolved.bundle_dir, bundle_dir);
         assert_eq!(resolved.bundle_artifact, bundle_dir.join("bundle.json"));
         assert_eq!(resolved.artifacts_root, root);
+    }
+
+    #[test]
+    fn resolve_bundle_artifacts_root_prefers_default_out_dir_for_nested_bundle() {
+        let default_out_dir = Path::new("target/fret-diag/session-1");
+        let bundle_dir = default_out_dir.join("123-bundle");
+
+        let root = resolve_bundle_artifacts_root(&bundle_dir, default_out_dir);
+
+        assert_eq!(root, default_out_dir);
+    }
+
+    #[test]
+    fn resolve_bundle_artifacts_root_uses_parent_for_external_bundle() {
+        let default_out_dir = Path::new("target/fret-diag/session-1");
+        let bundle_dir = PathBuf::from("captures/123-bundle");
+
+        let root = resolve_bundle_artifacts_root(&bundle_dir, default_out_dir);
+
+        assert_eq!(root, PathBuf::from("captures"));
+    }
+
+    #[test]
+    fn resolve_bundle_source_path_or_latest_returns_src_when_present() {
+        let src = Path::new("captures/123-bundle");
+        let out_dir = Path::new("target/fret-diag/session-1");
+
+        let resolved =
+            resolve_bundle_source_path_or_latest(src, out_dir).expect("resolve source path");
+
+        assert_eq!(resolved, src);
     }
 
     #[test]

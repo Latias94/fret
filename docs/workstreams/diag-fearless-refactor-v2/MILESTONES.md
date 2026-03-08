@@ -81,12 +81,13 @@ Progress update:
   - share-manifest counters now use a named mergeable struct instead of ad hoc local integers,
   - combined failure zip staging now uses a named entry shape instead of an anonymous tuple,
   - final manifest payload assembly and combined-zip update now route through dedicated helpers plus a named outcome shape.
-- `commands/resolve` has now landed another artifact-resolution seam around `diag resolve latest`, session selection, and script-result search-start normalization:
+- `commands/resolve` has now landed another artifact-resolution seam around `diag resolve latest`, session selection, script-result search-start normalization, and shared bundle resolution:
   - option parsing now routes through a dedicated pure helper,
   - JSON and text projections now route through dedicated render helpers,
   - target session-id selection plus existing-session directory validation now route through dedicated helpers,
   - `resolve_script_result_json_path_or_latest` now routes latest-vs-src search-start selection through dedicated helpers,
-  - helper-level regression coverage now locks the command output shape plus session-selection/search-start behavior without relying on stdout capture.
+  - `resolve_bundle_input_or_latest` / `resolve_bundle_ref` now route source-path selection, bundle-ref derivation, and artifacts-root policy through dedicated helpers,
+  - helper-level regression coverage now locks the command output shape plus session-selection/search-start/bundle-root policy behavior without relying on stdout capture.
 - `commands::artifacts` plus `commands/artifact.rs` have now landed another artifact-resolution seam cluster around `cmd_pack`, `cmd_meta`, `cmd_lint`, `cmd_triage`, and `cmd_artifact_lint`:
   - bundle/source resolution and user-facing error hinting now route through dedicated setup helpers,
   - default output path selection now routes through pure helpers,
@@ -97,7 +98,7 @@ Progress update:
   - `cmd_artifact_lint` now routes artifact-dir/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing a dedicated write helper,
   - helper-level regression coverage now locks the AI-only output-path policy, shared input validation paths, meta-report line shape, lint exit predicate, triage lite out-path policy, tooling-warning attachment behavior, artifact-lint out-path policy, and artifact-dir normalization for `_root` manifests.
 - The next decision point in this area is whether any further `diag_run` slicing is worth it, or whether
-  the higher-ROI seam has now shifted to the remaining bundle-ref/input normalization helpers in `commands/resolve`.
+  the higher-ROI seam has now shifted away from `commands/resolve` toward `diag_campaign` or another artifact/materialization holdout.
 
 Exit criteria:
 
