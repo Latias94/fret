@@ -549,6 +549,11 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: a short decision draft with rationale, staged execution, and exit criteria before deprecation starts.
   - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now recommends `view::<V>()` / `view_with_hooks::<V>(...)` as the only default app-entry path, while `ui(...)` / `ui_with_hooks(...)` are treated as temporary advanced bridge surfaces on a path to future deprecation/removal once advanced demo migration is complete.
 
+- [x] AFA-postv1-011 Inventory the remaining in-tree `App::ui*` callers against the app-entry policy draft.
+  - Goal: turn the app-entry policy into a concrete migration table instead of a generic “later cleanup” note.
+  - Evidence target: one inventory that classifies each current `ui(...)` / `ui_with_hooks(...)` caller as `migrate-to-view`, `move-lower-level`, or `keep-temporarily`.
+  - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now classifies the current in-tree callers; the present conclusion is that almost all of them are `migrate-to-view` debt rather than evidence that closure-root app entry should remain a co-equal long-term surface.
+
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.
   - Evidence target: remove one of the remaining `simple_todo_v2_target` noise points in a migrated example or short design note.

@@ -1,0 +1,125 @@
+# Action-First Authoring + View Runtime (Fearless Refactor v1) — App Entry Caller Inventory
+
+Last updated: 2026-03-08
+
+This inventory turns the app-entry policy draft into an execution list.
+
+Scope:
+
+- public `fret::App::ui(...)`
+- public `fret::App::ui_with_hooks(...)`
+- direct in-tree consumers that still rely on those surfaces
+
+Non-scope:
+
+- builder/patch `.ui()` on composed widgets (`Card::build(...).ui()`, etc.)
+- lower-level `run_native_with_compat_driver(...)` consumers (tracked separately in `HARD_DELETE_GAP_ANALYSIS.md`)
+- internal constructor/forwarder methods that define the API but are not end-user call sites
+
+Decision context:
+
+- Policy draft: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
+- Hard-delete blockers: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
+
+---
+
+## Classification labels
+
+- `migrate-to-view` — should move to `App::view::<V>()` or `App::view_with_hooks::<V>(...)`
+- `move-lower-level` — should likely stop using the facade entry API and drop to bootstrap/driver-level wiring
+- `keep-temporarily` — acceptable bridge user for now, but should not remain in first-contact surfaces
+
+Current conclusion:
+
+- The in-tree `App::ui*` callers are overwhelmingly **migration debt**, not evidence that the closure surface must remain a co-equal long-term API.
+- Most current consumers should move to `View` / `view_with_hooks`, not to lower-level bootstrap APIs.
+
+---
+
+## Current in-tree `ui_with_hooks(...)` callers
+
+| File | Current role | Recommended class | Notes |
+|---|---|---|---|
+| `apps/fret-examples/src/assets_demo.rs` | advanced asset/event demo | `migrate-to-view` | already uses the `fret` facade and driver hooks; should become `view_with_hooks` rather than closure-root `ui_with_hooks` |
+| `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `migrate-to-view` | already has a `View` type in the file; app-entry closure is bridge debt rather than a capability blocker |
+| `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `migrate-to-view` | still likely needs hooks, but not necessarily closure-root entry |
+| `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
+| `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `migrate-to-view` | same reasoning as AVF demo |
+| `apps/fret-examples/src/image_heavy_memory_demo.rs` | memory/perf-oriented demo | `migrate-to-view` | driver hooks do not by themselves justify keeping closure-root app entry |
+| `apps/fret-examples/src/imui_editor_proof_demo.rs` | IMUI/editor proof demo | `migrate-to-view` | should prove IMUI can live under the same default app-entry policy |
+
+## Current in-tree `ui(...)` callers
+
+| File | Current role | Recommended class | Notes |
+|---|---|---|---|
+| `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `migrate-to-view` | no hook seam visible at entry; straightforward migration candidate |
+| `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `migrate-to-view` | useful as proof that plain IMUI demos do not require closure-root app entry |
+| `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `migrate-to-view` | likely one of the easiest early migrations |
+| `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `migrate-to-view` | still appears to be authoring debt rather than a lower-level requirement |
+| `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `migrate-to-view` | good small migration target |
+| `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `migrate-to-view` | useful proof that adapter demos can still live on the default entry path |
+| `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `migrate-to-view` | closure-root usage looks historical; not obviously blocked on a lower-level runner |
+
+---
+
+## Non-consumer references that still need cleanup attention
+
+These are not part of the migration table above, but they still matter for policy closure:
+
+| File | Why it matters |
+|---|---|
+| `ecosystem/fret/src/lib.rs` | rustdoc still contains closure-style `App::ui(...)` example text and should eventually follow the final policy decision |
+| `ecosystem/fret/src/app_entry.rs` | defines the public `ui(...)` / `ui_with_hooks(...)` surface; future deprecation/removal will land here |
+| `ecosystem/fret/README.md` | already moved to “view is default, ui is advanced bridge”; keep aligned with the policy draft |
+
+---
+
+## Suggested migration order
+
+## Batch A — easiest proof points
+
+These should move first because they are small and make the policy credible quickly:
+
+- `apps/fret-examples/src/imui_hello_demo.rs`
+- `apps/fret-examples/src/imui_response_signals_demo.rs`
+- `apps/fret-examples/src/chart_declarative_demo.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
+
+Success criterion:
+
+- the repo can show multiple non-trivial examples using `View` entry without relying on closure-root `App::ui(...)`.
+
+## Batch B — hook-preserving migrations
+
+These should move next to prove `view_with_hooks` is sufficient for advanced-but-facade-level demos:
+
+- `apps/fret-examples/src/assets_demo.rs`
+- `apps/fret-examples/src/image_heavy_memory_demo.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-examples/src/embedded_viewport_demo.rs`
+
+Success criterion:
+
+- the repo can show that driver hooks do not force the facade back to closure-root entry.
+
+## Batch C — highest-risk interop demos
+
+These should be migrated only after the policy and hook path are already proven by B:
+
+- `apps/fret-examples/src/external_texture_imports_demo.rs`
+- `apps/fret-examples/src/external_video_imports_avf_demo.rs`
+- `apps/fret-examples/src/external_video_imports_mf_demo.rs`
+
+Decision gate:
+
+- if one of these truly needs a lower-level bootstrap/driver path, document that explicitly and stop treating it as evidence for keeping `App::ui_with_hooks(...)` in the default facade.
+
+---
+
+## Practical verdict
+
+Based on the current caller set, the repo is **not blocked by lack of a `View`-based app entry API**.
+It is blocked by the remaining migration work required to make that API the only boring default.
+
+That means the recommended next step is not another abstract design pass.
+It is to start burning down **Batch A**, then **Batch B**, and only after that decide whether any Batch C demo truly justifies a lower-level non-`View` path.
