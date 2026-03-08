@@ -157,6 +157,8 @@ mod graph_construction;
 mod group_drag;
 mod group_draw_order;
 mod group_resize;
+mod group_resize_apply;
+mod group_resize_hit;
 mod hit_test;
 mod pointer_down_double_click;
 mod pointer_down_double_click_background;

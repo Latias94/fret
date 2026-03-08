@@ -706,6 +706,11 @@ real editors.
   `canvas/widget/paint_grid_tiles_dots.rs`, and
   `canvas/widget/paint_grid_tiles_cross.rs` seams, so retained grid tile
   painters no longer keep all background patterns embedded in one surface.
+- `group_resize.rs` now routes preview-rect computation, child-bounds
+  clamping, and resize-handle hit helpers through the private
+  `canvas/widget/group_resize_apply.rs` and
+  `canvas/widget/group_resize_hit.rs` seams, so retained group-resize reducers
+  no longer keep geometry math and hit testing embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
