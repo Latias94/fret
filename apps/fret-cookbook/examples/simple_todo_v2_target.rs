@@ -198,46 +198,36 @@ impl View for SimpleTodoV2TargetView {
         cx.on_action_notify_models::<act::ClearDone>({
             let todos_state = todos_state.clone();
             move |models| {
-                let mut removed_any = false;
-                if !todos_state.update_in(models, |rows| {
+                todos_state.update_in_if(models, |rows| {
                     let before = rows.len();
                     rows.retain(|row| !row.done);
-                    removed_any = rows.len() != before;
-                }) {
-                    return false;
-                }
-                removed_any
+                    rows.len() != before
+                })
             }
         });
 
         cx.on_payload_action_notify::<act::Toggle>({
             let todos_state = todos_state.clone();
             move |host, _action_cx, id| {
-                let mut toggled = false;
-                if !todos_state.update_in(host.models_mut(), |rows| {
+                todos_state.update_in_if(host.models_mut(), |rows| {
                     if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                         row.done = !row.done;
-                        toggled = true;
+                        true
+                    } else {
+                        false
                     }
-                }) {
-                    return false;
-                }
-                toggled
+                })
             }
         });
 
         cx.on_payload_action_notify::<act::Remove>({
             let todos_state = todos_state.clone();
             move |host, _action_cx, id| {
-                let mut removed = false;
-                if !todos_state.update_in(host.models_mut(), |rows| {
+                todos_state.update_in_if(host.models_mut(), |rows| {
                     let before = rows.len();
                     rows.retain(|row| row.id != id);
-                    removed = rows.len() != before;
-                }) {
-                    return false;
-                }
-                removed
+                    rows.len() != before
+                })
             }
         });
 

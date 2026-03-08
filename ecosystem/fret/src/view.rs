@@ -118,6 +118,18 @@ impl<T> LocalState<T> {
         models.update(&self.model, f).is_ok()
     }
 
+    /// Update this local slot through an explicit `ModelStore` transaction and let the closure
+    /// decide whether the write should count as `handled`.
+    ///
+    /// This is useful for tracked collections where the mutation may or may not actually change the
+    /// slot (for example: toggle/remove by id). Missing model handles still return `false`.
+    pub fn update_in_if(&self, models: &mut ModelStore, f: impl FnOnce(&mut T) -> bool) -> bool
+    where
+        T: Any,
+    {
+        models.update(&self.model, f).ok().unwrap_or(false)
+    }
+
     /// Set this local slot through an explicit `ModelStore` transaction.
     ///
     /// Like `update_in(...)`, this only mutates the tracked slot; redraw + `notify()` remain the
@@ -141,6 +153,25 @@ impl<T> LocalState<T> {
         T: Any,
     {
         let handled = self.update_in(host.models_mut(), f);
+        if handled {
+            host.request_redraw(action_cx.window);
+            host.notify(action_cx);
+        }
+        handled
+    }
+
+    /// Like `update_action(...)`, but the closure decides whether the mutation should count as
+    /// `handled` before triggering redraw + `notify()`.
+    pub fn update_action_if(
+        &self,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        action_cx: fret_ui::action::ActionCx,
+        f: impl FnOnce(&mut T) -> bool,
+    ) -> bool
+    where
+        T: Any,
+    {
+        let handled = self.update_in_if(host.models_mut(), f);
         if handled {
             host.request_redraw(action_cx.window);
             host.notify(action_cx);
@@ -991,6 +1022,31 @@ mod tests {
     }
 
     #[test]
+    fn local_state_update_in_if_returns_closure_handled_state() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+
+        assert!(local.update_in_if(&mut host.models, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 2);
+            values.len() != before
+        }));
+        assert_eq!(
+            host.models
+                .read(local.model(), |values| values.clone())
+                .unwrap(),
+            vec![1, 3]
+        );
+        assert!(!local.update_in_if(&mut host.models, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 99);
+            values.len() != before
+        }));
+    }
+
+    #[test]
     fn local_state_update_action_requests_redraw_and_notify() {
         let mut host = FakeHost::default();
         let model = host.models.insert(1i32);
@@ -1006,6 +1062,36 @@ mod tests {
         assert_eq!(host.models.read(&model, |value| *value).unwrap(), 2);
         assert_eq!(host.redraws, vec![action_cx.window]);
         assert_eq!(host.notifies, vec![action_cx]);
+    }
+
+    #[test]
+    fn local_state_update_action_if_only_notifies_when_handled() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(7),
+        };
+
+        assert!(local.update_action_if(&mut host, action_cx, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 2);
+            values.len() != before
+        }));
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
+
+        host.redraws.clear();
+        host.notifies.clear();
+        assert!(!local.update_action_if(&mut host, action_cx, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 99);
+            values.len() != before
+        }));
+        assert!(host.redraws.is_empty());
+        assert!(host.notifies.is_empty());
     }
 
     #[cfg(feature = "shadcn")]
