@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("file_tree_basic.rs");
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::{ui, LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui_ai::FileTree::new([

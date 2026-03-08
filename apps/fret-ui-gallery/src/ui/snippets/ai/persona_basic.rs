@@ -8,9 +8,11 @@ use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(move |cx| {
-        vec![ui_ai::Persona::new(ui_ai::PersonaState::Listening)
-            .variant(ui_ai::PersonaVariant::Opal)
-            .into_element(cx)]
+        vec![
+            ui_ai::Persona::new(ui_ai::PersonaState::Listening)
+                .variant(ui_ai::PersonaVariant::Opal)
+                .into_element(cx),
+        ]
     })
     .gap(Space::N4)
     .items_center()

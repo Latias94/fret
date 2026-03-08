@@ -6,7 +6,7 @@ use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::{ui, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
@@ -123,15 +123,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .collect::<Vec<_>>();
 
     ui::h_flex(move |cx| {
-        vec![ui_ai::Attachments::new(children)
-            .variant(ui_ai::AttachmentVariant::List)
-            .test_id("ui-ai-attachments-list-root")
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(MetricRef::Px(Px(440.0))),
-            )
-            .into_element(cx)]
+        vec![
+            ui_ai::Attachments::new(children)
+                .variant(ui_ai::AttachmentVariant::List)
+                .test_id("ui-ai-attachments-list-root")
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .max_w(MetricRef::Px(Px(440.0))),
+                )
+                .into_element(cx),
+        ]
     })
     .layout(LayoutRefinement::default().w_full())
     .justify_center()

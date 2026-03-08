@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("commit_custom_children.rs");
 // region: example
 use fret_ui_ai as ui_ai;
 use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{typography, Badge, BadgeVariant};
+use fret_ui_shadcn::{Badge, BadgeVariant, typography};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 

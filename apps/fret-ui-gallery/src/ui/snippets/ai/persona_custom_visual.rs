@@ -11,21 +11,25 @@ use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(move |cx| {
-        vec![ui_ai::Persona::new(ui_ai::PersonaState::Speaking)
-            .variant(ui_ai::PersonaVariant::Command)
-            .size(Px(112.0))
-            .show_label(true)
-            .into_element_with_children(cx, |cx, controller| {
-                vec![ui::v_flex(move |cx| {
+        vec![
+            ui_ai::Persona::new(ui_ai::PersonaState::Speaking)
+                .variant(ui_ai::PersonaVariant::Command)
+                .size(Px(112.0))
+                .show_label(true)
+                .into_element_with_children(cx, |cx, controller| {
                     vec![
-                        decl_icon::icon(cx, IconId::new_static("lucide.bot")),
-                        cx.text(controller.variant.label()),
+                        ui::v_flex(move |cx| {
+                            vec![
+                                decl_icon::icon(cx, IconId::new_static("lucide.bot")),
+                                cx.text(controller.variant.label()),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .items_center()
+                        .into_element(cx),
                     ]
-                })
-                .gap(Space::N1)
-                .items_center()
-                .into_element(cx)]
-            })]
+                }),
+        ]
     })
     .gap(Space::N4)
     .items_center()

@@ -48,12 +48,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let lodash = ui_ai::PackageInfo::new("lodash")
         .change_type(ui_ai::PackageInfoChangeKind::Added)
         .into_element_with_children(cx, move |cx, _controller| {
-            vec![ui_ai::PackageInfoHeader::new()
-                .children([
-                    ui_ai::PackageInfoName::new().into_element(cx),
-                    ui_ai::PackageInfoChangeType::new().into_element(cx),
-                ])
-                .into_element(cx)]
+            vec![
+                ui_ai::PackageInfoHeader::new()
+                    .children([
+                        ui_ai::PackageInfoName::new().into_element(cx),
+                        ui_ai::PackageInfoChangeType::new().into_element(cx),
+                    ])
+                    .into_element(cx),
+            ]
         });
 
     let moment = ui_ai::PackageInfo::new("moment")

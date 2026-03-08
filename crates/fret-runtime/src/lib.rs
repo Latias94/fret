@@ -50,8 +50,8 @@ pub mod runner_accessibility_diagnostics;
 pub mod runner_frame_drive_diagnostics;
 pub mod runner_platform_window_receiver_diagnostics;
 pub mod runner_present_diagnostics;
-pub mod runner_surface_lifecycle_diagnostics;
 pub mod runner_surface_config_diagnostics;
+pub mod runner_surface_lifecycle_diagnostics;
 pub mod runner_window_lifecycle_diagnostics;
 pub mod runner_window_style_diagnostics;
 pub mod shortcut_routing_diagnostics;
@@ -176,11 +176,11 @@ pub use runner_platform_window_receiver_diagnostics::{
 pub use runner_present_diagnostics::{
     RunnerPresentAggregateSnapshot, RunnerPresentDiagnosticsStore, RunnerPresentWindowSnapshot,
 };
-pub use runner_surface_lifecycle_diagnostics::{
-    RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
-};
 pub use runner_surface_config_diagnostics::{
     RunnerSurfaceConfigDiagnosticsStore, RunnerSurfaceConfigWindowSnapshot,
+};
+pub use runner_surface_lifecycle_diagnostics::{
+    RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
 };
 pub use runner_window_lifecycle_diagnostics::{
     RunnerWindowLifecycleDiagnosticsStore, RunnerWindowLifecycleSnapshot,

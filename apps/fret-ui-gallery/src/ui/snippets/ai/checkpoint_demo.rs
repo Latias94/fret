@@ -3,11 +3,11 @@ pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
 use fret_ui::Invalidation;
+use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
@@ -175,12 +175,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let controls = ui::h_flex(move |cx| {
-        vec![fret_ui_shadcn::Button::new("Reset preview")
-            .variant(ButtonVariant::Outline)
-            .size(ButtonSize::Sm)
-            .test_id("ui-ai-checkpoint-reset")
-            .on_activate(reset_demo.clone())
-            .into_element(cx)]
+        vec![
+            fret_ui_shadcn::Button::new("Reset preview")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .test_id("ui-ai-checkpoint-reset")
+                .on_activate(reset_demo.clone())
+                .into_element(cx),
+        ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N2)

@@ -1953,11 +1953,16 @@ dependencies = [
  "fret-bootstrap",
  "fret-core",
  "fret-examples",
+ "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-gallery",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "pollster",
+ "serde_json",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]

@@ -109,24 +109,26 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         props.corner_radii = Corners::all(theme.metric_token("metric.radius.lg"));
 
         cx.container(props, move |cx| {
-            vec![ui::v_flex(move |cx| {
-                vec![
-                    suggestions,
-                    ui::h_flex(move |_cx| vec![prompt_input])
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center()
-                        .into_element(cx),
-                ]
-            })
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_full()
-                    .min_w_0()
-                    .min_h_0(),
-            )
-            .gap(Space::N4)
-            .into_element(cx)]
+            vec![
+                ui::v_flex(move |cx| {
+                    vec![
+                        suggestions,
+                        ui::h_flex(move |_cx| vec![prompt_input])
+                            .layout(LayoutRefinement::default().w_full())
+                            .justify_center()
+                            .into_element(cx),
+                    ]
+                })
+                .layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                )
+                .gap(Space::N4)
+                .into_element(cx),
+            ]
         })
     };
 

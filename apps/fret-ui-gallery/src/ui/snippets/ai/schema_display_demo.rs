@@ -8,8 +8,8 @@ use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let request_props: Arc<[ui_ai::SchemaProperty]> =
-        Arc::from(vec![ui_ai::SchemaProperty::new("request", "object")
+    let request_props: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("request", "object")
             .required(true)
             .description("Request payload")
             .properties(Arc::from(vec![
@@ -18,10 +18,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .description("User prompt"),
                 ui_ai::SchemaProperty::new("temperature", "number")
                     .description("Sampling temperature"),
-            ]))]);
+            ])),
+    ]);
 
-    let response_props: Arc<[ui_ai::SchemaProperty]> =
-        Arc::from(vec![ui_ai::SchemaProperty::new("response", "object")
+    let response_props: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("response", "object")
             .required(true)
             .description("Response payload")
             .properties(Arc::from(vec![
@@ -30,7 +31,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     ui_ai::SchemaProperty::new("prompt_tokens", "number"),
                     ui_ai::SchemaProperty::new("completion_tokens", "number"),
                 ])),
-            ]))]);
+            ])),
+    ]);
 
     let request_section = ui_ai::SchemaDisplayRequest::new(request_props)
         .default_open(true)

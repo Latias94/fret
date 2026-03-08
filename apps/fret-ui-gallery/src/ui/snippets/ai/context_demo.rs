@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("context_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::ui;
 use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::ui;
 use fret_ui_shadcn::prelude::*;
 
 fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {

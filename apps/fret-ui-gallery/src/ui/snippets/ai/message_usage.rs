@@ -3,11 +3,11 @@ pub const SOURCE: &str = include_str!("message_usage.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
 use fret_ui::Invalidation;
+use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;

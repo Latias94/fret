@@ -5,8 +5,8 @@ use crate::driver::UiGalleryImageSourceDemoAssets;
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets as ui_assets;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
@@ -53,11 +53,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             cx.text("Image (AI Elements): generated image presentation surface."),
             status_line,
             cx.container(props, move |cx| {
-                vec![ui::h_flex(move |_cx| vec![image])
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_center()
-                    .items_center()
-                    .into_element(cx)]
+                vec![
+                    ui::h_flex(move |_cx| vec![image])
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_center()
+                        .items_center()
+                        .into_element(cx),
+                ]
             }),
         ]
     })

@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("persona_variants.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::prelude::*;

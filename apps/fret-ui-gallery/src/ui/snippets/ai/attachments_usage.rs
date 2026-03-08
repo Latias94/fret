@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("attachments_usage.rs");
 // region: example
 use crate::ui::snippets::aspect_ratio::landscape_image_id;
 use fret_core::Px;
-use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui::Theme;
+use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -68,10 +68,12 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 "Display uploaded files in a message surface with a shared Attachments container.",
             ),
             ui::h_flex(move |cx| {
-                vec![ui_ai::Attachments::new(children)
-                    .variant(ui_ai::AttachmentVariant::Grid)
-                    .refine_layout(LayoutRefinement::default().min_w_0())
-                    .into_element(cx)]
+                vec![
+                    ui_ai::Attachments::new(children)
+                        .variant(ui_ai::AttachmentVariant::Grid)
+                        .refine_layout(LayoutRefinement::default().min_w_0())
+                        .into_element(cx),
+                ]
             })
             .layout(LayoutRefinement::default().w_full())
             .justify_center()
