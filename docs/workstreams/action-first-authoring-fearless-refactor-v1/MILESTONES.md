@@ -144,6 +144,7 @@ Post-v1 direction (recommended):
   - builder-first composition that reduces `ui::children!` / nested `into_element(cx)`,
   - widget-local action sugar only if a new round of evidence justifies promoting it,
   - narrow UI macros only if builder-first authoring still leaves repeated structural boilerplate; they are optional polish, not a v2 prerequisite.
+  - after default-path convergence, shift the next milestone from helper design to productization: onboarding clarity, comparison/advanced-surface positioning, visual defaults, and a future deprecation plan.
 
 ---
 
