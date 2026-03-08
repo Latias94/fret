@@ -1029,7 +1029,11 @@ impl FieldLabel {
                             let for_control_on_pointer = for_control.clone();
                             let control_snapshot_on_pointer = control_snapshot.clone();
                             cx.pointer_region_add_on_pointer_down(Arc::new(
-                                move |host, acx, _down| {
+                                move |host, acx, down| {
+                                    if down.hit_pressable_target.is_some() {
+                                        return false;
+                                    }
+
                                     let target = host
                                         .models_mut()
                                         .read(&control_registry_on_pointer, |reg| {
@@ -1074,6 +1078,9 @@ impl FieldLabel {
                                 host.release_pointer_capture();
                                 if !up.is_click {
                                     return true;
+                                }
+                                if up.down_hit_pressable_target.is_some() {
+                                    return false;
                                 }
                                 let control = host
                                     .models_mut()
@@ -1732,7 +1739,7 @@ mod tests {
     };
     use fret_runtime::Model;
     use fret_ui::tree::UiTree;
-    use fret_ui_kit::primitives::control_registry::ControlId;
+    use fret_ui_kit::primitives::control_registry::{ControlId, control_registry_model};
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
@@ -2085,8 +2092,6 @@ mod tests {
 
         let column_node = ui.children(root)[0];
         let label_node = ui.children(column_node)[0];
-        let control_host_node = ui.children(column_node)[1];
-
         let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
         let nested_button_node = snap
             .nodes
@@ -2106,29 +2111,52 @@ mod tests {
             .debug_node_bounds(nested_button_node)
             .expect("nested button bounds");
         let label_bounds = ui.debug_node_bounds(label_node).expect("label bounds");
-        let control_bounds = ui
-            .debug_node_bounds(control_host_node)
-            .expect("control bounds");
-
-        let control_focus_target = ui
-            .debug_hit_test(center_of(control_bounds))
-            .hit
-            .expect("expected control center hit-test");
+        let registry_model = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-field-label-nested-pressable-focus-suppression-registry",
+            |cx| control_registry_model(cx),
+        );
+        let control_focus_target = app
+            .models()
+            .read(&registry_model, |reg| {
+                reg.control_for(window, &control_id)
+                    .map(|entry| entry.element)
+            })
+            .ok()
+            .flatten()
+            .and_then(|element| fret_ui::elements::node_for_element(&mut app, window, element))
+            .expect("expected registered control focus target");
 
         assert_eq!(ui.focus(), None);
 
         // Clicking the nested pressable should not cause the label to forward focus to the
         // associated control.
+        let nested_button_position = center_of(nested_button_bounds);
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
                 pointer_id: fret_core::PointerId(0),
-                position: center_of(nested_button_bounds),
+                position: nested_button_position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: nested_button_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_ne!(ui.focus(), Some(control_focus_target));
