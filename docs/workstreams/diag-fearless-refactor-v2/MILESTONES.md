@@ -122,7 +122,13 @@ Progress update:
 - `diag_campaign` has now landed another report handoff seam around single-campaign execution:
   - `execute_campaign` now routes normalization plus report construction through `build_campaign_execution_report_from_outcome_result`,
   - helper-level regression coverage now locks the error-to-failed-report normalization path without running campaign execution.
-- The next decision point in this area is whether any remaining pure report/outcome shaping in `diag_campaign` still pays better than moving on to another orchestration-heavy file.
+- `diag_campaign` has now landed another combined-failure export seam around zip entry planning:
+  - `write_campaign_combined_failure_zip_inner` now consumes dedicated root/item zip-entry planners,
+  - helper-level regression coverage now locks root index inclusion and per-item artifact ordering without writing a zip file.
+- The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
+  follow-up is the remaining share/export artifact planning inside `write_campaign_share_manifest`
+  and `build_campaign_share_manifest_item` before shifting to artifact materialization or
+  presentation-surface follow-up work.
 
 Exit criteria:
 

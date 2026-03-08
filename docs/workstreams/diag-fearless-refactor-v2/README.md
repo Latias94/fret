@@ -244,6 +244,9 @@ Recommended order for landable work:
 Current emphasis after the latest `diag_suite` / `diag_run` landings:
 
 - `diag_campaign` is now the default next hotspot.
+- within `diag_campaign`, the next highest-ROI slice is still share/export artifact planning around
+  `write_campaign_share_manifest`, `write_campaign_combined_failure_zip_inner`, and
+  `build_campaign_share_manifest_item`.
 - `diag_run` is effectively parked unless a clearly reviewable sixth seam appears.
 - artifact/materialization and presentation-surface work should follow the next campaign slice,
   not jump ahead of it.

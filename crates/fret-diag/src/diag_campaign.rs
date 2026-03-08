@@ -1859,63 +1859,16 @@ fn write_campaign_combined_failure_zip_inner(
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o644);
 
-    add_file_to_zip(
-        &mut zip,
+    for entry in build_campaign_combined_failure_root_zip_entries(
+        root_dir,
         share_manifest_path,
-        "_root/share.manifest.json",
-        options,
-    )?;
-    add_file_to_zip(
-        &mut zip,
         summary_path,
-        "_root/regression.summary.json",
-        options,
-    )?;
-    let index_path = root_dir.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
-    if index_path.is_file() {
-        add_file_to_zip(
-            &mut zip,
-            &index_path,
-            "_root/regression.index.json",
-            options,
-        )?;
+    ) {
+        add_file_to_zip(&mut zip, &entry.src, &entry.dest, options)?;
     }
 
-    for (index, entry) in entries.iter().enumerate() {
-        let safe_item_id = zip_safe_component(&entry.item_id);
-        if let Some(share_zip) = entry.share_zip.as_deref()
-            && share_zip.is_file()
-        {
-            add_file_to_zip(
-                &mut zip,
-                share_zip,
-                &format!("items/{:02}-{safe_item_id}.ai.zip", index + 1),
-                options,
-            )?;
-        }
-        if let Some(triage_path) = entry.triage_path.as_deref()
-            && triage_path.is_file()
-        {
-            add_file_to_zip(
-                &mut zip,
-                triage_path,
-                &format!("items/{:02}-{safe_item_id}.triage.json", index + 1),
-                options,
-            )?;
-        }
-        if let Some(screenshots_manifest) = entry.screenshots_manifest.as_deref()
-            && screenshots_manifest.is_file()
-        {
-            add_file_to_zip(
-                &mut zip,
-                screenshots_manifest,
-                &format!(
-                    "items/{:02}-{safe_item_id}.screenshots.manifest.json",
-                    index + 1
-                ),
-                options,
-            )?;
-        }
+    for entry in build_campaign_combined_failure_item_zip_entries(entries) {
+        add_file_to_zip(&mut zip, &entry.src, &entry.dest, options)?;
     }
 
     zip.finish().map_err(|e| e.to_string())?;
@@ -1987,6 +1940,74 @@ struct CampaignShareManifestPayloadRequest<'a> {
 struct CampaignCombinedZipOutcome {
     path: Option<PathBuf>,
     error: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CampaignCombinedZipEntry {
+    src: PathBuf,
+    dest: String,
+}
+
+fn build_campaign_combined_failure_root_zip_entries(
+    root_dir: &Path,
+    share_manifest_path: &Path,
+    summary_path: &Path,
+) -> Vec<CampaignCombinedZipEntry> {
+    let mut entries = vec![
+        CampaignCombinedZipEntry {
+            src: share_manifest_path.to_path_buf(),
+            dest: "_root/share.manifest.json".to_string(),
+        },
+        CampaignCombinedZipEntry {
+            src: summary_path.to_path_buf(),
+            dest: "_root/regression.summary.json".to_string(),
+        },
+    ];
+    let index_path = root_dir.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    if index_path.is_file() {
+        entries.push(CampaignCombinedZipEntry {
+            src: index_path,
+            dest: "_root/regression.index.json".to_string(),
+        });
+    }
+    entries
+}
+
+fn build_campaign_combined_failure_item_zip_entries(
+    entries: &[CampaignCombinedFailureEntry],
+) -> Vec<CampaignCombinedZipEntry> {
+    let mut zip_entries = Vec::new();
+    for (index, entry) in entries.iter().enumerate() {
+        let safe_item_id = zip_safe_component(&entry.item_id);
+        if let Some(share_zip) = entry.share_zip.as_deref()
+            && share_zip.is_file()
+        {
+            zip_entries.push(CampaignCombinedZipEntry {
+                src: share_zip.to_path_buf(),
+                dest: format!("items/{:02}-{safe_item_id}.ai.zip", index + 1),
+            });
+        }
+        if let Some(triage_path) = entry.triage_path.as_deref()
+            && triage_path.is_file()
+        {
+            zip_entries.push(CampaignCombinedZipEntry {
+                src: triage_path.to_path_buf(),
+                dest: format!("items/{:02}-{safe_item_id}.triage.json", index + 1),
+            });
+        }
+        if let Some(screenshots_manifest) = entry.screenshots_manifest.as_deref()
+            && screenshots_manifest.is_file()
+        {
+            zip_entries.push(CampaignCombinedZipEntry {
+                src: screenshots_manifest.to_path_buf(),
+                dest: format!(
+                    "items/{:02}-{safe_item_id}.screenshots.manifest.json",
+                    index + 1
+                ),
+            });
+        }
+    }
+    zip_entries
 }
 
 fn build_campaign_share_manifest_payload(
@@ -2936,6 +2957,20 @@ mod tests {
         RegressionRunSummaryV1, RegressionSummaryV1, RegressionTotalsV1,
     };
 
+    fn temp_test_root(label: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-campaign-tests-{label}-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        root
+    }
+
     fn sample_campaign_cmd_context(root: &Path, rest: Vec<String>) -> CampaignCmdContext {
         CampaignCmdContext {
             pack_after_run: false,
@@ -3071,6 +3106,73 @@ mod tests {
         assert_eq!(
             report.aggregate.share_manifest_path,
             Some(PathBuf::from("share/manifest.json"))
+        );
+    }
+
+    #[test]
+    fn build_campaign_combined_failure_root_zip_entries_includes_index_when_present() {
+        let root = temp_test_root("combined-root-entries");
+        let share_manifest_path = root.join("share.manifest.json");
+        let summary_path = root.join("regression.summary.json");
+        let index_path = root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+        std::fs::write(&share_manifest_path, b"{}" as &[u8]).expect("write share manifest");
+        std::fs::write(&summary_path, b"{}" as &[u8]).expect("write summary");
+        std::fs::write(&index_path, b"{}" as &[u8]).expect("write index");
+
+        let entries = build_campaign_combined_failure_root_zip_entries(
+            &root,
+            &share_manifest_path,
+            &summary_path,
+        );
+
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].dest, "_root/share.manifest.json");
+        assert_eq!(entries[1].dest, "_root/regression.summary.json");
+        assert_eq!(entries[2].src, index_path);
+        assert_eq!(entries[2].dest, "_root/regression.index.json");
+    }
+
+    #[test]
+    fn build_campaign_combined_failure_item_zip_entries_orders_existing_item_artifacts() {
+        let root = temp_test_root("combined-item-entries");
+        let share_zip = root.join("accordion.ai.zip");
+        let triage_path = root.join("accordion.triage.json");
+        let screenshots_manifest = root.join("accordion.screenshots.manifest.json");
+        std::fs::write(&share_zip, b"zip" as &[u8]).expect("write share zip");
+        std::fs::write(&triage_path, b"{}" as &[u8]).expect("write triage");
+        std::fs::write(&screenshots_manifest, b"{}" as &[u8]).expect("write screenshots manifest");
+
+        let entries = build_campaign_combined_failure_item_zip_entries(&[
+            CampaignCombinedFailureEntry {
+                item_id: "accordion/basic".to_string(),
+                share_zip: Some(share_zip.clone()),
+                triage_path: Some(triage_path.clone()),
+                screenshots_manifest: Some(screenshots_manifest.clone()),
+            },
+            CampaignCombinedFailureEntry {
+                item_id: "missing".to_string(),
+                share_zip: Some(root.join("missing.ai.zip")),
+                triage_path: None,
+                screenshots_manifest: None,
+            },
+        ]);
+
+        assert_eq!(
+            entries,
+            vec![
+                CampaignCombinedZipEntry {
+                    src: share_zip,
+                    dest: "items/01-accordion-basic.ai.zip".to_string(),
+                },
+                CampaignCombinedZipEntry {
+                    src: triage_path,
+                    dest: "items/01-accordion-basic.triage.json".to_string(),
+                },
+                CampaignCombinedZipEntry {
+                    src: screenshots_manifest,
+                    dest: "items/01-accordion-basic.screenshots.manifest.json".to_string(),
+                },
+            ]
         );
     }
 
