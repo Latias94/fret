@@ -135,7 +135,7 @@ Post-v1 direction (recommended):
 
 - Close v1 as successful on architecture and default-path convergence; do not keep the migration phase open solely to chase the final authoring-density target.
 - Track the remaining ergonomics pressure separately:
-  - direct local-state ergonomics beyond `Model<T>`, with the next step being to turn the new todo-like `LocalState<Vec<_>>` comparison path into a boring default rather than a special evidence example,
+  - direct local-state ergonomics beyond `Model<T>`, with the next step being to turn the new todo-like `LocalState<Vec<_>>` comparison path into a boring default rather than a special evidence example; render-side `value_*` plus store-side `value_in*` now cover the common read path, so the remaining pressure is concentrated on tracked writes/invalidation rather than read syntax,
   - checkbox/switch/toggle action-only `control_id` parity is now closed, so any future discrete-widget work should point to a narrower regression than label forwarding,
   - skill-level parity guidance remains the shared rubric for any future discrete-widget audits before adding helpers,
   - explicit-vs-implicit invalidation ergonomics (`notify()` stays available, but should not be the default burden after tracked state writes),

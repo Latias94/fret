@@ -362,11 +362,11 @@ impl View for TodoView {
         let draft_value = cx
             .watch_model(&self.draft)
             .layout()
-            .cloned_or_default();
+            .value_or_default();
         let filter_value = cx
             .watch_model(&self.filter)
             .layout()
-            .copied_or(TodoFilter::All);
+            .value_or(TodoFilter::All);
 
         let add_enabled = !draft_value.trim().is_empty();
 
@@ -454,7 +454,7 @@ impl View for TodoView {
                 let todos = cx
                     .watch_model(&self.todos)
                     .layout()
-                    .cloned_or_default();
+                    .value_or_default();
                 let mut deps = DepsBuilder::new(cx);
                 deps.model_rev(&self.todos);
                 deps.model_rev(&self.filter);
@@ -467,16 +467,16 @@ impl View for TodoView {
                 let todos = cx
                     .watch_model(&self.todos)
                     .layout()
-                    .cloned_or_default();
+                    .value_or_default();
                 let filter = cx
                     .watch_model(&self.filter)
                     .layout()
-                    .copied_or(TodoFilter::All);
+                    .value_or(TodoFilter::All);
 
                 let mut rows = Vec::new();
                 let mut completed = 0usize;
                 for t in &todos {
-                    let done = cx.watch_model(&t.done).paint().copied_or_default();
+                    let done = cx.watch_model(&t.done).paint().value_or_default();
                     if done {
                         completed += 1;
                     }
@@ -499,7 +499,7 @@ impl View for TodoView {
             },
         );
 
-        let tip_nonce_value = cx.watch_model(&self.tip_nonce).paint().copied_or(0);
+        let tip_nonce_value = cx.watch_model(&self.tip_nonce).paint().value_or(0);
         let tip_handle =
             cx.use_query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -513,10 +513,9 @@ impl View for TodoView {
                 })
             });
 
-        let tip_state = cx
-            .watch_model(tip_handle.model())
-            .layout()
-            .cloned_or_else(QueryState::<TipData>::default);
+        let tip_state = tip_handle
+            .layout(cx)
+            .value_or_else(QueryState::<TipData>::default);
 
         let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
             QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
@@ -565,7 +564,7 @@ impl View for TodoView {
 
 __ADD_BTN_DEF__
 
-        let input = shadcn::Input::new(self.draft.clone())
+        let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task…")
             .submit_command(act::Add.into());
 
@@ -584,7 +583,7 @@ __ADD_BTN_DEF__
 
         let rows = ui::v_flex_build(|cx, out| {
             for row in derived.rows.iter() {
-                out.push(cx.keyed(row.id, |cx| todo_row(cx, theme, row)));
+                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
             }
         })
         .gap(Space::N3)
@@ -650,7 +649,7 @@ fn filter_chip(
     cx: &mut ElementContext<'_, App>,
     filter: TodoFilter,
     current: TodoFilter,
-) -> AnyElement {
+) -> impl UiChildIntoElement<App> {
     let selected = filter == current;
     shadcn::Button::new(filter.as_label())
         .variant(if selected {
@@ -664,38 +663,30 @@ fn filter_chip(
             TodoFilter::Active => act::FilterActive,
             TodoFilter::Completed => act::FilterCompleted,
         })
-        .into_element(cx)
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, row: &TodoRowSnapshot) -> AnyElement {
-    let checkbox = shadcn::Checkbox::new(row.done_model.clone()).into_element(cx);
+fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElement<App> {
+    let checkbox = shadcn::Checkbox::new(row.done_model.clone());
 
-    let label = cx.text_props(TextProps {
-        layout: Default::default(),
-        text: row.text.clone(),
-        style: None,
-        color: Some(theme.color_token(if row.done {
+    let label = ui::raw_text(row.text.clone())
+        .text_color(ColorRef::Color(theme.color_token(if row.done {
             "muted-foreground"
         } else {
             "foreground"
-        })),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-    });
+        })))
+        .truncate();
 
-    let row = ui::h_flex(|_cx| [checkbox.clone(), label])
+    let row = ui::h_flex(|cx| ui::children![cx; checkbox, label])
         .gap(Space::N3)
         .items_center()
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
-    ui::container(|_cx| [row])
+    ui::container(|cx| ui::children![cx; row])
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Md)
         .p(Space::N3)
         .w_full()
-        .into_element(cx)
 }
 
 fn install_app(app: &mut App) {
@@ -724,7 +715,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
         r#"
                 shadcn::Button::new("Command palette")
                     .action("app.command_palette")
-                    .into_element(cx),"#
+                    ,"#
     } else {
         ""
     };
@@ -753,7 +744,7 @@ impl View for HelloView {{
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {{
         let click_count = cx.use_state::<u32>();
-        let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
+        let click_count_value = cx.watch_model(&click_count).layout().value_or(0);
 
         cx.on_action_notify_models::<act::Click>({{
             let click_count = click_count.clone();
@@ -822,7 +813,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
         r#"
             shadcn::Button::new("Command palette")
                 .action("app.command_palette")
-                .into_element(cx),"#
+                ,"#
     } else {
         ""
     };
@@ -855,8 +846,6 @@ struct TodoItem {
 
 struct TodoView {
     todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    next_id: Model<u64>,
 }
 
 impl View for TodoView {
@@ -876,22 +865,24 @@ impl View for TodoView {
             },
         ]);
 
-        Self {
-            todos,
-            draft: app.models_mut().insert(String::new()),
-            next_id: app.models_mut().insert(3u64),
-        }
+        Self { todos }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let todos = cx.watch_model(&self.todos).layout().cloned_or_default();
-        let draft_value = cx.watch_model(&self.draft).paint().cloned_or_default();
+        let draft_state = cx.use_local::<String>();
+        let next_id_state = cx.use_local_with(|| 3u64);
 
+        let todos = cx.watch_model(&self.todos).layout().value_or_default();
+        let draft_value = draft_state.watch(cx).layout().value_or_default();
+
+        let mut row_done = Vec::with_capacity(todos.len());
         let mut done_count = 0usize;
         for t in &todos {
-            if cx.watch_model(&t.done).paint().copied_or_default() {
+            let done = cx.watch_model(&t.done).paint().value_or_default();
+            row_done.push(done);
+            if done {
                 done_count += 1;
             }
         }
@@ -901,23 +892,17 @@ impl View for TodoView {
 
         cx.on_action_notify_models::<act::Add>({
             let todos = self.todos.clone();
-            let draft = self.draft.clone();
-            let next_id = self.next_id.clone();
+            let draft_state = draft_state.clone();
+            let next_id_state = next_id_state.clone();
             move |models| {
-                let text = models
-                    .read(&draft, |v| v.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+                let text = draft_state.value_in_or_else(models, String::new).trim().to_string();
                 if text.is_empty() {
                     return false;
                 }
 
                 let done = models.insert(false);
-                let id = models
-                    .read(&next_id, |v| *v)
-                    .ok()
-                    .unwrap_or(1);
-                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
+                let id = next_id_state.value_in_or(models, 1);
+                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
 
                 let _ = models.update(&todos, |todos| {
                     todos.push(TodoItem {
@@ -926,8 +911,7 @@ impl View for TodoView {
                         text: Arc::from(text),
                     });
                 });
-                let _ = models.update(&draft, |v| v.clear());
-                true
+                draft_state.set_in(models, String::new())
             }
         });
 
@@ -971,7 +955,7 @@ impl View for TodoView {
 
 __ADD_BTN_DEF__
 
-        let input = shadcn::Input::new(self.draft.clone())
+        let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task…")
             .submit_command(act::Add.into());
 
@@ -981,8 +965,8 @@ __ADD_BTN_DEF__
             .w_full();
 
         let rows = ui::v_flex_build(|cx, out| {
-            for t in &todos {
-                out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
+            for (t, done) in todos.iter().zip(row_done.iter().copied()) {
+                out.push_ui(cx, ui::keyed(t.id, |_cx| todo_row(theme, t, done)));
             }
         })
         .gap(Space::N3)
@@ -1043,9 +1027,7 @@ __PALETTE_BUTTON__
     }
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
-    let done = cx.watch_model(&item.done).paint().copied_or_default();
-
+fn todo_row(theme: ThemeSnapshot, item: &TodoItem, done: bool) -> impl UiChildIntoElement<App> {
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 
     let text = ui::raw_text(item.text.clone())
@@ -1061,7 +1043,6 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
         .gap(Space::N2)
         .items_center()
         .w_full()
-        .into_element(cx)
 }
 
 fn install_app(app: &mut App) {
@@ -1218,12 +1199,13 @@ cargo run --release
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Default entrypoints: start with `on_action_notify_models`; keep `on_activate*` for local widget glue only.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
-- Read model values near the top of `render()` and keep row rendering driven by locals.
+- For keyed dynamic lists, keep the collection in an explicit `Model<Vec<_>>` when row items still own nested models, and move adjacent draft/counter state to `use_local*`.
+- Read tracked state near the top of `render()` and keep row rendering driven by locals.
 ## Next steps
 
 - Edit UI in `src/main.rs`
 - Use `ui::children![cx; ...]` to build heterogeneous child lists without call-site `.into_element(cx)` noise.
-- When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)` to keep identity stable.
+- When rendering dynamic lists, prefer `out.push_ui(cx, ui::keyed(id, |cx| ...))` to keep identity stable without an eager landing cliff.
 "#
     )
 }
@@ -1336,7 +1318,7 @@ mod tests {
     fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("ui::children!["));
-        assert!(src.contains("cx.keyed("));
+        assert!(src.contains("ui::keyed("));
         assert!(!src.contains("ui::container( |"));
         assert!(!src.contains("ui::h_flex( |"));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1351,6 +1333,9 @@ mod tests {
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
+        assert!(src.contains("let draft_state = cx.use_local::<String>();"));
+        assert!(src.contains("let next_id_state = cx.use_local_with(|| 3u64);"));
+        assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
         assert!(!src.contains(".refine_style("));
@@ -1378,8 +1363,11 @@ mod tests {
         assert!(hello.contains("cookbook/reference-only host-side glue"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
-        assert!(simple.contains("When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)`"));
-        assert!(simple.contains("Read model values near the top of `render()`"));
+        assert!(simple.contains(
+            "When rendering dynamic lists, prefer `out.push_ui(cx, ui::keyed(id, |cx| ...))`"
+        ));
+        assert!(simple.contains("keep the collection in an explicit `Model<Vec<_>>`"));
+        assert!(simple.contains("Read tracked state near the top of `render()`"));
         assert!(simple.contains("start with `on_action_notify_models`"));
         assert!(simple.contains("cookbook/reference-only host-side glue"));
 

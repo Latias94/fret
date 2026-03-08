@@ -142,7 +142,7 @@ No further default-surface local-state migrations are queued right now.
 
 The next wave should focus on:
 
-- tracked-state write ergonomics and the remaining explicit-model escape hatches after the default `value_*` read suffix landed,
+- tracked-state write ergonomics and the remaining explicit-model escape hatches after render-side `value_*` plus store-side `value_in*` reads landed,
 - explicit advanced docs for the remaining interop-bound/model-centered examples,
 - only then consider another surgical advanced-demo cleanup if a remaining field is unambiguously view-local and does not blur the runtime/interop lesson,
 - keeping new cookbook/template work on the post-v1 local-state default path.

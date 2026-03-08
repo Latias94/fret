@@ -25,14 +25,8 @@ struct TodoItem {
     text: Arc<str>,
 }
 
-struct TodoState {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    next_id: Model<u64>,
-}
-
 struct SimpleTodoView {
-    st: TodoState,
+    todos: Model<Vec<TodoItem>>,
 }
 
 impl View for SimpleTodoView {
@@ -51,29 +45,25 @@ impl View for SimpleTodoView {
                 text: Arc::from("Try the shadcn theme tokens"),
             },
         ]);
-        let draft = app.models_mut().insert(String::new());
-
-        let next_id = app.models_mut().insert(3u64);
-
-        Self {
-            st: TodoState {
-                todos,
-                draft,
-                next_id,
-            },
-        }
+        Self { todos }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
-        let todos = cx.watch_model(&self.st.todos).layout().cloned_or_default();
-        let draft_value = cx.watch_model(&self.st.draft).layout().cloned_or_default();
+        let draft_state = cx.use_local::<String>();
+        let next_id_state = cx.use_local_with(|| 3u64);
 
+        let todos = self.todos.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
+
+        let mut row_done = Vec::with_capacity(todos.len());
         let mut done_count = 0usize;
         for t in &todos {
-            if cx.watch_model(&t.done).paint().copied_or_default() {
+            let done = t.done.paint(cx).value_or_default();
+            row_done.push(done);
+            if done {
                 done_count += 1;
             }
         }
@@ -83,8 +73,7 @@ impl View for SimpleTodoView {
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_PROGRESS)
@@ -107,7 +96,7 @@ impl View for SimpleTodoView {
             .action(act::Add)
             .test_id(TEST_ID_ADD);
 
-        let input = shadcn::Input::new(self.st.draft.clone())
+        let input = shadcn::Input::new(&draft_state)
             .a11y_label("New task")
             .placeholder("Add a task?")
             .submit_command(act::Add.into())
@@ -119,9 +108,9 @@ impl View for SimpleTodoView {
             .w_full();
 
         let rows = ui::v_flex_build(|cx, out| {
-            for t in &todos {
+            for (t, done) in todos.iter().zip(row_done.iter().copied()) {
                 let theme = theme_for_rows.clone();
-                out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
+                out.push_ui(cx, ui::keyed(t.id, |_cx| todo_row(theme, t, done)));
             }
         })
         .gap(Space::N2)
@@ -155,25 +144,24 @@ impl View for SimpleTodoView {
         })
         .ui()
         .w_full()
-        .max_w(Px(560.0))
-        .into_element(cx);
+        .max_w(Px(560.0));
 
         cx.on_action_notify_models::<act::Add>({
-            let todos = self.st.todos.clone();
-            let draft = self.st.draft.clone();
-            let next_id = self.st.next_id.clone();
+            let todos = self.todos.clone();
+            let draft_state = draft_state.clone();
+            let next_id_state = next_id_state.clone();
             move |models| {
-                let text = models
-                    .read(&draft, |v| v.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+                let text = draft_state
+                    .value_in_or_else(models, String::new)
+                    .trim()
+                    .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
                 let done = models.insert(false);
-                let id = models.read(&next_id, |v| *v).ok().unwrap_or(0);
-                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
+                let id = next_id_state.value_in_or(models, 0);
+                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
 
                 let _ = models.update(&todos, |todos| {
                     todos.push(TodoItem {
@@ -182,13 +170,12 @@ impl View for SimpleTodoView {
                         text: Arc::from(text),
                     });
                 });
-                let _ = models.update(&draft, String::clear);
-                true
+                draft_state.set_in(models, String::new())
             }
         });
 
         cx.on_action_notify_models::<act::ClearDone>({
-            let todos = self.st.todos.clone();
+            let todos = self.todos.clone();
             move |models| {
                 let snapshot = models.read(&todos, Clone::clone).ok().unwrap_or_default();
 
@@ -210,13 +197,11 @@ impl View for SimpleTodoView {
             }
         });
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
-    let done = cx.watch_model(&item.done).paint().copied_or_default();
-
+fn todo_row(theme: ThemeSnapshot, item: &TodoItem, done: bool) -> impl UiChildIntoElement<App> {
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 
     let text = ui::text(item.text.clone())
@@ -233,7 +218,6 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
         .items_center()
         .w_full()
         .test_id(format!("{TEST_ID_ROW_PREFIX}{}", item.id))
-        .into_element(cx)
 }
 
 fn main() -> anyhow::Result<()> {

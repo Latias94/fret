@@ -168,9 +168,9 @@ impl View for SimpleTodoV2TargetView {
             let todos_state = todos_state.clone();
             move |models| {
                 let text = draft_state
-                    .read_in(models, |value| value.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+                    .value_in_or_else(models, String::new)
+                    .trim()
+                    .to_string();
                 if text.is_empty() {
                     return false;
                 }
