@@ -13,40 +13,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        self.sync_skin(Some(cx.services));
-        self.sync_paint_overrides(Some(cx.services));
-        let snapshot = self.sync_view_state(cx.app);
-        if cx.input_ctx.focus_is_text_input
-            && (command.as_str().starts_with("node_graph.")
-                || matches!(
-                    command.as_str(),
-                    "edit.copy" | "edit.cut" | "edit.paste" | "edit.select_all"
-                ))
-        {
-            return false;
-        }
-
-        let mw_outcome = {
-            let mw_ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
-                style: &self.style,
-                bounds: self.interaction.last_bounds,
-                pan: snapshot.pan,
-                zoom: snapshot.zoom,
-            };
-            self.middleware.handle_command(cx, &mw_ctx, command)
-        };
-        if mw_outcome == NodeGraphCanvasCommandOutcome::Handled {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-            return true;
-        }
-
-        self.handle_command(cx, &snapshot, command)
+        retained_widget_runtime::handle_retained_command(self, cx, command)
     }
 
     fn command_availability(
@@ -147,39 +114,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        self.sync_skin(Some(cx.services));
-        self.sync_paint_overrides(Some(cx.services));
-        let snapshot = self.sync_view_state(cx.app);
-        self.interaction.last_bounds = Some(cx.bounds);
-
-        let mw_outcome = {
-            let mw_ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
-                style: &self.style,
-                bounds: Some(cx.bounds),
-                pan: snapshot.pan,
-                zoom: snapshot.zoom,
-            };
-            self.middleware.handle_event(cx, &mw_ctx, event)
-        };
-        if mw_outcome == NodeGraphCanvasEventOutcome::Handled {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-            return;
-        }
-
-        self.handle_event(cx, event, &snapshot);
+        retained_widget_runtime::handle_retained_event(self, cx, event);
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        self.sync_skin(Some(cx.services));
-        self.sync_paint_overrides(Some(cx.services));
-        self.paint_root(cx);
+        retained_widget_runtime::paint_retained_widget(self, cx);
     }
 }

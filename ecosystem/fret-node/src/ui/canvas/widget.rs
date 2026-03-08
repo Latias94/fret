@@ -170,6 +170,7 @@ mod reconnect;
 mod rect_math;
 mod retained_widget;
 mod retained_widget_frame;
+mod retained_widget_runtime;
 mod right_click;
 mod searcher;
 mod searcher_activation;

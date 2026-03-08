@@ -548,6 +548,10 @@ real editors.
   `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value assembly,
   diagnostics-anchor child layout, queue drain-on-layout, and cull-window tracking no
   longer stay embedded in the main retained widget trait router.
+- `retained_widget.rs` now also routes command / event / paint runtime bridge
+  work through the private `canvas/widget/retained_widget_runtime.rs` seam, so
+  style/skin/paint-override sync, text-input command deferral, middleware handoff, and
+  middleware-handled redraw/invalidation no longer stay embedded in the main trait router.
 
 ### Deliverables
 
@@ -613,6 +617,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_frame.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

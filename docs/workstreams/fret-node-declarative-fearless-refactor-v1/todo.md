@@ -483,6 +483,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value
     assembly, diagnostics-anchor child layout, queue drain-on-layout, and cull-window
     tracking no longer stay embedded in the main retained widget trait router.
+  - Progress: `retained_widget.rs` now also routes command / event / paint runtime
+    bridge work through the private `canvas/widget/retained_widget_runtime.rs` seam, so
+    style/skin/paint-override sync, text-input command deferral, middleware handoff, and
+    middleware-handled redraw/invalidation no longer stay embedded in the main trait router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
