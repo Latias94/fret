@@ -544,6 +544,11 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: one written inventory that names the blockers, evidence anchors, and required preconditions before broader hard deletes.
   - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md` now records the four main blockers: `App::ui(...)` / `ui_with_hooks(...)`, `run_native_with_compat_driver(...)`, `ViewCx::use_state::<T>()` as a user-visible alias, and public `CommandId`-first widget contracts.
 
+- [x] AFA-postv1-010 Publish an app-entry policy decision draft for `view::<V>()` vs `.ui(...)`.
+  - Goal: turn the hard-delete blocker into one explicit policy choice rather than an open-ended cleanup note.
+  - Evidence target: a short decision draft with rationale, staged execution, and exit criteria before deprecation starts.
+  - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now recommends `view::<V>()` / `view_with_hooks::<V>(...)` as the only default app-entry path, while `ui(...)` / `ui_with_hooks(...)` are treated as temporary advanced bridge surfaces on a path to future deprecation/removal once advanced demo migration is complete.
+
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.
   - Evidence target: remove one of the remaining `simple_todo_v2_target` noise points in a migrated example or short design note.

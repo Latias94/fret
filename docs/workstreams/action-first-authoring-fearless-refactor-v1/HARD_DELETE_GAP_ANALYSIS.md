@@ -58,9 +58,9 @@ Why this blocks deletion:
 
 Required before hard delete:
 
-- Decide the long-term status of `ui(...)` / `ui_with_hooks(...)`.
-- If they remain: label them explicitly as advanced/non-default and stop counting them as cleanup debt.
-- If they do not remain: migrate the remaining advanced demos and add a deprecation/gate window first.
+- Recommended policy draft now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`.
+- Adopt one explicit policy: either keep `ui(...)` as advanced-only bridge surface, or begin a deprecation plan toward removal.
+- After that choice, migrate the remaining advanced demos and add the matching gate/deprecation window.
 
 ---
 
