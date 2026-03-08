@@ -539,6 +539,11 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: align the workstream proposal, v2 golden path, and todo golden-path docs on the same ?current baseline vs north-star? statement.
   - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, and `docs/examples/todo-app-golden-path.md` now explicitly record that the narrow text bridge landed and that the clearest remaining gap is small view-owned collection ergonomics (`Model<Vec<_>>` pressure in simple todo-style views), followed by widget-local action sugar and only then a macro re-evaluation.
 
+- [x] AFA-postv1-009 Publish a hard-delete gap analysis for the remaining compatibility surfaces.
+  - Goal: distinguish true legacy cleanup debt from advanced/interop surfaces we may keep on purpose.
+  - Evidence target: one written inventory that names the blockers, evidence anchors, and required preconditions before broader hard deletes.
+  - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md` now records the four main blockers: `App::ui(...)` / `ui_with_hooks(...)`, `run_native_with_compat_driver(...)`, `ViewCx::use_state::<T>()` as a user-visible alias, and public `CommandId`-first widget contracts.
+
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.
   - Evidence target: remove one of the remaining `simple_todo_v2_target` noise points in a migrated example or short design note.

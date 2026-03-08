@@ -145,6 +145,7 @@ Post-v1 direction (recommended):
   - widget-local action sugar only if a new round of evidence justifies promoting it,
   - narrow UI macros only if builder-first authoring still leaves repeated structural boilerplate; they are optional polish, not a v2 prerequisite.
   - after default-path convergence, shift the next milestone from helper design to productization: onboarding clarity, comparison/advanced-surface positioning, visual defaults, and a future deprecation plan.
+  - The current deprecation/hard-delete blockers are now named explicitly in `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible alias, and `CommandId`-first widget contracts.
 
 ---
 
