@@ -512,6 +512,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/focus_nav_traversal_node.rs`, and
     `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
     no longer stay embedded in a single traversal surface.
+  - Progress: `focus.rs` now routes focused-edge repair, draw-order fingerprinting, and
+    directional port navigation through the private `canvas/widget/focus_edge_repair.rs`,
+    `canvas/widget/focus_draw_order.rs`, and `canvas/widget/focus_port_direction.rs` seams,
+    so retained focus-maintenance helpers no longer stay embedded in one mixed utility surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

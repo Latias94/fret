@@ -575,6 +575,10 @@ real editors.
   `canvas/widget/focus_nav_traversal_node.rs`, and
   `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
   no longer stay embedded in a single traversal surface.
+- `focus.rs` now routes focused-edge repair, draw-order fingerprinting, and
+  directional port navigation through the private `canvas/widget/focus_edge_repair.rs`,
+  `canvas/widget/focus_draw_order.rs`, and `canvas/widget/focus_port_direction.rs` seams,
+  so retained focus-maintenance helpers no longer stay embedded in one mixed utility surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -656,6 +660,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_draw_order.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_edge_repair.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_edge.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node.rs`
@@ -663,6 +670,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_port_direction.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
