@@ -6,6 +6,37 @@ use super::sidecars;
 use crate::lint::{LintOptions, lint_bundle_from_path};
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 
+struct PackCommandRequest<'a> {
+    rest: &'a [String],
+    workspace_root: &'a Path,
+    out_dir: &'a Path,
+    pack_out: Option<PathBuf>,
+    pack_ai_only: bool,
+}
+
+struct PreparedPackCommand {
+    bundle_dir: PathBuf,
+    artifacts_root: PathBuf,
+    out: PathBuf,
+}
+
+struct RequiredBundleArtifactRequest<'a> {
+    rest: &'a [String],
+    workspace_root: &'a Path,
+    missing_hint: &'a str,
+}
+
+struct LintCommandRequest<'a> {
+    rest: &'a [String],
+    workspace_root: &'a Path,
+    lint_out: Option<PathBuf>,
+}
+
+struct PreparedLintCommand {
+    bundle_path: PathBuf,
+    out: PathBuf,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_pack(
     rest: &[String],
@@ -22,45 +53,17 @@ pub(crate) fn cmd_pack(
     sort_override: Option<BundleStatsSort>,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    if rest.len() > 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
-
-    let source = rest
-        .first()
-        .map(|src| crate::resolve_path(workspace_root, PathBuf::from(src)))
-        .unwrap_or_default();
-    let resolved = resolve::resolve_bundle_input_or_latest(&source, out_dir).map_err(|error| {
-        if rest.is_empty() {
-            format!(
-                "{} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                error
-            )
-        } else {
-            error
-        }
+    let PreparedPackCommand {
+        bundle_dir,
+        artifacts_root,
+        out,
+    } = prepare_cmd_pack(PackCommandRequest {
+        rest,
+        workspace_root,
+        out_dir,
+        pack_out,
+        pack_ai_only,
     })?;
-    let bundle_dir = resolved.bundle_dir;
-    let out = pack_out
-        .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| {
-            if pack_ai_only {
-                let name = bundle_dir
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .filter(|s| !s.trim().is_empty())
-                    .unwrap_or("bundle");
-                if bundle_dir.starts_with(out_dir) {
-                    out_dir.join("share").join(format!("{name}.ai.zip"))
-                } else {
-                    bundle_dir.with_extension("ai.zip")
-                }
-            } else {
-                crate::default_pack_out_path(out_dir, &bundle_dir)
-            }
-        });
-
-    let artifacts_root = resolved.artifacts_root;
 
     if ensure_ai_packet || pack_ai_only {
         let packet_dir = bundle_dir.join("ai.packet");
@@ -111,6 +114,91 @@ pub(crate) fn cmd_pack(
         warmup_frames,
     )?;
     println!("{}", out.display());
+    Ok(())
+}
+
+fn prepare_cmd_pack(request: PackCommandRequest<'_>) -> Result<PreparedPackCommand, String> {
+    if request.rest.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            request.rest[1..].join(" ")
+        ));
+    }
+
+    let source = request
+        .rest
+        .first()
+        .map(|src| crate::resolve_path(request.workspace_root, PathBuf::from(src)))
+        .unwrap_or_default();
+    let resolved =
+        resolve::resolve_bundle_input_or_latest(&source, request.out_dir).map_err(|error| {
+            if request.rest.is_empty() {
+                format!(
+                    "{} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                    error
+                )
+            } else {
+                error
+            }
+        })?;
+    let out = request
+        .pack_out
+        .map(|path| crate::resolve_path(request.workspace_root, path))
+        .unwrap_or_else(|| {
+            default_pack_output_path(&resolved.bundle_dir, request.out_dir, request.pack_ai_only)
+        });
+
+    Ok(PreparedPackCommand {
+        bundle_dir: resolved.bundle_dir,
+        artifacts_root: resolved.artifacts_root,
+        out,
+    })
+}
+
+fn default_pack_output_path(bundle_dir: &Path, out_dir: &Path, pack_ai_only: bool) -> PathBuf {
+    if pack_ai_only {
+        let name = bundle_dir
+            .file_name()
+            .and_then(|segment| segment.to_str())
+            .filter(|segment| !segment.trim().is_empty())
+            .unwrap_or("bundle");
+        if bundle_dir.starts_with(out_dir) {
+            out_dir.join("share").join(format!("{name}.ai.zip"))
+        } else {
+            bundle_dir.with_extension("ai.zip")
+        }
+    } else {
+        crate::default_pack_out_path(out_dir, bundle_dir)
+    }
+}
+
+fn resolve_required_bundle_artifact(
+    request: RequiredBundleArtifactRequest<'_>,
+) -> Result<PathBuf, String> {
+    let Some(src) = request.rest.first().cloned() else {
+        return Err(request.missing_hint.to_string());
+    };
+    if request.rest.len() != 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            request.rest[1..].join(" ")
+        ));
+    }
+
+    let src = crate::resolve_path(request.workspace_root, PathBuf::from(src));
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    Ok(resolved.bundle_artifact)
+}
+
+fn emit_path_or_json_output(out: &Path, stats_json: bool) -> Result<(), String> {
+    if stats_json {
+        println!(
+            "{}",
+            std::fs::read_to_string(out).map_err(|e| e.to_string())?
+        );
+    } else {
+        println!("{}", out.display());
+    }
     Ok(())
 }
 
@@ -215,6 +303,50 @@ mod tests {
     }
 
     #[test]
+    fn default_pack_output_path_uses_share_dir_for_ai_only_under_out_dir() {
+        let out_dir = PathBuf::from("target/fret-diag/session-1");
+        let bundle_dir = out_dir.join("123-ui-gallery");
+
+        let out = default_pack_output_path(&bundle_dir, &out_dir, true);
+
+        assert_eq!(out, out_dir.join("share").join("123-ui-gallery.ai.zip"));
+    }
+
+    #[test]
+    fn default_pack_output_path_uses_bundle_extension_for_external_ai_only() {
+        let out_dir = PathBuf::from("target/fret-diag/session-1");
+        let bundle_dir = PathBuf::from("captures/123-ui-gallery");
+
+        let out = default_pack_output_path(&bundle_dir, &out_dir, true);
+
+        assert_eq!(out, PathBuf::from("captures/123-ui-gallery.ai.zip"));
+    }
+
+    #[test]
+    fn resolve_required_bundle_artifact_rejects_missing_input() {
+        let err = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+            rest: &[],
+            workspace_root: Path::new("workspace-root"),
+            missing_hint: "missing bundle",
+        })
+        .expect_err("missing input");
+
+        assert_eq!(err, "missing bundle");
+    }
+
+    #[test]
+    fn resolve_required_bundle_artifact_rejects_extra_args() {
+        let err = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+            rest: &["a".to_string(), "b".to_string()],
+            workspace_root: Path::new("workspace-root"),
+            missing_hint: "missing bundle",
+        })
+        .expect_err("extra args");
+
+        assert!(err.contains("unexpected arguments: b"));
+    }
+
+    #[test]
     fn parse_triage_request_supports_metric_aliases() {
         let workspace_root = Path::new("workspace-root");
         let request = parse_triage_request(
@@ -236,6 +368,132 @@ mod tests {
             request.source,
             workspace_root.join(PathBuf::from("demo/bundle.json"))
         );
+    }
+
+    #[test]
+    fn meta_report_lines_include_base_summary_fields() {
+        let meta = serde_json::json!({
+            "bundle": "bundle.json",
+            "warmup_frames": 3,
+            "windows_total": 2,
+            "snapshots_total": 5,
+            "snapshots_with_semantics_total": 4,
+            "snapshots_with_inline_semantics_total": 1,
+            "snapshots_with_table_semantics_total": 3,
+            "semantics_table_entries_total": 8,
+            "semantics_table_unique_keys_total": 6,
+            "windows": [],
+        });
+
+        let lines = meta_report_lines(&meta, Path::new("out/bundle.meta.json"));
+
+        assert_eq!(lines.first().map(String::as_str), Some("bundle_meta:"));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line == "  meta_json: out/bundle.meta.json"),
+            "missing meta path: {lines:?}"
+        );
+        assert!(lines.iter().any(|line| line == "  bundle: bundle.json"));
+        assert!(lines.iter().any(|line| line == "  warmup_frames: 3"));
+        assert!(lines.iter().any(|line| line == "  windows_total: 2"));
+        assert!(lines.iter().any(|line| {
+            line == "  semantics: resolved=4 inline=1 table=3 table_entries=8 table_unique_keys=6"
+        }));
+    }
+
+    #[test]
+    fn meta_report_lines_truncate_windows_after_six_rows() {
+        let windows = (0..8)
+            .map(|index| {
+                serde_json::json!({
+                    "window": index,
+                    "snapshots_total": index + 10,
+                    "considered_frame_id": index + 100,
+                    "snapshots_with_semantics_total": index + 1,
+                    "snapshots_with_inline_semantics_total": index + 2,
+                    "snapshots_with_table_semantics_total": index + 3,
+                    "semantics_table_entries_total": index + 4,
+                    "semantics_table_unique_keys_total": index + 5,
+                })
+            })
+            .collect::<Vec<_>>();
+        let meta = serde_json::json!({
+            "bundle": "bundle.json",
+            "warmup_frames": 0,
+            "windows_total": 8,
+            "snapshots_total": 8,
+            "snapshots_with_semantics_total": 8,
+            "snapshots_with_inline_semantics_total": 8,
+            "snapshots_with_table_semantics_total": 8,
+            "semantics_table_entries_total": 8,
+            "semantics_table_unique_keys_total": 8,
+            "windows": windows,
+        });
+
+        let lines = meta_report_lines(&meta, Path::new("out/bundle.meta.json"));
+
+        assert!(lines.iter().any(|line| line == "  windows:"));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("window=0 snapshots=10 considered_frame=100"))
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("window=5 snapshots=15 considered_frame=105"))
+        );
+        assert!(lines.iter().any(|line| line == "    - ... (2 more)"));
+    }
+
+    #[test]
+    fn default_triage_out_path_uses_lite_sidecar_name() {
+        let bundle_path = Path::new("captures/demo/bundle.json");
+
+        let out = default_triage_out_path(bundle_path, true);
+
+        assert_eq!(out, PathBuf::from("captures/demo/triage.lite.json"));
+    }
+
+    #[test]
+    fn append_triage_tooling_warnings_inserts_warning_array_for_bundle_dir() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-triage-tooling-warnings-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join(crate::session::SESSIONS_DIRNAME))
+            .expect("create sessions dir");
+        let bundle_dir = root.join("123-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+
+        let bundle_path = bundle_dir.join("bundle.json");
+        let mut payload = serde_json::json!({ "kind": "triage" });
+        append_triage_tooling_warnings(&mut payload, &bundle_path);
+
+        let warnings = payload
+            .get("tooling_warnings")
+            .and_then(|value| value.as_array())
+            .expect("tooling warnings array");
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            warnings[0]
+                .get("code")
+                .and_then(|value| value.as_str())
+                .unwrap_or(""),
+            "diag.concurrency.base_dir_contains_sessions_but_bundle_not_in_session"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn lint_exit_required_only_when_error_issues_exist() {
+        assert!(!lint_exit_required(0));
+        assert!(lint_exit_required(1));
+        assert!(lint_exit_required(3));
     }
 
     #[test]
@@ -350,52 +608,89 @@ fn build_triage_payload(
     warmup_frames: u64,
 ) -> Result<serde_json::Value, String> {
     let mut payload = if lite {
-        let index_path = crate::frames_index::default_frames_index_path(bundle_path);
-        let mut frames_index =
-            crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
-        if frames_index.is_none() {
-            let out = crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
-            frames_index = crate::frames_index::read_frames_index_json_v1(&out, warmup_frames);
-        }
-        let frames_index = frames_index.ok_or_else(|| {
-            format!(
-                "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
-                bundle_path.display(),
-                warmup_frames
-            )
-        })?;
-        crate::frames_index::triage_lite_json_from_frames_index(
-            bundle_path,
-            &index_path,
-            &frames_index,
-            warmup_frames,
-            stats_top,
-            metric,
-        )?
+        build_triage_lite_payload(bundle_path, metric, stats_top, warmup_frames)?
     } else {
-        let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-        let report = bundle_stats_from_path(
-            bundle_path,
-            stats_top,
-            sort,
-            BundleStatsOptions { warmup_frames },
-        )?;
-        crate::triage_json_from_stats(bundle_path, &report, sort, warmup_frames)
+        build_triage_full_payload(bundle_path, stats_top, sort_override, warmup_frames)?
     };
 
-    if let Some(bundle_dir) = bundle_path.parent() {
-        let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
-        if !warnings.is_empty()
-            && let Some(obj) = payload.as_object_mut()
-        {
-            obj.insert(
-                "tooling_warnings".to_string(),
-                serde_json::Value::Array(warnings),
-            );
-        }
-    }
-
+    append_triage_tooling_warnings(&mut payload, bundle_path);
     Ok(payload)
+}
+
+fn build_triage_lite_payload(
+    bundle_path: &Path,
+    metric: crate::frames_index::TriageLiteMetric,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> Result<serde_json::Value, String> {
+    let (index_path, frames_index) = resolve_triage_frames_index(bundle_path, warmup_frames)?;
+    crate::frames_index::triage_lite_json_from_frames_index(
+        bundle_path,
+        &index_path,
+        &frames_index,
+        warmup_frames,
+        stats_top,
+        metric,
+    )
+}
+
+fn resolve_triage_frames_index(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(PathBuf, serde_json::Value), String> {
+    let index_path = crate::frames_index::default_frames_index_path(bundle_path);
+    let mut frames_index =
+        crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
+    if frames_index.is_none() {
+        let out = crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
+        frames_index = crate::frames_index::read_frames_index_json_v1(&out, warmup_frames);
+    }
+    let frames_index = frames_index.ok_or_else(|| {
+        format!(
+            "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
+            bundle_path.display(),
+            warmup_frames
+        )
+    })?;
+
+    Ok((index_path, frames_index))
+}
+
+fn build_triage_full_payload(
+    bundle_path: &Path,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+) -> Result<serde_json::Value, String> {
+    let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+    let report = bundle_stats_from_path(
+        bundle_path,
+        stats_top,
+        sort,
+        BundleStatsOptions { warmup_frames },
+    )?;
+    Ok(crate::triage_json_from_stats(
+        bundle_path,
+        &report,
+        sort,
+        warmup_frames,
+    ))
+}
+
+fn append_triage_tooling_warnings(payload: &mut serde_json::Value, bundle_path: &Path) {
+    let Some(bundle_dir) = bundle_path.parent() else {
+        return;
+    };
+    let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+    if warnings.is_empty() {
+        return;
+    }
+    if let Some(obj) = payload.as_object_mut() {
+        obj.insert(
+            "tooling_warnings".to_string(),
+            serde_json::Value::Array(warnings),
+        );
+    }
 }
 
 fn default_triage_out_path(bundle_path: &Path, lite: bool) -> PathBuf {
@@ -560,6 +855,24 @@ fn emit_artifact_output(out: &Path, display_mode: ArtifactDisplayMode) -> Result
     }
 }
 
+fn prepare_cmd_lint(request: LintCommandRequest<'_>) -> Result<PreparedLintCommand, String> {
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest: request.rest,
+        workspace_root: request.workspace_root,
+        missing_hint: "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+    })?;
+    let out = request
+        .lint_out
+        .map(|path| crate::resolve_path(request.workspace_root, path))
+        .unwrap_or_else(|| crate::default_lint_out_path(&bundle_path));
+
+    Ok(PreparedLintCommand { bundle_path, out })
+}
+
+fn lint_exit_required(error_issues: u64) -> bool {
+    error_issues > 0
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_triage(
     rest: &[String],
@@ -606,19 +919,11 @@ pub(crate) fn cmd_lint(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let Some(src) = rest.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
-
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
-    let bundle_path = resolved.bundle_artifact;
+    let PreparedLintCommand { bundle_path, out } = prepare_cmd_lint(LintCommandRequest {
+        rest,
+        workspace_root,
+        lint_out,
+    })?;
 
     let report = lint_bundle_from_path(
         &bundle_path,
@@ -629,23 +934,9 @@ pub(crate) fn cmd_lint(
         },
     )?;
 
-    let out = lint_out
-        .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| crate::default_lint_out_path(&bundle_path));
+    write_json_artifact_output(&out, &report.payload, stats_json)?;
 
-    if let Some(parent) = out.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let pretty = serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
-    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-    if stats_json {
-        println!("{pretty}");
-    } else {
-        println!("{}", out.display());
-    }
-
-    if report.error_issues > 0 {
+    if lint_exit_required(report.error_issues) {
         std::process::exit(1);
     }
     Ok(())
@@ -664,33 +955,18 @@ pub(crate) fn cmd_test_ids(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let Some(src) = rest.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
-
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
-    let bundle_path = resolved.bundle_artifact;
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest,
+        workspace_root,
+        missing_hint: "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+    })?;
 
     let out = test_ids_out
         .map(|p| crate::resolve_path(workspace_root, p))
         .unwrap_or_else(|| crate::default_test_ids_out_path(&bundle_path));
 
     if out.is_file() {
-        if stats_json {
-            println!(
-                "{}",
-                std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-            );
-        } else {
-            println!("{}", out.display());
-        }
+        emit_path_or_json_output(&out, stats_json)?;
         return Ok(());
     }
 
@@ -703,14 +979,7 @@ pub(crate) fn cmd_test_ids(
         std::fs::copy(&canonical, &out).map_err(|e| e.to_string())?;
     }
 
-    if stats_json {
-        println!(
-            "{}",
-            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-        );
-    } else {
-        println!("{}", out.display());
-    }
+    emit_path_or_json_output(&out, stats_json)?;
     Ok(())
 }
 
@@ -725,30 +994,13 @@ pub(crate) fn cmd_test_ids_index(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let Some(src) = rest.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
-
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
-    let bundle_path = resolved.bundle_artifact;
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest,
+        workspace_root,
+        missing_hint: "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+    })?;
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-
-    if stats_json {
-        println!(
-            "{}",
-            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-        );
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+    emit_path_or_json_output(&out, stats_json)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -762,30 +1014,13 @@ pub(crate) fn cmd_frames_index(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let Some(src) = rest.first().cloned() else {
-        return Err(
-            "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
-                .to_string(),
-        );
-    };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-    }
-
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let resolved = resolve::resolve_bundle_ref(&src)?;
-    let bundle_path = resolved.bundle_artifact;
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest,
+        workspace_root,
+        missing_hint: "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+    })?;
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
-
-    if stats_json {
-        println!(
-            "{}",
-            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-        );
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+    emit_path_or_json_output(&out, stats_json)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -812,64 +1047,78 @@ pub(crate) fn cmd_meta(
 }
 
 fn print_meta_report(meta: &serde_json::Value, meta_path: &Path) {
-    fn u64_field(v: &serde_json::Value, key: &str) -> u64 {
-        v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
+    for line in meta_report_lines(meta, meta_path) {
+        println!("{line}");
     }
+}
 
-    fn str_field<'a>(v: &'a serde_json::Value, key: &str) -> &'a str {
-        v.get(key).and_then(|v| v.as_str()).unwrap_or("")
-    }
+fn meta_report_u64_field(value: &serde_json::Value, key: &str) -> u64 {
+    value.get(key).and_then(|entry| entry.as_u64()).unwrap_or(0)
+}
 
-    println!("bundle_meta:");
-    println!("  meta_json: {}", meta_path.display());
-    println!("  bundle: {}", str_field(meta, "bundle"));
-    println!("  warmup_frames: {}", u64_field(meta, "warmup_frames"));
-    println!("  windows_total: {}", u64_field(meta, "windows_total"));
-    println!("  snapshots_total: {}", u64_field(meta, "snapshots_total"));
-    println!(
-        "  semantics: resolved={} inline={} table={} table_entries={} table_unique_keys={}",
-        u64_field(meta, "snapshots_with_semantics_total"),
-        u64_field(meta, "snapshots_with_inline_semantics_total"),
-        u64_field(meta, "snapshots_with_table_semantics_total"),
-        u64_field(meta, "semantics_table_entries_total"),
-        u64_field(meta, "semantics_table_unique_keys_total"),
-    );
+fn meta_report_str_field<'a>(value: &'a serde_json::Value, key: &str) -> &'a str {
+    value
+        .get(key)
+        .and_then(|entry| entry.as_str())
+        .unwrap_or("")
+}
 
-    let Some(windows) = meta.get("windows").and_then(|v| v.as_array()) else {
-        return;
+fn meta_report_lines(meta: &serde_json::Value, meta_path: &Path) -> Vec<String> {
+    let mut lines = vec![
+        "bundle_meta:".to_string(),
+        format!("  meta_json: {}", meta_path.display()),
+        format!("  bundle: {}", meta_report_str_field(meta, "bundle")),
+        format!(
+            "  warmup_frames: {}",
+            meta_report_u64_field(meta, "warmup_frames")
+        ),
+        format!(
+            "  windows_total: {}",
+            meta_report_u64_field(meta, "windows_total")
+        ),
+        format!(
+            "  snapshots_total: {}",
+            meta_report_u64_field(meta, "snapshots_total")
+        ),
+        format!(
+            "  semantics: resolved={} inline={} table={} table_entries={} table_unique_keys={}",
+            meta_report_u64_field(meta, "snapshots_with_semantics_total"),
+            meta_report_u64_field(meta, "snapshots_with_inline_semantics_total"),
+            meta_report_u64_field(meta, "snapshots_with_table_semantics_total"),
+            meta_report_u64_field(meta, "semantics_table_entries_total"),
+            meta_report_u64_field(meta, "semantics_table_unique_keys_total"),
+        ),
+    ];
+
+    let Some(windows) = meta.get("windows").and_then(|value| value.as_array()) else {
+        return lines;
     };
     if windows.is_empty() {
-        return;
+        return lines;
     }
 
-    println!("  windows:");
+    lines.push("  windows:".to_string());
     let max = 6usize;
-    for w in windows.iter().take(max) {
-        let window = u64_field(w, "window");
-        let snapshots_total = u64_field(w, "snapshots_total");
-        let sem_resolved = u64_field(w, "snapshots_with_semantics_total");
-        let sem_inline = u64_field(w, "snapshots_with_inline_semantics_total");
-        let sem_table = u64_field(w, "snapshots_with_table_semantics_total");
-        let table_entries = u64_field(w, "semantics_table_entries_total");
-        let table_keys = u64_field(w, "semantics_table_unique_keys_total");
-        let considered_frame_id = w
+    for window in windows.iter().take(max) {
+        let considered_frame_id = window
             .get("considered_frame_id")
-            .and_then(|v| v.as_u64())
-            .map(|v| v.to_string())
+            .and_then(|value| value.as_u64())
+            .map(|value| value.to_string())
             .unwrap_or_else(|| "null".to_string());
-        println!(
+        lines.push(format!(
             "    - window={} snapshots={} considered_frame={} semantics(resolved/inline/table)={}/{}/{} table(entries/keys)={}/{}",
-            window,
-            snapshots_total,
+            meta_report_u64_field(window, "window"),
+            meta_report_u64_field(window, "snapshots_total"),
             considered_frame_id,
-            sem_resolved,
-            sem_inline,
-            sem_table,
-            table_entries,
-            table_keys,
-        );
+            meta_report_u64_field(window, "snapshots_with_semantics_total"),
+            meta_report_u64_field(window, "snapshots_with_inline_semantics_total"),
+            meta_report_u64_field(window, "snapshots_with_table_semantics_total"),
+            meta_report_u64_field(window, "semantics_table_entries_total"),
+            meta_report_u64_field(window, "semantics_table_unique_keys_total"),
+        ));
     }
     if windows.len() > max {
-        println!("    - ... ({} more)", windows.len() - max);
+        lines.push(format!("    - ... ({} more)", windows.len() - max));
     }
+    lines
 }

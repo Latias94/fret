@@ -34,7 +34,7 @@ Deliverables:
 
 Progress update:
 
-- `diag_suite` has now landed thirteen consecutive seam slices around post-run and result-summary orchestration:
+- `diag_suite` has now landed seventeen consecutive seam slices around post-run and result-summary orchestration:
   - core default check planning,
   - editor/markdown/text default check planning,
   - explicit-or-policy post-run trigger planning,
@@ -47,11 +47,54 @@ Progress update:
   - per-script context assembly for stage/reason accounting plus evidence/lint preparation,
   - transport result decoding around `dump_label`, `run_script_over_transport`, and `tooling.suite.error` fallback,
   - script-execution block assembly for prewarm/prelude/load-script wiring,
-  - per-script launch env/default assembly plus connected transport acquisition.
-- The next remaining high-ROI seam in this area is the remaining per-script execution dispatch
-  closure around `SuiteScriptExecutionBlockContext` assembly plus
-  `execute_suite_script_iteration_block` invocation rather than re-expanding execution control in
-  `cmd_suite`.
+  - per-script launch env/default assembly plus connected transport acquisition,
+  - transport-backed execution dispatch around context assembly plus block invocation,
+  - per-script lint execution plus passed-script post-run preparation,
+  - per-script result finalization around stage branching, success-row emission, and stop-demo teardown,
+  - the remaining per-script success tail around lint-failure exit, post-run apply, and success finalize orchestration.
+- The next decision point in this area is whether the few remaining session-root-only holdouts are
+  still worth slicing, or whether the higher-ROI seam has shifted to `diag_campaign`, `diag_run`,
+  or artifact resolution/materialization.
+- `diag_run` has now landed its first shared result/post-run seam slice:
+  - transport result stage normalization,
+  - shared bundle doctor/post-run check execution,
+  - shared AI packet / pack artifact emission,
+  - demo-exit-killed marking before final result exit.
+- `diag_run` has now landed its second seam slice around filesystem post-run orchestration:
+  - failed-run dump bundle backfill,
+  - bundle artifact resolution/wait with optional trigger retry,
+  - filesystem post-run finalization for bundle doctor reuse and artifact emission.
+- `diag_run` has now landed its third seam slice around command-level branch separation:
+  - DevTools WS setup/connect/run wiring,
+  - branch-local result finalization and artifact emission,
+  - command-level separation between the WS and filesystem paths.
+- `diag_run` has now landed its fourth seam slice around filesystem branch separation:
+  - launch env/default preparation,
+  - launch/connect plus stop-guard ownership,
+  - filesystem branch-local execution and finalization dispatch.
+- `diag_run` has now landed its fifth seam slice around top-level command setup:
+  - argument normalization and script-source resolution,
+  - check-derived defaults and pack/bundle intent derivation,
+  - transport-mode validation before exclusive branch dispatch.
+- `diag_campaign` has now landed another artifact/evidence seam around share-manifest item processing:
+  - per-item bundle/triage/screenshot/share-zip planning now routes through a dedicated helper,
+  - share-manifest counters now use a named mergeable struct instead of ad hoc local integers,
+  - combined failure zip staging now uses a named entry shape instead of an anonymous tuple,
+  - final manifest payload assembly and combined-zip update now route through dedicated helpers plus a named outcome shape.
+- `commands/resolve` has now landed another artifact-resolution seam around `diag resolve latest`:
+  - option parsing now routes through a dedicated pure helper,
+  - JSON and text projections now route through dedicated render helpers,
+  - helper-level regression coverage now locks the command output shape without relying on stdout capture.
+- `commands::artifacts` has now landed another artifact-resolution seam cluster around `cmd_pack`, `cmd_meta`, `cmd_lint`, and `cmd_triage`:
+  - bundle/source resolution and user-facing error hinting now route through dedicated setup helpers,
+  - default output path selection now routes through pure helpers,
+  - repeated single-bundle emitters now also reuse shared bundle-input plus path/json output helpers,
+  - `cmd_meta` now routes its human-readable projection through pure report-line helpers,
+  - `cmd_lint` now routes bundle/out-path preparation through `prepare_cmd_lint` and exit-policy dispatch through a dedicated helper while reusing the shared JSON writer,
+  - `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper,
+  - helper-level regression coverage now locks the AI-only output-path policy, shared input validation paths, meta-report line shape, lint exit predicate, triage lite out-path policy, and tooling-warning attachment behavior.
+- The next decision point in this area is whether any further `diag_run` slicing is worth it, or whether
+  the higher-ROI seam has now shifted to adjacent artifact-lint-style write/exit holdouts or deeper session/bundle resolution helpers.
 
 Exit criteria:
 

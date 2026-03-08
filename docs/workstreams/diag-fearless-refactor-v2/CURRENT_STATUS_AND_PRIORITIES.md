@@ -112,10 +112,11 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, and per-script launch/transport acquisition have landed; the next target inside this file is the remaining per-script execution dispatch closure around `SuiteScriptExecutionBlockContext` assembly plus `execute_suite_script_iteration_block` invocation)
-- `crates/fret-diag/src/diag_campaign.rs`
-- `crates/fret-diag/src/diag_run.rs`
-- `crates/fret-diag/src/commands/artifacts.rs`
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, per-script launch/transport acquisition, execution dispatch, success-path bundle/lint/post-run preparation, result-finalization stage/success helpers, and success-tail orchestration have landed; the remaining holdouts in this file are now mostly one-time setup and session-root-adjacent helpers, so this file is no longer the default next seam target)
+- `crates/fret-diag/src/diag_run.rs` (the first five `cmd_run` seams are now landed: transport result stage normalization, bundle doctor/post-run checks, bundle artifact emission, demo-exit-killed marking, failure dump bundle backfill, bundle-path resolution/wait, filesystem post-run finalization, both transport branch adapters, and the remaining top-level option/policy setup now all reuse dedicated helpers; `cmd_run` is now mostly resolved-path setup plus transport dispatch, so further slicing here should be treated as a diminishing-returns decision rather than the default next step)
+- `crates/fret-diag/src/diag_campaign.rs` (the run/result/report/finalize seams are already in much better shape, and `write_campaign_share_manifest` now routes both per-item evidence planning and the final payload/combined-zip update through dedicated helpers plus named counters/combined-entry/outcome shapes; the next choice here is whether any further share-manifest slicing still pays, or whether the higher-ROI hotspot has moved to another artifact-resolution command)
+- `crates/fret-diag/src/commands/resolve.rs` (`diag resolve latest` now routes option parsing and JSON/text rendering through dedicated pure helpers with direct regression coverage, so the remaining work here is more about deeper artifact/session resolution seams than top-level command-blob cleanup)
+- `crates/fret-diag/src/commands/artifacts.rs` (`cmd_pack` now routes bundle/source resolution and default out-path selection through a dedicated setup helper plus pure out-path logic, the repeated single-bundle emitter commands now also reuse shared bundle-input plus path/json output helpers, `cmd_meta` now routes its human-readable projection through pure report-line helpers, `cmd_lint` now routes bundle/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing the shared JSON artifact writer, and `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper; the larger remaining holdouts here are now mostly adjacent artifact-lint-style write/exit paths or any deeper session/bundle resolution seams that still pay better than further emitter slicing)
 
 Recommended next seam choices:
 
@@ -129,8 +130,10 @@ Recent progress since this note was drafted:
   `ARTIFACT_AND_EVIDENCE_MODEL_V1.md`, which names source-of-truth artifacts, derived/index
   artifacts, optional evidence, presentation-facing projections, the bounded first-open set, and
   consumer checklists for CLI / GUI / CI / share flows in one place,
-- artifact resolution/materialization now has shared seams for bundle input resolution and
-  `script.result.json` discovery under `crates/fret-diag/src/commands/resolve.rs`,
+- artifact resolution/materialization now has shared seams for bundle input resolution,
+  `script.result.json` discovery, `diag resolve latest` option/render shaping under
+  `crates/fret-diag/src/commands/resolve.rs`, and `commands::artifacts` emitter setup/display
+  shaping for `cmd_pack`, the repeated single-bundle emitters, `cmd_meta`, and now `cmd_lint`,
 - run planning/context assembly now reuses `ResolvedScriptPaths` and a higher-level
   `ResolvedRunContext` instead of re-threading parallel path and transport arguments,
 - transport dispatch for the main script-driven launch flows now reuses shared filesystem transport
@@ -178,6 +181,13 @@ Recent progress since this note was drafted:
   acquisition through `SuiteScriptLaunchRequest`, `SuiteScriptTransportRequest`, and
   `SuiteScriptTransportSelection`, so `maybe_launch_demo` and filesystem-vs-DevTools selection no
   longer expand inline in the main script loop.
+- `diag_suite` now also routes transport-backed execution dispatch through
+  `SuiteScriptExecutionRequest`, so `SuiteScriptExecutionBlockContext` assembly plus
+  `execute_suite_script_iteration_block` invocation no longer stay inline in the main script loop.
+- `diag_suite` now also routes per-script lint execution plus passed-script post-run preparation
+  through `SuiteScriptLintRequest` and `SuiteScriptPostRunPreparationRequest`, so bundle waits,
+  bundle doctor application, lint/report wiring, and post-run default-check planning no longer
+  expand inline in the main script loop.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.
@@ -302,7 +312,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 
 1. apply and cross-link the canonical artifact/evidence contract update across remaining diagnostics notes and consumers,
 2. continue from the new `diag_campaign` invocation + execution-plan + run-outcome + shared-finalize + shared-payload + outcome/error + result-payload + artifact-builder + aggregate-artifact + report-artifact + aggregate-projection + run-outcome-json + report-json-section + batch-json-section + result-section + manifest-payload + item-execution-plan + item-result + item-plan-list + summary-finalize-plan + result-write-plan + result-payload-sections seams into the remaining JSON consolidation or check planning/execution,
-3. keep the new per-script launch/transport helpers thin instead of growing fresh execution-state or path-assembly branches into them,
+3. keep the new per-script success-path helpers thin instead of growing fresh finalize/teardown or path-assembly branches into them,
 4. only then revisit optional output projections or larger packaging policies.
 
 ## Bottom line

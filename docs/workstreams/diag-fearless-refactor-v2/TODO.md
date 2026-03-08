@@ -30,7 +30,16 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [x] Choose the next 2?3 high-ROI seam extractions for landable follow-up PRs:
   - [x] run planning/context,
+    - ninth landing: `diag_run` now routes transport result stage normalization, bundle doctor/post-run checks, bundle artifact emission, and demo-exit-killed marking through dedicated helpers, so the shared result/post-run tail no longer stays duplicated across the DevTools WS and filesystem branches
+    - tenth landing: `diag_run` now routes failed-run dump bundle backfill, bundle-path resolution/wait, and filesystem post-run finalization through dedicated helpers, so `cmd_run` no longer open-codes the same bundle wait/retry and post-run artifact flow inline in the filesystem branch
+    - eleventh landing: `diag_run` now routes the DevTools WS path through a dedicated branch adapter, so command-level WS setup, connect/run handling, and result finalization no longer live inline beside the filesystem branch in `cmd_run`
+    - twelfth landing: `diag_run` now routes the filesystem path through a dedicated branch adapter, so env/default wiring, launch/connect setup, stop-guard ownership, and branch-local finalization no longer live inline in `cmd_run`
+    - thirteenth landing: `diag_run` now routes the remaining top-level option/policy setup through `RunCommandSetupRequest` and `PreparedRunCommandSetup`, so argument normalization, check-derived defaults, pack/bundle intent derivation, and transport-mode validation stop sharing one long inline prelude in `cmd_run`
+    - next focus: treat `diag_run` as near diminishing returns and shift the next high-ROI seam to `diag_campaign` or artifact-resolution/materialization unless a new `cmd_run` holdout appears
   - [x] artifact resolution/materialization,
+    - latest landing: `commands/resolve` now routes `diag resolve latest` through dedicated option-parse plus JSON/text render helpers, so top-level command parsing/output shaping no longer stays inline and the output contract gains direct helper-level regression coverage
+    - latest landing: `commands::artifacts` now routes `cmd_pack` through a dedicated setup helper plus pure default-out-path logic, the repeated single-bundle emitters now reuse shared bundle-input plus path/json output helpers, `cmd_meta` now routes its human-readable projection through pure report-line helpers, `cmd_lint` now routes bundle/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing the shared JSON artifact writer, and `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper, so shared validation, simple artifact emission, lint write/display policy, triage payload shaping, and meta-report rendering no longer stay duplicated or inline-only across multiple commands
+    - next focus: decide between mirroring the same seam style into adjacent artifact-lint-style write/exit helpers or returning to deeper `commands/resolve` session/bundle resolution work
   - [ ] check planning/execution,
     - first landing: `diag_suite` now extracts suite core default post-run checks into a dedicated helper, shrinking the main orchestration body around viewport/vlist/view-cache/retained defaults
     - second landing: `diag_suite` now extracts editor/markdown/text default post-run checks plus merge wiring into dedicated helpers, keeping policy-heavy boolean gate assembly out of `cmd_suite`
@@ -45,7 +54,12 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - eleventh landing: `diag_suite` now routes dump-label planning, `run_script_over_transport` lowering, and `tooling.suite.error` fallback through dedicated helpers, so transport result decoding reuses one path
     - twelfth landing: `diag_suite` now routes prewarm/prelude execution and load-script wiring through a dedicated execution-block context, so the script loop reuses one setup path before transport execution
     - thirteenth landing: `diag_suite` now routes per-script launch env/default assembly and connected transport acquisition through `SuiteScriptLaunchRequest` plus `SuiteScriptTransportRequest` / `SuiteScriptTransportSelection`, so `maybe_launch_demo` and filesystem-vs-DevTools selection reuse one seam
-    - next focus: collapse the remaining per-script execution closure around `SuiteScriptExecutionBlockContext` assembly plus `execute_suite_script_iteration_block` invocation
+    - fourteenth landing: `diag_suite` now routes transport-backed execution dispatch through `SuiteScriptExecutionRequest`, so `SuiteScriptExecutionBlockContext` assembly plus `execute_suite_script_iteration_block` invocation reuse one seam
+    - fifteenth landing: `diag_suite` now routes per-script lint execution plus passed-script post-run preparation through `SuiteScriptLintRequest` and `SuiteScriptPostRunPreparationRequest`, so bundle waits, bundle doctor application, lint/report wiring, and post-run default-check planning reuse one seam
+    - sixteenth landing: `diag_suite` now routes per-script result finalization through `SuiteScriptStageFinalizeRequest` and `SuiteScriptSuccessFinalizeRequest`, so stage branching, success-row emission, and stop-demo teardown reuse dedicated helpers instead of sharing one inline tail
+    - seventeenth landing: `diag_suite` now routes the remaining per-script success tail through `SuiteScriptSuccessTailRequest`, so lint-failure exit, post-run apply, and success finalize orchestration reuse one helper seam instead of re-expanding the last success-only block inline
+    - audit note: the remaining `diag_suite` holdouts are now mostly one-time setup and session-root-adjacent helpers, so further slicing here has lower ROI than the next command hotspot
+    - next focus: keep `diag_suite` parked unless a new high-ROI holdout appears; the active seam work has moved to `diag_run`
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff
@@ -78,6 +92,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - twenty-ninth landing: `diag_campaign` now builds a shared summary-finalize plan for single-run and batch finalize paths, so summarize inputs, output roots, timestamps, and failure-share conditions stop being re-derived inline in two separate finalize branches
     - thirtieth landing: `diag_campaign` now builds dedicated result-write plans for single-run and batch result artifacts, so output-path resolution and payload shaping are settled before file IO and the write layer no longer duplicates the same "path + payload + write" pattern inline
     - thirty-first landing: `diag_campaign` now builds dedicated result-payload section bundles for single-run and batch result artifacts, so payload roots no longer open-code the same run/counters/aggregate/list section planning inline before composing the final JSON object
+    - latest landing: `diag_campaign` now routes `write_campaign_share_manifest` through dedicated item-planning, payload-build, and combined-zip-finalize helpers plus named counters/combined-entry/outcome shapes, so bundle/triage/share staging and final manifest update no longer expand inline in one artifact-handoff block
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.
