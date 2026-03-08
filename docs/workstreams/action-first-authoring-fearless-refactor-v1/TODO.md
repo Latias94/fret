@@ -553,7 +553,7 @@ Current sequencing note (as of 2026-03-08):
   - Goal: turn the app-entry policy into a concrete migration table instead of a generic “later cleanup” note.
   - Evidence target: one inventory that classifies each current `ui(...)` / `ui_with_hooks(...)` caller as `migrate-to-view`, `move-lower-level`, or `keep-temporarily`.
   - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now classifies the current in-tree callers; the present conclusion is that almost all of them are `migrate-to-view` debt rather than evidence that closure-root app entry should remain a co-equal long-term surface.
-  - Progress update (as of 2026-03-08): `apps/fret-examples/src/imui_hello_demo.rs`, `apps/fret-examples/src/imui_response_signals_demo.rs`, and `apps/fret-examples/src/chart_declarative_demo.rs` have already moved to `run_view::<...>()`, proving both minimal IMUI demos and a plain declarative chart demo do not need closure-root `App::ui(...)`.
+  - Progress update (as of 2026-03-08): `apps/fret-examples/src/imui_hello_demo.rs`, `apps/fret-examples/src/imui_response_signals_demo.rs`, `apps/fret-examples/src/chart_declarative_demo.rs`, and `apps/fret-examples/src/node_graph_demo.rs` have already moved to `run_view::<...>()`; Batch A is therefore complete and no longer depends on closure-root `App::ui(...)`.
 
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.

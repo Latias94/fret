@@ -59,7 +59,7 @@ Current conclusion:
 | `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `migrate-to-view` | still appears to be authoring debt rather than a lower-level requirement |
 | `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiResponseSignalsView>()`; proves response-signal-heavy IMUI demos also fit the default view entry path |
 | `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `migrate-to-view` | useful proof that adapter demos can still live on the default entry path |
-| `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `migrate-to-view` | closure-root usage looks historical; not obviously blocked on a lower-level runner |
+| `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `done` | migrated on 2026-03-08 to `run_view::<NodeGraphDemoView>()`; confirms a retained-model canvas demo also fits the default view entry path |
 
 ---
 
@@ -84,11 +84,15 @@ These should move first because they are small and make the policy credible quic
 - `apps/fret-examples/src/imui_hello_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/imui_response_signals_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/chart_declarative_demo.rs` _(done on 2026-03-08)_
-- `apps/fret-examples/src/node_graph_demo.rs`
+- `apps/fret-examples/src/node_graph_demo.rs` _(done on 2026-03-08)_
 
 Success criterion:
 
 - the repo can show multiple non-trivial examples using `View` entry without relying on closure-root `App::ui(...)`.
+
+Status update:
+
+- Batch A is now complete: all four planned proof points have moved off `App::ui(...)`.
 
 ## Batch B — hook-preserving migrations
 

@@ -9,8 +9,8 @@ use fret_node::core::{
 };
 use fret_node::io::NodeGraphViewState;
 use fret_node::ui::{
-    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
-    NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only,
+    node_graph_surface_paint_only, EdgePaintOverrideV1, NodeGraphPaintOverridesMap,
+    NodeGraphPaintOverridesRef, NodeGraphSurfacePaintOnlyProps,
 };
 use serde_json::Value;
 
@@ -18,7 +18,7 @@ const ENV_WIRE_PAINT_COOKBOOK: &str = "FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK"
 const TEST_ID_CANVAS: &str = "node_graph.canvas";
 
 #[derive(Clone)]
-struct NodeGraphDemoState {
+struct NodeGraphDemoView {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
@@ -27,30 +27,32 @@ struct NodeGraphDemoState {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("node-graph-demo")
         .window("node_graph_demo", (980.0, 720.0))
-        .ui(init_window, view)?
-        .run()?;
+        .run_view::<NodeGraphDemoView>()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
-    let graph = app.models_mut().insert(demo_graph());
-    let view = app.models_mut().insert(NodeGraphViewState::default());
-    let paint_overrides = demo_paint_overrides();
-    NodeGraphDemoState {
-        graph,
-        view,
-        paint_overrides,
+impl View for NodeGraphDemoView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        let graph = app.models_mut().insert(demo_graph());
+        let view = app.models_mut().insert(NodeGraphViewState::default());
+        let paint_overrides = demo_paint_overrides();
+        Self {
+            graph,
+            view,
+            paint_overrides,
+        }
     }
-}
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::ViewElements {
-    cx.observe_model(&st.graph, Invalidation::Paint);
-    cx.observe_model(&st.view, Invalidation::Paint);
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.elements()
+            .observe_model(&self.graph, Invalidation::Paint);
+        cx.elements().observe_model(&self.view, Invalidation::Paint);
 
-    let mut props = NodeGraphSurfacePaintOnlyProps::new(st.graph.clone(), st.view.clone());
-    props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
-    props.paint_overrides = st.paint_overrides.clone();
-    node_graph_surface_paint_only(cx, props).into()
+        let mut props = NodeGraphSurfacePaintOnlyProps::new(self.graph.clone(), self.view.clone());
+        props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
+        props.paint_overrides = self.paint_overrides.clone();
+        node_graph_surface_paint_only(cx.elements(), props).into()
+    }
 }
 
 fn env_enabled(name: &str) -> bool {
