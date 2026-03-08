@@ -14,8 +14,8 @@ It is intentionally “golden path”: advanced apps may assemble crates manuall
 Prefer an explicit ladder instead of starting with the full baseline on minute 1:
 
 1. `hello` — the smallest runnable “Hello UI”
-2. `simple-todo` — **View runtime + typed actions + keyed lists** (no selectors/queries)
-3. `todo` — the best-practice baseline (**selectors + queries**) once you need derived/async state
+2. `simple-todo` - **View runtime + typed actions + keyed lists** (no selectors/queries; current practical shape is `LocalState<Vec<_>>` + payload row actions for view-owned lists)
+3. `todo` — the current best-practice baseline (**selectors + queries**) once you need derived/async state
 
 Templates (in this repository):
 
@@ -24,6 +24,11 @@ cargo run -p fretboard -- new hello --name hello-world
 cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run -p fretboard -- new todo --name my-todo
 ```
+
+Maintainer comparison target (not the onboarding default):
+
+- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list direction now also ships in `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold. Its value is comparison, not proving the default path is still missing.
 
 Related ADRs:
 
@@ -190,6 +195,14 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
+Current status note (as of 2026-03-08): this document describes the **current practical baseline**
+for the full `todo` app and the richer `cargo run -p fretboard -- new todo` scaffold, not the
+smallest v2 default surface. The smaller `simple-todo` path is now the boring default for
+view-owned keyed lists: the cookbook comparison sample, `apps/fret-examples/src/todo_demo.rs`, and
+the `fretboard` simple-todo scaffold all use `LocalState<Vec<TodoRow>>`, payload row actions, and
+snapshot checkbox bindings. The remaining explicit collection examples are comparison-oriented or
+intentionally advanced rather than default-surface blockers.
+
 The official baseline uses an explicit 3-layer model:
 
 1. Local mutable state (`Model<T>`):
@@ -283,9 +296,10 @@ High-level sketch:
 ```rust,ignore
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState};
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
 let handle = cx.use_query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned_or_default();
+let state: QueryState<T> = handle.layout_query(cx).value_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -299,7 +313,7 @@ cx.on_action_notify_models::<act::RefreshTip>({
 });
 
 // then include the nonce in the query key:
-let nonce = cx.watch_model(&tip_nonce).paint().copied_or(0);
+let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
 let handle = cx.use_query(tip_key(nonce), policy, move |token| fetch(token));
 ```
 

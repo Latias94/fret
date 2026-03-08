@@ -47,8 +47,8 @@ Open:
 
 The template is intentionally small:
 
-- `TodoState` holds app-owned `Model<T>` state.
-- `act::*` are typed unit actions (stable IDs).
+- `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
+- `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
 - `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.on_action_notify_models`, `cx.on_action_notify_transient`, plus local `on_activate*` only when widget glue truly needs it.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
@@ -148,8 +148,8 @@ When observing models (via `cx.watch_model(...)`):
 Examples:
 
 ```rust
-let clicks = cx.watch_model(&models.clicks).paint().copied_or_default();
-let label = cx.watch_model(&models.label).layout().cloned_or_default();
+let clicks = cx.watch_model(&models.clicks).paint().value_or_default();
+let label = cx.watch_model(&models.label).layout().value_or_default();
 ```
 
 If you are unsure, start with `Layout` and tighten later.
