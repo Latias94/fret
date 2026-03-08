@@ -151,6 +151,7 @@ mod overlay_layout;
 mod paint_edge_anchors;
 mod paint_edges;
 mod paint_grid;
+mod paint_grid_tiles;
 mod paint_groups;
 mod paint_nodes;
 mod paint_overlay_elements;

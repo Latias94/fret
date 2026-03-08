@@ -499,6 +499,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     multi-drag extent clamp math through the private
     `canvas/widget/node_drag_constraints.rs` seam, so node/group constraint math no longer
     stays embedded in the retained drag router.
+  - Progress: `paint_grid.rs` now routes tile scene-op generation through the
+    private `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission
+    and focused pattern tests no longer stay embedded in the retained grid cache/router
+    surface.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

@@ -563,6 +563,9 @@ real editors.
 - `node_drag.rs` now also routes anchor clamp / extent union / multi-drag
   extent clamp math through the private `canvas/widget/node_drag_constraints.rs` seam,
   so node/group constraint math no longer stays embedded in the retained drag router.
+- `paint_grid.rs` now routes tile scene-op generation through the private
+  `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission and
+  focused pattern tests no longer stay embedded in the retained grid cache/router surface.
 
 ### Deliverables
 
@@ -634,6 +637,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_snap.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`
