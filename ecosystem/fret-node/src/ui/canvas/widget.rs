@@ -137,6 +137,8 @@ mod edge_path_ctx;
 mod event_clipboard;
 mod event_keyboard;
 mod event_pointer_down;
+mod event_pointer_down_route;
+mod event_pointer_down_state;
 mod event_pointer_move;
 mod event_pointer_up;
 mod event_pointer_wheel;

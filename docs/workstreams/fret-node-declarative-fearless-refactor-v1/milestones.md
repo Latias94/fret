@@ -517,6 +517,11 @@ real editors.
   sticky-wire activation, and pan-start branches through the private
   `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
   embedded in the retained pointer-down router.
+- `event_pointer_down.rs` now routes pointer-down interaction priming
+  and final left/right/ignore tail dispatch through the private
+  `canvas/widget/event_pointer_down_state.rs` and
+  `canvas/widget/event_pointer_down_route.rs` seams, so retained pointer-down routing
+  no longer keeps timer-stop/state-sync setup and tail button fallback embedded in one surface.
 - `focus_nav.rs` now also routes edge / node / port traversal through the private
   `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
   node focus no longer stay embedded in the port-hint / activation file.
@@ -922,6 +927,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports_center.rs`

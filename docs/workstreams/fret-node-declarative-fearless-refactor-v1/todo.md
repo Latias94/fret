@@ -452,6 +452,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     arming, sticky-wire activation, and pan-start branches through the private
     `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
     embedded in the retained pointer-down router.
+  - Progress: `event_pointer_down.rs` now routes pointer-down interaction priming
+    and final left/right/ignore tail dispatch through the private
+    `canvas/widget/event_pointer_down_state.rs` and
+    `canvas/widget/event_pointer_down_route.rs` seams, so retained pointer-down routing
+    no longer keeps timer-stop/state-sync setup and tail button fallback embedded in one surface.
   - Progress: `focus_nav.rs` now routes edge / node / port traversal through the private
     `canvas/widget/focus_nav_traversal.rs` seam, so selection/focus cycling order and auto-pan on
     node focus no longer stay embedded in the port-hint / activation file.
