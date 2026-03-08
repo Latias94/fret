@@ -1,14 +1,13 @@
-use std::collections::{HashMap, HashSet};
-
-use fret_canvas::scale::canvas_units_from_screen_px;
-use fret_core::{Modifiers, Point, Px, Rect};
+use fret_core::{Modifiers, Point, Px};
 use fret_ui::UiHost;
 
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
-use crate::core::{CanvasRect, CanvasSize, NodeExtent};
+use crate::core::{CanvasRect, CanvasSize};
 use crate::io::NodeGraphNodeOrigin;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, node_drag_preview, node_drag_snap,
+};
 use crate::ui::canvas::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 
 fn clamp_rect_origin_in_rect_with_size(
@@ -29,7 +28,7 @@ fn clamp_rect_origin_in_rect_with_size(
     out
 }
 
-fn clamp_anchor_in_rect_with_size(
+pub(super) fn clamp_anchor_in_rect_with_size(
     anchor: CanvasPoint,
     size: CanvasSize,
     extent: CanvasRect,
@@ -40,7 +39,7 @@ fn clamp_anchor_in_rect_with_size(
     node_anchor_from_rect_origin(clamped, size, node_origin)
 }
 
-fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
+pub(super) fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
     let ax0 = a.origin.x;
     let ay0 = a.origin.y;
     let ax1 = a.origin.x + a.size.width;
@@ -214,63 +213,19 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         };
     }
 
-    if snaplines {
-        let threshold_canvas = canvas_units_from_screen_px(snaplines_threshold_screen, zoom);
-
-        let geom = canvas.canvas_geometry(&*cx.app, snapshot);
-        let drag_nodes: HashSet<GraphNodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
-
-        let mut group: Option<Rect> = None;
-        for (id, start) in &drag.nodes {
-            let Some(ng) = geom.nodes.get(id) else {
-                continue;
-            };
-            let rect0 = Rect::new(Point::new(Px(start.x), Px(start.y)), ng.rect.size);
-            group = Some(match group {
-                Some(r) => super::rect_union(r, rect0),
-                None => rect0,
-            });
-        }
-
-        let mut candidates: Vec<Rect> = Vec::new();
-        for (id, ng) in geom.nodes.iter() {
-            if drag_nodes.contains(id) {
-                continue;
-            }
-            candidates.push(ng.rect);
-        }
-
-        if let Some(group0) = group {
-            let moving = Rect::new(
-                Point::new(
-                    Px(group0.origin.x.0 + delta.x),
-                    Px(group0.origin.y.0 + delta.y),
-                ),
-                group0.size,
-            );
-
-            let snap = crate::ui::canvas::snaplines::snap_delta_for_rects(
-                moving,
-                &candidates,
-                threshold_canvas,
-            );
-            canvas.interaction.snap_guides =
-                (snap.guides.x.is_some() || snap.guides.y.is_some()).then_some(snap.guides);
-
-            let allow_snap = !modifiers.alt && !modifiers.alt_gr;
-            if allow_snap {
-                delta.x += snap.delta_x;
-                delta.y += snap.delta_y;
-            }
-        } else {
-            canvas.interaction.snap_guides = None;
-        }
-    } else {
-        canvas.interaction.snap_guides = None;
-    }
+    delta = node_drag_snap::apply_snaplines_delta(
+        canvas,
+        cx,
+        snapshot,
+        &drag,
+        delta,
+        snaplines,
+        snaplines_threshold_screen,
+        modifiers,
+        zoom,
+    );
 
     let geom_for_extent = canvas.canvas_geometry(&*cx.app, snapshot);
-    let node_origin = snapshot.interaction.node_origin.normalized();
     if multi_drag && let Some(extent) = snapshot.interaction.node_extent {
         if let Some((group_min, group_size)) =
             dragged_group_bounds(&geom_for_extent, &drag.node_ids)
@@ -278,80 +233,10 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
             delta = clamp_delta_for_extent_rect(delta, group_min, group_size, extent);
         }
     }
-    let (next_nodes, next_groups) = canvas
-        .graph
-        .read_ref(cx.app, |g| {
-            let mut out_nodes: Vec<(GraphNodeId, CanvasPoint)> =
-                Vec::with_capacity(drag.nodes.len());
-            let mut group_overrides: HashMap<crate::core::GroupId, CanvasRect> = HashMap::new();
-
-            for (id, start) in &drag.nodes {
-                let Some(node) = g.nodes.get(id) else {
-                    continue;
-                };
-
-                let mut to = CanvasPoint {
-                    x: start.x + delta.x,
-                    y: start.y + delta.y,
-                };
-
-                let Some(node_geom) = geom_for_extent.nodes.get(id) else {
-                    continue;
-                };
-                let node_size = CanvasSize {
-                    width: node_geom.rect.size.width.0,
-                    height: node_geom.rect.size.height.0,
-                };
-
-                if !multi_drag && let Some(extent) = snapshot.interaction.node_extent {
-                    to = clamp_anchor_in_rect_with_size(to, node_size, extent, node_origin);
-                }
-
-                if let Some(NodeExtent::Rect { rect }) = node.extent {
-                    to = clamp_anchor_in_rect_with_size(to, node_size, rect, node_origin);
-                }
-
-                let expand_parent = node.expand_parent.unwrap_or(false);
-                if let Some(parent) = node.parent {
-                    let parent_rect = g.groups.get(&parent).map(|gr| gr.rect);
-
-                    let clamp_to_parent = !expand_parent
-                        && match node.extent {
-                            Some(NodeExtent::Parent) | None | Some(NodeExtent::Rect { .. }) => true,
-                        };
-
-                    if clamp_to_parent && let Some(group_rect) = parent_rect {
-                        to = clamp_anchor_in_rect_with_size(to, node_size, group_rect, node_origin);
-                    } else if expand_parent && let Some(group_rect) = parent_rect {
-                        let rect_origin = node_rect_origin_from_anchor(to, node_size, node_origin);
-                        let child_rect = CanvasRect {
-                            origin: rect_origin,
-                            size: node_size,
-                        };
-                        let next = union_rect(group_rect, child_rect);
-                        group_overrides
-                            .entry(parent)
-                            .and_modify(|r| *r = union_rect(*r, next))
-                            .or_insert(next);
-                    }
-                }
-
-                out_nodes.push((*id, to));
-            }
-
-            let mut out_groups: Vec<(crate::core::GroupId, CanvasRect)> =
-                group_overrides.into_iter().collect();
-            out_groups.sort_by(|a, b| a.0.cmp(&b.0));
-            (out_nodes, out_groups)
-        })
-        .ok()
-        .unwrap_or_default();
-
-    if drag.current_nodes != next_nodes || drag.current_groups != next_groups {
-        drag.current_nodes = next_nodes;
-        drag.current_groups = next_groups;
-        drag.preview_rev = drag.preview_rev.wrapping_add(1);
-    }
+    let (next_nodes, next_groups) = node_drag_preview::compute_preview_positions(
+        canvas, cx, snapshot, &drag, delta, multi_drag,
+    );
+    node_drag_preview::update_drag_preview_state(&mut drag, next_nodes, next_groups);
     canvas.interaction.node_drag = Some(drag.clone());
 
     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {

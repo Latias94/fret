@@ -491,6 +491,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/retained_widget_command_availability.rs` seam, so clipboard
     capability gating and selection/content availability checks no longer stay embedded in
     the main retained widget trait router.
+  - Progress: `node_drag.rs` now routes snapline arbitration and preview planning
+    through the private `canvas/widget/node_drag_snap.rs` and
+    `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
+    node/group projection no longer stay embedded in the retained drag router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
