@@ -507,6 +507,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     assembly through the private `canvas/widget/pointer_up_node_drag.rs` seam and shares
     pointer-capture teardown via `canvas/widget/pointer_up_finish.rs`, so retained
     pointer-up finalize logic no longer stays duplicated across commit/pending reducers.
+  - Progress: `focus_nav_traversal.rs` now routes edge/node/port cycle
+    traversal through the private `canvas/widget/focus_nav_traversal_edge.rs`,
+    `canvas/widget/focus_nav_traversal_node.rs`, and
+    `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
+    no longer stay embedded in a single traversal surface.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

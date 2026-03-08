@@ -570,6 +570,11 @@ real editors.
   assembly through the private `canvas/widget/pointer_up_node_drag.rs` seam and shares
   pointer-capture teardown via `canvas/widget/pointer_up_finish.rs`, so retained
   pointer-up finalize logic no longer stays duplicated across commit/pending reducers.
+- `focus_nav_traversal.rs` now routes edge/node/port cycle
+  traversal through the private `canvas/widget/focus_nav_traversal_edge.rs`,
+  `canvas/widget/focus_nav_traversal_node.rs`, and
+  `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
+  no longer stay embedded in a single traversal surface.
 
 ### Deliverables
 
@@ -619,9 +624,12 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_edge.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal_port.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_traversal.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_nav_ports.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
