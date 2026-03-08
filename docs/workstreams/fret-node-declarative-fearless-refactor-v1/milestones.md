@@ -537,6 +537,13 @@ real editors.
   through the private `canvas/widget/timer_motion.rs` seam, so pan inertia, viewport
   animation, auto-pan replay, and move-end debounce no longer stay embedded in the
   retained timer router.
+- `event_keyboard.rs` now routes escape / overlay / modifier shortcut / tab /
+  nudge / delete handling through the private `canvas/widget/keyboard_shortcuts.rs` seam,
+  so key-driven command dispatch and overlay-aware keyboard exits no longer stay embedded in
+  the retained keyboard router.
+- `event_keyboard.rs` now also routes pan-activation hold/release through the private
+  `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming, release, and
+  paint invalidation no longer stay embedded in the retained keyboard router.
 
 ### Deliverables
 
@@ -597,6 +604,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

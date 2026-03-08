@@ -134,6 +134,8 @@ mod insert_candidates;
 mod insert_execution;
 mod insert_node_drag;
 mod interaction_policy;
+mod keyboard_pan_activation;
+mod keyboard_shortcuts;
 mod left_click;
 mod marquee;
 mod menu_session;

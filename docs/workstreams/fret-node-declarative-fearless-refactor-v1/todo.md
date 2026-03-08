@@ -472,6 +472,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     motion through the private `canvas/widget/timer_motion.rs` seam, so pan inertia,
     viewport animation, auto-pan replay, and move-end debounce no longer stay embedded
     in the retained timer router.
+  - Progress: `event_keyboard.rs` now routes escape / overlay / modifier shortcut /
+    tab / nudge / delete handling through the private
+    `canvas/widget/keyboard_shortcuts.rs` seam, so key-driven command dispatch and
+    overlay-aware keyboard exits no longer stay embedded in the retained keyboard router.
+  - Progress: `event_keyboard.rs` now also routes pan-activation hold/release through the
+    private `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming,
+    release, and paint invalidation no longer stay embedded in the retained keyboard router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
