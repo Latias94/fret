@@ -43,7 +43,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - ninth landing: `diag_suite` now routes failed/unexpected/lint-failed script outcomes through a dedicated exit helper, so those branches reuse one outcome row + finalize path
     - tenth landing: `diag_suite` now prepares per-script stage/reason accounting plus evidence/lint context through a dedicated helper, so each script iteration reuses one bookkeeping path after transport execution
     - eleventh landing: `diag_suite` now routes dump-label planning, `run_script_over_transport` lowering, and `tooling.suite.error` fallback through dedicated helpers, so transport result decoding reuses one path
-    - next focus: script-execution block assembly for prewarm/prelude/load-script wiring
+    - twelfth landing: `diag_suite` now routes prewarm/prelude execution and load-script wiring through a dedicated execution-block context, so the script loop reuses one setup path before transport execution
+    - next focus: per-script launch and transport acquisition around `maybe_launch_demo` plus connected transport selection
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff

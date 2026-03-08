@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, and transport result decoding have landed; the next target inside this file is script-execution block assembly around prewarm/prelude/load-script wiring)
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, and script-execution block assembly have landed; the next target inside this file is per-script launch and transport acquisition around `maybe_launch_demo` plus connected transport selection)
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/diag_run.rs`
 - `crates/fret-diag/src/commands/artifacts.rs`
@@ -171,6 +171,9 @@ Recent progress since this note was drafted:
 - `diag_suite` now also routes dump-label planning, `run_script_over_transport` lowering, and
   `tooling.suite.error` fallback through dedicated helpers, so the transport result decoding path no
   longer stays as one monolithic inline block in the script execution loop.
+- `diag_suite` now also routes prewarm/prelude execution and load-script wiring through a dedicated
+  execution-block context, so the main script loop no longer interleaves that setup with transport
+  result decoding in one large closure.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.

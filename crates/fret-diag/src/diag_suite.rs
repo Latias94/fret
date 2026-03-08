@@ -756,6 +756,117 @@ fn finalize_suite_transport_result_error_and_return(
     )
 }
 
+struct SuiteScriptExecutionBlockContext<'a> {
+    tool_launched: bool,
+    child: &'a mut Option<LaunchedDemo>,
+    use_devtools_ws: bool,
+    connected_ws: Option<&'a ConnectedToolingTransport>,
+    connected_fs_for_aux: Option<&'a ConnectedToolingTransport>,
+    workspace_root: &'a Path,
+    resolved_out_dir: &'a Path,
+    resolved_exit_path: &'a Path,
+    keep_open: bool,
+    reuse_process: bool,
+    resolved_script_result_path: &'a Path,
+    resolved_script_result_trigger_path: &'a Path,
+    capabilities_check_path: &'a Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+    trace_chrome: bool,
+}
+
+impl SuiteScriptExecutionBlockContext<'_> {
+    fn run_aux_scripts(&mut self, scripts: &[PathBuf]) -> Result<(), String> {
+        for script in scripts {
+            crate::diag_perf::run_suite_aux_script_must_pass(
+                script,
+                self.tool_launched,
+                self.child,
+                self.use_devtools_ws,
+                self.connected_ws,
+                self.connected_fs_for_aux,
+                self.workspace_root,
+                self.resolved_out_dir,
+                self.resolved_exit_path,
+                !self.keep_open,
+                self.reuse_process,
+                self.resolved_script_result_path,
+                self.resolved_script_result_trigger_path,
+                self.capabilities_check_path,
+                self.timeout_ms,
+                self.poll_ms,
+            )?;
+        }
+        Ok(())
+    }
+}
+
+fn load_suite_script_json_for_execution_with_warning(
+    src: &Path,
+    tool_launched: bool,
+    script_key: &str,
+    resolved_script_result_path: &Path,
+) -> Result<serde_json::Value, String> {
+    let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+        src,
+        crate::script_execution::ScriptLoadPolicy {
+            tool_launched,
+            write_failure: write_tooling_failure_script_result,
+            failure_note: Some(script_key.to_string()),
+            include_stage_in_note: false,
+        },
+        resolved_script_result_path,
+    )?;
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
+    Ok(script_json)
+}
+
+fn execute_suite_script_iteration_block(
+    src: &Path,
+    idx: usize,
+    script_key: &str,
+    connected: &ConnectedToolingTransport,
+    execution_ctx: &mut SuiteScriptExecutionBlockContext<'_>,
+    resolved_suite_prewarm_scripts: &[PathBuf],
+    resolved_suite_prelude_scripts: &[PathBuf],
+    suite_prelude_each_run: bool,
+) -> Result<crate::stats::ScriptResultSummary, String> {
+    if !resolved_suite_prewarm_scripts.is_empty() && (!execution_ctx.reuse_process || idx == 0) {
+        execution_ctx.run_aux_scripts(resolved_suite_prewarm_scripts)?;
+    }
+    if !resolved_suite_prelude_scripts.is_empty()
+        && (!execution_ctx.reuse_process || suite_prelude_each_run || idx == 0)
+    {
+        execution_ctx.run_aux_scripts(resolved_suite_prelude_scripts)?;
+    }
+
+    let script_json = load_suite_script_json_for_execution_with_warning(
+        src,
+        execution_ctx.tool_launched,
+        script_key,
+        execution_ctx.resolved_script_result_path,
+    )?;
+
+    run_suite_script_over_transport_and_lower(
+        src,
+        idx,
+        execution_ctx.resolved_out_dir,
+        connected,
+        script_json,
+        execution_ctx.trace_chrome,
+        execution_ctx.timeout_ms,
+        execution_ctx.poll_ms,
+        execution_ctx.resolved_script_result_path,
+        execution_ctx.capabilities_check_path,
+        script_key,
+    )
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2500,82 +2611,34 @@ hint: list suites via `fretboard diag list suites`"
             } else {
                 Some(connected)
             };
-            if !resolved_suite_prewarm_scripts.is_empty() && (!reuse_process || idx == 0) {
-                for prewarm in &resolved_suite_prewarm_scripts {
-                    crate::diag_perf::run_suite_aux_script_must_pass(
-                        prewarm,
-                        tool_launched,
-                        &mut child,
-                        use_devtools_ws,
-                        connected_ws.as_ref(),
-                        connected_fs_for_aux,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_exit_path,
-                        !keep_open,
-                        reuse_process,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        &capabilities_check_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-                }
-            }
-            if !resolved_suite_prelude_scripts.is_empty()
-                && (!reuse_process || suite_prelude_each_run || idx == 0)
-            {
-                for prelude in &resolved_suite_prelude_scripts {
-                    crate::diag_perf::run_suite_aux_script_must_pass(
-                        prelude,
-                        tool_launched,
-                        &mut child,
-                        use_devtools_ws,
-                        connected_ws.as_ref(),
-                        connected_fs_for_aux,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_exit_path,
-                        !keep_open,
-                        reuse_process,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        &capabilities_check_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-                }
-            }
-
-            let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
-                &src,
-                crate::script_execution::ScriptLoadPolicy {
-                    tool_launched,
-                    write_failure: write_tooling_failure_script_result,
-                    failure_note: Some(script_key.clone()),
-                    include_stage_in_note: false,
-                },
-                &resolved_script_result_path,
-            )?;
-            if upgraded {
-                eprintln!(
-                    "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
-                    src.display()
-                );
-            }
-
-            Ok(run_suite_script_over_transport_and_lower(
-                &src,
-                idx,
-                &resolved_out_dir,
-                connected,
-                script_json,
-                trace_chrome,
+            let mut execution_ctx = SuiteScriptExecutionBlockContext {
+                tool_launched,
+                child: &mut child,
+                use_devtools_ws,
+                connected_ws: connected_ws.as_ref(),
+                connected_fs_for_aux,
+                workspace_root: &workspace_root,
+                resolved_out_dir: &resolved_out_dir,
+                resolved_exit_path: &resolved_exit_path,
+                keep_open,
+                reuse_process,
+                resolved_script_result_path: &resolved_script_result_path,
+                resolved_script_result_trigger_path: &resolved_script_result_trigger_path,
+                capabilities_check_path: &capabilities_check_path,
                 timeout_ms,
                 poll_ms,
-                &resolved_script_result_path,
-                &capabilities_check_path,
+                trace_chrome,
+            };
+
+            Ok(execute_suite_script_iteration_block(
+                &src,
+                idx,
                 script_key.as_str(),
+                connected,
+                &mut execution_ctx,
+                &resolved_suite_prewarm_scripts,
+                &resolved_suite_prelude_scripts,
+                suite_prelude_each_run,
             )?)
         })();
 

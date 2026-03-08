@@ -300,7 +300,8 @@ Recommended PR slices:
    - forty-sixth landing: `diag_suite` now routes failed/unexpected/lint-failed script outcomes through a dedicated exit helper, so row shaping and failure finalization no longer interleave inline with outcome logging in those branches
    - forty-seventh landing: `diag_suite` now prepares per-script stage/reason accounting plus evidence/lint context through a dedicated helper, so each script iteration no longer reassembles that bookkeeping inline after transport execution completes
    - forty-eighth landing: `diag_suite` now routes dump-label planning, `run_script_over_transport` lowering, and `tooling.suite.error` fallback through dedicated helpers, so the transport result decoding path no longer stays inline in one execution block
-   - next recommended landing: extract script-execution block assembly so prewarm/prelude/load-script wiring stops sharing one large closure with transport dispatch
+   - forty-ninth landing: `diag_suite` now routes prewarm/prelude execution and load-script wiring through a dedicated execution-block context, so the main script loop no longer interleaves that setup with transport result decoding in one large closure
+   - next recommended landing: extract per-script launch and transport acquisition so `maybe_launch_demo`, transport selection, and execution-block invocation stop sharing one orchestration branch
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
