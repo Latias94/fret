@@ -562,6 +562,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     cache stats publication through the private `canvas/widget/paint_grid_plan.rs`,
     `canvas/widget/paint_grid_cache.rs`, and `canvas/widget/paint_grid_stats.rs` seams,
     so retained grid-paint orchestration no longer stays embedded in one mixed surface.
+  - Progress: `focus_port_direction.rs` now routes wire-drag direction filtering and
+    directional candidate ranking through the private
+    `canvas/widget/focus_port_direction_candidate.rs` seam, and focus/view-state application
+    through `canvas/widget/focus_port_direction_apply.rs`, so retained directional port-focus
+    reducers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

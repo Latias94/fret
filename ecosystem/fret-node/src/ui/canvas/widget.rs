@@ -140,6 +140,8 @@ mod focus_nav_traversal_edge;
 mod focus_nav_traversal_node;
 mod focus_nav_traversal_port;
 mod focus_port_direction;
+mod focus_port_direction_apply;
+mod focus_port_direction_candidate;
 mod graph_construction;
 mod group_drag;
 mod group_draw_order;
