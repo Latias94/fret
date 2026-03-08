@@ -85,16 +85,17 @@ Progress update:
   - option parsing now routes through a dedicated pure helper,
   - JSON and text projections now route through dedicated render helpers,
   - helper-level regression coverage now locks the command output shape without relying on stdout capture.
-- `commands::artifacts` has now landed another artifact-resolution seam cluster around `cmd_pack`, `cmd_meta`, `cmd_lint`, and `cmd_triage`:
+- `commands::artifacts` plus `commands/artifact.rs` have now landed another artifact-resolution seam cluster around `cmd_pack`, `cmd_meta`, `cmd_lint`, `cmd_triage`, and `cmd_artifact_lint`:
   - bundle/source resolution and user-facing error hinting now route through dedicated setup helpers,
   - default output path selection now routes through pure helpers,
   - repeated single-bundle emitters now also reuse shared bundle-input plus path/json output helpers,
   - `cmd_meta` now routes its human-readable projection through pure report-line helpers,
   - `cmd_lint` now routes bundle/out-path preparation through `prepare_cmd_lint` and exit-policy dispatch through a dedicated helper while reusing the shared JSON writer,
   - `cmd_triage` now routes payload assembly through dedicated lite/full builders plus a tooling-warning attachment helper,
-  - helper-level regression coverage now locks the AI-only output-path policy, shared input validation paths, meta-report line shape, lint exit predicate, triage lite out-path policy, and tooling-warning attachment behavior.
+  - `cmd_artifact_lint` now routes artifact-dir/out-path preparation plus exit-policy dispatch through dedicated helpers while reusing a dedicated write helper,
+  - helper-level regression coverage now locks the AI-only output-path policy, shared input validation paths, meta-report line shape, lint exit predicate, triage lite out-path policy, tooling-warning attachment behavior, artifact-lint out-path policy, and artifact-dir normalization for `_root` manifests.
 - The next decision point in this area is whether any further `diag_run` slicing is worth it, or whether
-  the higher-ROI seam has now shifted to adjacent artifact-lint-style write/exit holdouts or deeper session/bundle resolution helpers.
+  the higher-ROI seam has now shifted to deeper session/bundle resolution helpers in `commands/resolve`.
 
 Exit criteria:
 
