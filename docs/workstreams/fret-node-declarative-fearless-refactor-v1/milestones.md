@@ -696,6 +696,11 @@ real editors.
   `canvas/widget/paint_overlay_toast.rs` and
   `canvas/widget/paint_overlay_wire_hint.rs` seams, so retained overlay
   feedback paint helpers no longer stay embedded in one mixed surface.
+- `auto_measure.rs` now routes node measurement input collection and
+  measured-size computation/store updates through the private
+  `canvas/widget/auto_measure_collect.rs` and
+  `canvas/widget/auto_measure_apply.rs` seams, so retained auto-measure
+  reducers no longer keep collection and apply phases embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -811,6 +816,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_feedback.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_toast.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_wire_hint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/auto_measure.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/auto_measure_collect.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/auto_measure_apply.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`

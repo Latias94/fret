@@ -83,6 +83,8 @@ use super::state::ViewportMoveDebounceState;
 
 mod apply;
 mod auto_measure;
+mod auto_measure_apply;
+mod auto_measure_collect;
 mod callbacks;
 mod callbacks_connect;
 mod callbacks_graph;
