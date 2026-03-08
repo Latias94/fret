@@ -678,6 +678,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     through the private `canvas/widget/rect_math_core.rs` and
     `canvas/widget/rect_math_path.rs` seams, so retained rect math utilities
     no longer keep mixed hit-rect and edge/path bounds helpers in one surface.
+  - Progress: `focus_port_direction_candidate.rs` now routes wire-drag required-direction
+    lookup and directional port ranking through the private
+    `canvas/widget/focus_port_direction_wire.rs` and
+    `canvas/widget/focus_port_direction_rank.rs` seams, so retained focus-navigation reducers
+    no longer keep input-context lookup and ranking math embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
