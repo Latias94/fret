@@ -683,6 +683,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/focus_port_direction_wire.rs` and
     `canvas/widget/focus_port_direction_rank.rs` seams, so retained focus-navigation reducers
     no longer keep input-context lookup and ranking math embedded in one surface.
+  - Progress: `keyboard_shortcuts_commands.rs` now routes shortcut eligibility gates and
+    command lookup tables through the private `canvas/widget/keyboard_shortcuts_gate.rs`
+    and `canvas/widget/keyboard_shortcuts_map.rs` seams, so retained keyboard shortcut
+    reducers no longer keep mixed gating and command mapping embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -189,6 +189,8 @@ mod interaction_policy;
 mod keyboard_pan_activation;
 mod keyboard_shortcuts;
 mod keyboard_shortcuts_commands;
+mod keyboard_shortcuts_gate;
+mod keyboard_shortcuts_map;
 mod keyboard_shortcuts_overlay;
 mod left_click;
 mod marquee;

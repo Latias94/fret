@@ -746,6 +746,10 @@ real editors.
   `canvas/widget/focus_port_direction_wire.rs` and
   `canvas/widget/focus_port_direction_rank.rs` seams, so retained focus-navigation reducers
   no longer keep input-context lookup and ranking math embedded in one surface.
+- `keyboard_shortcuts_commands.rs` now routes shortcut eligibility gates and
+  command lookup tables through the private `canvas/widget/keyboard_shortcuts_gate.rs`
+  and `canvas/widget/keyboard_shortcuts_map.rs` seams, so retained keyboard shortcut
+  reducers no longer keep mixed gating and command mapping embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -850,6 +854,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_overlay.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_gate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_map.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_ops.rs`
