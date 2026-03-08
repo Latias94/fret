@@ -598,6 +598,10 @@ real editors.
   and final cleanup through the private `canvas/widget/cancel_gesture_state.rs`,
   `canvas/widget/cancel_viewport_state.rs`, and `canvas/widget/cancel_cleanup.rs` seams,
   so retained cancel reducers no longer stay embedded in one mixed surface.
+- `pan_zoom.rs` now routes zoom cache mutation, pan-start arbitration, and
+  pan-move velocity updates through the private `canvas/widget/pan_zoom_zoom.rs`,
+  `canvas/widget/pan_zoom_begin.rs`, and `canvas/widget/pan_zoom_move.rs` seams,
+  so retained pan/zoom reducers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -668,6 +672,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_cleanup.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_gesture_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_viewport_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_zoom.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
