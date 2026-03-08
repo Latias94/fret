@@ -677,6 +677,11 @@ real editors.
   `canvas/widget/keyboard_shortcuts_overlay.rs` and
   `canvas/widget/keyboard_shortcuts_commands.rs` seams, so retained keyboard
   shortcut reducers no longer stay embedded in one mixed surface.
+- `pointer_up_node_drag.rs` now routes parent-group resolution and
+  release-op/commit orchestration through the private
+  `canvas/widget/pointer_up_node_drag_parent.rs` and
+  `canvas/widget/pointer_up_node_drag_ops.rs` seams, so retained node-drag
+  release reducers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -781,6 +786,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_overlay.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_parent.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag_ops.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`

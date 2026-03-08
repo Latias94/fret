@@ -228,6 +228,8 @@ mod pointer_up;
 mod pointer_up_commit;
 mod pointer_up_finish;
 mod pointer_up_node_drag;
+mod pointer_up_node_drag_ops;
+mod pointer_up_node_drag_parent;
 mod pointer_up_pending;
 mod preview;
 mod reconnect;
