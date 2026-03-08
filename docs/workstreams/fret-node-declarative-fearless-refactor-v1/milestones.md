@@ -586,6 +586,13 @@ real editors.
   `canvas/widget/viewport_timer_inertia.rs`, and
   `canvas/widget/viewport_timer_auto_pan.rs` seams, so retained viewport timer helpers
   no longer stay embedded in one surface file.
+- `timer_motion.rs` now routes pan-inertia ticks, viewport
+  animation/debounce ticks, and auto-pan motion replay through the private
+  `canvas/widget/timer_motion_pan_inertia.rs`,
+  `canvas/widget/timer_motion_viewport.rs`, and
+  `canvas/widget/timer_motion_auto_pan.rs` seams with shared invalidation in
+  `canvas/widget/timer_motion_shared.rs`, so retained timer-driven motion reducers no
+  longer stay embedded in one surface file.
 
 ### Deliverables
 
@@ -650,6 +657,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_animation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_inertia.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_auto_pan.rs`

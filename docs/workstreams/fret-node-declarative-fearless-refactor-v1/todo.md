@@ -523,6 +523,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/viewport_timer_inertia.rs`, and
     `canvas/widget/viewport_timer_auto_pan.rs` seams, so retained viewport timer helpers
     no longer stay embedded in one surface file.
+  - Progress: `timer_motion.rs` now routes pan-inertia ticks, viewport
+    animation/debounce ticks, and auto-pan motion replay through the private
+    `canvas/widget/timer_motion_pan_inertia.rs`,
+    `canvas/widget/timer_motion_viewport.rs`, and
+    `canvas/widget/timer_motion_auto_pan.rs` seams with shared invalidation in
+    `canvas/widget/timer_motion_shared.rs`, so retained timer-driven motion reducers no
+    longer stay embedded in one surface file.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
