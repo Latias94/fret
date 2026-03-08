@@ -24,6 +24,7 @@ shared `ControlId` + registry pattern:
 | Click label → focus control | `Label::for_control(id)` click requests focus for the registered control entry. |
 | Auto `labelled-by` | If the control has `control_id(id)` and does **not** have an explicit `a11y_label`, it uses the registry's label element as `labelled_by_element`. |
 | Auto `described-by` | If the control has `control_id(id)`, it uses the registry's description/error element as `described_by_element` (even when `a11y_label` is present). |
+| Nested pressables inside label content | Label forwarding should skip embedded pressables inside wrapped label content so nested buttons/links keep ownership of their own click path. |
 
 ## Status table
 
@@ -59,6 +60,7 @@ Legend:
   - `ecosystem/fret-ui-shadcn/src/select.rs`
   - `ecosystem/fret-ui-shadcn/src/slider.rs`
   - `ecosystem/fret-ui-shadcn/src/radio_group.rs`
+  - `ecosystem/fret-ui-shadcn/src/field.rs`
 - UI Gallery demos + scripts (new in this workstream):
   - `apps/fret-ui-gallery/src/ui/snippets/select/label.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/native_select/label.rs`
