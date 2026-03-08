@@ -9,7 +9,6 @@ pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
 pub(crate) const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
 pub(crate) const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
 pub(crate) const BISECT_DISABLE_TOASTER: u32 = 1 << 2;
-pub(crate) const BISECT_DISABLE_TAB_STRIP: u32 = 1 << 3;
 pub(crate) const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
 pub(crate) const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
 pub(crate) const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
