@@ -544,6 +544,10 @@ real editors.
 - `event_keyboard.rs` now also routes pan-activation hold/release through the private
   `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming, release, and
   paint invalidation no longer stay embedded in the retained keyboard router.
+- `retained_widget.rs` now routes semantics / layout / prepaint through the private
+  `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value assembly,
+  diagnostics-anchor child layout, queue drain-on-layout, and cull-window tracking no
+  longer stay embedded in the main retained widget trait router.
 
 ### Deliverables
 
@@ -607,6 +611,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_frame.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_selection.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/group_draw_order.rs`

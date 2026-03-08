@@ -479,6 +479,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `event_keyboard.rs` now also routes pan-activation hold/release through the
     private `canvas/widget/keyboard_pan_activation.rs` seam, so space-to-pan arming,
     release, and paint invalidation no longer stay embedded in the retained keyboard router.
+  - Progress: `retained_widget.rs` now routes semantics / layout / prepaint through the
+    private `canvas/widget/retained_widget_frame.rs` seam, so viewport semantics value
+    assembly, diagnostics-anchor child layout, queue drain-on-layout, and cull-window
+    tracking no longer stay embedded in the main retained widget trait router.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
