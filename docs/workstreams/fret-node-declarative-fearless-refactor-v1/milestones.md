@@ -602,6 +602,11 @@ real editors.
   pan-move velocity updates through the private `canvas/widget/pan_zoom_zoom.rs`,
   `canvas/widget/pan_zoom_begin.rs`, and `canvas/widget/pan_zoom_move.rs` seams,
   so retained pan/zoom reducers no longer stay embedded in one mixed surface.
+- `insert_execution.rs` now routes candidate point resolution, graph-op
+  planning, and insertion feedback through the private
+  `canvas/widget/insert_execution_point.rs`, `canvas/widget/insert_execution_plan.rs`, and
+  `canvas/widget/insert_execution_feedback.rs` seams, so retained insert execution reducers no
+  longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -656,6 +661,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_candidates.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/insert_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_feedback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_plan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_execution_point.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/split_edge_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`

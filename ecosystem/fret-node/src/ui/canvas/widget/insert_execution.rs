@@ -1,31 +1,12 @@
 use super::*;
 
 pub(super) fn is_reroute_insert_candidate(candidate: &InsertNodeCandidate) -> bool {
-    candidate.kind.0 == REROUTE_KIND
+    insert_execution_point::is_reroute_insert_candidate(candidate)
 }
 
-pub(super) fn insert_candidate_canvas_point<M: NodeGraphCanvasMiddleware>(
-    canvas: &NodeGraphCanvasWith<M>,
-    candidate: &InsertNodeCandidate,
-    invoked_at: Point,
-) -> CanvasPoint {
-    if is_reroute_insert_candidate(candidate) {
-        canvas.reroute_pos_for_invoked_at(invoked_at)
-    } else {
-        CanvasPoint {
-            x: invoked_at.x.0,
-            y: invoked_at.y.0,
-        }
-    }
-}
-
+#[cfg(test)]
 fn select_inserted_node_in_view_state(view_state: &mut NodeGraphViewState, node_id: GraphNodeId) {
-    view_state.selected_edges.clear();
-    view_state.selected_groups.clear();
-    view_state.selected_nodes.clear();
-    view_state.selected_nodes.push(node_id);
-    view_state.draw_order.retain(|id| *id != node_id);
-    view_state.draw_order.push(node_id);
+    insert_execution_feedback::select_inserted_node_in_view_state(view_state, node_id)
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -35,11 +16,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidate: &InsertNodeCandidate,
         at: CanvasPoint,
     ) -> Result<Vec<GraphOp>, Arc<str>> {
-        if is_reroute_insert_candidate(candidate) {
-            Ok(Self::build_reroute_create_ops(at))
-        } else {
-            presenter.plan_create_node(graph, candidate, at)
-        }
+        insert_execution_plan::plan_insert_candidate_ops_with_graph::<M>(
+            presenter, graph, candidate, at,
+        )
     }
 
     pub(super) fn plan_canvas_insert_candidate_ops<H: UiHost>(
@@ -48,12 +27,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidate: &InsertNodeCandidate,
         at: CanvasPoint,
     ) -> Option<Result<Vec<GraphOp>, Arc<str>>> {
-        let presenter = &mut *self.presenter;
-        self.graph
-            .read_ref(host, |graph| {
-                Self::plan_insert_candidate_ops_with_graph(presenter, graph, candidate, at)
-            })
-            .ok()
+        insert_execution_plan::plan_canvas_insert_candidate_ops(self, host, candidate, at)
     }
 
     pub(super) fn plan_split_edge_insert_candidate_with_graph(
@@ -63,11 +37,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidate: &InsertNodeCandidate,
         at: CanvasPoint,
     ) -> Result<Vec<GraphOp>, Vec<Diagnostic>> {
-        let plan = presenter.plan_split_edge_candidate(graph, edge_id, candidate, at);
-        match plan.decision {
-            ConnectDecision::Accept => Ok(plan.ops),
-            ConnectDecision::Reject => Err(plan.diagnostics),
-        }
+        insert_execution_plan::plan_split_edge_insert_candidate_with_graph(
+            presenter, graph, edge_id, candidate, at,
+        )
     }
 
     pub(super) fn plan_canvas_split_edge_insert_candidate<H: UiHost>(
@@ -77,15 +49,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidate: &InsertNodeCandidate,
         invoked_at: Point,
     ) -> Option<Result<Vec<GraphOp>, Vec<Diagnostic>>> {
-        let at = insert_candidate_canvas_point(self, candidate, invoked_at);
-        let presenter = &mut *self.presenter;
-        self.graph
-            .read_ref(host, |graph| {
-                Self::plan_split_edge_insert_candidate_with_graph(
-                    presenter, graph, edge_id, candidate, at,
-                )
-            })
-            .ok()
+        insert_execution_plan::plan_canvas_split_edge_insert_candidate(
+            self, host, edge_id, candidate, invoked_at,
+        )
     }
 
     pub(super) fn can_split_edge_insert_candidate<H: UiHost>(
@@ -95,20 +61,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidate: &InsertNodeCandidate,
         invoked_at: Point,
     ) -> Option<bool> {
-        self.plan_canvas_split_edge_insert_candidate(host, edge_id, candidate, invoked_at)
-            .map(|result| result.is_ok())
+        insert_execution_plan::can_split_edge_insert_candidate(
+            self, host, edge_id, candidate, invoked_at,
+        )
     }
 
     pub(super) fn split_edge_candidate_rejection_toast(
         candidate: &InsertNodeCandidate,
         diags: &[Diagnostic],
     ) -> (DiagnosticSeverity, Arc<str>) {
-        Self::toast_from_diagnostics(diags).unwrap_or_else(|| {
-            (
-                DiagnosticSeverity::Error,
-                Arc::<str>::from(format!("node insertion was rejected: {}", candidate.kind.0)),
-            )
-        })
+        insert_execution_feedback::split_edge_candidate_rejection_toast::<M>(candidate, diags)
     }
 
     pub(super) fn select_inserted_node<H: UiHost>(
@@ -116,11 +78,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         node_id: Option<GraphNodeId>,
     ) {
-        if let Some(node_id) = node_id {
-            self.update_view_state(host, |view_state| {
-                select_inserted_node_in_view_state(view_state, node_id);
-            });
-        }
+        insert_execution_feedback::select_inserted_node(self, host, node_id)
     }
 }
 
