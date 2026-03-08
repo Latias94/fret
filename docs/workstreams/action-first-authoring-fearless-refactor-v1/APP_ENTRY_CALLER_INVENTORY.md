@@ -41,7 +41,7 @@ Current conclusion:
 
 | File | Current role | Recommended class | Notes |
 |---|---|---|---|
-| `apps/fret-examples/src/assets_demo.rs` | advanced asset/event demo | `migrate-to-view` | already uses the `fret` facade and driver hooks; should become `view_with_hooks` rather than closure-root `ui_with_hooks` |
+| `apps/fret-examples/src/assets_demo.rs` | advanced asset/event demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<AssetsDemoView>(...)`; proves driver event hooks do not by themselves require closure-root `ui_with_hooks(...)` |
 | `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `migrate-to-view` | already has a `View` type in the file; app-entry closure is bridge debt rather than a capability blocker |
 | `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `migrate-to-view` | still likely needs hooks, but not necessarily closure-root entry |
 | `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
@@ -98,7 +98,7 @@ Status update:
 
 These should move next to prove `view_with_hooks` is sufficient for advanced-but-facade-level demos:
 
-- `apps/fret-examples/src/assets_demo.rs`
+- `apps/fret-examples/src/assets_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/image_heavy_memory_demo.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/src/embedded_viewport_demo.rs`
@@ -106,6 +106,10 @@ These should move next to prove `view_with_hooks` is sufficient for advanced-but
 Success criterion:
 
 - the repo can show that driver hooks do not force the facade back to closure-root entry.
+
+Status update:
+
+- Batch B has started: `assets_demo` now runs through `view_with_hooks::<AssetsDemoView>(...)` while keeping its `on_event(...)` driver seam.
 
 ## Batch C — highest-risk interop demos
 
