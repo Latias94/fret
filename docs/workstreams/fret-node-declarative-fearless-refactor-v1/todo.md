@@ -448,6 +448,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     double-click branches through the private `canvas/widget/pointer_down_double_click.rs` seam,
     so repeated edge/background hit filtering and double-click orchestration no longer stay
     embedded in the retained pointer-down router.
+  - Progress: `pointer_up.rs` now routes pointer-up state sync, sticky-wire
+    ignore handling, pan-release unwind, and left-button release ordering through the
+    private `canvas/widget/pointer_up_state.rs` and
+    `canvas/widget/pointer_up_left_route.rs` seams, so retained pointer release routing
+    no longer keeps state sync and left-tail fallback ordering embedded in one surface.
   - Progress: `event_pointer_down.rs` now also routes close-button dispatch, pending right-click
     arming, sticky-wire activation, and pan-start branches through the private
     `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays

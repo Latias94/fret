@@ -513,6 +513,11 @@ real editors.
   branches through the private `canvas/widget/pointer_down_double_click.rs` seam, so repeated
   edge/background hit filtering and double-click orchestration no longer stay embedded in the
   retained pointer-down router.
+- `pointer_up.rs` now routes pointer-up state sync, sticky-wire
+  ignore handling, pan-release unwind, and left-button release ordering through the
+  private `canvas/widget/pointer_up_state.rs` and
+  `canvas/widget/pointer_up_left_route.rs` seams, so retained pointer release routing
+  no longer keeps state sync and left-tail fallback ordering embedded in one surface.
 - `event_pointer_down.rs` now also routes close-button dispatch, pending right-click arming,
   sticky-wire activation, and pan-start branches through the private
   `canvas/widget/pointer_down_gesture_start.rs` seam, so gesture-start ordering no longer stays
@@ -915,6 +920,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/left_click/element_hits.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge.rs`
