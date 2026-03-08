@@ -594,6 +594,10 @@ real editors.
   `canvas/widget/marquee_begin.rs`, `canvas/widget/marquee_selection.rs`,
   `canvas/widget/marquee_pending.rs`, and `canvas/widget/marquee_finish.rs` seams,
   so retained marquee reducers no longer stay embedded in one mixed surface.
+- `cancel.rs` now routes gesture-state teardown, viewport-motion cancellation,
+  and final cleanup through the private `canvas/widget/cancel_gesture_state.rs`,
+  `canvas/widget/cancel_viewport_state.rs`, and `canvas/widget/cancel_cleanup.rs` seams,
+  so retained cancel reducers no longer stay embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -660,6 +664,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_anchor.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/clipboard_transfer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_cleanup.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_gesture_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_viewport_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`

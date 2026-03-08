@@ -531,6 +531,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/marquee_begin.rs`, `canvas/widget/marquee_selection.rs`,
     `canvas/widget/marquee_pending.rs`, and `canvas/widget/marquee_finish.rs` seams,
     so retained marquee reducers no longer stay embedded in one mixed surface.
+  - Progress: `cancel.rs` now routes gesture-state teardown, viewport-motion
+    cancellation, and final cleanup through the private `canvas/widget/cancel_gesture_state.rs`,
+    `canvas/widget/cancel_viewport_state.rs`, and `canvas/widget/cancel_cleanup.rs` seams,
+    so retained cancel reducers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
