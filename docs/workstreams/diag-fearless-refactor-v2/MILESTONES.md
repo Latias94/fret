@@ -112,7 +112,11 @@ Progress update:
   - `execute_campaign` now builds a dedicated `CampaignExecutionStartPlan`,
   - single-campaign manifest writing now routes through `build_campaign_manifest_write_plan`,
   - helper-level regression coverage now locks execution-plan/manifest setup reuse without running suite/script execution.
-- The next decision point in this area is whether any remaining execution/finalization handoff inside `execute_campaign_inner` still pays better than moving on to another orchestration-heavy file.
+- `diag_campaign` has now landed another finalize seam around single-campaign execution:
+  - `finalize_campaign_execution` now builds a dedicated `CampaignExecutionFinalizePlan`,
+  - failure counting plus summary-finalize setup now route through that plan before finalize IO,
+  - helper-level regression coverage now locks failure-count and summary-finalize setup reuse without running summarize/write side effects.
+- The next decision point in this area is whether any remaining outcome assembly or cross-function handoff in `execute_campaign_inner` still pays better than moving on to another orchestration-heavy file.
 
 Exit criteria:
 

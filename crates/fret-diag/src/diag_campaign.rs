@@ -78,6 +78,12 @@ struct CampaignExecutionFinalization {
 }
 
 #[derive(Debug, Clone)]
+struct CampaignExecutionFinalizePlan {
+    items_failed: usize,
+    summary_finalize: CampaignSummaryFinalizePlan,
+}
+
+#[derive(Debug, Clone)]
 struct CampaignSummaryArtifacts {
     finished_unix_ms: u64,
     duration_ms: u64,
@@ -1396,13 +1402,33 @@ fn finalize_campaign_execution(
     item_results: &[CampaignItemRunResult],
     ctx: &CampaignRunContext,
 ) -> Result<CampaignExecutionFinalization, String> {
-    let finalize_plan = build_campaign_execution_summary_finalize_plan(item_results, plan);
-    let items_failed = item_results.iter().filter(|entry| !entry.ok).count();
-    let summary_artifacts = finalize_campaign_summary_artifacts(&finalize_plan, ctx);
+    let finalize_plan = build_campaign_execution_finalize_plan(item_results, plan);
+    execute_campaign_execution_finalize_plan(campaign, plan, item_results, &finalize_plan, ctx)
+}
+
+fn build_campaign_execution_finalize_plan(
+    item_results: &[CampaignItemRunResult],
+    plan: &CampaignExecutionPlan,
+) -> CampaignExecutionFinalizePlan {
+    CampaignExecutionFinalizePlan {
+        items_failed: item_results.iter().filter(|entry| !entry.ok).count(),
+        summary_finalize: build_campaign_execution_summary_finalize_plan(item_results, plan),
+    }
+}
+
+fn execute_campaign_execution_finalize_plan(
+    campaign: &CampaignDefinition,
+    plan: &CampaignExecutionPlan,
+    item_results: &[CampaignItemRunResult],
+    finalize_plan: &CampaignExecutionFinalizePlan,
+    ctx: &CampaignRunContext,
+) -> Result<CampaignExecutionFinalization, String> {
+    let summary_artifacts =
+        finalize_campaign_summary_artifacts(&finalize_plan.summary_finalize, ctx);
     write_campaign_result(plan, campaign, item_results, &summary_artifacts, ctx)?;
 
     Ok(build_campaign_execution_finalization(
-        items_failed,
+        finalize_plan.items_failed,
         plan,
         summary_artifacts,
     ))
@@ -4302,6 +4328,34 @@ mod tests {
         );
         assert_eq!(finalization.aggregate.summary_path, plan.summary_path);
         assert_eq!(finalization.aggregate.index_path, plan.index_path);
+    }
+
+    #[test]
+    fn build_campaign_execution_finalize_plan_uses_failure_count_and_summary_setup() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let campaign = sample_campaign_definition();
+        let plan = build_campaign_execution_plan_at(&campaign, &ctx, 42);
+        let item_results = vec![
+            sample_campaign_item_run_result(CampaignItemKind::Suite, "suite-a", true),
+            sample_campaign_item_run_result(CampaignItemKind::Script, "script-a", false),
+        ];
+
+        let finalize_plan = build_campaign_execution_finalize_plan(&item_results, &plan);
+
+        assert_eq!(finalize_plan.items_failed, 1);
+        assert!(finalize_plan.summary_finalize.summarize_inputs.is_empty());
+        assert_eq!(finalize_plan.summary_finalize.out_dir, plan.campaign_root);
+        assert_eq!(
+            finalize_plan.summary_finalize.summary_path,
+            plan.summary_path
+        );
+        assert_eq!(finalize_plan.summary_finalize.created_unix_ms, 42);
+        assert!(
+            finalize_plan
+                .summary_finalize
+                .should_generate_share_manifest
+        );
     }
 
     #[test]
