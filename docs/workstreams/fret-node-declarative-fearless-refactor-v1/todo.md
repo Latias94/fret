@@ -587,6 +587,28 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/searcher_rows.rs`, `canvas/widget/searcher_row_activation.rs`, and
     `canvas/widget/searcher_picker.rs` seams, so retained searcher logic no longer stays
     embedded in one mixed surface.
+  - Progress: `command_focus.rs` now routes cycle commands and directional/activate
+    commands through the private `canvas/widget/command_focus_cycle.rs` and
+    `canvas/widget/command_focus_port.rs` seams, so retained focus command wrappers no longer
+    stay embedded in one mixed surface.
+  - Progress: `retained_widget_frame.rs` now routes semantics sync, layout/update
+    orchestration, and prepaint cull-window tracking through the private
+    `canvas/widget/retained_widget_semantics.rs`,
+    `canvas/widget/retained_widget_layout.rs`, and
+    `canvas/widget/retained_widget_cull_window.rs` seams, so retained widget frame
+    orchestration no longer stays embedded in one mixed surface.
+  - Progress: `delete.rs` now routes delete-op construction, removable-id
+    collection, and deletable predicates through the private
+    `canvas/widget/delete_ops_builder.rs`,
+    `canvas/widget/delete_removed_ids.rs`, and
+    `canvas/widget/delete_predicates.rs` seams, so retained deletion helpers
+    no longer stay embedded in one mixed surface.
+  - Progress: `clipboard_paste.rs` now routes clipboard parsing/offset
+    derivation, paste-transaction construction, and inserted-selection replay
+    through the private `canvas/widget/clipboard_paste_parse.rs`,
+    `canvas/widget/clipboard_paste_transaction.rs`, and
+    `canvas/widget/clipboard_paste_selection.rs` seams, so retained clipboard
+    paste helpers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

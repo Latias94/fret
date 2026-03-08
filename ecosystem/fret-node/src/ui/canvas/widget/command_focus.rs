@@ -6,12 +6,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_node(cx.app, true);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_next_node(self, cx)
     }
 
     pub(super) fn cmd_focus_prev_node<H: UiHost>(
@@ -19,12 +14,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_node(cx.app, false);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_prev_node(self, cx)
     }
 
     pub(super) fn cmd_focus_next_edge<H: UiHost>(
@@ -32,12 +22,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_edge(cx.app, true);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_next_edge(self, cx)
     }
 
     pub(super) fn cmd_focus_prev_edge<H: UiHost>(
@@ -45,12 +30,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_edge(cx.app, false);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_prev_edge(self, cx)
     }
 
     pub(super) fn cmd_focus_next_port<H: UiHost>(
@@ -58,12 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_port(cx.app, true);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_next_port(self, cx)
     }
 
     pub(super) fn cmd_focus_prev_port<H: UiHost>(
@@ -71,12 +46,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         _snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_next_port(cx.app, false);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_cycle::cmd_focus_prev_port(self, cx)
     }
 
     pub(super) fn cmd_focus_port_left<H: UiHost>(
@@ -84,12 +54,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_port_direction(cx.app, snapshot, PortNavDir::Left);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_port::cmd_focus_port_left(self, cx, snapshot)
     }
 
     pub(super) fn cmd_focus_port_right<H: UiHost>(
@@ -97,12 +62,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_port_direction(cx.app, snapshot, PortNavDir::Right);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_port::cmd_focus_port_right(self, cx, snapshot)
     }
 
     pub(super) fn cmd_focus_port_up<H: UiHost>(
@@ -110,12 +70,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_port_direction(cx.app, snapshot, PortNavDir::Up);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_port::cmd_focus_port_up(self, cx, snapshot)
     }
 
     pub(super) fn cmd_focus_port_down<H: UiHost>(
@@ -123,12 +78,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.focus_port_direction(cx.app, snapshot, PortNavDir::Down);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_port::cmd_focus_port_down(self, cx, snapshot)
     }
 
     pub(super) fn cmd_activate<H: UiHost>(
@@ -136,11 +86,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut CommandCx<'_, H>,
         snapshot: &ViewSnapshot,
     ) -> bool {
-        let did = self.activate_focused_port(cx, snapshot);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_focus_port::cmd_activate(self, cx, snapshot)
     }
 }
