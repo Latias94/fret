@@ -68,6 +68,8 @@ Usage:
   fretboard diag list scripts [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
   fretboard diag list sessions [--dir <dir>] [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
   fretboard diag sessions clean [--dir <dir>] --keep <n> [--older-than-days <n>] [--top <n>] [--apply] [--json]
+  fretboard diag summarize [<dir|summary.json>...] [--dir <dir>] [--json]
+  fretboard diag dashboard [<dir|regression.index.json>] [--dir <dir>] [--top <n>] [--json]
   fretboard diag doctor [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--check|--strict] [--fix|--fix-dry-run] [--fix-schema2] [--json]
   fretboard diag doctor scripts [--max-examples <n>] [--json]
   fretboard diag registry <check|write|print> [--path <path>] [--json]
@@ -186,6 +188,11 @@ Examples:
   fretboard diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json
+  fretboard diag summarize --dir target/fret-diag/campaigns/ui-gallery-pr
+  fretboard diag dashboard --dir target/fret-diag/campaigns/ui-gallery-pr --top 10
+  fretboard diag campaign list --lane smoke --tag ui-gallery --platform native
+  fretboard diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag campaign share target/fret-diag/campaign-batches/filtered-lane-smoke-tag-ui-gallery-platform-native-2-campaigns/1234
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx

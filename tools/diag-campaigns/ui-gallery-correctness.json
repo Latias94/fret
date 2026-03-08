@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "ui-gallery-correctness",
+  "description": "Broader UI gallery correctness pass for common interaction surfaces.",
+  "lane": "correctness",
+  "profile": "bounded",
+  "items": [
+    { "kind": "suite", "value": "ui-gallery" },
+    { "kind": "suite", "value": "ui-gallery-code-editor" }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "correctness",
+  "expected_duration_ms": 300000,
+  "tags": ["ui-gallery", "correctness"]
+}

@@ -27,7 +27,6 @@ pub(crate) fn cmd_dock_routing(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (dock_routing_path, bundle_path) = if src.is_file()
         && src
@@ -54,20 +53,22 @@ pub(crate) fn cmd_dock_routing(
             ));
         }
     } else if src.is_dir() {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        let bundle_dir = resolved.bundle_dir;
+        let bundle_path = resolved.bundle_artifact;
         if bundle_path.is_file() {
             let dock_routing_path =
                 crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
             (dock_routing_path, Some(bundle_path))
         } else {
-            let direct = src.join("dock.routing.json");
+            let direct = bundle_dir.join("dock.routing.json");
             if direct.is_file()
                 && sidecars::try_read_sidecar_json_v1(&direct, "dock_routing", warmup_frames)
                     .is_some()
             {
                 (direct, None)
             } else {
-                let root = src.join("_root").join("dock.routing.json");
+                let root = bundle_dir.join("_root").join("dock.routing.json");
                 if root.is_file()
                     && sidecars::try_read_sidecar_json_v1(&root, "dock_routing", warmup_frames)
                         .is_some()
@@ -76,13 +77,14 @@ pub(crate) fn cmd_dock_routing(
                 } else {
                     return Err(format!(
                         "missing bundle artifact (expected bundle.json or bundle.schema2.json) under: {}",
-                        src.display()
+                        bundle_dir.display()
                     ));
                 }
             }
         }
     } else {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        let bundle_path = resolved.bundle_artifact;
         let dock_routing_path =
             crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
         (dock_routing_path, Some(bundle_path))

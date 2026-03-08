@@ -13,6 +13,9 @@ Scope note:
 
 - This file focuses on **bundles + scripts** (how to dump `bundle.json`, how the script harness is triggered, and
   how to author stable, selector-driven repros).
+- For the canonical artifact/evidence taxonomy (source-of-truth vs derived vs optional evidence, the bounded
+  first-open set, and consumer expectations), see:
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
 - For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
   `docs/debugging-ui-with-inspector-and-scripts.md`.
 - For the planned **DevTools GUI** that wraps these same contracts (inspect/pick/scripts/bundles) with a user-facing UI,

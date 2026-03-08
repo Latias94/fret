@@ -11,6 +11,9 @@ Scope note:
 - This file focuses on the **interactive inspect workflow** (picker UX + shortcuts).
 - For the **bundle format + script harness** details (dump workflow, script schema v1, CI-friendly runs), see:
   `docs/ui-diagnostics-and-scripted-tests.md`.
+- For the canonical artifact/evidence taxonomy (source-of-truth vs derived vs optional evidence, plus the bounded
+  first-open set used by CLI / GUI / CI consumers), see:
+  `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
 
 ## Quick start (UI Gallery)
 

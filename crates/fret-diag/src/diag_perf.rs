@@ -1,5 +1,12 @@
 use super::*;
 
+use crate::regression_summary::{
+    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1, RegressionCampaignSummaryV1,
+    RegressionEvidenceV1, RegressionHighlightRefV1, RegressionHighlightsV1, RegressionItemKindV1,
+    RegressionItemSummaryV1, RegressionLaneV1, RegressionNotesV1, RegressionRunSummaryV1,
+    RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1, RegressionTotalsV1,
+};
+
 #[path = "diag_perf/aux_scripts.rs"]
 mod aux_scripts;
 pub(crate) use aux_scripts::run_suite_aux_script_must_pass;
@@ -19,6 +26,341 @@ mod runs_rows;
 mod stats_rows;
 #[path = "diag_perf/thresholds.rs"]
 mod thresholds;
+
+fn normalize_perf_regression_script(workspace_root: &Path, script: &str) -> String {
+    normalize_repo_relative_path(workspace_root, Path::new(script))
+}
+
+fn perf_row_status_and_reason(
+    row: &serde_json::Value,
+    threshold_failures: &[serde_json::Value],
+    hint_failures: &[serde_json::Value],
+) -> (RegressionStatusV1, Option<String>, Option<String>) {
+    if let Some(row_error) = row.get("error").and_then(|v| v.as_str()) {
+        let reason_code = match row_error {
+            "no_last_bundle_dir" => "tooling.diag_perf.no_last_bundle_dir",
+            _ => "tooling.diag_perf.row_error",
+        };
+        return (
+            RegressionStatusV1::FailedTooling,
+            Some(reason_code.to_string()),
+            Some(row_error.to_string()),
+        );
+    }
+
+    if !threshold_failures.is_empty() {
+        return (
+            RegressionStatusV1::FailedDeterministic,
+            Some("diag.perf.threshold_failed".to_string()),
+            threshold_failures
+                .first()
+                .and_then(|failure| failure.get("metric"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
+        );
+    }
+
+    if !hint_failures.is_empty() {
+        return (
+            RegressionStatusV1::FailedDeterministic,
+            Some("diag.perf.hint_failed".to_string()),
+            hint_failures
+                .first()
+                .and_then(|failure| failure.get("code"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
+        );
+    }
+
+    (RegressionStatusV1::Passed, None, None)
+}
+
+fn perf_row_to_regression_item(
+    workspace_root: &Path,
+    row: &serde_json::Value,
+    threshold_failures: &[serde_json::Value],
+    hint_failures: &[serde_json::Value],
+    layout_perf_summary_path: Option<&Path>,
+    perf_thresholds_json_path: Option<&Path>,
+    perf_hints_json_path: Option<&Path>,
+) -> RegressionItemSummaryV1 {
+    let raw_script = row.get("script").and_then(|v| v.as_str()).unwrap_or("perf");
+    let script = normalize_perf_regression_script(workspace_root, raw_script);
+    let repeat = row.get("repeat").and_then(|v| v.as_u64());
+    let sort = row
+        .get("sort")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    let worst_run = row.get("worst_run").cloned();
+    let bundle_artifact = worst_run
+        .as_ref()
+        .and_then(|v| v.get("bundle"))
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+    let (status, reason_code, source_reason_code) =
+        perf_row_status_and_reason(row, threshold_failures, hint_failures);
+    let threshold_failure_count = threshold_failures.len();
+    let hint_failure_count = hint_failures.len();
+
+    let mut detail_parts: Vec<String> = Vec::new();
+    if let Some(row_error) = row.get("error").and_then(|v| v.as_str()) {
+        detail_parts.push(format!("row_error={row_error}"));
+    }
+    if threshold_failure_count > 0 {
+        detail_parts.push(format!("threshold_failures={threshold_failure_count}"));
+    }
+    if hint_failure_count > 0 {
+        detail_parts.push(format!("hint_failures={hint_failure_count}"));
+    }
+    if let Some(repeat) = repeat {
+        detail_parts.push(format!("repeat={repeat}"));
+    }
+    if let Some(sort) = sort.as_deref() {
+        detail_parts.push(format!("sort={sort}"));
+    }
+
+    RegressionItemSummaryV1 {
+        item_id: format!("perf:{}", script),
+        kind: RegressionItemKindV1::PerfCase,
+        name: script.clone(),
+        status,
+        reason_code,
+        source_reason_code,
+        lane: RegressionLaneV1::Perf,
+        owner: None,
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: None,
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact,
+            bundle_dir: None,
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: layout_perf_summary_path.map(|p| p.display().to_string()),
+            compare_json: perf_thresholds_json_path.map(|p| p.display().to_string()),
+            extra: Some(serde_json::json!({
+                "sort": sort,
+                "repeat": repeat,
+                "stats": row.get("stats").cloned(),
+                "worst_run": worst_run,
+                "row_error": row.get("error").cloned(),
+                "threshold_failures": threshold_failures,
+                "hint_failures": hint_failures,
+                "artifacts": {
+                    "layout_perf_summary_json": layout_perf_summary_path.map(|p| p.display().to_string()),
+                    "check_perf_thresholds_json": perf_thresholds_json_path.map(|p| p.display().to_string()),
+                    "check_perf_hints_json": perf_hints_json_path.map(|p| p.display().to_string()),
+                },
+            })),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: Some(script.clone()),
+            suite: None,
+            campaign_case: Some("perf".to_string()),
+            metadata: Some(serde_json::json!({
+                "sort": sort,
+                "repeat": repeat,
+            })),
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: (!detail_parts.is_empty()).then(|| detail_parts.join(", ")),
+            details: Vec::new(),
+        }),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_regression_summary_for_perf(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    generated_unix_ms: u64,
+    sort: BundleStatsSort,
+    repeat: usize,
+    perf_json_rows: &[serde_json::Value],
+    overall_worst: Option<&(u64, PathBuf, PathBuf)>,
+    perf_threshold_failures: &[serde_json::Value],
+    perf_hint_failures: &[serde_json::Value],
+    layout_perf_summary_path: Option<&Path>,
+    perf_thresholds_json_path: Option<&Path>,
+    perf_hints_json_path: Option<&Path>,
+    wants_perf_thresholds: bool,
+    wants_perf_hints: bool,
+) {
+    let threshold_failures_by_script = perf_threshold_failures.iter().fold(
+        std::collections::BTreeMap::<String, Vec<serde_json::Value>>::new(),
+        |mut acc, failure| {
+            if let Some(script) = failure.get("script").and_then(|v| v.as_str()) {
+                acc.entry(script.to_string())
+                    .or_default()
+                    .push(failure.clone());
+            }
+            acc
+        },
+    );
+    let hint_failures_by_script = perf_hint_failures.iter().fold(
+        std::collections::BTreeMap::<String, Vec<serde_json::Value>>::new(),
+        |mut acc, failure| {
+            if let Some(script) = failure.get("script").and_then(|v| v.as_str()) {
+                acc.entry(script.to_string())
+                    .or_default()
+                    .push(failure.clone());
+            }
+            acc
+        },
+    );
+
+    let mut items = perf_json_rows
+        .iter()
+        .map(|row| {
+            let script_key = row
+                .get("script")
+                .and_then(|v| v.as_str())
+                .map(|v| normalize_perf_regression_script(workspace_root, v))
+                .unwrap_or_else(|| "perf".to_string());
+            let threshold_failures = threshold_failures_by_script
+                .get(&script_key)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            let hint_failures = hint_failures_by_script
+                .get(&script_key)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            perf_row_to_regression_item(
+                workspace_root,
+                row,
+                threshold_failures,
+                hint_failures,
+                layout_perf_summary_path,
+                perf_thresholds_json_path,
+                perf_hints_json_path,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    if items.is_empty() {
+        items.push(RegressionItemSummaryV1 {
+            item_id: "perf".to_string(),
+            kind: RegressionItemKindV1::CampaignStep,
+            name: "perf".to_string(),
+            status: RegressionStatusV1::FailedTooling,
+            reason_code: Some("tooling.diag_perf.no_rows".to_string()),
+            source_reason_code: None,
+            lane: RegressionLaneV1::Perf,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: Some(RegressionEvidenceV1 {
+                bundle_artifact: overall_worst.map(|(_, _, bundle)| bundle.display().to_string()),
+                bundle_dir: None,
+                triage_json: None,
+                script_result_json: None,
+                ai_packet_dir: None,
+                pack_path: None,
+                screenshots_manifest: None,
+                perf_summary_json: layout_perf_summary_path.map(|p| p.display().to_string()),
+                compare_json: perf_thresholds_json_path.map(|p| p.display().to_string()),
+                extra: Some(serde_json::json!({
+                    "sort": sort.as_str(),
+                    "repeat": repeat,
+                    "check_perf_thresholds_json": perf_thresholds_json_path.map(|p| p.display().to_string()),
+                    "check_perf_hints_json": perf_hints_json_path.map(|p| p.display().to_string()),
+                })),
+            }),
+            source: None,
+            notes: Some(RegressionNotesV1 {
+                summary: Some("perf finished without row-level summary output".to_string()),
+                details: Vec::new(),
+            }),
+        });
+    }
+
+    let mut totals = RegressionTotalsV1::default();
+    for item in &items {
+        totals.record_status(item.status);
+    }
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: "perf".to_string(),
+            lane: RegressionLaneV1::Perf,
+            profile: Some("perf".to_string()),
+            schema_version: Some(1),
+            requested_by: Some("diag perf".to_string()),
+            filters: Some(serde_json::json!({
+                "sort": sort.as_str(),
+                "repeat": repeat,
+                "wants_perf_thresholds": wants_perf_thresholds,
+                "wants_perf_hints": wants_perf_hints,
+            })),
+        },
+        RegressionRunSummaryV1 {
+            run_id: generated_unix_ms.to_string(),
+            created_unix_ms: generated_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(resolved_out_dir.display().to_string()),
+            tool: "fretboard diag perf".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    summary.items = items;
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+    if let Some(highlights) = summary.highlights.as_mut() {
+        let worst_perf_failure = overall_worst.and_then(|(_, src, _)| {
+            let script = normalize_repo_relative_path(workspace_root, src.as_path());
+            summary
+                .items
+                .iter()
+                .find(|item| {
+                    item.status != RegressionStatusV1::Passed
+                        && item
+                            .source
+                            .as_ref()
+                            .and_then(|source| source.script.as_deref())
+                            == Some(script.as_str())
+                })
+                .or_else(|| {
+                    summary
+                        .items
+                        .iter()
+                        .find(|item| item.status != RegressionStatusV1::Passed)
+                })
+                .map(|item| RegressionHighlightRefV1 {
+                    item_id: item.item_id.clone(),
+                    reason_code: item.reason_code.clone(),
+                })
+        });
+        highlights.worst_perf_failure = worst_perf_failure;
+    }
+    summary.artifacts = Some(RegressionArtifactsV1 {
+        summary_dir: Some(resolved_out_dir.display().to_string()),
+        packed_report: None,
+        index_json: None,
+        html_report: None,
+    });
+
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    if let Err(err) = crate::util::write_json_value(
+        &regression_summary_path,
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    ) {
+        eprintln!(
+            "warning: failed to write regression summary {}: {}",
+            regression_summary_path.display(),
+            err
+        );
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct PerfCmdContext {
@@ -378,13 +720,13 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         }
     }
 
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
-    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path =
-        resolved_script_result_trigger_path.clone();
+    let launch_fs_transport_cfg = crate::script_run_fs_transport_cfg(
+        &resolved_out_dir,
+        &resolved_script_path,
+        &resolved_script_trigger_path,
+        &resolved_script_result_path,
+        &resolved_script_result_trigger_path,
+    );
 
     let perf_wants_screenshots = check_pixels_changed_test_id.is_some()
         || check_pixels_unchanged_test_id.is_some()
@@ -1902,6 +2244,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     }
 
     let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
+    let mut perf_thresholds_json_path: Option<PathBuf> = None;
     if wants_perf_thresholds {
         let baseline_summary = perf_baseline.as_ref().map(|b| {
             serde_json::json!({
@@ -1925,12 +2268,14 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &perf_threshold_rows,
             &perf_threshold_failures,
         );
+        perf_thresholds_json_path = Some(out_path.clone());
         if !perf_threshold_failures.is_empty() {
             perf_threshold_failure = Some((perf_threshold_failures.len(), out_path.clone()));
         }
     }
 
     let mut perf_hint_failure: Option<(usize, PathBuf)> = None;
+    let mut perf_hints_json_path: Option<PathBuf> = None;
     if wants_perf_hints {
         let out_path = outputs::write_perf_hints_json(
             &resolved_out_dir,
@@ -1943,6 +2288,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &perf_hint_rows,
             &perf_hint_failures,
         );
+        perf_hints_json_path = Some(out_path.clone());
         if !perf_hint_failures.is_empty() {
             perf_hint_failure = Some((perf_hint_failures.len(), out_path.clone()));
         }
@@ -1951,6 +2297,23 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     if launched_by_fretboard {
         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
     }
+
+    write_regression_summary_for_perf(
+        &workspace_root,
+        &resolved_out_dir,
+        now_unix_ms(),
+        sort,
+        repeat,
+        &perf_json_rows,
+        overall_worst.as_ref(),
+        &perf_threshold_failures,
+        &perf_hint_failures,
+        layout_perf_summary_path.as_deref(),
+        perf_thresholds_json_path.as_deref(),
+        perf_hints_json_path.as_deref(),
+        wants_perf_thresholds,
+        wants_perf_hints,
+    );
 
     if stats_json {
         outputs::print_perf_stats_stdout_json(
@@ -1986,6 +2349,73 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     }
 
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn perf_row_to_regression_item_marks_threshold_failures() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "top_total",
+            "repeat": 3,
+            "stats": { "total_time_us": { "max": 42 } },
+            "worst_run": { "bundle": "F:/repo/.fret/bundle.json", "run_index": 1, "top_total_time_us": 42 }
+        });
+        let threshold_failures = vec![serde_json::json!({
+            "script": "apps/demo.perf.json",
+            "metric": "top_total_time_us",
+            "evidence_bundle": "F:/repo/.fret/bundle.json"
+        })];
+
+        let item = perf_row_to_regression_item(
+            workspace_root,
+            &row,
+            &threshold_failures,
+            &[],
+            Some(Path::new("F:/repo/out/layout.perf.summary.v1.json")),
+            Some(Path::new("F:/repo/out/check.perf_thresholds.json")),
+            None,
+        );
+
+        assert_eq!(item.status, RegressionStatusV1::FailedDeterministic);
+        assert_eq!(
+            item.reason_code.as_deref(),
+            Some("diag.perf.threshold_failed")
+        );
+        assert_eq!(
+            item.source_reason_code.as_deref(),
+            Some("top_total_time_us")
+        );
+        assert_eq!(item.name, "apps/demo.perf.json");
+    }
+
+    #[test]
+    fn perf_row_to_regression_item_marks_row_errors_as_tooling() {
+        let workspace_root = Path::new("F:/repo");
+        let row = serde_json::json!({
+            "script": "F:/repo/apps/demo.perf.json",
+            "sort": "top_total",
+            "repeat": 1,
+            "error": "no_last_bundle_dir"
+        });
+
+        let item = perf_row_to_regression_item(workspace_root, &row, &[], &[], None, None, None);
+
+        assert_eq!(item.status, RegressionStatusV1::FailedTooling);
+        assert_eq!(
+            item.reason_code.as_deref(),
+            Some("tooling.diag_perf.no_last_bundle_dir")
+        );
+        assert_eq!(
+            item.source_reason_code.as_deref(),
+            Some("no_last_bundle_dir")
+        );
+        assert_eq!(item.name, "apps/demo.perf.json");
+    }
 }
 
 fn ensure_perf_fs_transport_connected(

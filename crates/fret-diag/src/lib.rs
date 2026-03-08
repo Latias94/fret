@@ -30,7 +30,9 @@ mod commands;
 mod compare;
 mod compat;
 pub mod devtools;
+mod diag_campaign;
 mod diag_compare;
+mod diag_dashboard;
 mod diag_list;
 mod diag_matrix;
 mod diag_perf;
@@ -44,6 +46,7 @@ mod diag_simple_dispatch;
 mod diag_stats;
 mod diag_suite;
 mod diag_suite_scripts;
+mod diag_summarize;
 mod evidence_index;
 mod frames_index;
 mod gates;
@@ -66,6 +69,7 @@ mod perf_seed_policy;
 mod post_run_checks;
 mod promoted_registry_builder;
 mod registry;
+pub mod regression_summary;
 mod run_artifacts;
 mod script_execution;
 mod script_registry;
@@ -2939,6 +2943,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
     };
 
+    let resolved_paths = ResolvedScriptPaths {
+        out_dir: resolved_out_dir.clone(),
+        trigger_path: resolved_trigger_path.clone(),
+        ready_path: resolved_ready_path.clone(),
+        exit_path: resolved_exit_path.clone(),
+        script_path: resolved_script_path.clone(),
+        script_trigger_path: resolved_script_trigger_path.clone(),
+        script_result_path: resolved_script_result_path.clone(),
+        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+    };
+    let resolved_run_context = ResolvedRunContext {
+        paths: resolved_paths.clone(),
+        fs_transport_cfg: fs_transport_cfg.clone(),
+    };
+
     if let Some(res) = diag_simple_dispatch::dispatch_simple(
         sub.as_str(),
         &rest,
@@ -3105,6 +3124,48 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             stats_top_override,
         ),
+        "dashboard" => diag_dashboard::cmd_dashboard(diag_dashboard::DashboardCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
+        "campaign" => diag_campaign::cmd_campaign(diag_campaign::CampaignCmdContext {
+            pack_after_run,
+            rest: rest.clone(),
+            suite_script_inputs: suite_script_inputs.clone(),
+            suite_prewarm_scripts: suite_prewarm_scripts.clone(),
+            suite_prelude_scripts: suite_prelude_scripts.clone(),
+            suite_prelude_each_run,
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            devtools_ws_url: devtools_ws_url.clone(),
+            devtools_token: devtools_token.clone(),
+            devtools_session_id: devtools_session_id.clone(),
+            timeout_ms,
+            poll_ms,
+            stats_top,
+            stats_json,
+            warmup_frames,
+            max_test_ids,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            suite_lint,
+            pack_include_screenshots,
+            reuse_launch,
+            launch: launch.clone(),
+            launch_env: launch_env.clone(),
+            launch_high_priority,
+            launch_write_bundle_json,
+            keep_open,
+            checks: run_checks.clone(),
+        }),
+        "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,
@@ -3121,13 +3182,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 ensure_ai_packet,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_trigger_path: resolved_trigger_path.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 pack_include_root_artifacts,
                 pack_include_triage,
@@ -3157,13 +3212,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_after_run,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_trigger_path: resolved_script_trigger_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 pack_include_screenshots,
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
                 check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
@@ -3188,14 +3237,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             diag_repro::cmd_repro(diag_repro::ReproCmdContext {
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_trigger_path: resolved_script_trigger_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 ensure_ai_packet,
                 pack_ai_only,
@@ -3238,9 +3280,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 suite_prelude_scripts: suite_prelude_scripts.clone(),
                 suite_prelude_each_run,
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 devtools_ws_url: devtools_ws_url.clone(),
                 devtools_token: devtools_token.clone(),
                 devtools_session_id: devtools_session_id.clone(),
@@ -4114,20 +4154,54 @@ mod capability_tests {
 }
 
 #[derive(Debug, Clone)]
-struct ResolvedScriptPaths {
-    out_dir: PathBuf,
-    ready_path: PathBuf,
-    exit_path: PathBuf,
-    script_path: PathBuf,
-    script_trigger_path: PathBuf,
-    script_result_path: PathBuf,
-    script_result_trigger_path: PathBuf,
+pub(crate) struct ResolvedScriptPaths {
+    pub(crate) out_dir: PathBuf,
+    pub(crate) trigger_path: PathBuf,
+    pub(crate) ready_path: PathBuf,
+    pub(crate) exit_path: PathBuf,
+    pub(crate) script_path: PathBuf,
+    pub(crate) script_trigger_path: PathBuf,
+    pub(crate) script_result_path: PathBuf,
+    pub(crate) script_result_trigger_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedRunContext {
+    pub(crate) paths: ResolvedScriptPaths,
+    pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+}
+
+pub(crate) fn script_run_fs_transport_cfg(
+    out_dir: &Path,
+    script_path: &Path,
+    script_trigger_path: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_path = script_path.to_path_buf();
+    cfg.script_trigger_path = script_trigger_path.to_path_buf();
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
+}
+
+pub(crate) fn script_result_fs_transport_cfg(
+    out_dir: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
 }
 
 impl ResolvedScriptPaths {
-    fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
+    pub(crate) fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
         let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
         Self {
+            trigger_path: resolve_path(workspace_root, out_dir.join("trigger.touch")),
             ready_path: resolve_path(workspace_root, out_dir.join("ready.touch")),
             exit_path: resolve_path(workspace_root, out_dir.join("exit.touch")),
             script_path: resolve_path(workspace_root, out_dir.join("script.json")),
@@ -4139,6 +4213,16 @@ impl ResolvedScriptPaths {
             ),
             out_dir,
         }
+    }
+
+    pub(crate) fn launch_fs_transport_cfg(&self) -> crate::transport::FsDiagTransportConfig {
+        script_run_fs_transport_cfg(
+            &self.out_dir,
+            &self.script_path,
+            &self.script_trigger_path,
+            &self.script_result_path,
+            &self.script_result_trigger_path,
+        )
     }
 }
 
@@ -4767,12 +4851,7 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(paths.out_dir.clone());
-    launch_fs_transport_cfg.script_path = paths.script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = paths.script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = paths.script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path = paths.script_result_trigger_path.clone();
+    let launch_fs_transport_cfg = paths.launch_fs_transport_cfg();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,

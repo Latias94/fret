@@ -454,13 +454,13 @@ pub(crate) fn cmd_script(
 
             let wants_screenshots = crate::script_requests_screenshots(&src);
             let shrink_launch_env = launch_env.to_vec();
-            let mut launch_fs_transport_cfg =
-                crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
-            launch_fs_transport_cfg.script_path = script_path.to_path_buf();
-            launch_fs_transport_cfg.script_trigger_path = script_trigger_path.to_path_buf();
-            launch_fs_transport_cfg.script_result_path = script_result_path.to_path_buf();
-            launch_fs_transport_cfg.script_result_trigger_path =
-                script_result_trigger_path.to_path_buf();
+            let launch_fs_transport_cfg = crate::script_run_fs_transport_cfg(
+                out_dir,
+                script_path,
+                script_trigger_path,
+                script_result_path,
+                script_result_trigger_path,
+            );
             let mut child = maybe_launch_demo(
                 launch,
                 &shrink_launch_env,

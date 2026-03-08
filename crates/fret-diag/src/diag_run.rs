@@ -298,13 +298,7 @@ pub(crate) struct RunCmdContext {
     pub ensure_ai_packet: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_trigger_path: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_exit_path: PathBuf,
-    pub resolved_script_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
-    pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub resolved_run_context: ResolvedRunContext,
     pub pack_out: Option<PathBuf>,
     pub pack_include_root_artifacts: bool,
     pub pack_include_triage: bool,
@@ -336,13 +330,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         ensure_ai_packet,
         rest,
         workspace_root,
-        resolved_out_dir,
-        resolved_trigger_path,
-        resolved_ready_path,
-        resolved_exit_path,
-        resolved_script_path,
-        resolved_script_result_path,
-        fs_transport_cfg,
+        resolved_run_context,
         pack_out,
         pack_include_root_artifacts,
         pack_include_triage,
@@ -366,6 +354,18 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         keep_open,
         checks,
     } = ctx;
+
+    let ResolvedRunContext {
+        paths: resolved_paths,
+        fs_transport_cfg,
+    } = resolved_run_context;
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_trigger_path = resolved_paths.trigger_path;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_exit_path = resolved_paths.exit_path;
+    let resolved_script_path = resolved_paths.script_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
 
     let mut checks_for_post_run = checks.clone();
 

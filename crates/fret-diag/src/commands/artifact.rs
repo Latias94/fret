@@ -2,25 +2,14 @@ use std::path::{Path, PathBuf};
 
 use crate::artifact_lint::lint_run_artifact_dir;
 
+use super::resolve;
+
 fn resolve_run_dir_from_out_dir(
     out_dir: &Path,
     script_result_path: &Path,
 ) -> Result<PathBuf, String> {
-    let bytes = std::fs::read(script_result_path).map_err(|e| {
-        format!(
-            "failed to read script.result.json to resolve latest run_id ({}): {}",
-            script_result_path.display(),
-            e
-        )
-    })?;
-    let result: fret_diag_protocol::UiScriptResultV1 =
-        serde_json::from_slice(&bytes).map_err(|e| {
-            format!(
-                "script.result.json was not valid UiScriptResultV1 JSON ({}): {}",
-                script_result_path.display(),
-                e
-            )
-        })?;
+    let result =
+        resolve::read_script_result_v1_or_err(script_result_path, "to resolve latest run_id")?;
     Ok(out_dir.join(result.run_id.to_string()))
 }
 
