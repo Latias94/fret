@@ -57,7 +57,7 @@ Current conclusion:
 | `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `migrate-to-view` | useful as proof that plain IMUI demos do not require closure-root app entry |
 | `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiHelloView>()`; keep as the first Batch A proof point until the remaining callers are burned down |
 | `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `migrate-to-view` | still appears to be authoring debt rather than a lower-level requirement |
-| `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `migrate-to-view` | good small migration target |
+| `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiResponseSignalsView>()`; proves response-signal-heavy IMUI demos also fit the default view entry path |
 | `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `migrate-to-view` | useful proof that adapter demos can still live on the default entry path |
 | `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `migrate-to-view` | closure-root usage looks historical; not obviously blocked on a lower-level runner |
 
@@ -82,7 +82,7 @@ These are not part of the migration table above, but they still matter for polic
 These should move first because they are small and make the policy credible quickly:
 
 - `apps/fret-examples/src/imui_hello_demo.rs` _(done on 2026-03-08)_
-- `apps/fret-examples/src/imui_response_signals_demo.rs`
+- `apps/fret-examples/src/imui_response_signals_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/chart_declarative_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/node_graph_demo.rs`
 
