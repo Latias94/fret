@@ -530,6 +530,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/timer_motion_auto_pan.rs` seams with shared invalidation in
     `canvas/widget/timer_motion_shared.rs`, so retained timer-driven motion reducers no
     longer stay embedded in one surface file.
+  - Progress: the searcher input/pointer activation trio now routes hit
+    testing, drag arming, key-step/query reducers, hover sync, and wheel scroll through
+    the private `canvas/widget/searcher_activation_hit.rs`,
+    `canvas/widget/searcher_activation_state.rs`,
+    `canvas/widget/searcher_input_nav.rs`, `canvas/widget/searcher_input_query.rs`,
+    `canvas/widget/searcher_pointer_hover.rs`, and
+    `canvas/widget/searcher_pointer_wheel.rs` seams, so retained searcher reducers no
+    longer stay embedded in three medium-sized surface files.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

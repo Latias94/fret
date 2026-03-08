@@ -593,6 +593,14 @@ real editors.
   `canvas/widget/timer_motion_auto_pan.rs` seams with shared invalidation in
   `canvas/widget/timer_motion_shared.rs`, so retained timer-driven motion reducers no
   longer stay embedded in one surface file.
+- The searcher input/pointer activation trio now routes hit
+  testing, drag arming, key-step/query reducers, hover sync, and wheel scroll through
+  the private `canvas/widget/searcher_activation_hit.rs`,
+  `canvas/widget/searcher_activation_state.rs`,
+  `canvas/widget/searcher_input_nav.rs`, `canvas/widget/searcher_input_query.rs`,
+  `canvas/widget/searcher_pointer_hover.rs`, and
+  `canvas/widget/searcher_pointer_wheel.rs` seams, so retained searcher reducers no
+  longer stay embedded in three medium-sized surface files.
 
 ### Deliverables
 
@@ -632,8 +640,14 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_nav.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer_hover.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer_wheel.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
