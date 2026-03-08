@@ -29,6 +29,11 @@ cargo run -p fretboard -- dev native --example commands_keymap_basics
 
 Then pick a topic:
 
+Maintainer comparison target (reference-only; not part of the boring ladder):
+
+- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+  - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + payload-action path now used by `todo_demo` and the simple-todo scaffold, so its role is to stay as an explicit comparison surface rather than a missing-default-path preview
+
 - State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
 - Queries (feature-gated): `query_basics`
 - Routing (feature-gated): `router_basics`
