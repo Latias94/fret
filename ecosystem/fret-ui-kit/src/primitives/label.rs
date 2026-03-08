@@ -169,14 +169,23 @@ fn label_for_control<H: UiHost>(
                 let target = host
                     .models_mut()
                     .read(&control_registry_on_down, |reg| {
-                        reg.control_for(acx.window, &for_control_on_down)
-                            .map(|c| (c.enabled, c.element, matches!(c.action, ControlAction::FocusOnly)))
+                        reg.control_for(acx.window, &for_control_on_down).map(|c| {
+                            (
+                                c.enabled,
+                                c.element,
+                                matches!(c.action, ControlAction::FocusOnly),
+                            )
+                        })
                     })
                     .ok()
                     .flatten()
                     .or_else(|| {
                         control_snapshot_on_down.as_ref().map(|c| {
-                            (c.enabled, c.element, matches!(c.action, ControlAction::FocusOnly))
+                            (
+                                c.enabled,
+                                c.element,
+                                matches!(c.action, ControlAction::FocusOnly),
+                            )
                         })
                     });
                 if let Some((true, element, focus_on_pointer_down)) = target {
@@ -219,7 +228,7 @@ fn label_for_control<H: UiHost>(
                 }
 
                 host.request_focus(control.element);
-                control.action.invoke(host);
+                control.action.invoke(host, acx);
                 host.request_redraw(acx.window);
                 true
             }));

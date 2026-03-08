@@ -31,14 +31,18 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 - Pass: Supports controlled state via `Model<bool>`.
 - Pass: Supports uncontrolled initial state via `defaultPressed` (`Toggle::uncontrolled(...)` /
   `Toggle::default_pressed(...)` / `toggle_uncontrolled(...)`).
+- Pass: Supports a source-aligned snapshot/action path via `Toggle::from_pressed(...)` plus
+  `action(...)` / `action_payload(...)`, so action-first views can render a toggle from plain local
+  state without allocating a `Model<bool>`.
 - Pass: Supports `variant` (`default` / `outline`) and `size` (`sm` / `default` / `lg`).
 - Pass: Supports both text labels (`label(...)`) and arbitrary children (`children(...)`).
 
 ### Interaction behavior
 
-- Pass: Activation toggles the boolean model.
+- Pass: Activation toggles the boolean model when a controlled/uncontrolled model path is used.
+- Pass: Snapshot/action toggles can render from plain local state and dispatch typed actions without a model handle.
 - Pass: Disabled state prevents interaction and uses disabled styling.
-- Pass: A11y uses button semantics and exposes `selected` state.
+- Pass: A11y uses button semantics and exposes `pressed` state.
 
 ### Visual defaults (shadcn parity)
 
@@ -55,7 +59,11 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn toggle`
+- `cargo test -p fret-ui-shadcn --lib toggle_pressed_value_exposes_semantics_without_model --message-format short`
+- `cargo check -p fret-cookbook --example toggle_basics --message-format short`
+- `cargo test -p fret-ui-shadcn --lib field_label_click_dispatches_action_for_snapshot_toggle_control --message-format short`
 
 ## Follow-ups (recommended)
 
+- Pass: Snapshot/action toggles now participate in `control_id` / label forwarding with the same command-backed activation path as the model-backed contract.
 - Consider an icon-sizing helper to match shadcn’s default `svg.size-4` rule.

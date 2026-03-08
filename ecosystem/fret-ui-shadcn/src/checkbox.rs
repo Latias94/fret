@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{ActionId, CommandId, Model};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
@@ -111,6 +111,7 @@ pub struct Checkbox {
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_click: Option<CommandId>,
+    action_payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: CheckboxStyle,
@@ -121,6 +122,7 @@ enum CheckboxCheckedModel {
     Bool(Model<bool>),
     OptionalBool(Model<Option<bool>>),
     TriState(Model<CheckedState>),
+    Value(CheckedState),
 }
 
 impl Checkbox {
@@ -133,6 +135,7 @@ impl Checkbox {
             a11y_label: None,
             test_id: None,
             on_click: None,
+            action_payload: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: CheckboxStyle::default(),
@@ -148,6 +151,34 @@ impl Checkbox {
             a11y_label: None,
             test_id: None,
             on_click: None,
+            action_payload: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
+        }
+    }
+
+    /// Creates a checkbox from a plain bool value, mirroring the upstream controlled `checked`
+    /// prop without forcing a `Model<bool>` at the call site.
+    ///
+    /// This is intended for views that already own the state elsewhere (for example a
+    /// `LocalState<Vec<Row>>` collection) and only need the checkbox to render the current value
+    /// while dispatching an external action on click.
+    pub fn from_checked(checked: bool) -> Self {
+        Self::from_checked_state(CheckedState::from(checked))
+    }
+
+    /// Creates a checkbox from an explicit tri-state snapshot.
+    pub fn from_checked_state(checked: CheckedState) -> Self {
+        Self {
+            checked: CheckboxCheckedModel::Value(checked),
+            aria_invalid: false,
+            disabled: false,
+            control_id: None,
+            a11y_label: None,
+            test_id: None,
+            on_click: None,
+            action_payload: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: CheckboxStyle::default(),
@@ -166,6 +197,7 @@ impl Checkbox {
             a11y_label: None,
             test_id: None,
             on_click: None,
+            action_payload: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: CheckboxStyle::default(),
@@ -239,6 +271,34 @@ impl Checkbox {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    /// Bind a stable action ID to this checkbox (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this still dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`Checkbox::action_payload`], but computes the payload lazily on activation.
+    pub fn action_payload_factory(
+        mut self,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -328,6 +388,7 @@ impl Checkbox {
             let test_id = self.test_id.clone();
             let disabled_explicit = self.disabled;
             let on_click = self.on_click.clone();
+            let action_payload = self.action_payload.clone();
             let disabled = disabled_explicit
                 || on_click
                     .as_ref()
@@ -342,7 +403,14 @@ impl Checkbox {
                     id,
                     fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
                 );
-                cx.pressable_dispatch_command_if_enabled_opt(on_click);
+                if let Some(payload) = action_payload.clone() {
+                    cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                        on_click.clone(),
+                        payload,
+                    );
+                } else {
+                    cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
+                }
                 match &checked {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
                     CheckboxCheckedModel::OptionalBool(model) => {
@@ -353,6 +421,7 @@ impl Checkbox {
                     CheckboxCheckedModel::TriState(model) => {
                         cx.pressable_update_model(model, |v| *v = v.toggle());
                     }
+                    CheckboxCheckedModel::Value(_) => {}
                 }
 
                 let theme = Theme::global(&*cx.app).snapshot();
@@ -366,6 +435,7 @@ impl Checkbox {
                     CheckboxCheckedModel::TriState(model) => {
                         cx.watch_model(model).copied().unwrap_or_default()
                     }
+                    CheckboxCheckedModel::Value(state) => *state,
                 };
                 let is_on = state.is_on();
                 let is_checked = state.is_checked();
@@ -423,25 +493,44 @@ impl Checkbox {
                 if let (Some(control_id), Some(control_registry)) =
                     (control_id.clone(), control_registry.clone())
                 {
-                    let action = match &checked {
+                    let toggle_action = match &checked {
                         CheckboxCheckedModel::Bool(model) => {
-                            ControlAction::ToggleBool(model.clone())
+                            Some(ControlAction::ToggleBool(model.clone()))
                         }
                         CheckboxCheckedModel::OptionalBool(model) => {
-                            ControlAction::ToggleOptionalBool(model.clone())
+                            Some(ControlAction::ToggleOptionalBool(model.clone()))
                         }
                         CheckboxCheckedModel::TriState(model) => {
-                            ControlAction::ToggleCheckedState(model.clone())
+                            Some(ControlAction::ToggleCheckedState(model.clone()))
                         }
+                        CheckboxCheckedModel::Value(_) => None,
                     };
-                    let entry = ControlEntry {
-                        element: id,
-                        enabled: !disabled,
-                        action,
+                    let action = match (on_click.clone(), action_payload.clone(), toggle_action) {
+                        (Some(command), payload, Some(toggle_action)) => {
+                            Some(ControlAction::Sequence(
+                                vec![
+                                    ControlAction::DispatchCommand { command, payload },
+                                    toggle_action,
+                                ]
+                                .into(),
+                            ))
+                        }
+                        (Some(command), payload, None) => {
+                            Some(ControlAction::DispatchCommand { command, payload })
+                        }
+                        (None, _, Some(toggle_action)) => Some(toggle_action),
+                        (None, _, None) => None,
                     };
-                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
-                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
-                    });
+                    if let Some(action) = action {
+                        let entry = ControlEntry {
+                            element: id,
+                            enabled: !disabled,
+                            action,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                        });
+                    }
                 }
 
                 let labelled_by_element = if let (Some(control_id), Some(control_registry)) =
@@ -566,8 +655,9 @@ mod tests {
         TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
-        CommandMeta, CommandScope, FrameId, WindowCommandActionAvailabilityService,
-        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+        CommandId, CommandMeta, CommandScope, Effect, FrameId,
+        WindowCommandActionAvailabilityService, WindowCommandEnabledService,
+        WindowCommandGatingService, WindowCommandGatingSnapshot, WindowPendingActionPayloadService,
     };
     use fret_ui::element::{ElementKind, PressableProps};
     use fret_ui::tree::UiTree;
@@ -706,6 +796,56 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(true));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(!scene.ops().is_empty());
+    }
+
+    #[test]
+    fn checkbox_checked_value_exposes_semantics_without_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-checked-value-semantics",
+            |cx| {
+                vec![
+                    Checkbox::from_checked(true)
+                        .test_id("checked-value-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("checked-value-checkbox"))
+            .expect("checkbox semantics node");
+        assert_eq!(node.role, fret_core::SemanticsRole::Checkbox);
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
+        assert_eq!(node.flags.checked, Some(true));
 
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
@@ -1080,6 +1220,137 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(false));
+    }
+
+    #[test]
+    fn field_label_click_mirrors_checkbox_action_sequence() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(true);
+        let cmd = CommandId::from("test.checkbox.label-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Checkbox Label Action").with_scope(CommandScope::App),
+        );
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-field-label-mirrors-checkbox-action-sequence",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+
+                vec![cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    |cx| {
+                        vec![
+                            Checkbox::new(model.clone())
+                                .control_id("test.checkbox")
+                                .a11y_label("Test checkbox")
+                                .action(cmd.clone())
+                                .action_payload(41u32)
+                                .test_id("test.checkbox")
+                                .into_element(cx),
+                            crate::FieldLabel::new("Toggle via label")
+                                .for_control("test.checkbox")
+                                .into_element(cx)
+                                .test_id("test.checkbox.label"),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.flush_effects();
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.checkbox.label"))
+            .expect("label semantics node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(false));
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())),
+            "expected label click to dispatch {cmd:?}, got {effects:?}"
+        );
+        let payload = app
+            .with_global_mut(WindowPendingActionPayloadService::default, |svc, app| {
+                svc.consume(window, app.tick_id(), &cmd)
+            })
+            .expect("expected pending payload for checkbox label action");
+        let payload = payload
+            .downcast::<u32>()
+            .ok()
+            .expect("payload type must match");
+        assert_eq!(*payload, 41);
     }
 
     #[test]

@@ -1,9 +1,11 @@
+use std::any::Any;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 
 use fret_core::AppWindowId;
-use fret_runtime::{FrameId, Model};
-use fret_ui::action::UiActionHost;
+use fret_runtime::{CommandId, FrameId, Model};
+use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::headless::checked_state::CheckedState;
@@ -39,17 +41,46 @@ impl From<&str> for ControlId {
     }
 }
 
-#[derive(Debug, Clone)]
+pub type ControlPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
+
+#[derive(Clone)]
 pub enum ControlAction {
     ToggleBool(Model<bool>),
     ToggleOptionalBool(Model<Option<bool>>),
     ToggleCheckedState(Model<CheckedState>),
+    DispatchCommand {
+        command: CommandId,
+        payload: Option<ControlPayloadFactory>,
+    },
+    Sequence(Arc<[ControlAction]>),
     Noop,
     FocusOnly,
 }
 
+impl fmt::Debug for ControlAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ControlAction::ToggleBool(model) => f.debug_tuple("ToggleBool").field(model).finish(),
+            ControlAction::ToggleOptionalBool(model) => {
+                f.debug_tuple("ToggleOptionalBool").field(model).finish()
+            }
+            ControlAction::ToggleCheckedState(model) => {
+                f.debug_tuple("ToggleCheckedState").field(model).finish()
+            }
+            ControlAction::DispatchCommand { command, payload } => f
+                .debug_struct("DispatchCommand")
+                .field("command", command)
+                .field("has_payload", &payload.is_some())
+                .finish(),
+            ControlAction::Sequence(actions) => f.debug_tuple("Sequence").field(actions).finish(),
+            ControlAction::Noop => f.write_str("Noop"),
+            ControlAction::FocusOnly => f.write_str("FocusOnly"),
+        }
+    }
+}
+
 impl ControlAction {
-    pub fn invoke(&self, host: &mut dyn UiActionHost) {
+    pub fn invoke(&self, host: &mut dyn UiActionHost, cx: ActionCx) {
         match self {
             ControlAction::ToggleBool(model) => {
                 let _ = host.models_mut().update(model, |v: &mut bool| *v = !*v);
@@ -67,6 +98,18 @@ impl ControlAction {
                 let _ = host
                     .models_mut()
                     .update(model, |v: &mut CheckedState| *v = v.toggle());
+            }
+            ControlAction::DispatchCommand { command, payload } => {
+                host.record_pending_command_dispatch_source(cx, command, ActivateReason::Pointer);
+                if let Some(payload) = payload {
+                    host.record_pending_action_payload(cx, command, payload());
+                }
+                host.dispatch_command(Some(cx.window), command.clone());
+            }
+            ControlAction::Sequence(actions) => {
+                for action in actions.iter() {
+                    action.invoke(host, cx);
+                }
             }
             ControlAction::Noop => {}
             ControlAction::FocusOnly => {}
