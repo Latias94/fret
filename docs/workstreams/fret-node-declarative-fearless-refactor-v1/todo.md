@@ -521,6 +521,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/callbacks_graph.rs`, `canvas/widget/callbacks_connect.rs`, and
     `canvas/widget/callbacks_view.rs` seams, so retained callback orchestration no longer stays
     embedded in one mixed surface.
+  - Progress: `clipboard.rs` now routes paste-anchor math, clipboard host effects,
+    and paste/duplicate transaction assembly through the private
+    `canvas/widget/clipboard_anchor.rs`, `canvas/widget/clipboard_transfer.rs`, and
+    `canvas/widget/clipboard_paste.rs` seams, so retained clipboard reducers no longer stay
+    embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

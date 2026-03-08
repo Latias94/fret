@@ -584,6 +584,11 @@ real editors.
   `canvas/widget/callbacks_graph.rs`, `canvas/widget/callbacks_connect.rs`, and
   `canvas/widget/callbacks_view.rs` seams, so retained callback orchestration no longer stays
   embedded in one mixed surface.
+- `clipboard.rs` now routes paste-anchor math, clipboard host effects, and
+  paste/duplicate transaction assembly through the private
+  `canvas/widget/clipboard_anchor.rs`, `canvas/widget/clipboard_transfer.rs`, and
+  `canvas/widget/clipboard_paste.rs` seams, so retained clipboard reducers no longer stay
+  embedded in one mixed surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -646,6 +651,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/item_builders.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/target_hit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/clipboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/clipboard_anchor.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/clipboard_paste.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/clipboard_transfer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_connect.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/callbacks_graph.rs`
