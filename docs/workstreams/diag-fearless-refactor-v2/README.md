@@ -241,6 +241,13 @@ Recommended order for landable work:
 4. align DevTools GUI to the same contracts,
 5. remove redundancy and close migration debt.
 
+Current emphasis after the latest `diag_suite` / `diag_run` landings:
+
+- `diag_campaign` is now the default next hotspot.
+- `diag_run` is effectively parked unless a clearly reviewable sixth seam appears.
+- artifact/materialization and presentation-surface work should follow the next campaign slice,
+  not jump ahead of it.
+
 See `TODO.md` and `MILESTONES.md` for the staged plan.
 
 

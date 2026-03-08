@@ -76,6 +76,9 @@ Progress update:
   - argument normalization and script-source resolution,
   - check-derived defaults and pack/bundle intent derivation,
   - transport-mode validation before exclusive branch dispatch.
+- `diag_run` is now effectively parked: the remaining body is mostly resolved-path setup plus
+  exclusive branch dispatch, so the next higher-ROI seam has shifted back to `diag_campaign`
+  summary/finalize execution and report shaping rather than a speculative sixth `cmd_run` slice.
 - `diag_campaign` has now landed another artifact/evidence seam around share-manifest item processing:
   - per-item bundle/triage/screenshot/share-zip planning now routes through a dedicated helper,
   - share-manifest counters now use a named mergeable struct instead of ad hoc local integers,
