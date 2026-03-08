@@ -548,6 +548,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     double-click actions through the private `canvas/widget/pointer_down_double_click_background.rs`
     and `canvas/widget/pointer_down_double_click_edge.rs` seams, so retained double-click reducers no
     longer stay embedded in one mixed surface.
+  - Progress: `command_open.rs` now routes insert-picker positioning, group command reducers,
+    split-edge open/reroute actions, and conversion-picker presentation through the private
+    `canvas/widget/command_open_insert.rs`, `canvas/widget/command_open_group.rs`,
+    `canvas/widget/command_open_edge.rs`, and `canvas/widget/command_open_conversion.rs` seams,
+    so retained command-open reducers no longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
