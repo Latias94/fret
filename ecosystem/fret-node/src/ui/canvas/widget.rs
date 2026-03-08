@@ -255,6 +255,8 @@ mod pointer_up_pending;
 mod preview;
 mod reconnect;
 mod rect_math;
+mod rect_math_core;
+mod rect_math_path;
 mod retained_widget;
 mod retained_widget_command_availability;
 mod retained_widget_cull_window;

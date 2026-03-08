@@ -674,6 +674,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     rect/hit/resize-handle geometry through the private
     `canvas/widget/view_math_viewport.rs` and `canvas/widget/view_math_rect.rs` seams,
     so retained view-math utilities no longer keep mixed viewport and hit geometry in one surface.
+  - Progress: `rect_math.rs` now routes base rect set-ops and path/edge bounds helpers
+    through the private `canvas/widget/rect_math_core.rs` and
+    `canvas/widget/rect_math_path.rs` seams, so retained rect math utilities
+    no longer keep mixed hit-rect and edge/path bounds helpers in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
