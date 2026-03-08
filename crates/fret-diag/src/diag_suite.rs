@@ -990,6 +990,178 @@ fn execute_suite_script_iteration_block(
     )
 }
 
+fn execute_suite_script_iteration(
+    request: SuiteScriptExecutionRequest<'_>,
+) -> Result<crate::stats::ScriptResultSummary, String> {
+    let transport = resolve_suite_script_transport(SuiteScriptTransportRequest {
+        use_devtools_ws: request.use_devtools_ws,
+        reuse_process: request.reuse_process,
+        connected_ws: request.connected_ws,
+        connected_fs: request.connected_fs,
+        fs_transport_cfg: request.fs_transport_cfg,
+        resolved_ready_path: request.resolved_ready_path,
+        child_running: request.child.is_some(),
+        timeout_ms: request.timeout_ms,
+        poll_ms: request.poll_ms,
+        resolved_script_result_path: request.resolved_script_result_path,
+        script_key: request.script_key,
+    })?;
+
+    let mut execution_ctx = SuiteScriptExecutionBlockContext {
+        tool_launched: request.tool_launched,
+        child: request.child,
+        use_devtools_ws: request.use_devtools_ws,
+        connected_ws: request.connected_ws,
+        connected_fs_for_aux: transport.connected_fs_for_aux(),
+        workspace_root: request.workspace_root,
+        resolved_out_dir: request.resolved_out_dir,
+        resolved_exit_path: request.resolved_exit_path,
+        keep_open: request.keep_open,
+        reuse_process: request.reuse_process,
+        resolved_script_result_path: request.resolved_script_result_path,
+        resolved_script_result_trigger_path: request.resolved_script_result_trigger_path,
+        capabilities_check_path: request.capabilities_check_path,
+        timeout_ms: request.timeout_ms,
+        poll_ms: request.poll_ms,
+        trace_chrome: request.trace_chrome,
+    };
+
+    execute_suite_script_iteration_block(
+        request.src,
+        request.idx,
+        request.script_key,
+        transport.connected(),
+        &mut execution_ctx,
+        request.resolved_suite_prewarm_scripts,
+        request.resolved_suite_prelude_scripts,
+        request.suite_prelude_each_run,
+    )
+}
+
+struct SuiteScriptExecutionRequest<'a> {
+    src: &'a Path,
+    idx: usize,
+    script_key: &'a str,
+    tool_launched: bool,
+    child: &'a mut Option<LaunchedDemo>,
+    use_devtools_ws: bool,
+    connected_ws: Option<&'a ConnectedToolingTransport>,
+    connected_fs: Option<&'a ConnectedToolingTransport>,
+    workspace_root: &'a Path,
+    resolved_ready_path: &'a Path,
+    resolved_out_dir: &'a Path,
+    resolved_exit_path: &'a Path,
+    keep_open: bool,
+    reuse_process: bool,
+    fs_transport_cfg: &'a crate::transport::FsDiagTransportConfig,
+    resolved_script_result_path: &'a Path,
+    resolved_script_result_trigger_path: &'a Path,
+    capabilities_check_path: &'a Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+    trace_chrome: bool,
+    resolved_suite_prewarm_scripts: &'a [PathBuf],
+    resolved_suite_prelude_scripts: &'a [PathBuf],
+    suite_prelude_each_run: bool,
+}
+
+struct SuiteScriptLintRequest<'a> {
+    src: &'a Path,
+    result: &'a crate::stats::ScriptResultSummary,
+    resolved_out_dir: &'a Path,
+    suite_lint: bool,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    lint_all_test_ids_bounds: bool,
+    lint_eps_px: f32,
+    timeout_ms: u64,
+    poll_ms: u64,
+}
+
+fn maybe_run_suite_script_lint(
+    request: SuiteScriptLintRequest<'_>,
+    script_ctx: &mut PreparedSuiteScriptContext,
+) -> Result<bool, String> {
+    if !request.suite_lint {
+        return Ok(false);
+    }
+
+    let Some(last_bundle_dir) = request
+        .result
+        .last_bundle_dir
+        .as_deref()
+        .and_then(|value| (!value.trim().is_empty()).then_some(value.trim()))
+    else {
+        return Ok(false);
+    };
+
+    let bundle_dir = PathBuf::from(last_bundle_dir);
+    let bundle_dir = if bundle_dir.is_absolute() {
+        bundle_dir
+    } else {
+        request.resolved_out_dir.join(bundle_dir)
+    };
+    let bundle_path =
+        wait_for_bundle_artifact_in_dir(&bundle_dir, request.timeout_ms, request.poll_ms)
+            .ok_or_else(|| {
+                format!(
+                    "suite lint is enabled but no bundle artifact was found in time: {}",
+                    bundle_dir.display()
+                )
+            })?;
+
+    if request.bundle_doctor_mode != BundleDoctorMode::Off {
+        run_bundle_doctor_for_bundle_path(
+            &bundle_path,
+            request.bundle_doctor_mode,
+            request.warmup_frames,
+        )?;
+    }
+
+    let report = lint_bundle_from_path(
+        &bundle_path,
+        request.warmup_frames,
+        LintOptions {
+            all_test_ids_bounds: request.lint_all_test_ids_bounds,
+            eps_px: request.lint_eps_px,
+        },
+    )?;
+
+    let out = default_lint_out_path(&bundle_path);
+    script_ctx.lint_summary = Some(serde_json::json!({
+        "out": out.display().to_string(),
+        "error_issues": report
+            .payload
+            .get("error_issues")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(report.error_issues),
+        "warning_issues": report
+            .payload
+            .get("warning_issues")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        "counts_by_code": report.payload.get("counts_by_code").cloned(),
+    }));
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
+    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+    if report.error_issues == 0 {
+        return Ok(false);
+    }
+
+    eprintln!(
+        "LINT-FAIL {} (run_id={}) errors={} out={}",
+        request.src.display(),
+        request.result.run_id,
+        report.error_issues,
+        out.display()
+    );
+    Ok(true)
+}
+
 struct PreparedSuiteScriptPostRunContext {
     bundle_path: PathBuf,
     checks_for_post_run: SuiteChecks,
@@ -1201,6 +1373,222 @@ fn prepare_suite_script_post_run_context(
         bundle_path,
         checks_for_post_run,
     }))
+}
+
+struct SuiteScriptStageFinalizeRequest<'a> {
+    src: &'a Path,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    resolved_exit_path: &'a Path,
+    poll_ms: u64,
+    summary_ctx: &'a SuiteSummaryContext<'a>,
+    stage_counts: &'a std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &'a std::collections::BTreeMap<String, u64>,
+    rows: &'a mut Vec<serde_json::Value>,
+    evidence_aggregate: &'a suite_summary::SuiteEvidenceAggregate,
+    script_ctx: &'a PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_stage_or_exit(request: SuiteScriptStageFinalizeRequest<'_>) {
+    match request.result.stage.as_deref() {
+        Some("passed") => {
+            println!(
+                "PASS {} (run_id={})",
+                request.src.display(),
+                request.result.run_id
+            )
+        }
+        Some("failed") => {
+            eprintln!(
+                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                request.src.display(),
+                request.result.run_id,
+                request.result.step_index.unwrap_or(0),
+                request.result.reason.as_deref().unwrap_or("unknown"),
+                request.result.last_bundle_dir.as_deref().unwrap_or("")
+            );
+            exit_for_suite_script_outcome(
+                request.child,
+                !request.keep_open,
+                request.resolved_exit_path,
+                request.poll_ms,
+                request.summary_ctx,
+                request.stage_counts,
+                request.reason_code_counts,
+                request.rows,
+                request.evidence_aggregate,
+                &request.script_ctx.script_key,
+                request.result,
+                request.script_ctx.lint_summary.as_ref(),
+                request.script_ctx.evidence_highlights.as_ref(),
+                "failed",
+                None,
+                None,
+            );
+        }
+        _ => {
+            eprintln!(
+                "unexpected script stage for {}: {:?}",
+                request.src.display(),
+                request.result
+            );
+            exit_for_suite_script_outcome(
+                request.child,
+                !request.keep_open,
+                request.resolved_exit_path,
+                request.poll_ms,
+                request.summary_ctx,
+                request.stage_counts,
+                request.reason_code_counts,
+                request.rows,
+                request.evidence_aggregate,
+                &request.script_ctx.script_key,
+                request.result,
+                request.script_ctx.lint_summary.as_ref(),
+                request.script_ctx.evidence_highlights.as_ref(),
+                "failed",
+                None,
+                None,
+            );
+        }
+    }
+}
+
+struct SuiteScriptSuccessFinalizeRequest<'a> {
+    idx: usize,
+    script_count: usize,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    reuse_process: bool,
+    resolved_exit_path: &'a Path,
+    poll_ms: u64,
+    rows: &'a mut Vec<serde_json::Value>,
+    script_ctx: &'a PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_success_iteration(request: SuiteScriptSuccessFinalizeRequest<'_>) {
+    record_suite_script_outcome(
+        request.rows,
+        &request.script_ctx.script_key,
+        request.result,
+        request.script_ctx.lint_summary.as_ref(),
+        request.script_ctx.evidence_highlights.as_ref(),
+    );
+
+    if !request.reuse_process {
+        let is_last = request.idx.saturating_add(1) >= request.script_count;
+        if !(request.keep_open && is_last) {
+            stop_launched_demo(request.child, request.resolved_exit_path, request.poll_ms);
+        }
+    }
+}
+
+struct SuiteScriptSuccessTailRequest<'a> {
+    src: &'a Path,
+    idx: usize,
+    script_count: usize,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    reuse_process: bool,
+    resolved_exit_path: &'a Path,
+    resolved_out_dir: &'a Path,
+    poll_ms: u64,
+    suite_lint: bool,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    lint_all_test_ids_bounds: bool,
+    lint_eps_px: f32,
+    timeout_ms: u64,
+    suite_profile: SuiteRunProfile,
+    builtin_suite: Option<BuiltinSuite>,
+    checks_for_post_run_template: &'a SuiteChecks,
+    check_notify_hotspot_file_max: &'a [(String, u64)],
+    summary_ctx: &'a SuiteSummaryContext<'a>,
+    stage_counts: &'a std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &'a std::collections::BTreeMap<String, u64>,
+    rows: &'a mut Vec<serde_json::Value>,
+    evidence_aggregate: &'a suite_summary::SuiteEvidenceAggregate,
+    script_ctx: &'a mut PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_success_tail(
+    request: SuiteScriptSuccessTailRequest<'_>,
+) -> Result<(), String> {
+    if maybe_run_suite_script_lint(
+        SuiteScriptLintRequest {
+            src: request.src,
+            result: request.result,
+            resolved_out_dir: request.resolved_out_dir,
+            suite_lint: request.suite_lint,
+            bundle_doctor_mode: request.bundle_doctor_mode,
+            warmup_frames: request.warmup_frames,
+            lint_all_test_ids_bounds: request.lint_all_test_ids_bounds,
+            lint_eps_px: request.lint_eps_px,
+            timeout_ms: request.timeout_ms,
+            poll_ms: request.poll_ms,
+        },
+        request.script_ctx,
+    )? {
+        exit_for_suite_script_outcome(
+            request.child,
+            true,
+            request.resolved_exit_path,
+            request.poll_ms,
+            request.summary_ctx,
+            request.stage_counts,
+            request.reason_code_counts,
+            request.rows,
+            request.evidence_aggregate,
+            &request.script_ctx.script_key,
+            request.result,
+            request.script_ctx.lint_summary.as_ref(),
+            request.script_ctx.evidence_highlights.as_ref(),
+            "failed",
+            None,
+            Some("lint_failed"),
+        );
+    }
+
+    if let Some(post_run_ctx) =
+        prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+            src: request.src,
+            result: request.result,
+            suite_profile: request.suite_profile,
+            builtin_suite: request.builtin_suite,
+            checks_for_post_run_template: request.checks_for_post_run_template,
+            check_notify_hotspot_file_max: request.check_notify_hotspot_file_max,
+            resolved_out_dir: request.resolved_out_dir,
+            bundle_doctor_mode: request.bundle_doctor_mode,
+            warmup_frames: request.warmup_frames,
+            timeout_ms: request.timeout_ms,
+            poll_ms: request.poll_ms,
+        })?
+    {
+        apply_post_run_checks(
+            &post_run_ctx.bundle_path,
+            request.resolved_out_dir,
+            &post_run_ctx.checks_for_post_run,
+            request.warmup_frames,
+        )?;
+    }
+
+    finalize_suite_script_success_iteration(SuiteScriptSuccessFinalizeRequest {
+        idx: request.idx,
+        script_count: request.script_count,
+        child: request.child,
+        keep_open: request.keep_open,
+        reuse_process: request.reuse_process,
+        resolved_exit_path: request.resolved_exit_path,
+        poll_ms: request.poll_ms,
+        rows: request.rows,
+        script_ctx: request.script_ctx,
+        result: request.result,
+    });
+
+    Ok(())
 }
 
 fn emit_suite_summary(
@@ -2908,51 +3296,32 @@ hint: list suites via `fretboard diag list suites`"
                 "suite run failed (see suite.summary.json)",
             ));
         }
-        let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
-            let transport = resolve_suite_script_transport(SuiteScriptTransportRequest {
-                use_devtools_ws,
-                reuse_process,
-                connected_ws: connected_ws.as_ref(),
-                connected_fs: connected_fs.as_ref(),
-                fs_transport_cfg: &fs_transport_cfg,
-                resolved_ready_path: &resolved_ready_path,
-                child_running: child.is_some(),
-                timeout_ms,
-                poll_ms,
-                resolved_script_result_path: &resolved_script_result_path,
-                script_key: script_key.as_str(),
-            })?;
-
-            let mut execution_ctx = SuiteScriptExecutionBlockContext {
-                tool_launched,
-                child: &mut child,
-                use_devtools_ws,
-                connected_ws: connected_ws.as_ref(),
-                connected_fs_for_aux: transport.connected_fs_for_aux(),
-                workspace_root: &workspace_root,
-                resolved_out_dir: &resolved_out_dir,
-                resolved_exit_path: &resolved_exit_path,
-                keep_open,
-                reuse_process,
-                resolved_script_result_path: &resolved_script_result_path,
-                resolved_script_result_trigger_path: &resolved_script_result_trigger_path,
-                capabilities_check_path: &capabilities_check_path,
-                timeout_ms,
-                poll_ms,
-                trace_chrome,
-            };
-
-            Ok(execute_suite_script_iteration_block(
-                &src,
-                idx,
-                script_key.as_str(),
-                transport.connected(),
-                &mut execution_ctx,
-                &resolved_suite_prewarm_scripts,
-                &resolved_suite_prelude_scripts,
-                suite_prelude_each_run,
-            )?)
-        })();
+        let result = execute_suite_script_iteration(SuiteScriptExecutionRequest {
+            src: &src,
+            idx,
+            script_key: script_key.as_str(),
+            tool_launched,
+            child: &mut child,
+            use_devtools_ws,
+            connected_ws: connected_ws.as_ref(),
+            connected_fs: connected_fs.as_ref(),
+            workspace_root: &workspace_root,
+            resolved_ready_path: &resolved_ready_path,
+            resolved_out_dir: &resolved_out_dir,
+            resolved_exit_path: &resolved_exit_path,
+            keep_open,
+            reuse_process,
+            fs_transport_cfg: &fs_transport_cfg,
+            resolved_script_result_path: &resolved_script_result_path,
+            resolved_script_result_trigger_path: &resolved_script_result_trigger_path,
+            capabilities_check_path: &capabilities_check_path,
+            timeout_ms,
+            poll_ms,
+            trace_chrome,
+            resolved_suite_prewarm_scripts: &resolved_suite_prewarm_scripts,
+            resolved_suite_prelude_scripts: &resolved_suite_prelude_scripts,
+            suite_prelude_each_run,
+        });
 
         let result = match result {
             Ok(v) => v,
@@ -2982,190 +3351,49 @@ hint: list suites via `fretboard diag list suites`"
             &mut suite_reason_code_counts,
             &mut suite_evidence_agg,
         );
-        match result.stage.as_deref() {
-            Some("passed") => {
-                println!("PASS {} (run_id={})", src.display(), result.run_id)
-            }
-            Some("failed") => {
-                eprintln!(
-                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                    src.display(),
-                    result.run_id,
-                    result.step_index.unwrap_or(0),
-                    result.reason.as_deref().unwrap_or("unknown"),
-                    result.last_bundle_dir.as_deref().unwrap_or("")
-                );
-                exit_for_suite_script_outcome(
-                    &mut child,
-                    !keep_open,
-                    &resolved_exit_path,
-                    poll_ms,
-                    &summary_ctx,
-                    &suite_stage_counts,
-                    &suite_reason_code_counts,
-                    &mut suite_rows,
-                    &suite_evidence_agg,
-                    &script_ctx.script_key,
-                    &result,
-                    script_ctx.lint_summary.as_ref(),
-                    script_ctx.evidence_highlights.as_ref(),
-                    "failed",
-                    None,
-                    None,
-                );
-            }
-            _ => {
-                eprintln!(
-                    "unexpected script stage for {}: {:?}",
-                    src.display(),
-                    result
-                );
-                exit_for_suite_script_outcome(
-                    &mut child,
-                    !keep_open,
-                    &resolved_exit_path,
-                    poll_ms,
-                    &summary_ctx,
-                    &suite_stage_counts,
-                    &suite_reason_code_counts,
-                    &mut suite_rows,
-                    &suite_evidence_agg,
-                    &script_ctx.script_key,
-                    &result,
-                    script_ctx.lint_summary.as_ref(),
-                    script_ctx.evidence_highlights.as_ref(),
-                    "failed",
-                    None,
-                    None,
-                );
-            }
-        }
+        finalize_suite_script_stage_or_exit(SuiteScriptStageFinalizeRequest {
+            src: &src,
+            child: &mut child,
+            keep_open,
+            resolved_exit_path: &resolved_exit_path,
+            poll_ms,
+            summary_ctx: &summary_ctx,
+            stage_counts: &suite_stage_counts,
+            reason_code_counts: &suite_reason_code_counts,
+            rows: &mut suite_rows,
+            evidence_aggregate: &suite_evidence_agg,
+            script_ctx: &script_ctx,
+            result: &result,
+        });
 
-        if suite_lint {
-            let last_bundle_dir = result
-                .last_bundle_dir
-                .as_deref()
-                .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()));
-            if let Some(last_bundle_dir) = last_bundle_dir {
-                let bundle_dir = PathBuf::from(last_bundle_dir);
-                let bundle_dir = if bundle_dir.is_absolute() {
-                    bundle_dir
-                } else {
-                    resolved_out_dir.join(bundle_dir)
-                };
-                let bundle_path = wait_for_bundle_artifact_in_dir(&bundle_dir, timeout_ms, poll_ms)
-                    .ok_or_else(|| {
-                        format!(
-                            "suite lint is enabled but no bundle artifact was found in time: {}",
-                            bundle_dir.display()
-                        )
-                    })?;
-
-                if bundle_doctor_mode != BundleDoctorMode::Off {
-                    run_bundle_doctor_for_bundle_path(
-                        &bundle_path,
-                        bundle_doctor_mode,
-                        warmup_frames,
-                    )?;
-                }
-
-                let report = lint_bundle_from_path(
-                    &bundle_path,
-                    warmup_frames,
-                    LintOptions {
-                        all_test_ids_bounds: lint_all_test_ids_bounds,
-                        eps_px: lint_eps_px,
-                    },
-                )?;
-
-                let out = default_lint_out_path(&bundle_path);
-                script_ctx.lint_summary = Some(serde_json::json!({
-                    "out": out.display().to_string(),
-                    "error_issues": report
-                        .payload
-                        .get("error_issues")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(report.error_issues),
-                    "warning_issues": report
-                        .payload
-                        .get("warning_issues")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0),
-                    "counts_by_code": report.payload.get("counts_by_code").cloned(),
-                }));
-                if let Some(parent) = out.parent() {
-                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                }
-                let pretty = serde_json::to_string_pretty(&report.payload)
-                    .unwrap_or_else(|_| "{}".to_string());
-                std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                if report.error_issues > 0 {
-                    eprintln!(
-                        "LINT-FAIL {} (run_id={}) errors={} out={}",
-                        src.display(),
-                        result.run_id,
-                        report.error_issues,
-                        out.display()
-                    );
-                    exit_for_suite_script_outcome(
-                        &mut child,
-                        true,
-                        &resolved_exit_path,
-                        poll_ms,
-                        &summary_ctx,
-                        &suite_stage_counts,
-                        &suite_reason_code_counts,
-                        &mut suite_rows,
-                        &suite_evidence_agg,
-                        &script_ctx.script_key,
-                        &result,
-                        script_ctx.lint_summary.as_ref(),
-                        script_ctx.evidence_highlights.as_ref(),
-                        "failed",
-                        None,
-                        Some("lint_failed"),
-                    );
-                }
-            }
-        }
-
-        if let Some(post_run_ctx) =
-            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
-                src: &src,
-                result: &result,
-                suite_profile,
-                builtin_suite,
-                checks_for_post_run_template: &checks_for_post_run_template,
-                check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
-                resolved_out_dir: &resolved_out_dir,
-                bundle_doctor_mode,
-                warmup_frames,
-                timeout_ms,
-                poll_ms,
-            })?
-        {
-            apply_post_run_checks(
-                &post_run_ctx.bundle_path,
-                &resolved_out_dir,
-                &post_run_ctx.checks_for_post_run,
-                warmup_frames,
-            )?;
-        }
-
-        suite_rows.push(build_suite_script_result_row(
-            &script_ctx.script_key,
-            &result,
-            script_ctx.lint_summary.as_ref(),
-            script_ctx.evidence_highlights.as_ref(),
-        ));
-
-        if !reuse_process {
-            let is_last = idx.saturating_add(1) >= script_count;
-            if !(keep_open && is_last) {
-                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-            }
-        }
+        finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
+            src: &src,
+            idx,
+            script_count,
+            child: &mut child,
+            keep_open,
+            reuse_process,
+            resolved_exit_path: &resolved_exit_path,
+            resolved_out_dir: &resolved_out_dir,
+            poll_ms,
+            suite_lint,
+            bundle_doctor_mode,
+            warmup_frames,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            timeout_ms,
+            suite_profile,
+            builtin_suite,
+            checks_for_post_run_template: &checks_for_post_run_template,
+            check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
+            summary_ctx: &summary_ctx,
+            stage_counts: &suite_stage_counts,
+            reason_code_counts: &suite_reason_code_counts,
+            rows: &mut suite_rows,
+            evidence_aggregate: &suite_evidence_agg,
+            script_ctx: &mut script_ctx,
+            result: &result,
+        })?;
     }
 
     if !keep_open {
@@ -3341,7 +3569,6 @@ mod tests {
         ));
     }
 
-
     #[test]
     fn prepare_suite_script_post_run_context_skips_non_passed_results() {
         let result = crate::stats::ScriptResultSummary {
@@ -3403,6 +3630,164 @@ mod tests {
 
         assert!(prepared.is_none());
     }
+
+    #[test]
+    fn maybe_run_suite_script_lint_skips_when_suite_lint_is_disabled() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: Some("bundle-dir".to_string()),
+        };
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "script.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: None,
+        };
+
+        let lint_failed = maybe_run_suite_script_lint(
+            SuiteScriptLintRequest {
+                src: std::path::Path::new("script.json"),
+                result: &result,
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                suite_lint: false,
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                lint_all_test_ids_bounds: false,
+                lint_eps_px: 0.0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            },
+            &mut script_ctx,
+        )
+        .expect("disabled suite lint should skip helper work");
+
+        assert!(!lint_failed);
+        assert!(script_ctx.lint_summary.is_none());
+    }
+
+    #[test]
+    fn maybe_run_suite_script_lint_skips_when_bundle_dir_is_missing() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "script.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: None,
+        };
+
+        let lint_failed = maybe_run_suite_script_lint(
+            SuiteScriptLintRequest {
+                src: std::path::Path::new("script.json"),
+                result: &result,
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                suite_lint: true,
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                lint_all_test_ids_bounds: false,
+                lint_eps_px: 0.0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            },
+            &mut script_ctx,
+        )
+        .expect("missing bundle dir should skip lint helper");
+
+        assert!(!lint_failed);
+        assert!(script_ctx.lint_summary.is_none());
+    }
+
+    #[test]
+    fn finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip() {
+        let workspace_root = std::path::Path::new(".");
+        let resolved_out_dir = std::path::Path::new("diag-out");
+        let suite_summary_path = std::path::Path::new("diag-out/suite.summary.json");
+        let regression_summary_path = std::path::Path::new("diag-out/regression.summary.json");
+        let summary_ctx = SuiteSummaryContext {
+            workspace_root,
+            resolved_out_dir,
+            suite_summary_path,
+            regression_summary_path,
+            suite_name: Some("test-suite"),
+            generated_unix_ms: 7,
+            warmup_frames: 0,
+            reuse_launch: true,
+            wants_screenshots: false,
+        };
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+        let mut stage_counts = std::collections::BTreeMap::new();
+        stage_counts.insert("passed".to_string(), 1);
+        let reason_code_counts = std::collections::BTreeMap::new();
+        let evidence_aggregate = suite_summary::SuiteEvidenceAggregate::default();
+        let mut rows = Vec::new();
+        let mut child = None;
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "unrelated.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: Some(serde_json::json!({
+                "artifacts": []
+            })),
+        };
+
+        finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
+            src: std::path::Path::new("unrelated.json"),
+            idx: 0,
+            script_count: 1,
+            child: &mut child,
+            keep_open: false,
+            reuse_process: true,
+            resolved_exit_path: std::path::Path::new("diag-out/exit"),
+            resolved_out_dir,
+            poll_ms: 1,
+            suite_lint: false,
+            bundle_doctor_mode: BundleDoctorMode::Off,
+            warmup_frames: 0,
+            lint_all_test_ids_bounds: false,
+            lint_eps_px: 0.0,
+            timeout_ms: 1,
+            suite_profile: SuiteRunProfile::default(),
+            builtin_suite: None,
+            checks_for_post_run_template: &SuiteChecks::default(),
+            check_notify_hotspot_file_max: &[],
+            summary_ctx: &summary_ctx,
+            stage_counts: &stage_counts,
+            reason_code_counts: &reason_code_counts,
+            rows: &mut rows,
+            evidence_aggregate: &evidence_aggregate,
+            script_ctx: &mut script_ctx,
+            result: &result,
+        })
+        .expect("success tail should fall through to row recording when lint and post-run skip");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].get("script").and_then(|value| value.as_str()), Some("unrelated.json"));
+        assert_eq!(rows[0].get("stage").and_then(|value| value.as_str()), Some("passed"));
+        assert!(rows[0].get("lint").is_some_and(|value| value.is_null()));
+        assert_eq!(
+            rows[0]
+                .get("evidence_highlights")
+                .and_then(|value| value.get("artifacts"))
+                .and_then(|value| value.as_array())
+                .map(Vec::len),
+            Some(0)
+        );
+    }
+
     #[test]
     fn resolve_suite_run_inputs_merges_script_inputs_and_reuse_process_env_defaults() {
         let root = std::env::temp_dir().join(format!(
