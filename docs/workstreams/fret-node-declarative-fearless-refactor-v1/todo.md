@@ -624,6 +624,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/node_drag_constraints_anchor.rs` and
     `canvas/widget/node_drag_constraints_extent.rs` seams, so retained node-drag
     geometry helpers no longer stay embedded in one mixed surface.
+  - Progress: `command_edit.rs` now routes cut/delete removal orchestration and
+    removed-selection cleanup through the private
+    `canvas/widget/command_edit_remove.rs` seam, so retained edit command
+    reducers no longer keep destructive edit flows embedded in one surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -99,6 +99,7 @@ mod clipboard_paste_selection;
 mod clipboard_paste_transaction;
 mod clipboard_transfer;
 mod command_edit;
+mod command_edit_remove;
 mod command_focus;
 mod command_focus_cycle;
 mod command_focus_port;

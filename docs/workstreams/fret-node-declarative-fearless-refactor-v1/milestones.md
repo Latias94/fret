@@ -687,6 +687,10 @@ real editors.
   `canvas/widget/node_drag_constraints_anchor.rs` and
   `canvas/widget/node_drag_constraints_extent.rs` seams, so retained node-drag
   geometry helpers no longer stay embedded in one mixed surface.
+- `command_edit.rs` now routes cut/delete removal orchestration and
+  removed-selection cleanup through the private
+  `canvas/widget/command_edit_remove.rs` seam, so retained edit command
+  reducers no longer keep destructive edit flows embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
@@ -797,6 +801,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints_anchor.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints_extent.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_edit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_edit_remove.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_open_edge.rs`
