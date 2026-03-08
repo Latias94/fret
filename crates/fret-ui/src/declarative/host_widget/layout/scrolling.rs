@@ -1748,8 +1748,20 @@ impl ElementHostWidget {
                 // (including deferred/cached paths and clean probe/final flows). When a bounded
                 // post-layout observation proves the laid-out content is smaller, clamp the
                 // scroll extent down without scheduling another deep measure walk.
+                //
+                // Important nuance:
+                //
+                // In fresh unbounded-probe flows, bounded layout commonly clamps the child subtree
+                // back to the viewport on the scroll axis. An observed extent equal to the viewport
+                // is therefore ambiguous: it does not prove the probed content extent was too
+                // large, only that the final layout phase constrained it. Only treat fresh-probe
+                // observations as shrink proof when the laid-out subtree still exceeds the viewport
+                // (i.e. the observation contains real post-layout overflow beyond `desired`).
+                let can_shrink_x = defer_this_frame || observed.width.0 > desired.width.0 + 0.5;
+                let can_shrink_y = defer_this_frame || observed.height.0 > desired.height.0 + 0.5;
                 let mut changed = false;
                 if props.axis.scroll_x()
+                    && can_shrink_x
                     && observed.width.0 > 0.0
                     && observed.width.0 + 0.5 < content_w.0
                 {
@@ -1757,6 +1769,7 @@ impl ElementHostWidget {
                     changed = true;
                 }
                 if props.axis.scroll_y()
+                    && can_shrink_y
                     && observed.height.0 > 0.0
                     && observed.height.0 + 0.5 < content_h.0
                 {

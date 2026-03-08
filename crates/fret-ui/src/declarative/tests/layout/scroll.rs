@@ -96,6 +96,124 @@ fn scroll_intrinsic_content_mode_measures_children() {
 }
 
 #[test]
+fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_width_as_unknown() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-zero-placeholder-cross-axis-width",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Fill;
+            scroll.layout.size.height = Length::Auto;
+            scroll.axis = crate::element::ScrollAxis::Y;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = Length::Px(Px(80.0));
+            child.layout.size.height = Length::Px(Px(24.0));
+
+            vec![cx.scroll(scroll, |cx| vec![cx.container(child, |_cx| vec![])])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(0.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let size = ui.measure_in(&mut app, &mut text, scroll, constraints, 1.0);
+
+    assert!(
+        size.width.0 >= 79.5,
+        "expected cross-axis placeholder width to be treated as unknown during scroll probing; size={size:?}"
+    );
+    assert!(
+        size.height.0 >= 23.5,
+        "expected scroll probe height to preserve child height under zero cross-axis placeholder width; size={size:?}"
+    );
+}
+
+#[test]
+fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_height_as_unknown() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-zero-placeholder-cross-axis-height",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Auto;
+            scroll.layout.size.height = Length::Fill;
+            scroll.axis = crate::element::ScrollAxis::X;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = Length::Px(Px(24.0));
+            child.layout.size.height = Length::Px(Px(80.0));
+
+            vec![cx.scroll(scroll, |cx| vec![cx.container(child, |_cx| vec![])])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::MaxContent,
+            AvailableSpace::Definite(Px(0.0)),
+        ),
+    );
+    let size = ui.measure_in(&mut app, &mut text, scroll, constraints, 1.0);
+
+    assert!(
+        size.width.0 >= 23.5,
+        "expected scroll probe width to preserve child width under zero cross-axis placeholder height; size={size:?}"
+    );
+    assert!(
+        size.height.0 >= 79.5,
+        "expected cross-axis placeholder height to be treated as unknown during scroll probing; size={size:?}"
+    );
+}
+
+#[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -2168,10 +2286,15 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
     let scrollbar_bounds = ui
         .debug_node_bounds(scrollbar_node)
         .expect("scrollbar bounds");
-    let down_pos = fret_core::Point::new(
-        Px(scrollbar_bounds.origin.x.0 + 2.0),
-        Px(scrollbar_bounds.origin.y.0 + 1.0),
-    );
+    let thumb = crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal(
+        scrollbar_bounds,
+        scroll_handle.viewport_size().width,
+        scroll_handle.content_size().width,
+        scroll_handle.offset().x,
+        crate::element::ScrollbarStyle::default().track_padding,
+    )
+    .expect("horizontal thumb rect");
+    let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));
     let move_pos = fret_core::Point::new(Px(down_pos.x.0 + 12.0), down_pos.y);
     ui.dispatch_event(
         &mut app,
@@ -2184,6 +2307,11 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
         }),
+    );
+    assert_eq!(
+        ui.captured(),
+        Some(scrollbar_node),
+        "expected horizontal thumb down to capture the pointer on the scrollbar node"
     );
     ui.dispatch_event(
         &mut app,
