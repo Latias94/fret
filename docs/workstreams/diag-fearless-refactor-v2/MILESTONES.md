@@ -34,7 +34,7 @@ Deliverables:
 
 Progress update:
 
-- `diag_suite` has now landed seventeen consecutive seam slices around post-run and result-summary orchestration:
+- `diag_suite` has now landed fifteen consecutive seam slices around post-run and result-summary orchestration:
   - core default check planning,
   - editor/markdown/text default check planning,
   - explicit-or-policy post-run trigger planning,
@@ -49,12 +49,10 @@ Progress update:
   - script-execution block assembly for prewarm/prelude/load-script wiring,
   - per-script launch env/default assembly plus connected transport acquisition,
   - transport-backed execution dispatch around context assembly plus block invocation,
-  - per-script lint execution plus passed-script post-run preparation,
-  - per-script result finalization around stage branching, success-row emission, and stop-demo teardown,
-  - the remaining per-script success tail around lint-failure exit, post-run apply, and success finalize orchestration.
-- The next decision point in this area is whether the few remaining session-root-only holdouts are
-  still worth slicing, or whether the higher-ROI seam has shifted to `diag_campaign`, `diag_run`,
-  or artifact resolution/materialization.
+  - passed-script post-run preparation planning and application preflight.
+- The next decision point in this area is whether to finish the remaining success-only lint/finalize
+  tail in `diag_suite` before shifting attention to `diag_campaign`, `diag_run`, or artifact
+  resolution/materialization.
 - `diag_run` has now landed its first shared result/post-run seam slice:
   - transport result stage normalization,
   - shared bundle doctor/post-run check execution,

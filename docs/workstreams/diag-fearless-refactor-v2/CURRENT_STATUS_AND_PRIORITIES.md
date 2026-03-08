@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, per-script launch/transport acquisition, execution dispatch, success-path bundle/lint/post-run preparation, result-finalization stage/success helpers, and success-tail orchestration have landed; the remaining holdouts in this file are now mostly one-time setup and session-root-adjacent helpers, so this file is no longer the default next seam target)
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, per-script launch/transport acquisition, execution dispatch, and passed-script post-run policy preparation have landed; the remaining high-ROI holdout is still the success-only lint/finalize tail, so this file should stay in rotation until that seam is settled cleanly)
 - `crates/fret-diag/src/diag_run.rs` (the first five `cmd_run` seams are now landed: transport result stage normalization, bundle doctor/post-run checks, bundle artifact emission, demo-exit-killed marking, failure dump bundle backfill, bundle-path resolution/wait, filesystem post-run finalization, both transport branch adapters, and the remaining top-level option/policy setup now all reuse dedicated helpers; `cmd_run` is now mostly resolved-path setup plus transport dispatch, so further slicing here should be treated as a diminishing-returns decision rather than the default next step)
 - `crates/fret-diag/src/diag_campaign.rs` (the run/result/report/finalize seams are already in much better shape, `write_campaign_share_manifest` now routes both per-item evidence planning and the final payload/combined-zip update through dedicated helpers plus named counters/combined-entry/outcome shapes, `execute_campaign_run_selection` now routes counters/failure aggregation through a dedicated `build_campaign_run_outcome` helper, the shared summary-finalize path now routes summarize/share execution through `execute_campaign_summary_finalize_outcome` plus timing/materialization through `build_campaign_summary_artifacts`, batch artifact handoff now routes manifest/finalize setup through `CampaignBatchArtifactWritePlan` plus `build_campaign_batch_manifest_write_plan`, the single-campaign startup path now routes execution-plan plus manifest setup through `CampaignExecutionStartPlan` plus `build_campaign_manifest_write_plan`, the single-campaign finalize path now routes failure counting plus summary-finalize setup through `CampaignExecutionFinalizePlan`, and the single-campaign report handoff now routes result normalization plus report construction through `build_campaign_execution_report_from_outcome_result`; the next higher-ROI choice here is whether any remaining pure report/outcome shaping inside `diag_campaign` still pays better than moving on to another orchestration-heavy file)
 - `crates/fret-diag/src/commands/resolve.rs` (`diag resolve latest` now routes option parsing and JSON/text rendering through dedicated pure helpers with direct regression coverage, the deeper session-resolution path now routes target session-id selection plus existing-session directory validation through dedicated helpers, `resolve_script_result_json_path_or_latest` now routes latest-vs-src search-start selection through dedicated helpers, and the shared bundle resolution path now routes source-path selection, bundle-ref derivation, and artifacts-root policy through dedicated helpers, so the remaining work here is down to only a few last normalization holdouts rather than top-level command-blob cleanup)
@@ -204,10 +204,13 @@ Recent progress since this note was drafted:
 - `diag_suite` now also routes transport-backed execution dispatch through
   `SuiteScriptExecutionRequest`, so `SuiteScriptExecutionBlockContext` assembly plus
   `execute_suite_script_iteration_block` invocation no longer stay inline in the main script loop.
-- `diag_suite` now also routes per-script lint execution plus passed-script post-run preparation
-  through `SuiteScriptLintRequest` and `SuiteScriptPostRunPreparationRequest`, so bundle waits,
-  bundle doctor application, lint/report wiring, and post-run default-check planning no longer
-  expand inline in the main script loop.
+- `diag_suite` now also routes passed-script post-run preparation through
+  `SuiteScriptPostRunPreparationRequest`, so bundle waits, bundle doctor application, and
+  post-run default-check planning no longer expand inline immediately before
+  `apply_post_run_checks`.
+- the remaining `diag_suite` high-ROI holdout is still the success-only lint/finalize tail around
+  row emission, post-run apply, and stop-demo teardown, so this file remains a valid next seam
+  target even after the latest policy-helper extraction.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.

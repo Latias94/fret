@@ -990,6 +990,219 @@ fn execute_suite_script_iteration_block(
     )
 }
 
+struct PreparedSuiteScriptPostRunContext {
+    bundle_path: PathBuf,
+    checks_for_post_run: SuiteChecks,
+}
+
+struct SuiteScriptPostRunPreparationRequest<'a> {
+    src: &'a Path,
+    result: &'a crate::stats::ScriptResultSummary,
+    suite_profile: SuiteRunProfile,
+    builtin_suite: Option<BuiltinSuite>,
+    checks_for_post_run_template: &'a SuiteChecks,
+    check_notify_hotspot_file_max: &'a [(String, u64)],
+    resolved_out_dir: &'a Path,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    timeout_ms: u64,
+    poll_ms: u64,
+}
+
+fn prepare_suite_script_post_run_context(
+    request: SuiteScriptPostRunPreparationRequest<'_>,
+) -> Result<Option<PreparedSuiteScriptPostRunContext>, String> {
+    let script_override_checks =
+        resolve_suite_script_override_checks(request.src, request.checks_for_post_run_template);
+    let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
+        request.src,
+        request.checks_for_post_run_template,
+    );
+
+    let is_gc_liveness_script = request
+        .src
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            name == "ui-gallery-overlay-torture.json"
+                || name == "ui-gallery-sidebar-scroll-refresh.json"
+        });
+
+    let wants_post_run_checks_for_script = request.suite_profile.wants_post_run_checks_for_script(
+        request.builtin_suite,
+        wants_post_run_checks_for_script,
+        is_gc_liveness_script,
+    );
+
+    if request.result.stage.as_deref() != Some("passed") || !wants_post_run_checks_for_script {
+        return Ok(None);
+    }
+
+    let bundle_path = wait_for_bundle_artifact_from_script_result(
+        request.resolved_out_dir,
+        request.result,
+        request.timeout_ms,
+        request.poll_ms,
+    )
+    .ok_or_else(|| {
+        format!(
+            "script passed but no bundle artifact was found (required for post-run checks): {}",
+            request.src.display()
+        )
+    })?;
+
+    if request.bundle_doctor_mode != BundleDoctorMode::Off {
+        run_bundle_doctor_for_bundle_path(
+            &bundle_path,
+            request.bundle_doctor_mode,
+            request.warmup_frames,
+        )?;
+    }
+
+    let suite_core_default_checks = build_suite_core_default_post_run_checks(
+        request.src,
+        request.suite_profile,
+        request.builtin_suite,
+        request.checks_for_post_run_template,
+        is_gc_liveness_script,
+    );
+    let suite_editor_text_default_checks = build_suite_editor_text_default_post_run_checks(
+        request.src,
+        request.checks_for_post_run_template,
+    );
+    let mut notify_hotspot_file_max_for_script = request.check_notify_hotspot_file_max.to_vec();
+    if notify_hotspot_file_max_for_script.is_empty()
+        && request.builtin_suite == Some(BuiltinSuite::UiGallery)
+        && request
+            .src
+            .file_name()
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value == "ui-gallery-virtual-list-torture.json")
+    {
+        notify_hotspot_file_max_for_script.push((
+            "crates/fret-ui/src/declarative/host_widget/event/pressable.rs".to_string(),
+            0,
+        ));
+    }
+    let mut checks_for_post_run = request.checks_for_post_run_template.clone();
+
+    if checks_for_post_run.check_stale_paint_test_id.is_none() {
+        checks_for_post_run.check_stale_paint_test_id =
+            suite_core_default_checks.check_stale_paint_test_id.clone();
+    }
+    if checks_for_post_run.check_pixels_changed_test_id.is_none() {
+        checks_for_post_run.check_pixels_changed_test_id = suite_core_default_checks
+            .check_pixels_changed_test_id
+            .clone();
+    }
+
+    apply_suite_editor_text_default_post_run_checks(
+        &mut checks_for_post_run,
+        &suite_editor_text_default_checks,
+    );
+
+    checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
+        .check_wheel_events_max_per_frame
+        .or(suite_core_default_checks.check_wheel_events_max_per_frame);
+    if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
+        checks_for_post_run.check_wheel_scroll_test_id =
+            suite_core_default_checks.check_wheel_scroll_test_id.clone();
+    }
+    if checks_for_post_run
+        .check_wheel_scroll_hit_changes_test_id
+        .is_none()
+    {
+        checks_for_post_run.check_wheel_scroll_hit_changes_test_id = suite_core_default_checks
+            .check_wheel_scroll_hit_changes_test_id
+            .clone();
+    }
+
+    checks_for_post_run.check_prepaint_actions_min = checks_for_post_run
+        .check_prepaint_actions_min
+        .or(suite_core_default_checks.check_prepaint_actions_min);
+    checks_for_post_run.check_chart_sampling_window_shifts_min = checks_for_post_run
+        .check_chart_sampling_window_shifts_min
+        .or(suite_core_default_checks.check_chart_sampling_window_shifts_min);
+    checks_for_post_run.check_node_graph_cull_window_shifts_min = checks_for_post_run
+        .check_node_graph_cull_window_shifts_min
+        .or(suite_core_default_checks.check_node_graph_cull_window_shifts_min);
+    checks_for_post_run.check_node_graph_cull_window_shifts_max = checks_for_post_run
+        .check_node_graph_cull_window_shifts_max
+        .or(suite_core_default_checks.check_node_graph_cull_window_shifts_max);
+    checks_for_post_run.check_vlist_visible_range_refreshes_min = checks_for_post_run
+        .check_vlist_visible_range_refreshes_min
+        .or(suite_core_default_checks.check_vlist_visible_range_refreshes_min);
+    checks_for_post_run.check_vlist_visible_range_refreshes_max = checks_for_post_run
+        .check_vlist_visible_range_refreshes_max
+        .or(suite_core_default_checks.check_vlist_visible_range_refreshes_max);
+
+    checks_for_post_run.check_vlist_window_shifts_explainable |=
+        suite_core_default_checks.check_vlist_window_shifts_explainable;
+    checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
+        suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
+    checks_for_post_run.check_vlist_window_shifts_non_retained_max = script_override_checks
+        .vlist_window_shifts_non_retained_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
+    checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
+        .check_vlist_window_shifts_prefetch_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
+    checks_for_post_run.check_vlist_window_shifts_escape_max = checks_for_post_run
+        .check_vlist_window_shifts_escape_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_escape_max);
+    checks_for_post_run.check_vlist_policy_key_stable |=
+        suite_core_default_checks.check_vlist_policy_key_stable;
+
+    checks_for_post_run.check_windowed_rows_offset_changes_min = checks_for_post_run
+        .check_windowed_rows_offset_changes_min
+        .or(suite_core_default_checks.check_windowed_rows_offset_changes_min);
+    checks_for_post_run.check_windowed_rows_visible_start_changes_repainted |=
+        suite_core_default_checks.check_windowed_rows_visible_start_changes_repainted;
+    checks_for_post_run.check_layout_fast_path_min = checks_for_post_run
+        .check_layout_fast_path_min
+        .or(suite_core_default_checks.check_layout_fast_path_min);
+    checks_for_post_run.check_hover_layout_max = checks_for_post_run
+        .check_hover_layout_max
+        .or(suite_core_default_checks.check_hover_layout_max);
+    checks_for_post_run.check_gc_sweep_liveness |=
+        suite_core_default_checks.check_gc_sweep_liveness;
+
+    checks_for_post_run.check_notify_hotspot_file_max = notify_hotspot_file_max_for_script;
+    checks_for_post_run.check_view_cache_reuse_stable_min = checks_for_post_run
+        .check_view_cache_reuse_stable_min
+        .or(suite_core_default_checks.check_view_cache_reuse_stable_min);
+    checks_for_post_run.check_view_cache_reuse_min = checks_for_post_run
+        .check_view_cache_reuse_min
+        .or(suite_core_default_checks.check_view_cache_reuse_min);
+
+    checks_for_post_run.check_viewport_input_min = checks_for_post_run
+        .check_viewport_input_min
+        .or(suite_core_default_checks.check_viewport_input_min);
+    checks_for_post_run.check_dock_drag_min = checks_for_post_run
+        .check_dock_drag_min
+        .or(suite_core_default_checks.check_dock_drag_min);
+    checks_for_post_run.check_viewport_capture_min = checks_for_post_run
+        .check_viewport_capture_min
+        .or(suite_core_default_checks.check_viewport_capture_min);
+
+    checks_for_post_run.check_retained_vlist_reconcile_no_notify_min = script_override_checks
+        .retained_vlist_reconcile_no_notify_min
+        .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
+    checks_for_post_run.check_retained_vlist_attach_detach_max = script_override_checks
+        .retained_vlist_attach_detach_max
+        .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
+    checks_for_post_run.check_retained_vlist_keep_alive_reuse_min = script_override_checks
+        .retained_vlist_keep_alive_reuse_min
+        .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
+    checks_for_post_run.check_retained_vlist_keep_alive_budget = script_override_checks
+        .retained_vlist_keep_alive_budget
+        .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
+
+    Ok(Some(PreparedSuiteScriptPostRunContext {
+        bundle_path,
+        checks_for_post_run,
+    }))
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2917,184 +3130,25 @@ hint: list suites via `fretboard diag list suites`"
             }
         }
 
-        let script_override_checks =
-            resolve_suite_script_override_checks(&src, &checks_for_post_run_template);
-        let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
-            &src,
-            &checks_for_post_run_template,
-        );
-
-        let is_gc_liveness_script = src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-            n == "ui-gallery-overlay-torture.json" || n == "ui-gallery-sidebar-scroll-refresh.json"
-        });
-
-        let wants_post_run_checks_for_script = suite_profile.wants_post_run_checks_for_script(
-            builtin_suite,
-            wants_post_run_checks_for_script,
-            is_gc_liveness_script,
-        );
-
-        if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
-            let bundle_path = wait_for_bundle_artifact_from_script_result(
-                &resolved_out_dir,
-                &result,
-                timeout_ms,
-                poll_ms,
-            )
-            .ok_or_else(|| {
-                format!(
-                    "script passed but no bundle artifact was found (required for post-run checks): {}",
-                    src.display()
-                )
-            })?;
-
-            if bundle_doctor_mode != BundleDoctorMode::Off {
-                run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
-            }
-
-            let suite_core_default_checks = build_suite_core_default_post_run_checks(
-                &src,
+        if let Some(post_run_ctx) =
+            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+                src: &src,
+                result: &result,
                 suite_profile,
                 builtin_suite,
-                &checks_for_post_run_template,
-                is_gc_liveness_script,
-            );
-            let suite_editor_text_default_checks = build_suite_editor_text_default_post_run_checks(
-                &src,
-                &checks_for_post_run_template,
-            );
-            let mut notify_hotspot_file_max_for_script = check_notify_hotspot_file_max.clone();
-            if notify_hotspot_file_max_for_script.is_empty()
-                && builtin_suite == Some(BuiltinSuite::UiGallery)
-                && src
-                    .file_name()
-                    .and_then(|v| v.to_str())
-                    .is_some_and(|v| v == "ui-gallery-virtual-list-torture.json")
-            {
-                notify_hotspot_file_max_for_script.push((
-                    "crates/fret-ui/src/declarative/host_widget/event/pressable.rs".to_string(),
-                    0,
-                ));
-            }
-            let mut checks_for_post_run = checks_for_post_run_template.clone();
-
-            if checks_for_post_run.check_stale_paint_test_id.is_none() {
-                checks_for_post_run.check_stale_paint_test_id =
-                    suite_core_default_checks.check_stale_paint_test_id.clone();
-            }
-            if checks_for_post_run.check_pixels_changed_test_id.is_none() {
-                checks_for_post_run.check_pixels_changed_test_id = suite_core_default_checks
-                    .check_pixels_changed_test_id
-                    .clone();
-            }
-
-            apply_suite_editor_text_default_post_run_checks(
-                &mut checks_for_post_run,
-                &suite_editor_text_default_checks,
-            );
-
-            checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
-                .check_wheel_events_max_per_frame
-                .or(suite_core_default_checks.check_wheel_events_max_per_frame);
-            if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
-                checks_for_post_run.check_wheel_scroll_test_id =
-                    suite_core_default_checks.check_wheel_scroll_test_id.clone();
-            }
-            if checks_for_post_run
-                .check_wheel_scroll_hit_changes_test_id
-                .is_none()
-            {
-                checks_for_post_run.check_wheel_scroll_hit_changes_test_id =
-                    suite_core_default_checks
-                        .check_wheel_scroll_hit_changes_test_id
-                        .clone();
-            }
-
-            checks_for_post_run.check_prepaint_actions_min = checks_for_post_run
-                .check_prepaint_actions_min
-                .or(suite_core_default_checks.check_prepaint_actions_min);
-            checks_for_post_run.check_chart_sampling_window_shifts_min = checks_for_post_run
-                .check_chart_sampling_window_shifts_min
-                .or(suite_core_default_checks.check_chart_sampling_window_shifts_min);
-            checks_for_post_run.check_node_graph_cull_window_shifts_min = checks_for_post_run
-                .check_node_graph_cull_window_shifts_min
-                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_min);
-            checks_for_post_run.check_node_graph_cull_window_shifts_max = checks_for_post_run
-                .check_node_graph_cull_window_shifts_max
-                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_max);
-            checks_for_post_run.check_vlist_visible_range_refreshes_min = checks_for_post_run
-                .check_vlist_visible_range_refreshes_min
-                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_min);
-            checks_for_post_run.check_vlist_visible_range_refreshes_max = checks_for_post_run
-                .check_vlist_visible_range_refreshes_max
-                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_max);
-
-            checks_for_post_run.check_vlist_window_shifts_explainable |=
-                suite_core_default_checks.check_vlist_window_shifts_explainable;
-            checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
-                suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
-            checks_for_post_run.check_vlist_window_shifts_non_retained_max = script_override_checks
-                .vlist_window_shifts_non_retained_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
-            checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
-                .check_vlist_window_shifts_prefetch_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
-            checks_for_post_run.check_vlist_window_shifts_escape_max = checks_for_post_run
-                .check_vlist_window_shifts_escape_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_escape_max);
-            checks_for_post_run.check_vlist_policy_key_stable |=
-                suite_core_default_checks.check_vlist_policy_key_stable;
-
-            checks_for_post_run.check_windowed_rows_offset_changes_min = checks_for_post_run
-                .check_windowed_rows_offset_changes_min
-                .or(suite_core_default_checks.check_windowed_rows_offset_changes_min);
-            checks_for_post_run.check_windowed_rows_visible_start_changes_repainted |=
-                suite_core_default_checks.check_windowed_rows_visible_start_changes_repainted;
-            checks_for_post_run.check_layout_fast_path_min = checks_for_post_run
-                .check_layout_fast_path_min
-                .or(suite_core_default_checks.check_layout_fast_path_min);
-            checks_for_post_run.check_hover_layout_max = checks_for_post_run
-                .check_hover_layout_max
-                .or(suite_core_default_checks.check_hover_layout_max);
-            checks_for_post_run.check_gc_sweep_liveness |=
-                suite_core_default_checks.check_gc_sweep_liveness;
-
-            checks_for_post_run.check_notify_hotspot_file_max = notify_hotspot_file_max_for_script;
-            checks_for_post_run.check_view_cache_reuse_stable_min = checks_for_post_run
-                .check_view_cache_reuse_stable_min
-                .or(suite_core_default_checks.check_view_cache_reuse_stable_min);
-            checks_for_post_run.check_view_cache_reuse_min = checks_for_post_run
-                .check_view_cache_reuse_min
-                .or(suite_core_default_checks.check_view_cache_reuse_min);
-
-            checks_for_post_run.check_viewport_input_min = checks_for_post_run
-                .check_viewport_input_min
-                .or(suite_core_default_checks.check_viewport_input_min);
-            checks_for_post_run.check_dock_drag_min = checks_for_post_run
-                .check_dock_drag_min
-                .or(suite_core_default_checks.check_dock_drag_min);
-            checks_for_post_run.check_viewport_capture_min = checks_for_post_run
-                .check_viewport_capture_min
-                .or(suite_core_default_checks.check_viewport_capture_min);
-
-            checks_for_post_run.check_retained_vlist_reconcile_no_notify_min =
-                script_override_checks
-                    .retained_vlist_reconcile_no_notify_min
-                    .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
-            checks_for_post_run.check_retained_vlist_attach_detach_max = script_override_checks
-                .retained_vlist_attach_detach_max
-                .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
-            checks_for_post_run.check_retained_vlist_keep_alive_reuse_min = script_override_checks
-                .retained_vlist_keep_alive_reuse_min
-                .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
-            checks_for_post_run.check_retained_vlist_keep_alive_budget = script_override_checks
-                .retained_vlist_keep_alive_budget
-                .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
-
+                checks_for_post_run_template: &checks_for_post_run_template,
+                check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
+                resolved_out_dir: &resolved_out_dir,
+                bundle_doctor_mode,
+                warmup_frames,
+                timeout_ms,
+                poll_ms,
+            })?
+        {
             apply_post_run_checks(
-                &bundle_path,
+                &post_run_ctx.bundle_path,
                 &resolved_out_dir,
-                &checks_for_post_run,
+                &post_run_ctx.checks_for_post_run,
                 warmup_frames,
             )?;
         }
@@ -3287,6 +3341,68 @@ mod tests {
         ));
     }
 
+
+    #[test]
+    fn prepare_suite_script_post_run_context_skips_non_passed_results() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("failed".to_string()),
+            step_index: Some(3),
+            reason_code: Some("boom".to_string()),
+            reason: Some("script failed".to_string()),
+            last_bundle_dir: None,
+        };
+
+        let prepared =
+            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+                src: std::path::Path::new(
+                    "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
+                ),
+                result: &result,
+                suite_profile: SuiteRunProfile::default(),
+                builtin_suite: Some(BuiltinSuite::UiGalleryCodeEditor),
+                checks_for_post_run_template: &SuiteChecks::default(),
+                check_notify_hotspot_file_max: &[],
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            })
+            .expect("non-passed result should skip post-run preparation");
+
+        assert!(prepared.is_none());
+    }
+
+    #[test]
+    fn prepare_suite_script_post_run_context_skips_when_no_explicit_or_policy_gate_exists() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+
+        let prepared =
+            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+                src: std::path::Path::new("unrelated.json"),
+                result: &result,
+                suite_profile: SuiteRunProfile::default(),
+                builtin_suite: None,
+                checks_for_post_run_template: &SuiteChecks::default(),
+                check_notify_hotspot_file_max: &[],
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            })
+            .expect("scripts without post-run gates should skip preparation");
+
+        assert!(prepared.is_none());
+    }
     #[test]
     fn resolve_suite_run_inputs_merges_script_inputs_and_reuse_process_env_defaults() {
         let root = std::env::temp_dir().join(format!(
