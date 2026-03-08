@@ -1,12 +1,15 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
+- V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
+- Widget-contract audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MODEL_CENTERED_WIDGET_CONTRACT_AUDIT.md`
 
 ---
 
@@ -19,7 +22,7 @@ teaching surfaces, and gates line up.
 - **M1**: Met (typed unit actions exist; keymap/palette/menu/pointer triggers converge on the same dispatch pipeline, with diagnostics traces explaining availability/dispatch outcomes).
 - **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
-- **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
+- **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, while broader builder-first and explicit-model cleanup continue).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
 - **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
 - **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
@@ -31,11 +34,53 @@ Adoption note (as of 2026-03-07):
 
 - A follow-up polish pass is active to reduce “early element landing” (`into_element(cx)` cliffs) in
   cookbook demos by preferring late-landing child composition (`ui::children!`, `*_::build(...)`).
-  See `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (`AFA-adopt-045`).
+  Recent closure steps also kept child-only helpers on `impl UiChildIntoElement<_>` where possible
+  and removed extra template/demo `.into_element(cx)` call sites around palette/filter helper paths.
+  See
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (`AFA-adopt-045`).
+- Post-v1 repo-shape note: the remaining authoring work is ergonomics + teaching-surface convergence,
+  not a Bevy-style single-package root `examples/` rewrite and not an expansion of `ecosystem/fret`
+  into the repo?s canonical example host.
+- Active post-v1 order: local-state / invalidation ergonomics first, then narrow widget-local action
+  sugar, and only then a decision on macros.
+- Adjacent examples-side polish is also underway: `apps/fret-examples` now uses the same builder-first
+  guidance for decorate-only `test_id` / semantics patches in `todo_demo` and the utility-window /
+  hit-test demos where the host sink already accepts builders; raw pointer-region and container roots
+  still intentionally land as `AnyElement` boundaries.
+- Cookbook polish has narrowed further as well: `async_inbox_basics`, `imui_action_basics`, and
+  `utility_window_materials_windows` now keep their progress/root diagnostics hooks on the builder
+  path, and `apps/fret-cookbook/src/scaffold.rs` now keeps the shared page-shell root `test_id` on
+  that same path. That leaves `date_picker_basics` as the intentionally documented host-boundary
+  exception.
 
-Evidence anchors (verified in-tree as of 2026-03-07):
+Evidence anchors (verified in-tree as of 2026-03-08):
 
-- `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
+- `ecosystem/fret/src/view.rs` (`TrackedStateExt::{layout, paint, hit_test}` now covers `LocalState<T>`, `Model<T>`, and `QueryHandle<T>` behind `state-query`; `WatchedState::value*`, `LocalState::{watch, read_in, revision_in}`, documented `LocalState::{update_in, set_in, update_action, set_action}` write semantics, `ViewCx::on_action_notify_*`, and `ViewCx::on_action_notify_local_*` helpers)
+- `ecosystem/fret/src/view.rs` test `local_state_update_action_requests_redraw_and_notify` (locks the post-v1 rule that tracked local writes inside action dispatch request redraw and notify, while `notify()` remains an escape hatch rather than a teaching-surface default)
+- `ecosystem/fret-ui-kit/src/declarative/model_watch.rs` (`ModelWatchExt` still backs legacy `cx.watch_model(...)`, while `QueryHandleWatchExt` now gives `ElementContext` query surfaces the query-specific handle-side `handle.layout_query(cx).value_*` read shape that mirrors the View runtime)
+- `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/imui-state-integration-v1.md` (narrative docs now mirror the same query handle-side read story across `ViewCx` and `ElementContext`, including the `QueryHandleWatchExt` path for `handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MODEL_CENTERED_WIDGET_CONTRACT_AUDIT.md`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/card/demo.rs`, `apps/fret-ui-gallery/src/ui/snippets/button_group/popover.rs` (post-v1 audit now distinguishes cookbook/template closure from advanced/runtime-bound surfaces, true model-centered widget contracts, and snippet-level controlled/uncontrolled authoring choices)
+- `apps/fret-cookbook/examples/hello.rs` (simple baseline remains the smallest action-first view reference case)
+- `apps/fret-cookbook/examples/hello_counter.rs` (first medium cookbook example on the `use_local` + `state.layout(cx).value_*` / `state.paint(cx).value_*` + local-state-specific notify helpers path)
+- `apps/fret-cookbook/examples/query_basics.rs` (second medium cookbook example on the same local-state path, while still demonstrating render-time query invalidation and explicit redraw as an escape hatch; query result reads now stay on the `QueryHandle<T>` side via `handle.layout(cx).value_*`)
+- `apps/fret-cookbook/examples/commands_keymap_basics.rs` (third medium cookbook example on the same path; validates command availability + keymap gating against `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*` without view-held `Model<bool>` fields, now uses `Switch::from_checked(...).action(...)` for its view-local allow-command toggle plus a disabled snapshot indicator for panel state, and keeps coordinated gate reads on `LocalState::read_in(...)` inside the generic transaction/availability closures)
+- `apps/fret-cookbook/examples/toggle_basics.rs` (new focused cookbook example proving `Toggle::from_pressed(...).action(...)` on view-local state without a `Model<bool>` bridge)
+- `apps/fret-cookbook/examples/text_input_basics.rs` (validates `use_local*` + `state.layout(cx).value_*` / `state.paint(cx).value_*` + direct `Input::new(&LocalState<String>)` interop while keeping command availability on the generic models path)
+- `apps/fret-cookbook/examples/date_picker_basics.rs` (extends the same bridge pattern to `DatePicker::new_controllable(...)`, proving the authoring side can still prefer `use_local*` even when the widget API remains model-centered; the selected row stays builder-first, while the current picker/card sink still lands at the widget host boundary when a concrete `AnyElement` is required)
+- `apps/fret-cookbook/examples/form_basics.rs` (extends the same local-state path to multi-field validation/reset flows while intentionally keeping cross-field coordination on `on_action_notify_models`)
+- `apps/fret-cookbook/examples/simple_todo.rs` (first keyed-list hybrid on the post-v1 path: draft and `next_id` use `use_local*`, while the dynamic `todos` collection intentionally stays on `Model<Vec<_>>`; generic model-store reads now stay on `LocalState::read_in(...)` rather than leaking `local.model()` back into the default path)
+- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs` now mirrors the same `LocalState::read_in(...)` pattern for generic model-store reads, its draft input now uses the direct text-value bridge `Input::new(&draft_state)`, the query-tip scaffold now reads `QueryHandle<T>` from the handle side too, and generated starter code stays aligned with the cookbook local-state handle surface)
+- `apps/fret-cookbook/examples/drop_shadow_basics.rs` (adds a pure toggle-only renderer demo to the same post-v1 path by using `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*` / `local.clone_model()` for the existing `Switch::new(Model<bool>)` boundary)
+- `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (extends the same path to a mixed editor/render-options surface: `Textarea` now accepts `&LocalState<String>` directly, while `ToggleGroup::single` and `Switch` still consume models and the view itself keeps source/wrap/cap-height in local state)
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (extends the same path to a host/runtime escape-hatch surface: the bump counter now lives in local state, while the actual asset reload epoch bump plus redraw/RAF scheduling intentionally stay render-time)
+- `apps/fret-cookbook/examples/drag_basics.rs` / `apps/fret-cookbook/examples/undo_basics.rs` / `apps/fret-cookbook/examples/gizmo_basics.rs` (numeric semantics/test-id decoration now stay on the builder path for badges/text instead of forcing decorate-only `AnyElement` landings)
+- `apps/fret-cookbook/examples/virtual_list_basics.rs` (extends the same path to the first virtualization hybrid: the items collection and scroll handle stay explicit, while measure mode / toggles / jump input now use local state and the reorder/scroll commands remain on `on_action_notify_models`)
+- `apps/fret-cookbook/examples/theme_switching_basics.rs` (extends the same path to a theme-selection surface: the selected scheme now lives in local state while the actual theme application plus redraw/RAF synchronization intentionally stay render-time)
+- `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (extends the same path to an asset demo surface: the reload bump counter now lives in local state while the actual asset reload epoch bump plus redraw/RAF synchronization intentionally stay render-time)
+- `apps/fret-cookbook/examples/customv1_basics.rs` (clears the last default-surface renderer hybrid by moving `enabled` / `strength` to `use_local*`, using `on_action_notify_toggle_local_bool` for the simple enable/disable flag, and leaving effect registration, capability checks, and effect-layer plumbing explicit)
+- `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs` and `simple_todo_template_main_rs` now avoid template-only palette/filter `.into_element(cx)` cliffs, while `simple_todo_template_main_rs` still mirrors the same hybrid split so cookbook and generated starter code no longer drift on keyed-list state placement)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md` (records Queue A + Queue B as cleared and treats the remaining teaching-surface `Model<T>` holders as intentionally advanced/interop-bound)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md` (documents the intentionally small default v2 surface and the five recommended composition entry points)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
 - `ecosystem/fret-ui-kit/src/ui.rs` (`UiElementSinkExt` + `UiChildIntoElement` for builder-first `*_build` sink composition and heterogeneous child bridging)
 - `ecosystem/fret-ui-shadcn/src/card.rs` (`Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` allow late child landing, host-bound `.ui()` patching, and direct `children!` / `push_ui()` participation across the query-demo card tree)
@@ -52,20 +97,25 @@ Evidence anchors (verified in-tree as of 2026-03-07):
 - `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` uses the default path; `Start` remains advanced for host-side dispatcher/inbox scheduling; the page card now uses the late-landing card builder path)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command/keymap teaching surface now uses the late-landing card builder path for both the outer panel and nested card)
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` (prefers `on_action_notify*` helpers)
-- `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models` and now uses the late-landing card builder path)
+- `apps/fret-cookbook/examples/date_picker_basics.rs` (now uses `use_local*` / `local.clone_model()` for the controlled open/selected state while keeping the existing date-picker widget boundary)
+- `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models`, now uses `use_local*` plus the direct text bridge for field inputs, and keeps the late-landing card builder path)
 - `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case for imperative Sonner host integration)
 - `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default path; back/forward remain advanced for router availability sync)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` use the default path; `Undo`/`Redo` keep the host-side RAF effect)
+- `apps/fret-cookbook/examples/simple_todo.rs` (now uses a hybrid local-state + explicit-model split for keyed dynamic-list authoring)
+- `apps/fret-cookbook/examples/simple_todo_v2_target.rs` (comparison target now keeps the keyed list in `LocalState<Vec<TodoRow>>`, uses `Checkbox::from_checked(...).action_payload(...)` for row toggles, and makes the remaining visible gap more precise: row-level event ergonomics still prefer root handler registration)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, `docs/examples/todo-app-golden-path.md` (current baseline vs v2 north-star is now documented explicitly; text widgets are no longer the main blocker, while simple todo-style collection ergonomics remain the clearest post-v1 design gap)
 - `apps/fret-cookbook/examples/virtual_list_basics.rs` (prefers `on_action_notify_models` for scroll actions)
 - `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)
 - `apps/fret-examples/src/custom_effect_v1_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-examples/src/liquid_glass_demo.rs` (reset/preset/toggle-inspector actions now use the default `on_action_notify_models` transaction path)
-- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses the default `on_action_notify_models` path and keeps the theme side effect as render-time state synchronization)
-- `apps/fret-examples/src/hello_counter_demo.rs` (first `use_local` prototype; removes explicit model-handle fields while keeping the default `on_action_notify_models` action surface)
-- `apps/fret-examples/src/query_demo.rs` (second `use_local` prototype; also the first builder-first composition experiment using `ui::*_build` sinks plus `UiElementSinkExt`, now paired with late-landing `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`)
-- `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; now also mirrors the builder-first composition experiment for the async query path with the same late-landing card tree while keeping transient invalidation and Tokio-backed async spawning)
-- `apps/fret-examples/src/embedded_viewport_demo.rs` (default demo avoids single-model aliases and stays on `on_action_notify_models` / `on_action_notify_transient`)
+- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses the default `on_action_notify_models` path and keeps the theme side effect as render-time state synchronization; its query result view now reads from `handle.layout_query(cx).value_*`)
+- `apps/fret-examples/src/hello_counter_demo.rs` (first `use_local` prototype; removes explicit model-handle fields, now keeps its generic step read on `LocalState::read_in(...)`, uses the direct text bridge for its step input, and still keeps the default `on_action_notify_models` action surface)
+- `apps/fret-examples/src/query_demo.rs` (second `use_local` prototype; also the first builder-first composition experiment using `ui::*_build` sinks plus `UiElementSinkExt`, now paired with late-landing `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`, while query state reads stay on `QueryHandle<T>` via `query_handle.layout(cx).value_*`)
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; now also mirrors the builder-first composition experiment for the async query path with the same late-landing card tree while keeping transient invalidation and Tokio-backed async spawning, and query state reads stay on `QueryHandle<T>` via `query_handle.layout(cx).value_*`)
+- `apps/fret-ui-gallery/src/ui/snippets/collapsible/demo.rs` (gallery snippet now uses the uncontrolled `Collapsible::default_open(false)` path directly; this case no longer counts as a model-centered contract blocker)
+- `apps/fret-examples/src/embedded_viewport_demo.rs` (advanced demo now moves its view-local `size_preset` to `use_local_with(...)` + `on_action_notify_local_set(...)`, while embedded viewport interop state and render-time effects stay on the explicit runtime path)
 - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
@@ -85,7 +135,9 @@ Post-v1 direction (recommended):
 
 - Close v1 as successful on architecture and default-path convergence; do not keep the migration phase open solely to chase the final authoring-density target.
 - Track the remaining ergonomics pressure separately:
-  - direct local-state ergonomics beyond `Model<T>`,
+  - direct local-state ergonomics beyond `Model<T>`, with the next step being to turn the new todo-like `LocalState<Vec<_>>` comparison path into a boring default rather than a special evidence example,
+  - checkbox/switch/toggle action-only `control_id` parity is now closed, so any future discrete-widget work should point to a narrower regression than label forwarding,
+  - skill-level parity guidance remains the shared rubric for any future discrete-widget audits before adding helpers,
   - explicit-vs-implicit invalidation ergonomics (`notify()` stays available, but should not be the default burden after tracked state writes),
   - builder-first composition that reduces `ui::children!` / nested `into_element(cx)`,
   - widget-local action sugar only if a new round of evidence justifies promoting it,

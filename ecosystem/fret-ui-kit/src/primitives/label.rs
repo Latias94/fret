@@ -214,7 +214,7 @@ fn label_for_control<H: UiHost>(
                 }
 
                 host.request_focus(control.element);
-                control.action.invoke(host);
+                control.action.invoke(host, acx);
                 host.request_redraw(acx.window);
                 true
             }));

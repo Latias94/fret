@@ -52,6 +52,7 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib checkbox`
+- `cargo test -p fret-ui-shadcn --lib field_label_click_mirrors_checkbox_action_sequence --message-format short`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_checkbox_demo_control_size`).
 - Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
@@ -59,5 +60,6 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 
 ## Follow-ups (recommended)
 
+- Pass: Snapshot/action checkboxes now participate in `control_id` / label forwarding without falling back to a model-backed registry entry; label activation mirrors command dispatch, payload forwarding, and state toggles when applicable.
 - Pass: Supports Radix `checked="indeterminate"` (tri-state) via `Checkbox::new_tristate`.
   - Note: Semantics currently maps indeterminate to `checked: None`.

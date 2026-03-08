@@ -36,14 +36,14 @@ Legend:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Input` | `ecosystem/fret-ui-shadcn/src/input.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Baseline pattern. |
 | `Textarea` | `ecosystem/fret-ui-shadcn/src/textarea.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Baseline pattern. |
-| `Checkbox` | `ecosystem/fret-ui-shadcn/src/checkbox.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Label click toggles via registry action. |
-| `Switch` | `ecosystem/fret-ui-shadcn/src/switch.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Label click toggles via registry action. |
+| `Checkbox` | `ecosystem/fret-ui-shadcn/src/checkbox.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Label click mirrors checkbox activation via the registry (command/payload + toggle when applicable). |
+| `Switch` | `ecosystem/fret-ui-shadcn/src/switch.rs` | Yes | Yes | Yes | Yes | Existing | Existing | Label click mirrors switch activation via the registry (command dispatch and/or toggle). |
 | `InputGroup` | `ecosystem/fret-ui-shadcn/src/input_group.rs` | Yes | Yes | Yes | Yes | Yes | Yes | Inline addons forward focus correctly. |
 | `Select` | `ecosystem/fret-ui-shadcn/src/select.rs` | Partial | Yes | Yes | Yes | Yes | Yes | Focus target is the trigger pressable. |
 | `NativeSelect` | `ecosystem/fret-ui-shadcn/src/native_select.rs` | Partial | Yes | Yes | Yes | Yes | Yes | Trigger is a combobox-like pressable. |
 | `Slider` | `ecosystem/fret-ui-shadcn/src/slider.rs` | Partial | Yes | Yes | Yes | Yes | Yes | Focus target is the active thumb (`*-thumb-0`). |
 | `RadioGroup` | `ecosystem/fret-ui-shadcn/src/radio_group.rs` | Partial | Yes | Yes | Yes | Yes | Yes | Focus target is the active item; adds `{prefix}-item-{idx}` test ids. |
-| `Toggle` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | Partial | Yes | Yes | Yes | No | No | Label click toggles via registry action. |
+| `Toggle` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | Partial | Yes | Yes | Yes | No | No | Label click now mirrors toggle activation via the registry; UI Gallery / diag coverage is still pending. |
 | `ToggleGroup` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | Partial | Yes | N/A | N/A | No | No | Focus target is the group's tab-stop item. |
 | `Combobox` | `ecosystem/fret-ui-shadcn/src/combobox.rs` | Partial | Yes | Yes | Yes | No | No | Suppresses dynamic label fallback when `control_id` is set. |
 | `DatePicker` | `ecosystem/fret-ui-shadcn/src/date_picker.rs` (+ `button.rs`) | Partial | Yes | Yes | Yes | No | No | Uses `Button::control_id(...)` for trigger association. |
@@ -53,6 +53,7 @@ Legend:
 - Registry + label primitive:
   - `ecosystem/fret-ui-kit/src/primitives/control_registry.rs`
   - `ecosystem/fret-ui-kit/src/primitives/label.rs`
+  - `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
 - Representative recipe implementations:
   - `ecosystem/fret-ui-shadcn/src/input.rs`
   - `ecosystem/fret-ui-shadcn/src/select.rs`

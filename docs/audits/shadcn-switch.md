@@ -30,6 +30,9 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ### Interaction
 
 - Pass: Click toggles the bound `Model<bool>`.
+- Pass: Supports a source-aligned snapshot/action path via `Switch::from_checked(...)` plus
+  `action(...)` / `action_payload(...)`, so action-first views can render a switch from plain local
+  state without allocating per-row `Model<bool>` handles.
 - Note: `Switch` is a leaf control surface, so Fret intentionally does not add a generic
   `compose()` builder here; the direct control API already matches the important shadcn/Radix
   contract.
@@ -52,6 +55,7 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib switch`
+- `cargo test -p fret-ui-shadcn --lib field_label_click_dispatches_action_for_snapshot_switch_control --message-format short`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_switch_demo_track_size`).
 - Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
@@ -59,4 +63,4 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 
 ## Follow-ups (recommended)
 
-- None at the moment.
+- Pass: Snapshot/action switches now participate in `control_id` / label forwarding with the same command-backed activation path as the model-backed surface.

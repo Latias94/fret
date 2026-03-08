@@ -1097,7 +1097,7 @@ impl FieldLabel {
                                     return true;
                                 }
                                 host.request_focus(control.element);
-                                control.action.invoke(host);
+                                control.action.invoke(host, acx);
                                 host.request_redraw(acx.window);
                                 true
                             }));
