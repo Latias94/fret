@@ -371,7 +371,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is the preferred way for declarative UI to drive animations: while the returned
     /// lease is held, the mount pass will continue requesting animation frames.
     pub fn begin_continuous_frames(&mut self) -> ContinuousFrames {
-        let lease = self.window_state.begin_continuous_frames();
+        let lease = self
+            .window_state
+            .begin_continuous_frames(Some(self.root_id()));
         self.request_animation_frame();
         lease
     }

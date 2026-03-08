@@ -37,6 +37,7 @@ pub(super) fn push_settings_sheet(
     settings_menu_bar_in_window_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
+    chrome_show_workspace_tab_strip: Model<bool>,
     content: &mut Vec<AnyElement>,
 ) {
     content.push(cx.keyed("ui_gallery.settings_sheet", move |cx| {
@@ -92,6 +93,11 @@ pub(super) fn push_settings_sheet(
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
+                    let chrome_show_workspace_tab_strip_switch = shadcn::Switch::new(
+                        chrome_show_workspace_tab_strip.clone(),
+                    )
+                    .a11y_label("Show workspace tab strip")
+                    .into_element(cx);
                     let edit_can_undo_switch = shadcn::Switch::new(settings_edit_can_undo.clone())
                         .a11y_label("Can Undo")
                         .disabled(true)
@@ -108,7 +114,7 @@ pub(super) fn push_settings_sheet(
                                     shadcn::SheetHeader::new(vec![
                                         shadcn::SheetTitle::new("Settings").into_element(cx),
                                         shadcn::SheetDescription::new(
-                                            "Menu bar presentation (OS vs in-window) + debug state.",
+                                            "Menu bar presentation (OS vs in-window) + chrome/debug state.",
                                         )
                                         .into_element(cx),
                                     ])
@@ -117,6 +123,12 @@ pub(super) fn push_settings_sheet(
                                     cx.text("Menu bar surfaces"),
                                     os_select,
                                     in_window_select,
+                                    cx.text("Chrome"),
+                                    switch_row(
+                                        cx,
+                                        chrome_show_workspace_tab_strip_switch,
+                                        "Workspace tabs in the top bar",
+                                    ),
                                     cx.text("Command availability (debug)"),
                                     switch_row(
                                         cx,

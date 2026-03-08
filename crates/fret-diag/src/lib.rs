@@ -111,9 +111,9 @@ use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
     compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
-    normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file, resolve_threshold,
-    run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
-    wait_for_files_with_extensions,
+    maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
+    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
 use gates::{
@@ -398,6 +398,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut lint_eps_px: f32 = 0.5;
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
+    let mut check_memory_p90_max: Vec<(String, u64)> = Vec::new();
+    let mut repeat_compare_enabled: bool = true;
     let mut reuse_launch: bool = false;
     let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
@@ -551,6 +553,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
@@ -1046,6 +1049,39 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --repeat".to_string())?
                     .max(1);
+                i += 1;
+            }
+            "--no-compare" => {
+                repeat_compare_enabled = false;
+                i += 1;
+            }
+            "--check-memory-p90-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-memory-p90-max".to_string());
+                };
+                let v = v.trim();
+                let (key, bytes_str) = if let Some((a, b)) = v.split_once(':') {
+                    (a.trim(), b.trim())
+                } else if let Some((a, b)) = v.split_once('=') {
+                    (a.trim(), b.trim())
+                } else {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                };
+                if key.is_empty() || bytes_str.is_empty() {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                }
+                let bytes = bytes_str.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-memory-p90-max: invalid bytes (expected u64)"
+                        .to_string()
+                })?;
+                check_memory_p90_max.push((key.to_string(), bytes));
                 i += 1;
             }
             "--max-top-total-us" => {
@@ -2199,6 +2235,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
                 i += 1;
             }
+            "--check-hello-world-compare-idle-present-max-delta" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string(),
+                    );
+                };
+                check_hello_world_compare_idle_present_max_delta =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
             "--check-gc-sweep-liveness" => {
                 check_gc_sweep_liveness = true;
                 i += 1;
@@ -3117,6 +3168,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
         check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
         check_hover_layout_max: check_hover_layout_max.clone(),
+        check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3319,6 +3371,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_high_priority,
                 launch_write_bundle_json,
                 perf_repeat,
+                check_memory_p90_max: check_memory_p90_max.clone(),
+                compare_enabled: repeat_compare_enabled,
                 compare_eps_px,
                 compare_ignore_bounds,
                 compare_ignore_scene_fingerprint,
@@ -3405,6 +3459,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
                 check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
                 check_hover_layout_max: check_hover_layout_max.clone(),
+                check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),

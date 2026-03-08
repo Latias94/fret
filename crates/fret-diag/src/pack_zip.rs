@@ -565,6 +565,7 @@ fn zip_add_root_artifacts(
         "check.semantics_changed_repainted.json",
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
+        "check.hello_world_compare_idle_present.json",
         "check.perf_thresholds.json",
         "check.perf_hints.json",
         "check.redraw_hitches.json",

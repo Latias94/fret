@@ -246,6 +246,8 @@ pub(crate) struct RepeatCmdContext {
     pub launch_high_priority: bool,
     pub launch_write_bundle_json: bool,
     pub perf_repeat: u64,
+    pub check_memory_p90_max: Vec<(String, u64)>,
+    pub compare_enabled: bool,
     pub compare_eps_px: f32,
     pub compare_ignore_bounds: bool,
     pub compare_ignore_scene_fingerprint: bool,
@@ -255,6 +257,24 @@ pub(crate) struct RepeatCmdContext {
     pub stats_json: bool,
     pub timeout_ms: u64,
     pub poll_ms: u64,
+}
+
+fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
+    if env.iter().any(|(existing, _)| existing == key) {
+        return;
+    }
+    env.push((key.to_string(), value.to_string()));
+}
+
+fn merged_repeat_launch_env(
+    launch_env: &[(String, String)],
+    script_defaults: Vec<(String, String)>,
+) -> Vec<(String, String)> {
+    let mut merged = launch_env.to_vec();
+    for (key, value) in script_defaults {
+        push_env_if_missing(&mut merged, &key, &value);
+    }
+    merged
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -273,6 +293,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         launch_high_priority,
         launch_write_bundle_json,
         perf_repeat,
+        check_memory_p90_max,
+        compare_enabled,
         compare_eps_px,
         compare_ignore_bounds,
         compare_ignore_scene_fingerprint,
@@ -314,7 +336,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         || check_pixels_changed_test_id.is_some()
         || check_pixels_unchanged_test_id.is_some();
 
-    let repeat_launch_env = launch_env.clone();
+    let repeat_launch_env = merged_repeat_launch_env(&launch_env, script_env_defaults(&src));
     let reuse_process = launch.is_none() || reuse_launch;
 
     let mut child = if reuse_process {
@@ -383,6 +405,68 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
         })
+    }
+
+    fn copy_if_exists(src: &Path, dst: &Path) {
+        if !src.is_file() {
+            return;
+        }
+        let _ = std::fs::copy(src, dst);
+    }
+
+    fn write_repeat_evidence_index_best_effort(
+        run_out_dir: &Path,
+        out_dir: &Path,
+        bundle_artifact: Option<&PathBuf>,
+    ) {
+        copy_if_exists(
+            &out_dir.join("resource.footprint.json"),
+            &run_out_dir.join("resource.footprint.json"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.macos_footprint.steady.json"),
+            &run_out_dir.join("resource.macos_footprint.steady.json"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_summary.txt"),
+            &run_out_dir.join("resource.vmmap_summary.txt"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_summary.steady.txt"),
+            &run_out_dir.join("resource.vmmap_summary.steady.txt"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_regions_sorted.steady.txt"),
+            &run_out_dir.join("resource.vmmap_regions_sorted.steady.txt"),
+        );
+
+        let selected_bundle_json = bundle_artifact
+            .and_then(|p| {
+                if p.is_file() {
+                    Some(p.clone())
+                } else {
+                    let candidate = p.join("bundle.json");
+                    candidate.is_file().then_some(candidate)
+                }
+            })
+            .or_else(|| {
+                let candidate = run_out_dir.join("bundle.json");
+                candidate.is_file().then_some(candidate)
+            })
+            .map(|p| p.display().to_string());
+
+        let summary_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "repro_summary_repeat_v1",
+            "selected_bundle_json": selected_bundle_json,
+        });
+        let summary_path = run_out_dir.join("repro.summary.json");
+        let _ = write_json_value(&summary_path, &summary_json);
+        let _ = crate::evidence_index::write_evidence_index(
+            run_out_dir,
+            &summary_path,
+            Some(&summary_json),
+        );
     }
 
     fn repeat_tooling_reason_code_from_error(err: &str) -> &'static str {
@@ -610,30 +694,28 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         }
 
         let entry = match summary {
-            Ok(s) => {
-                let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
-
-                let bundle_artifact = s
-                    .last_bundle_dir
-                    .as_deref()
-                    .and_then(|d| (!d.trim().is_empty()).then_some(d.trim()))
-                    .map(PathBuf::from)
-                    .map(|p| {
-                        if p.is_absolute() {
-                            p
+            Ok(mut s) => {
+                let bundle_artifact = crate::paths::wait_for_bundle_artifact_from_script_result(
+                    &resolved_out_dir,
+                    &s,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if s.last_bundle_dir.is_none()
+                    && let Some(name) = bundle_artifact.as_ref().and_then(|artifact| {
+                        if artifact.is_dir() {
+                            artifact.file_name().and_then(|v| v.to_str())
                         } else {
-                            resolved_out_dir.join(p)
+                            artifact
+                                .parent()
+                                .and_then(|parent| parent.file_name())
+                                .and_then(|v| v.to_str())
                         }
                     })
-                    .and_then(|p| {
-                        if p.is_dir() {
-                            wait_for_bundle_artifact_in_dir(&p, timeout_ms, poll_ms)
-                        } else if p.is_file() {
-                            Some(p)
-                        } else {
-                            None
-                        }
-                    });
+                {
+                    s.last_bundle_dir = Some(name.to_string());
+                }
+                let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
 
                 if stage == "failed" {
                     failed_runs += 1;
@@ -686,6 +768,22 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                         "top_layout_engine_solve_time_us": top.layout_engine_solve_time_us,
                         "frame_id": top.frame_id,
                     }));
+                }
+
+                if let Some(bundle_artifact) = bundle_artifact.as_ref() {
+                    let run_out_dir = if bundle_artifact.is_dir() {
+                        bundle_artifact.clone()
+                    } else {
+                        bundle_artifact
+                            .parent()
+                            .map(Path::to_path_buf)
+                            .unwrap_or_else(|| resolved_out_dir.clone())
+                    };
+                    write_repeat_evidence_index_best_effort(
+                        &run_out_dir,
+                        &resolved_out_dir,
+                        Some(bundle_artifact),
+                    );
                 }
 
                 let mut lint: Option<serde_json::Value> = None;
@@ -744,7 +842,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut compare_to_baseline: Option<serde_json::Value> = None;
-                if stage == "passed" {
+                if compare_enabled && stage == "passed" {
                     if baseline_bundle.is_none() {
                         if let Some(bundle_artifact) = bundle_artifact.clone() {
                             baseline_run = Some(run_index);
@@ -837,7 +935,149 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
 
     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
+    fn quantile_sorted(values: &[u64], q: f64) -> u64 {
+        if values.is_empty() {
+            return 0;
+        }
+        let q = q.clamp(0.0, 1.0);
+        let idx = ((values.len() - 1) as f64 * q).round() as usize;
+        *values.get(idx).unwrap_or(values.last().unwrap_or(&0))
+    }
+
+    fn read_u64_resource(resources: &serde_json::Value, key: &str) -> Option<u64> {
+        let process = resources
+            .get("process_footprint")
+            .unwrap_or(&serde_json::Value::Null);
+        let bundle = resources
+            .get("bundle_last_frame_stats")
+            .unwrap_or(&serde_json::Value::Null);
+        process
+            .get(key)
+            .and_then(|v| v.as_u64())
+            .or_else(|| bundle.get(key).and_then(|v| v.as_u64()))
+    }
+
+    let mut memory_checks: Option<serde_json::Value> = None;
+    let mut memory_check_failures: Vec<serde_json::Value> = Vec::new();
+
+    if !check_memory_p90_max.is_empty() {
+        let mut sample_dirs: Vec<PathBuf> = Vec::new();
+        let mut q: Vec<PathBuf> = vec![resolved_out_dir.clone()];
+        while let Some(dir) = q.pop() {
+            let evidence = dir.join("evidence.index.json");
+            if evidence.is_file() {
+                sample_dirs.push(dir);
+                continue;
+            }
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    q.push(path);
+                }
+            }
+        }
+
+        let mut checks_out: Vec<serde_json::Value> = Vec::new();
+        if sample_dirs.is_empty() {
+            memory_check_failures.push(serde_json::json!({
+                "kind": "no_samples",
+                "reason": "no evidence.index.json found under repeat out_dir; ensure bundles are written and evidence is materialized per run",
+            }));
+        }
+        for (key, threshold) in &check_memory_p90_max {
+            let mut values: Vec<u64> = Vec::new();
+            let mut missing: u64 = 0;
+
+            for dir in &sample_dirs {
+                let evidence_index_path = dir.join("evidence.index.json");
+                let Some(v) = read_json_value(&evidence_index_path) else {
+                    missing = missing.saturating_add(1);
+                    continue;
+                };
+                let Some(resources) = v.get("resources") else {
+                    missing = missing.saturating_add(1);
+                    continue;
+                };
+
+                match read_u64_resource(resources, key) {
+                    Some(n) => values.push(n),
+                    None => missing = missing.saturating_add(1),
+                }
+            }
+
+            values.sort_unstable();
+            let p90 = quantile_sorted(&values, 0.90);
+            let max = *values.last().unwrap_or(&0);
+
+            let mut failures: Vec<serde_json::Value> = Vec::new();
+            if missing > 0 {
+                failures.push(serde_json::json!({
+                    "kind": "missing_field",
+                    "missing_samples": missing,
+                }));
+            }
+            if values.is_empty() {
+                failures.push(serde_json::json!({
+                    "kind": "no_values",
+                    "reason": "field missing in all samples",
+                }));
+            }
+            if !values.is_empty() && p90 > *threshold {
+                failures.push(serde_json::json!({
+                    "kind": "p90_exceeded",
+                    "threshold": threshold,
+                    "observed_p90": p90,
+                }));
+            }
+
+            if !failures.is_empty() {
+                memory_check_failures.push(serde_json::json!({
+                    "key": key,
+                    "threshold": threshold,
+                    "observed_p90": p90,
+                    "observed_max": max,
+                    "samples_present": values.len(),
+                    "samples_missing": missing,
+                    "failures": failures,
+                }));
+            }
+
+            checks_out.push(serde_json::json!({
+                "key": key,
+                "threshold": threshold,
+                "observed_p90": p90,
+                "observed_max": max,
+                "samples_present": values.len(),
+                "samples_missing": missing,
+            }));
+        }
+
+        let out_path = resolved_out_dir.join("check.repeat_memory_p90_max.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "repeat_memory_p90_max",
+            "out_dir": resolved_out_dir.display().to_string(),
+            "samples_total": sample_dirs.len(),
+            "checks": checks_out,
+            "failures": memory_check_failures,
+        });
+        let _ = write_json_value(&out_path, &payload);
+        memory_checks = Some(serde_json::json!({
+            "evidence": out_path.display().to_string(),
+            "failures_len": memory_check_failures.len(),
+        }));
+    }
+
     let status = if failed_runs == 0 && differing_runs == 0 {
+        "passed"
+    } else {
+        "failed"
+    };
+    let status = if status == "passed" && memory_check_failures.is_empty() {
         "passed"
     } else {
         "failed"
@@ -881,11 +1121,13 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         "repeat": repeat,
         "baseline_run": baseline_run,
         "highlights": highlights,
+        "memory_checks": memory_checks,
         "error_reason_code": tooling_error_reason_code,
         "options": {
             "warmup_frames": warmup_frames,
             "compare_eps_px": compare_eps_px,
             "compare_ignore_bounds": compare_ignore_bounds,
+            "compare_enabled": compare_enabled,
             "compare_ignore_scene_fingerprint": compare_ignore_scene_fingerprint,
         },
         "failed_runs": failed_runs,
@@ -917,4 +1159,34 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merged_repeat_launch_env_preserves_explicit_values() {
+        let merged = merged_repeat_launch_env(
+            &[(
+                "FRET_UI_GALLERY_START_PAGE".to_string(),
+                "overlay".to_string(),
+            )],
+            vec![
+                ("FRET_UI_GALLERY_START_PAGE".to_string(), "card".to_string()),
+                ("FRET_UI_GALLERY_NAV_QUERY".to_string(), "card".to_string()),
+            ],
+        );
+
+        assert_eq!(
+            merged,
+            vec![
+                (
+                    "FRET_UI_GALLERY_START_PAGE".to_string(),
+                    "overlay".to_string()
+                ),
+                ("FRET_UI_GALLERY_NAV_QUERY".to_string(), "card".to_string()),
+            ]
+        );
+    }
 }

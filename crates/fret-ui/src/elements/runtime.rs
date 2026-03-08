@@ -1,5 +1,7 @@
 use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
+#[cfg(feature = "diagnostics")]
+use std::sync::Mutex;
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -63,6 +65,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub pressed_pressable_visual_bounds: Option<Rect>,
     pub hovered_hover_region: Option<GlobalElementId>,
     pub wants_continuous_frames: bool,
+    pub continuous_frame_leases: Vec<ContinuousFrameLeaseDiagnosticsSnapshot>,
+    pub animation_frame_request_roots: Vec<AnimationFrameRequestRootDiagnosticsSnapshot>,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
     pub observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot>,
@@ -72,6 +76,23 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
+    pub rendered_state_entries: u64,
+    pub next_state_entries: u64,
+    pub lag_state_frames: u64,
+    pub lag_state_entries_total: u64,
+    pub state_entries_total: u64,
+    pub nodes_count: u64,
+    pub bounds_entries_total: u64,
+    pub timer_targets_count: u64,
+    pub transient_events_count: u64,
+    pub view_cache_state_key_roots_count: u64,
+    pub view_cache_state_key_entries_total: u64,
+    pub view_cache_element_roots_count: u64,
+    pub view_cache_element_entries_total: u64,
+    pub view_cache_key_mismatch_roots_count: u64,
+    pub scratch_element_children_vec_pool_len: u64,
+    pub scratch_element_children_vec_pool_capacity_total: u64,
+    pub scratch_element_children_vec_pool_bytes_estimate_total: u64,
     /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0177).
     ///
     /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0176).
@@ -80,6 +101,21 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
     pub overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ContinuousFrameLeaseDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub count: u32,
+    pub debug_path: Option<String>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct AnimationFrameRequestRootDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub debug_path: Option<String>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -351,6 +387,8 @@ pub struct WindowElementState {
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
+    #[cfg(feature = "diagnostics")]
+    raf_notify_roots_debug: HashSet<GlobalElementId>,
     pub(super) pending_retained_virtual_list_reconciles:
         HashMap<GlobalElementId, crate::tree::UiDebugRetainedVirtualListReconcileKind>,
     retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
@@ -410,6 +448,8 @@ pub struct WindowElementState {
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     pub(super) hovered_hover_region_node: Option<NodeId>,
     continuous_frames: Arc<AtomicUsize>,
+    #[cfg(feature = "diagnostics")]
+    continuous_frame_owners: Arc<Mutex<HashMap<GlobalElementId, u32>>>,
     #[cfg(feature = "diagnostics")]
     debug_identity: DebugIdentityRegistry,
     #[cfg(feature = "diagnostics")]
@@ -548,6 +588,8 @@ impl WindowElementState {
         self.transient_events
             .retain(|_, recorded| recorded.0 >= cutoff);
         self.raf_notify_roots.clear();
+        #[cfg(feature = "diagnostics")]
+        self.raf_notify_roots_debug.clear();
         self.view_cache_key_mismatch_roots.clear();
         self.element_children_vec_pool_reuses = 0;
         self.element_children_vec_pool_misses = 0;
@@ -1119,6 +1161,8 @@ impl WindowElementState {
 
     pub(crate) fn request_notify_for_animation_frame(&mut self, root: GlobalElementId) {
         self.raf_notify_roots.insert(root);
+        #[cfg(feature = "diagnostics")]
+        self.raf_notify_roots_debug.insert(root);
     }
 
     pub(crate) fn take_notify_for_animation_frame(&mut self) -> Vec<GlobalElementId> {
@@ -1756,10 +1800,28 @@ impl WindowElementState {
         self.continuous_frames.load(Ordering::Relaxed) > 0
     }
 
-    pub(crate) fn begin_continuous_frames(&self) -> ContinuousFrames {
+    pub(crate) fn begin_continuous_frames(
+        &self,
+        owner: Option<GlobalElementId>,
+    ) -> ContinuousFrames {
         self.continuous_frames.fetch_add(1, Ordering::Relaxed);
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = owner;
+        #[cfg(feature = "diagnostics")]
+        if let Some(owner) = owner {
+            let mut owners = self
+                .continuous_frame_owners
+                .lock()
+                .unwrap_or_else(|err| err.into_inner());
+            owners
+                .entry(owner)
+                .and_modify(|count| *count = count.saturating_add(1))
+                .or_insert(1);
+        }
         ContinuousFrames {
             leases: self.continuous_frames.clone(),
+            #[cfg(feature = "diagnostics")]
+            owners: owner.map(|owner| (self.continuous_frame_owners.clone(), owner)),
         }
     }
 
@@ -1975,6 +2037,100 @@ impl WindowElementState {
                 })
                 .collect();
 
+        let mut continuous_frame_leases: Vec<ContinuousFrameLeaseDiagnosticsSnapshot> = {
+            let owners = self
+                .continuous_frame_owners
+                .lock()
+                .unwrap_or_else(|err| err.into_inner());
+            owners
+                .iter()
+                .map(
+                    |(&element, &count)| ContinuousFrameLeaseDiagnosticsSnapshot {
+                        element,
+                        count,
+                        debug_path: self.debug_path_for_element(element),
+                    },
+                )
+                .collect()
+        };
+        continuous_frame_leases.sort_by(|a, b| {
+            b.count
+                .cmp(&a.count)
+                .then_with(|| a.element.0.cmp(&b.element.0))
+        });
+
+        let mut animation_frame_request_roots: Vec<AnimationFrameRequestRootDiagnosticsSnapshot> =
+            self.raf_notify_roots_debug
+                .iter()
+                .copied()
+                .map(|element| AnimationFrameRequestRootDiagnosticsSnapshot {
+                    element,
+                    debug_path: self.debug_path_for_element(element),
+                })
+                .collect();
+        animation_frame_request_roots.sort_by_key(|entry| entry.element.0);
+
+        let rendered_state_entries = self.rendered_state.len() as u64;
+        let next_state_entries = self.next_state.len() as u64;
+        let lag_state_frames = self.lag_state.len() as u64;
+        let lag_state_entries_total = self
+            .lag_state
+            .iter()
+            .fold(0u64, |acc, state| acc.saturating_add(state.len() as u64));
+        let state_entries_total = rendered_state_entries
+            .saturating_add(next_state_entries)
+            .saturating_add(lag_state_entries_total);
+        let nodes_count = self.nodes.len() as u64;
+        let bounds_entries_total = (self.root_bounds.len() as u64)
+            .saturating_add(self.prev_bounds.len() as u64)
+            .saturating_add(self.cur_bounds.len() as u64)
+            .saturating_add(self.prev_visual_bounds.len() as u64)
+            .saturating_add(self.cur_visual_bounds.len() as u64);
+        let timer_targets_count = self.timer_targets.len() as u64;
+        let transient_events_count = self.transient_events.len() as u64;
+        let view_cache_state_key_roots_count = (self.view_cache_state_keys_rendered.len() as u64)
+            .saturating_add(self.view_cache_state_keys_next.len() as u64);
+        let view_cache_state_key_entries_total = self
+            .view_cache_state_keys_rendered
+            .values()
+            .fold(0u64, |acc, keys| acc.saturating_add(keys.len() as u64))
+            .saturating_add(
+                self.view_cache_state_keys_next
+                    .values()
+                    .fold(0u64, |acc, keys| acc.saturating_add(keys.len() as u64)),
+            );
+        let view_cache_element_roots_count = (self.view_cache_elements_rendered.len() as u64)
+            .saturating_add(self.view_cache_elements_next.len() as u64);
+        let view_cache_element_entries_total = self
+            .view_cache_elements_rendered
+            .values()
+            .fold(0u64, |acc, elements| {
+                acc.saturating_add(elements.len() as u64)
+            })
+            .saturating_add(
+                self.view_cache_elements_next
+                    .values()
+                    .fold(0u64, |acc, elements| {
+                        acc.saturating_add(elements.len() as u64)
+                    }),
+            );
+        let view_cache_key_mismatch_roots_count = self.view_cache_key_mismatch_roots.len() as u64;
+        let scratch_element_children_vec_pool_len =
+            self.scratch_element_children_vec_pool.len() as u64;
+        let scratch_element_children_vec_pool_capacity_total = self
+            .scratch_element_children_vec_pool
+            .iter()
+            .fold(0u64, |acc, vec| acc.saturating_add(vec.capacity() as u64));
+        let scratch_element_children_vec_pool_bytes_estimate_total = self
+            .scratch_element_children_vec_pool
+            .iter()
+            .fold(0u64, |acc, vec| {
+                acc.saturating_add(
+                    (vec.capacity() as u64)
+                        .saturating_mul(std::mem::size_of::<AnyElement>() as u64),
+                )
+            });
+
         const KEEP_ALIVE_ROOT_SAMPLE: usize = 16;
         let mut retained_keep_alive_roots: Vec<NodeId> = self
             .retained_virtual_list_keep_alive_roots
@@ -2022,6 +2178,8 @@ impl WindowElementState {
             pressed_pressable_visual_bounds: visual_bounds_for(self.pressed_pressable),
             hovered_hover_region: self.hovered_hover_region,
             wants_continuous_frames: self.wants_continuous_frames(),
+            continuous_frame_leases,
+            animation_frame_request_roots,
             observed_models: self
                 .observed_models_next
                 .iter()
@@ -2053,6 +2211,23 @@ impl WindowElementState {
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,
+            rendered_state_entries,
+            next_state_entries,
+            lag_state_frames,
+            lag_state_entries_total,
+            state_entries_total,
+            nodes_count,
+            bounds_entries_total,
+            timer_targets_count,
+            transient_events_count,
+            view_cache_state_key_roots_count,
+            view_cache_state_key_entries_total,
+            view_cache_element_roots_count,
+            view_cache_element_entries_total,
+            view_cache_key_mismatch_roots_count,
+            scratch_element_children_vec_pool_len,
+            scratch_element_children_vec_pool_capacity_total,
+            scratch_element_children_vec_pool_bytes_estimate_total,
             retained_keep_alive_roots_len,
             retained_keep_alive_roots_head,
             retained_keep_alive_roots_tail,
@@ -2253,6 +2428,8 @@ impl WindowElementState {
 #[must_use]
 pub struct ContinuousFrames {
     leases: Arc<AtomicUsize>,
+    #[cfg(feature = "diagnostics")]
+    owners: Option<(Arc<Mutex<HashMap<GlobalElementId, u32>>>, GlobalElementId)>,
 }
 
 impl Drop for ContinuousFrames {
@@ -2260,6 +2437,17 @@ impl Drop for ContinuousFrames {
         let _ = self
             .leases
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1));
+        #[cfg(feature = "diagnostics")]
+        if let Some((owners, owner)) = self.owners.as_ref() {
+            let mut owners = owners.lock().unwrap_or_else(|err| err.into_inner());
+            if let Some(count) = owners.get_mut(owner) {
+                if *count <= 1 {
+                    owners.remove(owner);
+                } else {
+                    *count -= 1;
+                }
+            }
+        }
     }
 }
 

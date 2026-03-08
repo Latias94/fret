@@ -36,8 +36,13 @@ node-graph-demos-legacy = ["fret-examples/node-graph-demos-legacy"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 anyhow.workspace = true
+pollster.workspace = true
+serde_json.workspace = true
+wgpu.workspace = true
+winit.workspace = true
 fret-alloc = { path = "../../crates/fret-alloc" }
 fret-examples = { path = "../fret-examples" }
+fret-render = { path = "../../crates/fret-render" }
 fret-ui-gallery = { path = "../fret-ui-gallery", optional = true }
 fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core", optional = true }

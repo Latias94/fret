@@ -123,6 +123,8 @@ pub mod grouped_bars_demo;
 pub mod heatmap_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod hello_counter_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod hello_world_compare_demo;
 pub mod histogram2d_demo;
 pub mod histogram_demo;
 pub mod horizontal_bars_demo;

@@ -6,7 +6,7 @@ use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
 use fret_ui::declarative;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsDecoration, SpacerProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsProps, SpacerProps};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
 use fret_workspace::WorkspaceFrame;
@@ -23,6 +23,8 @@ pub(super) struct PreparedFrame {
     pub(super) cache_content: bool,
     pub(super) content_models: Arc<ui::UiGalleryModels>,
     pub(super) selected_page: Model<Arc<str>>,
+    pub(super) workspace_tabs: Model<Vec<Arc<str>>>,
+    pub(super) workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     pub(super) nav_query: Model<String>,
     pub(super) settings_open: Model<bool>,
     pub(super) settings_menu_bar_os: Model<Option<Arc<str>>>,
@@ -31,6 +33,7 @@ pub(super) struct PreparedFrame {
     pub(super) settings_menu_bar_in_window_open: Model<bool>,
     pub(super) settings_edit_can_undo: Model<bool>,
     pub(super) settings_edit_can_redo: Model<bool>,
+    pub(super) chrome_show_workspace_tab_strip: Model<bool>,
     pub(super) menu_bar_seq: Model<u64>,
     pub(super) inspector_enabled: Model<bool>,
     pub(super) inspector_last_pointer: Model<Option<fret_core::Point>>,
@@ -107,6 +110,8 @@ pub(super) fn begin_frame(
 
     let content_models = Arc::new(state.content_models());
     let selected_page = state.selected_page.clone();
+    let workspace_tabs = state.workspace_tabs.clone();
+    let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
     let nav_query = state.nav_query.clone();
     let settings_open = state.settings_open.clone();
     let settings_menu_bar_os = state.settings_menu_bar_os.clone();
@@ -115,6 +120,7 @@ pub(super) fn begin_frame(
     let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
     let settings_edit_can_undo = state.settings_edit_can_undo.clone();
     let settings_edit_can_redo = state.settings_edit_can_redo.clone();
+    let chrome_show_workspace_tab_strip = state.chrome_show_workspace_tab_strip.clone();
     let menu_bar_seq = state.menu_bar_seq.clone();
     let inspector_enabled = state.inspector_enabled.clone();
     let inspector_last_pointer = state.inspector_last_pointer.clone();
@@ -157,6 +163,8 @@ pub(super) fn begin_frame(
         cache_content,
         content_models,
         selected_page,
+        workspace_tabs,
+        workspace_dirty_tabs,
         nav_query,
         settings_open,
         settings_menu_bar_os,
@@ -165,6 +173,7 @@ pub(super) fn begin_frame(
         settings_menu_bar_in_window_open,
         settings_edit_can_undo,
         settings_edit_can_redo,
+        chrome_show_workspace_tab_strip,
         menu_bar_seq,
         inspector_enabled,
         inspector_last_pointer,
@@ -222,6 +231,7 @@ fn render_root_contents(
         frame.cache_sidebar,
         &frame.nav_query,
         &frame.selected_page,
+        &frame.workspace_tabs,
     );
     let content = shell::content_view(
         cx,
@@ -232,34 +242,44 @@ fn render_root_contents(
         frame.content_models.as_ref(),
     );
 
+    let show_tab_strip = cx
+        .get_model_copied(&frame.chrome_show_workspace_tab_strip, Invalidation::Layout)
+        .unwrap_or(false);
+    let tab_strip = if show_tab_strip && (frame.bisect & BISECT_DISABLE_TAB_STRIP) == 0 {
+        Some(chrome::tab_strip_view(
+            cx,
+            false,
+            &frame.selected_page,
+            &frame.workspace_tabs,
+            &frame.workspace_dirty_tabs,
+        ))
+    } else {
+        None
+    };
+
     let menubar_handle = std::cell::RefCell::new(None);
     let in_window_menu_bar =
         menubar::build_in_window_menu_bar(cx, &frame.menu_bar_seq, &menubar_handle);
 
-    let top_bar = if in_window_menu_bar.is_empty() {
-        None
-    } else {
-        Some(chrome::top_bar_view(cx, in_window_menu_bar))
-    };
+    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
 
     let mut center_layout = fret_ui::element::LayoutStyle::default();
     center_layout.size.width = fret_ui::element::Length::Fill;
     center_layout.size.height = fret_ui::element::Length::Fill;
     center_layout.flex.grow = 1.0;
 
-    let center = cx.flex(
-        fret_ui::element::FlexProps {
-            layout: center_layout,
-            direction: fret_core::Axis::Horizontal,
-            ..Default::default()
-        },
-        |_cx| vec![sidebar, content],
-    );
+    let center = cx
+        .flex(
+            fret_ui::element::FlexProps {
+                layout: center_layout,
+                direction: fret_core::Axis::Horizontal,
+                ..Default::default()
+            },
+            |_cx| vec![sidebar, content],
+        )
+        .test_id("ui-gallery-workspace-center");
 
-    let mut frame_el = WorkspaceFrame::new(center);
-    if let Some(top_bar) = top_bar {
-        frame_el = frame_el.top(top_bar);
-    }
+    let mut frame_el = WorkspaceFrame::new(center).top(top_bar);
     if frame.show_status_bar {
         let status_bar = status_bar::status_bar_view(
             cx,
@@ -272,10 +292,18 @@ fn render_root_contents(
     }
     let frame_el = frame_el.into_element(cx);
 
-    let panel = frame_el.attach_semantics(
-        SemanticsDecoration::default()
-            .role(SemanticsRole::Panel)
-            .label("fret-ui-gallery"),
+    let mut frame_semantics_layout = LayoutStyle::default();
+    frame_semantics_layout.size.width = Length::Fill;
+    frame_semantics_layout.size.height = Length::Fill;
+    let panel = cx.semantics(
+        SemanticsProps {
+            layout: frame_semantics_layout,
+            role: SemanticsRole::Panel,
+            label: Some(Arc::from("fret-ui-gallery")),
+            test_id: Some(Arc::from("ui-gallery-workspace-frame")),
+            ..Default::default()
+        },
+        |_cx| [frame_el],
     );
     menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
 
@@ -297,6 +325,7 @@ fn render_root_contents(
         frame.settings_menu_bar_in_window_open.clone(),
         frame.settings_edit_can_undo.clone(),
         frame.settings_edit_can_redo.clone(),
+        frame.chrome_show_workspace_tab_strip.clone(),
         &mut content,
     );
 
@@ -566,9 +595,13 @@ mod tests {
         );
     }
 
-    fn scroll_test_id_into_gallery_viewport(rendered: &mut RenderedGalleryPage, target_test_id: &str) {
+    fn scroll_test_id_into_gallery_viewport(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+    ) {
         for _ in 0..64 {
-            let gallery_viewport = visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
+            let gallery_viewport =
+                visual_bounds_by_test_id(rendered, "ui-gallery-content-viewport");
             let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
             let target_center_y = target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5;
             let visible_top = gallery_viewport.origin.y.0;
@@ -648,7 +681,9 @@ mod tests {
             .ui
             .semantics_snapshot()
             .expect("expected semantics snapshot after initial render");
-        let before_viewport_scroll = node_by_test_id(before_snapshot, viewport_test_id).extra.scroll;
+        let before_viewport_scroll = node_by_test_id(before_snapshot, viewport_test_id)
+            .extra
+            .scroll;
         let before_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
         assert!(
             before_viewport.size.height.0 > 0.01,
@@ -680,7 +715,9 @@ mod tests {
             .ui
             .semantics_snapshot()
             .expect("expected semantics snapshot after wheel scrolling");
-        let after_viewport_scroll = node_by_test_id(after_snapshot, viewport_test_id).extra.scroll;
+        let after_viewport_scroll = node_by_test_id(after_snapshot, viewport_test_id)
+            .extra
+            .scroll;
         let after_viewport = visual_bounds_by_test_id(&rendered, viewport_test_id);
         assert!(
             after_viewport_scroll.y.unwrap_or(0.0) > before_viewport_scroll.y.unwrap_or(0.0) + 0.01,
