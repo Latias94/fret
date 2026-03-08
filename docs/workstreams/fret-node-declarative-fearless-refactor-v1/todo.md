@@ -517,6 +517,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
     `canvas/widget/paint_overlay_feedback.rs` seams, so retained overlay paint helpers no
     longer stay embedded in one surface file.
+  - Progress: `viewport_timers.rs` now routes animation/debounce, inertia,
+    and auto-pan timer orchestration through the private
+    `canvas/widget/viewport_timer_animation.rs`,
+    `canvas/widget/viewport_timer_inertia.rs`, and
+    `canvas/widget/viewport_timer_auto_pan.rs` seams, so retained viewport timer helpers
+    no longer stay embedded in one surface file.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,

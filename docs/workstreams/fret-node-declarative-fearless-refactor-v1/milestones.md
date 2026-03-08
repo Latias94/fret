@@ -580,6 +580,12 @@ real editors.
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
   `canvas/widget/paint_overlay_feedback.rs` seams, so retained overlay paint helpers no
   longer stay embedded in one surface file.
+- `viewport_timers.rs` now routes animation/debounce, inertia,
+  and auto-pan timer orchestration through the private
+  `canvas/widget/viewport_timer_animation.rs`,
+  `canvas/widget/viewport_timer_inertia.rs`, and
+  `canvas/widget/viewport_timer_auto_pan.rs` seams, so retained viewport timer helpers
+  no longer stay embedded in one surface file.
 
 ### Deliverables
 
@@ -643,6 +649,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_animation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_inertia.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_timer_auto_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
