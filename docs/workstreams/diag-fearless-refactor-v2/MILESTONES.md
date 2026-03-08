@@ -116,7 +116,10 @@ Progress update:
   - `finalize_campaign_execution` now builds a dedicated `CampaignExecutionFinalizePlan`,
   - failure counting plus summary-finalize setup now route through that plan before finalize IO,
   - helper-level regression coverage now locks failure-count and summary-finalize setup reuse without running summarize/write side effects.
-- The next decision point in this area is whether any remaining outcome assembly or cross-function handoff in `execute_campaign_inner` still pays better than moving on to another orchestration-heavy file.
+- `diag_campaign` has now landed another report handoff seam around single-campaign execution:
+  - `execute_campaign` now routes normalization plus report construction through `build_campaign_execution_report_from_outcome_result`,
+  - helper-level regression coverage now locks the error-to-failed-report normalization path without running campaign execution.
+- The next decision point in this area is whether any remaining pure report/outcome shaping in `diag_campaign` still pays better than moving on to another orchestration-heavy file.
 
 Exit criteria:
 

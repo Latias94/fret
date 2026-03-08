@@ -1194,11 +1194,23 @@ fn execute_campaign(
     ctx: &CampaignRunContext,
 ) -> CampaignExecutionReport {
     let start_plan = build_campaign_execution_start_plan(campaign, ctx);
-    let outcome = normalize_campaign_execution_outcome(
+    build_campaign_execution_report_from_outcome_result(
+        campaign,
+        &start_plan.execution,
         execute_campaign_inner(campaign, ctx, &start_plan),
-        campaign.items.len(),
-    );
-    build_campaign_execution_report(campaign, &start_plan.execution, outcome)
+    )
+}
+
+fn build_campaign_execution_report_from_outcome_result(
+    campaign: &CampaignDefinition,
+    plan: &CampaignExecutionPlan,
+    outcome: Result<CampaignExecutionOutcome, String>,
+) -> CampaignExecutionReport {
+    build_campaign_execution_report(
+        campaign,
+        plan,
+        normalize_campaign_execution_outcome(outcome, campaign.items.len()),
+    )
 }
 
 fn normalize_campaign_execution_outcome(
@@ -3000,6 +3012,31 @@ mod tests {
         assert_eq!(outcome.error.as_deref(), Some("boom"));
         assert!(outcome.share_manifest_path.is_none());
         assert!(outcome.share_error.is_none());
+    }
+
+    #[test]
+    fn build_campaign_execution_report_from_outcome_result_normalizes_err_before_building_report() {
+        let root = PathBuf::from("diag-root");
+        let ctx = sample_campaign_run_context(&root);
+        let campaign = sample_campaign_definition();
+        let plan = build_campaign_execution_plan_at(&campaign, &ctx, 42);
+
+        let report = build_campaign_execution_report_from_outcome_result(
+            &campaign,
+            &plan,
+            Err("boom".to_string()),
+        );
+
+        assert_eq!(report.campaign_id, "ui-gallery-smoke");
+        assert_eq!(report.out_dir, plan.campaign_root);
+        assert_eq!(report.items_total, 1);
+        assert_eq!(report.items_failed, 1);
+        assert_eq!(report.suites_total, 1);
+        assert_eq!(report.scripts_total, 0);
+        assert!(!report.ok);
+        assert_eq!(report.error.as_deref(), Some("boom"));
+        assert!(report.aggregate.share_manifest_path.is_none());
+        assert!(report.aggregate.share_error.is_none());
     }
 
     #[test]

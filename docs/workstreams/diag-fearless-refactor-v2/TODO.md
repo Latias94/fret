@@ -98,6 +98,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - latest landing: `diag_campaign` now builds a dedicated `CampaignBatchArtifactWritePlan` plus `build_campaign_batch_manifest_write_plan`, so batch manifest output-path/payload shaping and summary-finalize setup are settled before IO rather than being re-derived inline inside `write_campaign_batch_artifacts`
     - latest landing: `diag_campaign` now builds a dedicated `CampaignExecutionStartPlan` plus `build_campaign_manifest_write_plan`, so single-campaign execution-plan and manifest setup are settled before IO rather than being re-threaded inline across `execute_campaign` and `execute_campaign_inner`
     - latest landing: `diag_campaign` now builds a dedicated `CampaignExecutionFinalizePlan`, so failure counting plus summary-finalize setup are settled before finalize IO rather than being re-derived inline inside `finalize_campaign_execution`
+    - latest landing: `diag_campaign` now routes result normalization plus report construction through `build_campaign_execution_report_from_outcome_result`, so `execute_campaign` no longer rethreads that outcome/report handoff inline after startup execution returns
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.
