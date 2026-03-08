@@ -123,23 +123,24 @@ Keep explicit `notify()` for:
 As of 2026-03-08, the biggest remaining ergonomics gap is no longer text inputs. The narrow text
 bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 
-The clearest remaining gaps are:
+The clearest remaining gaps are now narrower:
 
-- simple view-owned keyed collections still often stay on `Model<Vec<_>>` + nested row models,
 - widget-local `listener` / `dispatch` sugar is still not the default path,
-- builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces.
+- builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
+- remaining explicit-model collection examples are now comparison-only or intentionally advanced rather than default-surface blockers.
 
-The new comparison example `apps/fret-cookbook/examples/simple_todo_v2_target.rs` is useful evidence
-for this distinction: it already keeps the entire keyed list in `LocalState<Vec<TodoRow>>`, so the
-remaining visible pressure now shifts more toward the narrower checkbox/label parity follow-up
-and handler placement than toward macros or another round of generic helpers.
+`apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`, and
+`apps/fretboard/src/scaffold/templates.rs` now collectively show that the current v2 path already
+covers cookbook, app-grade, and scaffold keyed-list surfaces via `LocalState<Vec<TodoRow>>`,
+payload row actions, and snapshot checkbox bindings. That shifts the remaining visible pressure more
+toward handler placement, default-path documentation, and narrower widget ergonomics rather than
+macros or another round of generic tracked-write helpers.
 
 ## What is *not* default yet
 
 These remain valid, but they are not the default golden path:
 
 - raw `cx.on_action(...)`
-- pure view-owned keyed collections expressed without explicit `Model<Vec<_>>` coordination
 - widget-local `listener` / `dispatch` / `shortcut` sugar
 - another default transaction helper beyond `on_action_notify_models::<A>(...)`
 - macros beyond existing minimal helpers

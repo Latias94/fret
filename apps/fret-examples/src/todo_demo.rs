@@ -9,7 +9,10 @@ mod act {
         ClearDone = "todo_demo.clear_done.v1"
     ]);
 
-    fret::payload_actions!([Remove(u64) = "todo_demo.remove.v2"]);
+    fret::payload_actions!([
+        Toggle(u64) = "todo_demo.toggle.v1",
+        Remove(u64) = "todo_demo.remove.v2"
+    ]);
 }
 
 const TEST_ID_ROOT: &str = "todo_demo.root";
@@ -21,80 +24,58 @@ const TEST_ID_ROWS: &str = "todo_demo.rows";
 const TEST_ID_DONE_PREFIX: &str = "todo_demo.done.";
 const TEST_ID_ROW_PREFIX: &str = "todo_demo.row.";
 const TEST_ID_REMOVE_PREFIX: &str = "todo_demo.remove.";
+const TEST_ID_NOTE: &str = "todo_demo.note";
 
 #[derive(Clone)]
-struct TodoItem {
+struct TodoRow {
     id: u64,
-    done: Model<bool>,
+    done: bool,
     text: Arc<str>,
 }
 
-struct TodoState {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    next_id: Model<u64>,
-}
-
-struct TodoDemoView {
-    st: TodoState,
-}
+struct TodoDemoView;
 
 impl View for TodoDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        let done_1 = app.models_mut().insert(false);
-        let done_2 = app.models_mut().insert(true);
-        let done_3 = app.models_mut().insert(false);
-
-        let todos = app.models_mut().insert(vec![
-            TodoItem {
-                id: 1,
-                done: done_1,
-                text: Arc::from("Action-first: one dispatch pipeline"),
-            },
-            TodoItem {
-                id: 2,
-                done: done_2,
-                text: Arc::from("View runtime: notify → dirty → reuse"),
-            },
-            TodoItem {
-                id: 3,
-                done: done_3,
-                text: Arc::from("Payload actions v2: parameterize remove"),
-            },
-        ]);
-
-        let draft = app.models_mut().insert(String::new());
-        let next_id = app.models_mut().insert(4u64);
-
-        Self {
-            st: TodoState {
-                todos,
-                draft,
-                next_id,
-            },
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
-        let todos = cx.watch_model(&self.st.todos).layout().cloned_or_default();
-        let draft_value = cx.watch_model(&self.st.draft).layout().cloned_or_default();
+        let draft_state = cx.use_local::<String>();
+        let next_id_state = cx.use_local_with(|| 4u64);
+        let todos_state = cx.use_local_with(|| {
+            vec![
+                TodoRow {
+                    id: 1,
+                    done: false,
+                    text: Arc::from("Action-first: one dispatch pipeline"),
+                },
+                TodoRow {
+                    id: 2,
+                    done: true,
+                    text: Arc::from("View runtime: notify -> dirty -> reuse"),
+                },
+                TodoRow {
+                    id: 3,
+                    done: false,
+                    text: Arc::from("Payload actions v2: parameterize toggle/remove"),
+                },
+            ]
+        });
 
-        let mut done_count = 0usize;
-        for t in &todos {
-            if cx.watch_model(&t.done).paint().copied_or_default() {
-                done_count += 1;
-            }
-        }
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
+
+        let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
         let add_enabled = !draft_value.trim().is_empty();
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_PROGRESS)
@@ -106,176 +87,212 @@ impl View for TodoDemoView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(done_count == 0)
             .action(act::ClearDone)
-            .into_element(cx)
             .test_id(TEST_ID_CLEAR_DONE);
 
-        let header_actions = ui::h_flex(|_cx| [progress, clear_done_btn])
+        let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let add_btn = shadcn::Button::new("Add")
             .disabled(!add_enabled)
             .action(act::Add)
-            .into_element(cx)
             .test_id(TEST_ID_ADD);
 
-        let input = shadcn::Input::new(self.st.draft.clone())
+        let input = shadcn::Input::new(&draft_state)
             .a11y_label("New task")
-            .placeholder("Add a task…")
+            .placeholder("Add a task?")
             .submit_command(act::Add.into())
-            .into_element(cx)
             .test_id(TEST_ID_DRAFT);
 
-        let input_row = ui::h_flex(|_cx| [input, add_btn])
+        let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let rows = ui::v_flex_build(|cx, out| {
-            for t in &todos {
+            if todos.is_empty() {
+                out.push_ui(
+                    cx,
+                    ui::text("No tasks yet. Add one above.")
+                        .text_sm()
+                        .text_color(ColorRef::Color(
+                            theme_for_rows.color_token("muted-foreground"),
+                        )),
+                );
+                return;
+            }
+
+            for row in &todos {
                 let theme = theme_for_rows.clone();
-                out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
+                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
             }
         })
         .gap(Space::N2)
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_ROWS);
 
-        let content = ui::v_flex(|_cx| [input_row, rows])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx);
+        let note = ui::text(
+            "App-grade comparison target: this demo now keeps the keyed list in LocalState<Vec<_>> and uses payload actions for row toggle/remove. The next migration target should be the scaffold simple-todo template, not more tracked-write helpers.",
+        )
+        .text_xs()
+        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+        .test_id(TEST_ID_NOTE);
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Todo demo (action-first)").into_element(cx),
-                shadcn::CardDescription::new("View runtime + typed actions + payload remove.")
-                    .into_element(cx),
-                header_actions,
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Todo demo (action-first)"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "App-grade local list + typed actions + payload row actions.",
+                        ),
+                    );
+                    out.push_ui(cx, header_actions);
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; input_row, rows, note])
+                            .gap(Space::N4)
+                            .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .max_w(Px(720.0))
-        .into_element(cx);
+        .max_w(Px(720.0));
 
         cx.on_action_notify_models::<act::Add>({
-            let todos = self.st.todos.clone();
-            let draft = self.st.draft.clone();
-            let next_id = self.st.next_id.clone();
+            let draft_state = draft_state.clone();
+            let next_id_state = next_id_state.clone();
+            let todos_state = todos_state.clone();
             move |models| {
-                let text = models
-                    .read(&draft, |v| v.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+                let text = draft_state
+                    .value_in_or_else(models, String::new)
+                    .trim()
+                    .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let done = models.insert(false);
-                let id = models.read(&next_id, |v| *v).ok().unwrap_or(0);
-                let _ = models.update(&next_id, |v| *v = v.saturating_add(1).max(1));
+                let id = next_id_state
+                    .read_in(models, |value| *value)
+                    .ok()
+                    .unwrap_or(1);
+                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
 
-                let _ = models.update(&todos, |todos| {
-                    todos.push(TodoItem {
+                if !todos_state.update_in(models, |rows| {
+                    rows.push(TodoRow {
                         id,
-                        done,
+                        done: false,
                         text: Arc::from(text),
                     });
-                });
-                let _ = models.update(&draft, String::clear);
-                true
+                }) {
+                    return false;
+                }
+
+                draft_state.set_in(models, String::new())
             }
         });
 
         cx.on_action_notify_models::<act::ClearDone>({
-            let todos = self.st.todos.clone();
+            let todos_state = todos_state.clone();
             move |models| {
-                let snapshot = models.read(&todos, Clone::clone).ok().unwrap_or_default();
+                todos_state.update_in_if(models, |rows| {
+                    let before = rows.len();
+                    rows.retain(|row| !row.done);
+                    rows.len() != before
+                })
+            }
+        });
 
-                let mut remove_ids = Vec::new();
-                for t in &snapshot {
-                    let done = models.read(&t.done, |v| *v).ok().unwrap_or(false);
-                    if done {
-                        remove_ids.push(t.id);
+        cx.on_payload_action_notify::<act::Toggle>({
+            let todos_state = todos_state.clone();
+            move |host, _action_cx, id| {
+                todos_state.update_in_if(host.models_mut(), |rows| {
+                    if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                        row.done = !row.done;
+                        true
+                    } else {
+                        false
                     }
-                }
-                if remove_ids.is_empty() {
-                    return false;
-                }
-
-                let _ = models.update(&todos, |todos| {
-                    todos.retain(|t| !remove_ids.contains(&t.id));
-                });
-                true
+                })
             }
         });
 
         cx.on_payload_action_notify::<act::Remove>({
-            let todos = self.st.todos.clone();
-            move |host, _acx, id| {
-                let _ = host.models_mut().update(&todos, |todos| {
-                    todos.retain(|t| t.id != id);
-                });
-                true
+            let todos_state = todos_state.clone();
+            move |host, _action_cx, id| {
+                todos_state.update_in_if(host.models_mut(), |rows| {
+                    let before = rows.len();
+                    rows.retain(|row| row.id != id);
+                    rows.len() != before
+                })
             }
         });
 
         ui::container(|cx| {
-            let centered = ui::v_flex(|_cx| [card])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                .into_element(cx);
-            [centered]
+            ui::children![
+                cx;
+                ui::v_flex(|cx| ui::children![cx; card])
+                    .w_full()
+                    .h_full()
+                    .justify_center()
+                    .items_center()
+            ]
         })
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx)
         .test_id(TEST_ID_ROOT)
+        .into_element(cx)
         .into()
     }
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
-    let done = cx.watch_model(&item.done).paint().copied_or_default();
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<App> {
+    let checkbox = shadcn::Checkbox::from_checked(row.done)
+        .action(act::Toggle)
+        .action_payload(row.id)
+        .a11y_label(row.text.clone())
+        .test_id(format!("{TEST_ID_DONE_PREFIX}{}", row.id));
 
-    let checkbox = shadcn::Checkbox::new(item.done.clone())
-        .into_element(cx)
-        .test_id(format!("{TEST_ID_DONE_PREFIX}{}", item.id));
-
-    let text = ui::text(item.text.clone())
+    let text = ui::text(row.text.clone())
         .truncate()
         .text_sm()
-        .text_color(ColorRef::Color(if done {
+        .flex_1()
+        .min_w_0()
+        .text_color(ColorRef::Color(if row.done {
             theme.color_token("muted-foreground")
         } else {
             theme.color_token("foreground")
-        }))
-        .into_element(cx);
+        }));
+
+    let leading = ui::h_flex(|cx| ui::children![cx; checkbox, text])
+        .gap(Space::N2)
+        .items_start()
+        .flex_1()
+        .min_w_0();
 
     let remove = shadcn::Button::new("Remove")
         .variant(shadcn::ButtonVariant::Secondary)
         .action(act::Remove)
-        .action_payload(item.id)
-        .test_id(format!("{TEST_ID_REMOVE_PREFIX}{}", item.id))
-        .into_element(cx);
+        .action_payload(row.id)
+        .test_id(format!("{TEST_ID_REMOVE_PREFIX}{}", row.id));
 
-    ui::h_flex(|_cx| [checkbox, text, remove])
+    ui::h_flex(|cx| ui::children![cx; leading, remove])
         .gap(Space::N2)
-        .items_center()
+        .items_start()
         .justify_between()
         .w_full()
-        .into_element(cx)
-        .test_id(format!("{TEST_ID_ROW_PREFIX}{}", item.id))
+        .test_id(format!("{TEST_ID_ROW_PREFIX}{}", row.id))
 }
 
 pub fn run() -> anyhow::Result<()> {

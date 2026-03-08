@@ -30,8 +30,8 @@ remaining explicit-model collection surfaces are:
 | --- | --- | --- | --- | --- |
 | `apps/fret-cookbook/examples/simple_todo.rs` | `Model<Vec<TodoItem>>` + row `Model<bool>` | Keep one explicit-model comparison surface beside the local-state target. | Keep as comparison/reference for now; do not treat it as the default end state. | Intentional comparison |
 | `apps/fret-cookbook/examples/simple_todo_v2_target.rs` | `LocalState<Vec<TodoRow>>` + snapshot checkbox + payload actions | Proves the current runtime can already express a small view-owned keyed collection without `Model<Vec<_>>`. | Use as the evidence baseline for future migrations. | Evidence target |
-| `apps/fret-examples/src/todo_demo.rs` | `Model<Vec<TodoItem>>` + row `Model<bool>` + `on_action_notify_models` | Mostly an authoring/demo choice rather than a hard runtime requirement. | Make this the next app-grade comparison target before changing the scaffold template. | Candidate |
-| `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`) | Local draft/id + explicit `Model<Vec<TodoItem>>` rows | The scaffold still values a conservative dynamic-list teaching path. | Re-evaluate after one more app-grade migration proves the local-state list path is boring enough. | Candidate after demo proof |
+| `apps/fret-examples/src/todo_demo.rs` | `LocalState<Vec<TodoRow>>` + payload toggle/remove + snapshot checkbox | App-grade proof that the current v2 local-state path scales beyond the cookbook comparison sample. | Keep as the app-grade evidence anchor; use it to judge the scaffold migration next. | Evidence target |
+| `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`) | `LocalState<Vec<TodoRow>>` + payload toggle + local draft/id state | Scaffold default path now matches the v2 keyed-list authoring direction. | Keep as the default template evidence anchor. | Evidence target |
 | `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) | explicit collection models + selector/query/filter coordination | This template intentionally teaches multi-state coordination, query, and filter derivation together. | Keep explicit for now; not a target for local-state-first simplification. | Intentional advanced surface |
 
 ## What this inventory changes
@@ -42,20 +42,21 @@ It changes the next question from:
 
 to:
 
-> can one more collection-oriented teaching surface move from explicit `Model<Vec<_>>` to the
-> existing v2 local-state path without losing the lesson it is supposed to teach?
+> now that cookbook, app-grade, and scaffold keyed-list surfaces all use the v2 local-state path,
+> should any new helper be added at all, or should the remaining explicit surfaces stay comparison-
+> only / intentionally advanced?
 
 ## Recommended sequencing
 
 | Step | Why |
 | --- | --- |
-| Audit `apps/fret-examples/src/todo_demo.rs` next | It is closer to an app-grade reference than the cookbook comparison sample, but less user-facing than the scaffold template. |
-| Revisit `simple_todo_template_main_rs` only after that audit | Template churn should follow evidence, not lead it. |
-| Keep `simple_todo.rs` as an explicit comparison surface until the template decision is made | The repo still benefits from showing both paths side by side. |
-| Do not add another default tracked-write helper before these audits land | The remaining noise may be a surface-choice issue rather than an API-gap issue. |
+| Use `apps/fret-examples/src/todo_demo.rs` as the app-grade evidence anchor | It now demonstrates the current v2 local-state list path outside the cookbook. |
+| Keep `apps/fretboard/src/scaffold/templates.rs` as the default template evidence anchor | It now demonstrates that the v2 keyed-list path is teachable in generated apps too. |
+| Keep `simple_todo.rs` as an explicit comparison surface until there is a reason to delete the comparison | The repo still benefits from showing both paths side by side. |
+| Do not add another default tracked-write helper after this migration | The remaining noise now lives in comparison-only or intentionally advanced surfaces. |
 
 ## Provisional conclusion
 
-The remaining collection noise in the repo is now concentrated in a small number of explicit-model
-surfaces. That is good news: it means the next milestone should compare and possibly migrate those
-surfaces directly, instead of continuing to widen the default helper surface.
+The remaining collection noise in the repo is now concentrated in comparison-only or intentionally
+advanced surfaces. Cookbook, app-grade, and scaffold keyed-list defaults all land on the same v2
+local-state path, so widening the default helper surface is still the wrong next move.

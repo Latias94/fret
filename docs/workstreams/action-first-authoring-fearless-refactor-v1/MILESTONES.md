@@ -137,7 +137,7 @@ Post-v1 direction (recommended):
 - Track the remaining ergonomics pressure separately:
   - direct local-state ergonomics beyond `Model<T>`, with the next step being to turn the new todo-like `LocalState<Vec<_>>` comparison path into a boring default rather than a special evidence example; render-side `value_*`, store-side `value_in*`, and handled-aware `update_in_if` now cover the common read/write boilerplate, so the remaining pressure is concentrated on higher-level tracked-write ownership/invalidation defaults rather than syntax noise,
   - the new tracked-write inventory note confirms that the remaining noisy cases mostly live at explicit-model/shared coordination boundaries, so the next milestone step should evaluate those boundaries directly before adding more default action helpers,
-  - the new explicit-model collection inventory narrows that evidence pass further: `apps/fret-examples/src/todo_demo.rs` should be the next comparison target, while the scaffold simple-todo template should only move after that proof lands,
+  - the explicit-model collection inventory now records that both `apps/fret-examples/src/todo_demo.rs` and the scaffold simple-todo template have moved onto the v2 local-state keyed-list path, so remaining explicit collection surfaces are comparison-only or intentionally advanced,
   - checkbox/switch/toggle action-only `control_id` parity is now closed, so any future discrete-widget work should point to a narrower regression than label forwarding,
   - skill-level parity guidance remains the shared rubric for any future discrete-widget audits before adding helpers,
   - explicit-vs-implicit invalidation ergonomics (`notify()` stays available, but should not be the default burden after tracked state writes),

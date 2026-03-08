@@ -31,7 +31,7 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 | Store-side local read | todo draft/id reads inside multi-state transaction | `value_in_or*` | Covered | Matches render-side `value_*` naming now. |
 | Collection mutation with handled decision | toggle/remove/retain by id in `LocalState<Vec<_>>` | `update_in_if` / `update_action_if` | Covered | Removes the common `mut handled = false` pattern. |
 | Multi-state transaction touching local + explicit models | add todo, submit form, sync filters | `on_action_notify_models` | Keep as default | This is real coordination, not just syntax noise. |
-| Shared explicit-model collections | legacy todo/demo/template flows with nested row models | `on_action_notify_models` + explicit `Model<T>` reads/writes | Intentional for now | Better evidence target than new helper design. |
+| Shared explicit-model collections | legacy todo/template flows that still keep nested row models or shared list ownership explicit | `on_action_notify_models` + explicit `Model<T>` reads/writes | Intentional for now | Narrow enough now that surface-by-surface migration evidence is better than new helper design. |
 | Runtime/effect transactions | query invalidation, host/runtime side effects, viewport interop | `on_action_notify_models` or render-time escape hatch | Intentional for now | Not a candidate for local-state sugar. |
 
 ## Evidence anchors
@@ -40,7 +40,7 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 | --- | --- |
 | `apps/fret-cookbook/examples/simple_todo_v2_target.rs` | `LocalState<Vec<_>>` + `value_in*` + `update_in_if` for list mutations |
 | `apps/fret-cookbook/examples/simple_todo.rs` | Remaining explicit-model collection comparison surface |
-| `apps/fretboard/src/scaffold/templates.rs` | Template default path for multi-state add/clear flows |
+| `apps/fretboard/src/scaffold/templates.rs` | Template default path now using `LocalState<Vec<_>>` for the simple keyed-list scaffold while still relying on `on_action_notify_models` for coordinated writes |
 | `apps/fret-cookbook/examples/text_input_basics.rs` | Multi-state local transaction that still fits `on_action_notify_models` cleanly |
 | `apps/fret-examples/src/hello_counter_demo.rs` | Straight local writes that do not need more than current helpers |
 
@@ -64,14 +64,15 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 
 | Step | Why |
 | --- | --- |
-| Use explicit-model collection examples as the next comparison target | They are now the clearest remaining source of noise. |
+| Keep the helper surface stable after the scaffold migration | Default-surface collection migrations are no longer the main blocker. |
 | Avoid adding another helper until two or more real surfaces need the same shape | Keeps the default path stable. |
 | Keep documenting the difference between local-state ergonomics and real coordination cost | Prevents helper sprawl from hiding architectural boundaries. |
 
 ## Provisional conclusion
 
 For the post-v1 default path, the next meaningful question is no longer "how do we read or toggle local
-state with less syntax?" It is:
+state with less syntax?" The local-state keyed-list path now covers cookbook, app-grade, and scaffold
+default surfaces. The remaining question is:
 
 > when a write spans multiple state buckets, should the framework offer a narrower orchestration
 > helper, or is `on_action_notify_models::<A>(|models| ...)` already the right default because the
