@@ -7,11 +7,14 @@ the right one.
 
 These are intentionally stable and should be your default onboarding path:
 
-They all teach the same small authoring model first: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
+They all teach the same small authoring model first: `LocalState` for view-owned state,
+`on_action_notify_models` for coordinated writes, `on_action_notify_transient` for App-bound
+effects, and local `on_activate*` only when widget glue truly needs it.
 
 1. `hello` (template) — smallest runnable UI surface.
    - Generate: `cargo run -p fretboard -- new hello --name hello-world`
-2. `simple-todo` (template) — view runtime + typed actions + models + keyed lists (no selectors/queries).
+2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
+   the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
    - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
 3. `todo` (template) — “best practice baseline” (selectors + queries).
    - Generate: `cargo run -p fretboard -- new todo --name my-todo`
@@ -58,6 +61,7 @@ auto-enable required cookbook features for known Lab examples and print what it 
 
 Preview / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
+- `simple_todo_v2_target` ? comparison target for post-v1 `LocalState<Vec<Row>>` authoring; it is intentionally evidence-oriented, not the default tutorial surface.
 - [apps/fret-cookbook/EXAMPLES.md](../../apps/fret-cookbook/EXAMPLES.md)
 
 Historical MVU removal inventory (applies to maintainer demos, not cookbook):
