@@ -301,7 +301,8 @@ Recommended PR slices:
    - forty-seventh landing: `diag_suite` now prepares per-script stage/reason accounting plus evidence/lint context through a dedicated helper, so each script iteration no longer reassembles that bookkeeping inline after transport execution completes
    - forty-eighth landing: `diag_suite` now routes dump-label planning, `run_script_over_transport` lowering, and `tooling.suite.error` fallback through dedicated helpers, so the transport result decoding path no longer stays inline in one execution block
    - forty-ninth landing: `diag_suite` now routes prewarm/prelude execution and load-script wiring through a dedicated execution-block context, so the main script loop no longer interleaves that setup with transport result decoding in one large closure
-   - next recommended landing: extract per-script launch and transport acquisition so `maybe_launch_demo`, transport selection, and execution-block invocation stop sharing one orchestration branch
+   - fiftieth landing: `diag_suite` now routes per-script launch env/default assembly and connected transport acquisition through `SuiteScriptLaunchRequest` plus `SuiteScriptTransportRequest` / `SuiteScriptTransportSelection`, so `maybe_launch_demo` and filesystem-vs-DevTools selection no longer stay inline in the main script loop
+   - next recommended landing: collapse the remaining per-script execution closure so transport-backed `SuiteScriptExecutionBlockContext` assembly and `execute_suite_script_iteration_block` invocation live behind one helper seam
    - remaining known holdouts: a few session-root-only helpers that intentionally do not require bundle materialization,
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
  4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,

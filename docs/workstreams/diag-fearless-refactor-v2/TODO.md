@@ -44,7 +44,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - tenth landing: `diag_suite` now prepares per-script stage/reason accounting plus evidence/lint context through a dedicated helper, so each script iteration reuses one bookkeeping path after transport execution
     - eleventh landing: `diag_suite` now routes dump-label planning, `run_script_over_transport` lowering, and `tooling.suite.error` fallback through dedicated helpers, so transport result decoding reuses one path
     - twelfth landing: `diag_suite` now routes prewarm/prelude execution and load-script wiring through a dedicated execution-block context, so the script loop reuses one setup path before transport execution
-    - next focus: per-script launch and transport acquisition around `maybe_launch_demo` plus connected transport selection
+    - thirteenth landing: `diag_suite` now routes per-script launch env/default assembly and connected transport acquisition through `SuiteScriptLaunchRequest` plus `SuiteScriptTransportRequest` / `SuiteScriptTransportSelection`, so `maybe_launch_demo` and filesystem-vs-DevTools selection reuse one seam
+    - next focus: collapse the remaining per-script execution closure around `SuiteScriptExecutionBlockContext` assembly plus `execute_suite_script_iteration_block` invocation
   - [ ] suite/campaign resolution,
     - first landing: `diag_suite` now uses `ResolvedSuiteRunInputs` for suite input normalization and env/default resolution
     - second landing: `diag_campaign` now uses a shared invocation builder for per-item `diag_suite::SuiteCmdContext` handoff

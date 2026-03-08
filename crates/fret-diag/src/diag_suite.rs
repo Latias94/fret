@@ -616,6 +616,129 @@ fn exit_for_suite_script_outcome(
     )
 }
 
+struct SuiteScriptLaunchRequest<'a> {
+    reuse_process: bool,
+    suite_launch_env: &'a [(String, String)],
+    src: &'a Path,
+    launch: &'a Option<Vec<String>>,
+    workspace_root: &'a Path,
+    resolved_ready_path: &'a Path,
+    resolved_exit_path: &'a Path,
+    fs_transport_cfg: &'a crate::transport::FsDiagTransportConfig,
+    suite_wants_screenshots: bool,
+    launch_write_bundle_json: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    launch_high_priority: bool,
+}
+
+fn maybe_launch_suite_script_demo(
+    child: &mut Option<LaunchedDemo>,
+    request: &SuiteScriptLaunchRequest<'_>,
+) -> Result<(), String> {
+    if request.reuse_process {
+        return Ok(());
+    }
+
+    let mut per_script_launch_env = request.suite_launch_env.to_vec();
+    for (key, value) in script_env_defaults(request.src) {
+        push_env_if_missing(&mut per_script_launch_env, &key, &value);
+    }
+
+    *child = maybe_launch_demo(
+        request.launch,
+        &per_script_launch_env,
+        request.workspace_root,
+        request.resolved_ready_path,
+        request.resolved_exit_path,
+        request.fs_transport_cfg,
+        request.suite_wants_screenshots,
+        request.launch_write_bundle_json,
+        request.timeout_ms,
+        request.poll_ms,
+        request.launch_high_priority,
+    )?;
+    Ok(())
+}
+
+enum SuiteScriptTransportSelection<'a> {
+    DevtoolsWs {
+        connected: &'a ConnectedToolingTransport,
+    },
+    ReusedFilesystem {
+        connected: &'a ConnectedToolingTransport,
+    },
+    FreshFilesystem {
+        connected: ConnectedToolingTransport,
+    },
+}
+
+impl SuiteScriptTransportSelection<'_> {
+    fn connected(&self) -> &ConnectedToolingTransport {
+        match self {
+            Self::DevtoolsWs { connected } | Self::ReusedFilesystem { connected } => connected,
+            Self::FreshFilesystem { connected } => connected,
+        }
+    }
+
+    fn connected_fs_for_aux(&self) -> Option<&ConnectedToolingTransport> {
+        match self {
+            Self::DevtoolsWs { .. } => None,
+            Self::ReusedFilesystem { .. } | Self::FreshFilesystem { .. } => Some(self.connected()),
+        }
+    }
+}
+
+struct SuiteScriptTransportRequest<'a> {
+    use_devtools_ws: bool,
+    reuse_process: bool,
+    connected_ws: Option<&'a ConnectedToolingTransport>,
+    connected_fs: Option<&'a ConnectedToolingTransport>,
+    fs_transport_cfg: &'a crate::transport::FsDiagTransportConfig,
+    resolved_ready_path: &'a Path,
+    child_running: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    resolved_script_result_path: &'a Path,
+    script_key: &'a str,
+}
+
+fn resolve_suite_script_transport<'a>(
+    request: SuiteScriptTransportRequest<'a>,
+) -> Result<SuiteScriptTransportSelection<'a>, String> {
+    if request.use_devtools_ws {
+        return request
+            .connected_ws
+            .map(|connected| SuiteScriptTransportSelection::DevtoolsWs { connected })
+            .ok_or_else(|| "missing DevTools WS transport (this is a tooling bug)".to_string());
+    }
+
+    if request.reuse_process {
+        return request
+            .connected_fs
+            .map(|connected| SuiteScriptTransportSelection::ReusedFilesystem { connected })
+            .ok_or_else(|| "missing filesystem transport (this is a tooling bug)".to_string());
+    }
+
+    let connected = connect_filesystem_tooling(
+        request.fs_transport_cfg,
+        request.resolved_ready_path,
+        request.child_running,
+        request.timeout_ms,
+        request.poll_ms,
+    )
+    .inspect_err(|err| {
+        write_suite_tooling_failure_result(
+            request.resolved_script_result_path,
+            "tooling.connect.failed",
+            err,
+            Some(request.script_key.to_string()),
+        );
+    })?;
+
+    Ok(SuiteScriptTransportSelection::FreshFilesystem { connected })
+}
+
 fn build_suite_transport_dump_label(src: &Path, idx: usize) -> String {
     let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
     let mut sanitized: String = stem
@@ -2533,90 +2656,66 @@ hint: list suites via `fretboard diag list suites`"
     let script_count = scripts.len();
     for (idx, src) in scripts.into_iter().enumerate() {
         let script_key = normalize_repo_relative_path(&workspace_root, &src);
-        if !reuse_process {
-            let mut per_script_launch_env = suite_launch_env.clone();
-            for (key, value) in script_env_defaults(&src) {
-                push_env_if_missing(&mut per_script_launch_env, &key, &value);
-            }
-            child = match maybe_launch_demo(
-                &launch,
-                &per_script_launch_env,
-                &workspace_root,
-                &resolved_ready_path,
-                &resolved_exit_path,
-                &fs_transport_cfg,
+        if let Err(err) = maybe_launch_suite_script_demo(
+            &mut child,
+            &SuiteScriptLaunchRequest {
+                reuse_process,
+                suite_launch_env: &suite_launch_env,
+                src: &src,
+                launch: &launch,
+                workspace_root: &workspace_root,
+                resolved_ready_path: &resolved_ready_path,
+                resolved_exit_path: &resolved_exit_path,
+                fs_transport_cfg: &fs_transport_cfg,
                 suite_wants_screenshots,
                 launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
-            ) {
-                Ok(v) => v,
-                Err(err) => {
-                    return Err(record_suite_tooling_failure_and_return(
-                        &mut child,
-                        !keep_open,
-                        &resolved_exit_path,
-                        poll_ms,
-                        &summary_ctx,
-                        &suite_stage_counts,
-                        &suite_reason_code_counts,
-                        &mut suite_rows,
-                        &suite_evidence_agg,
-                        &resolved_script_result_path,
-                        Some(script_key.as_str()),
-                        "tooling.launch.failed",
-                        &err,
-                        Some(script_key.clone()),
-                        "error",
-                        Some("tooling.launch.failed"),
-                        None,
-                        "suite run failed (see suite.summary.json)",
-                    ));
-                }
-            };
+            },
+        ) {
+            return Err(record_suite_tooling_failure_and_return(
+                &mut child,
+                !keep_open,
+                &resolved_exit_path,
+                poll_ms,
+                &summary_ctx,
+                &suite_stage_counts,
+                &suite_reason_code_counts,
+                &mut suite_rows,
+                &suite_evidence_agg,
+                &resolved_script_result_path,
+                Some(script_key.as_str()),
+                "tooling.launch.failed",
+                &err,
+                Some(script_key.clone()),
+                "error",
+                Some("tooling.launch.failed"),
+                None,
+                "suite run failed (see suite.summary.json)",
+            ));
         }
         let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
-            let child_running = child.is_some();
-            let connected_fs_iter: ConnectedToolingTransport;
-            let connected: &ConnectedToolingTransport = if use_devtools_ws {
-                connected_ws.as_ref().ok_or_else(|| {
-                    "missing DevTools WS transport (this is a tooling bug)".to_string()
-                })?
-            } else if reuse_process {
-                connected_fs.as_ref().ok_or_else(|| {
-                    "missing filesystem transport (this is a tooling bug)".to_string()
-                })?
-            } else {
-                connected_fs_iter = connect_filesystem_tooling(
-                    &fs_transport_cfg,
-                    &resolved_ready_path,
-                    child_running,
-                    timeout_ms,
-                    poll_ms,
-                )
-                .inspect_err(|err| {
-                    write_suite_tooling_failure_result(
-                        &resolved_script_result_path,
-                        "tooling.connect.failed",
-                        err,
-                        Some(script_key.clone()),
-                    );
-                })?;
-                &connected_fs_iter
-            };
+            let transport = resolve_suite_script_transport(SuiteScriptTransportRequest {
+                use_devtools_ws,
+                reuse_process,
+                connected_ws: connected_ws.as_ref(),
+                connected_fs: connected_fs.as_ref(),
+                fs_transport_cfg: &fs_transport_cfg,
+                resolved_ready_path: &resolved_ready_path,
+                child_running: child.is_some(),
+                timeout_ms,
+                poll_ms,
+                resolved_script_result_path: &resolved_script_result_path,
+                script_key: script_key.as_str(),
+            })?;
 
-            let connected_fs_for_aux = if use_devtools_ws {
-                None
-            } else {
-                Some(connected)
-            };
             let mut execution_ctx = SuiteScriptExecutionBlockContext {
                 tool_launched,
                 child: &mut child,
                 use_devtools_ws,
                 connected_ws: connected_ws.as_ref(),
-                connected_fs_for_aux,
+                connected_fs_for_aux: transport.connected_fs_for_aux(),
                 workspace_root: &workspace_root,
                 resolved_out_dir: &resolved_out_dir,
                 resolved_exit_path: &resolved_exit_path,
@@ -2634,7 +2733,7 @@ hint: list suites via `fretboard diag list suites`"
                 &src,
                 idx,
                 script_key.as_str(),
-                connected,
+                transport.connected(),
                 &mut execution_ctx,
                 &resolved_suite_prewarm_scripts,
                 &resolved_suite_prelude_scripts,

@@ -112,7 +112,7 @@ Why it is second:
 
 Current hotspots worth treating as explicit seam candidates:
 
-- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, and script-execution block assembly have landed; the next target inside this file is per-script launch and transport acquisition around `maybe_launch_demo` plus connected transport selection)
+- `crates/fret-diag/src/diag_suite.rs` (summary/failure emit factoring, per-row payload shaping, failure-finalization helpers, tooling-failure handling helpers, script-outcome handlers, per-script context assembly, transport result decoding, script-execution block assembly, and per-script launch/transport acquisition have landed; the next target inside this file is the remaining per-script execution dispatch closure around `SuiteScriptExecutionBlockContext` assembly plus `execute_suite_script_iteration_block` invocation)
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/diag_run.rs`
 - `crates/fret-diag/src/commands/artifacts.rs`
@@ -174,6 +174,10 @@ Recent progress since this note was drafted:
 - `diag_suite` now also routes prewarm/prelude execution and load-script wiring through a dedicated
   execution-block context, so the main script loop no longer interleaves that setup with transport
   result decoding in one large closure.
+- `diag_suite` now also routes per-script launch env/default assembly plus connected transport
+  acquisition through `SuiteScriptLaunchRequest`, `SuiteScriptTransportRequest`, and
+  `SuiteScriptTransportSelection`, so `maybe_launch_demo` and filesystem-vs-DevTools selection no
+  longer expand inline in the main script loop.
 - `diag_campaign` now routes per-item `diag_suite::SuiteCmdContext` construction through a
   shared invocation builder, so suite items and script items no longer maintain parallel handoff
   structs inline.
@@ -298,7 +302,7 @@ These are meaningful follow-ups once the contract and seam story are more settle
 
 1. apply and cross-link the canonical artifact/evidence contract update across remaining diagnostics notes and consumers,
 2. continue from the new `diag_campaign` invocation + execution-plan + run-outcome + shared-finalize + shared-payload + outcome/error + result-payload + artifact-builder + aggregate-artifact + report-artifact + aggregate-projection + run-outcome-json + report-json-section + batch-json-section + result-section + manifest-payload + item-execution-plan + item-result + item-plan-list + summary-finalize-plan + result-write-plan + result-payload-sections seams into the remaining JSON consolidation or check planning/execution,
-3. keep the new transport helpers thin instead of growing fresh inline path-assembly branches,
+3. keep the new per-script launch/transport helpers thin instead of growing fresh execution-state or path-assembly branches into them,
 4. only then revisit optional output projections or larger packaging policies.
 
 ## Bottom line
