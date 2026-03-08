@@ -523,10 +523,7 @@ fn scroll_into_view_scrolls_horizontal_scroll_container_when_descendant_is_offsc
     let target_index = 4usize;
 
     let mut services = FakeUiServices;
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(100.0), Px(80.0)),
-    );
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(80.0)));
 
     let root = declarative::render_root(
         &mut ui,
@@ -614,7 +611,10 @@ fn scroll_into_view_scrolls_horizontal_scroll_container_when_descendant_is_offsc
     let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
     let after = scroll_handle.offset();
 
-    assert!(did_scroll, "expected horizontal scroll_into_view to report scrolling");
+    assert!(
+        did_scroll,
+        "expected horizontal scroll_into_view to report scrolling"
+    );
     assert!(
         after.x.0 > before.x.0 + 0.5,
         "expected horizontal scroll_into_view to increase x offset: before={:?} after={:?}",
