@@ -42,7 +42,7 @@ Current conclusion:
 | File | Current role | Recommended class | Notes |
 |---|---|---|---|
 | `apps/fret-examples/src/assets_demo.rs` | advanced asset/event demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<AssetsDemoView>(...)`; proves driver event hooks do not by themselves require closure-root `ui_with_hooks(...)` |
-| `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `migrate-to-view` | already has a `View` type in the file; app-entry closure is bridge debt rather than a capability blocker |
+| `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<EmbeddedViewportDemoView>(...)`; `EmbeddedViewportView` now lets retained viewport recording compose with `ViewWindowState<V>` |
 | `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `migrate-to-view` | still likely needs hooks, but not necessarily closure-root entry |
 | `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
 | `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `migrate-to-view` | same reasoning as AVF demo |
@@ -101,7 +101,7 @@ These should move next to prove `view_with_hooks` is sufficient for advanced-but
 - `apps/fret-examples/src/assets_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/image_heavy_memory_demo.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
-- `apps/fret-examples/src/embedded_viewport_demo.rs`
+- `apps/fret-examples/src/embedded_viewport_demo.rs` _(done on 2026-03-08)_
 
 Success criterion:
 
@@ -109,7 +109,7 @@ Success criterion:
 
 Status update:
 
-- Batch B has started: `assets_demo` now runs through `view_with_hooks::<AssetsDemoView>(...)` while keeping its `on_event(...)` driver seam.
+- Batch B is underway: `assets_demo` and `embedded_viewport_demo` now run through `view_with_hooks::<...>(...)`, and `EmbeddedViewportView` closes the retained viewport recording gap for `ViewWindowState<V>`.
 
 ## Batch C — highest-risk interop demos
 

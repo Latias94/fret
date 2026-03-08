@@ -3,10 +3,8 @@ use std::sync::Arc;
 use fret::interop::embedded_viewport as embedded;
 use fret::prelude::*;
 use fret_core::ViewportFit;
-use fret_launch::EngineFrameUpdate;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
-use fret_ui::{ElementContext, UiTree};
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 
@@ -24,7 +22,6 @@ mod act {
 
 struct EmbeddedViewportDemoView {
     embedded: embedded::EmbeddedViewportSurface,
-    size_preset: Model<usize>,
 }
 
 impl View for EmbeddedViewportDemoView {
@@ -40,7 +37,6 @@ impl View for EmbeddedViewportDemoView {
                 RenderTargetColorSpace::Srgb,
                 DEFAULT_VIEWPORT_PX_SIZE,
             ),
-            size_preset: app.models_mut().insert(1usize),
         }
     }
 
@@ -51,17 +47,15 @@ impl View for EmbeddedViewportDemoView {
         let models = embedded::models(&*cx.app, window)
             .unwrap_or_else(|| embedded::ensure_models(cx.app, window));
 
-        let clicks = cx.watch_model(&models.clicks).paint().copied_or_default();
+        let clicks = cx.watch_model(&models.clicks).paint().value_or_default();
         let last_input: Arc<str> = cx
             .watch_model(&models.last_input)
             .paint()
             .cloned()
             .unwrap_or_else(|| Arc::from("<no input yet>"));
 
-        let preset = cx
-            .watch_model(&self.size_preset)
-            .layout()
-            .copied_or_default();
+        let size_preset_state = cx.use_local_with(|| 1usize);
+        let preset = size_preset_state.layout(cx).value_or_default();
         let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
             0 => ((640, 360), "640×360"),
             2 => ((1280, 720), "1280×720"),
@@ -150,27 +144,9 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        cx.on_action_notify_models::<act::PickSize640>({
-            let size_preset = self.size_preset.clone();
-            move |models| {
-                let _ = models.update(&size_preset, |v| *v = 0);
-                true
-            }
-        });
-        cx.on_action_notify_models::<act::PickSize960>({
-            let size_preset = self.size_preset.clone();
-            move |models| {
-                let _ = models.update(&size_preset, |v| *v = 1);
-                true
-            }
-        });
-        cx.on_action_notify_models::<act::PickSize1280>({
-            let size_preset = self.size_preset.clone();
-            move |models| {
-                let _ = models.update(&size_preset, |v| *v = 2);
-                true
-            }
-        });
+        cx.on_action_notify_local_set::<act::PickSize640, usize>(&size_preset_state, 0);
+        cx.on_action_notify_local_set::<act::PickSize960, usize>(&size_preset_state, 1);
+        cx.on_action_notify_local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
 
         let page = ui::container(|cx| {
             ui::children![
@@ -197,13 +173,9 @@ impl View for EmbeddedViewportDemoView {
     }
 }
 
-struct EmbeddedViewportDemoWindowState {
-    view: fret::view::ViewWindowState<EmbeddedViewportDemoView>,
-}
-
-impl embedded::EmbeddedViewportRecord for EmbeddedViewportDemoWindowState {
+impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
     fn embedded_viewport_surface(&mut self) -> &mut embedded::EmbeddedViewportSurface {
-        &mut self.view.view.embedded
+        &mut self.embedded
     }
 
     fn embedded_viewport_label(&self) -> Option<&'static str> {
@@ -226,7 +198,6 @@ impl embedded::EmbeddedViewportRecord for EmbeddedViewportDemoWindowState {
             .and_then(|m| app.models().read(&m.clicks, |v| *v).ok())
             .unwrap_or(0);
 
-        // Visible feedback inside the viewport: change the clear color as clicks increase.
         let t = (frame_id.0 as f32 * 0.02).sin() * 0.5 + 0.5;
         let c = (clicks % 9) as f32 / 8.0;
         let clear = wgpu::Color {
@@ -239,64 +210,10 @@ impl embedded::EmbeddedViewportRecord for EmbeddedViewportDemoWindowState {
     }
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> EmbeddedViewportDemoWindowState {
-    EmbeddedViewportDemoWindowState {
-        view: fret::view::view_init_window::<EmbeddedViewportDemoView>(app, window),
-    }
-}
-
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut EmbeddedViewportDemoWindowState,
-) -> ViewElements {
-    fret::view::view_view::<EmbeddedViewportDemoView>(cx, &mut st.view).into()
-}
-
-fn record_engine_frame(
-    app: &mut App,
-    window: AppWindowId,
-    ui: &mut UiTree<App>,
-    st: &mut EmbeddedViewportDemoWindowState,
-    context: &WgpuContext,
-    renderer: &mut Renderer,
-    scale_factor: f32,
-    tick_id: TickId,
-    frame_id: FrameId,
-) -> EngineFrameUpdate {
-    // Preserve view runtime v1 behavior (view cache enablement) while also recording the embedded
-    // viewport engine/offscreen pass.
-    let _ = fret::view::view_record_engine_frame::<EmbeddedViewportDemoView>(
-        app,
-        window,
-        ui,
-        &mut st.view,
-        context,
-        renderer,
-        scale_factor,
-        tick_id,
-        frame_id,
-    );
-
-    embedded::record_engine_frame(
-        app,
-        window,
-        ui,
-        st,
-        context,
-        renderer,
-        scale_factor,
-        tick_id,
-        frame_id,
-    )
-}
-
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("embedded-viewport-demo")
         .window("embedded_viewport_demo", (1120.0, 720.0))
-        .ui_with_hooks(init_window, view, |d| {
-            d.viewport_input(embedded::handle_viewport_input)
-                .record_engine_frame(record_engine_frame)
-        })?
+        .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
