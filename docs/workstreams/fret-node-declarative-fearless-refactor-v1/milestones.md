@@ -729,6 +729,10 @@ real editors.
   `canvas/widget/pointer_up_commit_resize.rs` and
   `canvas/widget/pointer_up_commit_group_drag.rs` seams, so retained pointer-up reducers
   no longer keep multiple commit builders embedded in one surface.
+- `paint_searcher.rs` now routes searcher query chrome and row list painting
+  through the private `canvas/widget/paint_searcher_query.rs` and
+  `canvas/widget/paint_searcher_rows.rs` seams, so retained searcher paint reducers
+  no longer keep all query/list paint phases embedded in one surface.
 - `paint_overlay_elements.rs` now routes context-menu chrome,
   marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
   `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and

@@ -16,10 +16,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(55),
             rect,
             background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
-
             border: Edges::all(border_w),
             border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
-
             corner_radii: Corners::all(radius),
         });
 
@@ -31,8 +29,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let mut text_style = self.style.geometry.context_menu_text_style.clone();
         text_style.size = Px(text_style.size.0 / zoom);
-        if let Some(lh) = text_style.line_height.as_mut() {
-            lh.0 /= zoom;
+        if let Some(line_height) = text_style.line_height.as_mut() {
+            line_height.0 /= zoom;
         }
 
         let constraints = TextConstraints {
@@ -43,101 +41,30 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 
-        let query_rect = Rect::new(
-            Point::new(Px(inner_x), Px(inner_y)),
-            Size::new(Px(inner_w), Px(item_h)),
+        let list_y0 = super::paint_searcher_query::paint_searcher_query(
+            self,
+            cx,
+            searcher,
+            &text_style,
+            constraints,
+            inner_x,
+            inner_y,
+            inner_w,
+            item_h,
+            pad,
+            zoom,
         );
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(56),
-            rect: query_rect,
-            background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background)
-                .into(),
-
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-            corner_radii: Corners::all(Px(4.0 / zoom)),
-        });
-
-        let query_text = if searcher.query.is_empty() {
-            Arc::<str>::from("Search...")
-        } else {
-            Arc::<str>::from(format!("Search: {}", searcher.query))
-        };
-        let (blob, metrics) =
-            self.paint_cache
-                .text_blob(cx.services, query_text, &text_style, constraints);
-        let text_x = query_rect.origin.x;
-        let text_y = Px(query_rect.origin.y.0
-            + (query_rect.size.height.0 - metrics.size.height.0) * 0.5
-            + metrics.baseline.0);
-        let query_color = if searcher.query.is_empty() {
-            self.style.paint.context_menu_text_disabled
-        } else {
-            self.style.paint.context_menu_text
-        };
-        cx.scene.push(SceneOp::Text {
-            order: DrawOrder(57),
-            origin: Point::new(text_x, text_y),
-            text: blob,
-            paint: (query_color).into(),
-            outline: None,
-            shadow: None,
-        });
-
-        let list_y0 = inner_y + item_h + pad;
-        let start = searcher.scroll.min(searcher.rows.len());
-        let end = (start + visible_rows).min(searcher.rows.len());
-        for (slot, row_ix) in (start..end).enumerate() {
-            let row = &searcher.rows[row_ix];
-            let item_rect = Rect::new(
-                Point::new(Px(inner_x), Px(list_y0 + slot as f32 * item_h)),
-                Size::new(Px(inner_w), Px(item_h)),
-            );
-
-            let is_active = searcher.active_row == row_ix;
-            let is_hovered = searcher.hovered_row == Some(row_ix);
-            if (is_hovered || is_active) && Self::searcher_is_selectable_row(row) {
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(56),
-                    rect: item_rect,
-                    background: fret_core::Paint::Solid(
-                        self.style.paint.context_menu_hover_background,
-                    )
-                    .into(),
-
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                    corner_radii: Corners::all(Px(4.0 / zoom)),
-                });
-            }
-
-            let (blob, metrics) = self.paint_cache.text_blob(
-                cx.services,
-                row.label.clone(),
-                &text_style,
-                constraints,
-            );
-
-            let text_x = item_rect.origin.x;
-            let text_y = Px(item_rect.origin.y.0
-                + (item_rect.size.height.0 - metrics.size.height.0) * 0.5
-                + metrics.baseline.0);
-            let color = if row.enabled {
-                self.style.paint.context_menu_text
-            } else {
-                self.style.paint.context_menu_text_disabled
-            };
-
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(57),
-                origin: Point::new(text_x, text_y),
-                text: blob,
-                paint: (color).into(),
-                outline: None,
-                shadow: None,
-            });
-        }
+        super::paint_searcher_rows::paint_searcher_rows(
+            self,
+            cx,
+            searcher,
+            &text_style,
+            constraints,
+            inner_x,
+            list_y0,
+            inner_w,
+            item_h,
+            zoom,
+        );
     }
 }

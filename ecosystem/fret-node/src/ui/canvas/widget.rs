@@ -232,6 +232,8 @@ mod paint_render_data;
 mod paint_root;
 mod paint_root_helpers;
 mod paint_searcher;
+mod paint_searcher_query;
+mod paint_searcher_rows;
 mod pan_zoom;
 mod pan_zoom_begin;
 mod pan_zoom_move;
