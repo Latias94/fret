@@ -575,6 +575,11 @@ real editors.
   `canvas/widget/focus_nav_traversal_node.rs`, and
   `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
   no longer stay embedded in a single traversal surface.
+- `paint_overlay_elements.rs` now routes context-menu chrome,
+  marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
+  `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
+  `canvas/widget/paint_overlay_feedback.rs` seams, so retained overlay paint helpers no
+  longer stay embedded in one surface file.
 
 ### Deliverables
 
@@ -651,6 +656,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_constraints.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_elements.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_guides.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_feedback.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs`

@@ -512,6 +512,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/focus_nav_traversal_node.rs`, and
     `canvas/widget/focus_nav_traversal_port.rs` seams, so retained focus-cycle reducers
     no longer stay embedded in a single traversal surface.
+  - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
+    marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
+    `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
+    `canvas/widget/paint_overlay_feedback.rs` seams, so retained overlay paint helpers no
+    longer stay embedded in one surface file.
 - [x] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
