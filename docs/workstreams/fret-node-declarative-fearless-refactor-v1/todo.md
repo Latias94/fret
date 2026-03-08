@@ -567,6 +567,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/focus_port_direction_candidate.rs` seam, and focus/view-state application
     through `canvas/widget/focus_port_direction_apply.rs`, so retained directional port-focus
     reducers no longer stay embedded in one mixed surface.
+  - Progress: `sticky_wire.rs` now routes connect-target planning/reject handling and
+    non-port picker routing through the private `canvas/widget/sticky_wire_connect.rs` and
+    `canvas/widget/sticky_wire_targets.rs` seams, so retained sticky-wire pointer reducers no
+    longer stay embedded in one mixed surface.
   - Progress: `paint_overlay_elements.rs` now routes context-menu chrome,
     marquee/snap-guide primitives, and toast/wire-drag hint feedback through the private
     `canvas/widget/paint_overlay_menu.rs`, `canvas/widget/paint_overlay_guides.rs`, and
