@@ -1932,6 +1932,21 @@ struct CampaignShareManifestItemArtifacts {
     share_zip_error: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct CampaignShareManifestSupportingArtifacts {
+    counters: CampaignShareManifestCounters,
+    triage_path: Option<PathBuf>,
+    triage_error: Option<String>,
+    screenshots_manifest: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignShareManifestShareZipArtifacts {
+    counters: CampaignShareManifestCounters,
+    share_zip: Option<PathBuf>,
+    share_zip_error: Option<String>,
+}
+
 struct CampaignShareManifestPayloadRequest<'a> {
     root_dir: &'a Path,
     summary_path: &'a Path,
@@ -2195,26 +2210,56 @@ fn build_campaign_share_manifest_item(
 fn collect_campaign_share_manifest_item_artifacts(
     request: &CampaignShareManifestItemRequest<'_>,
 ) -> CampaignShareManifestItemArtifacts {
-    let bundle_dir = request
-        .item
-        .evidence
-        .as_ref()
-        .and_then(|evidence| evidence.bundle_dir.as_deref())
-        .map(PathBuf::from);
+    let bundle_dir = resolve_campaign_share_manifest_item_bundle_dir(request.item);
     let mut counters = CampaignShareManifestCounters::default();
     if bundle_dir.is_none() {
         counters.bundles_missing = 1;
     }
+    let supporting_artifacts = collect_campaign_share_manifest_item_supporting_artifacts(
+        bundle_dir.as_deref(),
+        request.stats_top,
+        request.warmup_frames,
+    );
+    counters.merge(&supporting_artifacts.counters);
+    let share_zip_artifacts =
+        collect_campaign_share_manifest_item_share_zip(request, bundle_dir.as_deref());
+    counters.merge(&share_zip_artifacts.counters);
 
-    let (triage_path, triage_error) = if let Some(bundle_dir) = bundle_dir.as_deref() {
-        maybe_write_bundle_triage_json(bundle_dir, request.stats_top, request.warmup_frames)
+    CampaignShareManifestItemArtifacts {
+        counters,
+        bundle_dir,
+        triage_path: supporting_artifacts.triage_path,
+        triage_error: supporting_artifacts.triage_error,
+        screenshots_manifest: supporting_artifacts.screenshots_manifest,
+        share_zip: share_zip_artifacts.share_zip,
+        share_zip_error: share_zip_artifacts.share_zip_error,
+    }
+}
+
+fn resolve_campaign_share_manifest_item_bundle_dir(
+    item: &RegressionItemSummaryV1,
+) -> Option<PathBuf> {
+    item.evidence
+        .as_ref()
+        .and_then(|evidence| evidence.bundle_dir.as_deref())
+        .map(PathBuf::from)
+}
+
+fn collect_campaign_share_manifest_item_supporting_artifacts(
+    bundle_dir: Option<&Path>,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> CampaignShareManifestSupportingArtifacts {
+    let (triage_path, triage_error) = if let Some(bundle_dir) = bundle_dir {
+        maybe_write_bundle_triage_json(bundle_dir, stats_top, warmup_frames)
     } else {
         (None, None)
     };
-    let screenshots_manifest = bundle_dir.as_deref().and_then(|bundle_dir| {
+    let screenshots_manifest = bundle_dir.and_then(|bundle_dir| {
         crate::commands::screenshots::resolve_screenshots_manifest_path(bundle_dir)
             .map(|(_screenshots_dir, manifest_path)| manifest_path)
     });
+    let mut counters = CampaignShareManifestCounters::default();
     if triage_path.is_some() {
         counters.triage_generated = 1;
     }
@@ -2222,7 +2267,20 @@ fn collect_campaign_share_manifest_item_artifacts(
         counters.triage_failed = 1;
     }
 
-    let share_zip_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
+    CampaignShareManifestSupportingArtifacts {
+        counters,
+        triage_path,
+        triage_error,
+        screenshots_manifest,
+    }
+}
+
+fn collect_campaign_share_manifest_item_share_zip(
+    request: &CampaignShareManifestItemRequest<'_>,
+    bundle_dir: Option<&Path>,
+) -> CampaignShareManifestShareZipArtifacts {
+    let mut counters = CampaignShareManifestCounters::default();
+    let share_zip_result = if let Some(bundle_dir) = bundle_dir {
         counters.bundles_total = 1;
         let packet_dir = bundle_dir.join("ai.packet");
         let ai_packet_result = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
@@ -2253,12 +2311,8 @@ fn collect_campaign_share_manifest_item_artifacts(
         Err("item does not expose evidence.bundle_dir".to_string())
     };
 
-    CampaignShareManifestItemArtifacts {
+    CampaignShareManifestShareZipArtifacts {
         counters,
-        bundle_dir,
-        triage_path,
-        triage_error,
-        screenshots_manifest,
         share_zip: share_zip_result.as_ref().ok().cloned(),
         share_zip_error: share_zip_result.as_ref().err().cloned(),
     }
@@ -3422,6 +3476,80 @@ mod tests {
         assert_eq!(artifacts.counters.bundles_missing, 1);
         assert_eq!(artifacts.counters.bundles_packed, 0);
         assert!(artifacts.bundle_dir.is_none());
+        assert!(artifacts.share_zip.is_none());
+        assert_eq!(
+            artifacts.share_zip_error.as_deref(),
+            Some("item does not expose evidence.bundle_dir")
+        );
+    }
+
+    #[test]
+    fn resolve_campaign_share_manifest_item_bundle_dir_reads_evidence_path() {
+        let bundle_dir = PathBuf::from("diag-out/bundle-a");
+        let item = sample_regression_item_summary(
+            "accordion-basic",
+            RegressionStatusV1::FailedDeterministic,
+            Some(&bundle_dir),
+        );
+
+        let resolved = resolve_campaign_share_manifest_item_bundle_dir(&item);
+
+        assert_eq!(resolved, Some(bundle_dir));
+    }
+
+    #[test]
+    fn collect_campaign_share_manifest_item_supporting_artifacts_reuses_existing_triage_and_screenshots() {
+        let root = temp_test_root("share-item-supporting-artifacts");
+        let bundle_dir = root.join("bundle-a");
+        let triage_path = bundle_dir.join("triage.json");
+        let screenshots_manifest = root
+            .join("screenshots")
+            .join("bundle-a")
+            .join("manifest.json");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::create_dir_all(
+            screenshots_manifest
+                .parent()
+                .expect("screenshots manifest parent"),
+        )
+        .expect("create screenshots dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle json");
+        std::fs::write(&triage_path, b"{}" as &[u8]).expect("write triage json");
+        std::fs::write(&screenshots_manifest, b"{}" as &[u8])
+            .expect("write screenshots manifest");
+
+        let artifacts =
+            collect_campaign_share_manifest_item_supporting_artifacts(Some(&bundle_dir), 5, 0);
+
+        assert_eq!(artifacts.counters.triage_generated, 1);
+        assert_eq!(artifacts.counters.triage_failed, 0);
+        assert_eq!(artifacts.triage_path, Some(triage_path));
+        assert_eq!(artifacts.triage_error, None);
+        assert_eq!(artifacts.screenshots_manifest, Some(screenshots_manifest));
+    }
+
+    #[test]
+    fn collect_campaign_share_manifest_item_share_zip_reports_missing_bundle_dir() {
+        let root = temp_test_root("share-item-zip-missing");
+        let share_dir = root.join("share");
+        let item = sample_regression_item_summary(
+            "missing-bundle",
+            RegressionStatusV1::FailedDeterministic,
+            None,
+        );
+        let request = CampaignShareManifestItemRequest {
+            item: &item,
+            root_dir: &root,
+            share_dir: &share_dir,
+            bundle_ordinal: 1,
+            stats_top: 5,
+            warmup_frames: 0,
+        };
+
+        let artifacts = collect_campaign_share_manifest_item_share_zip(&request, None);
+
+        assert_eq!(artifacts.counters.bundles_total, 0);
+        assert_eq!(artifacts.counters.bundles_packed, 0);
         assert!(artifacts.share_zip.is_none());
         assert_eq!(
             artifacts.share_zip_error.as_deref(),

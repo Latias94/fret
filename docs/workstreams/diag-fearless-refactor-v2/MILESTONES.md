@@ -133,9 +133,14 @@ Progress update:
   - `write_campaign_share_manifest` now consumes a dedicated `CampaignShareManifestWritePlan` for initial payload/output-path planning,
   - combined-failure zip update now routes through `finalize_campaign_share_manifest_write`,
   - helper-level regression coverage now locks write-plan payload/output shaping and finalize-time combined-zip path recording without running a full campaign execution.
+- `diag_campaign` has now landed another share-manifest seam around per-item artifact planning:
+  - bundle-dir resolution now routes through a dedicated helper,
+  - triage/screenshot collection now routes through a dedicated supporting-artifacts helper,
+  - AI-packet/share-zip planning now routes through a dedicated share-zip helper,
+  - helper-level regression coverage now locks evidence-path resolution, reuse of existing triage/screenshots artifacts, and missing-bundle share-zip error handling directly.
 - The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
-  follow-up is the remaining share/export artifact planning adjacent to
-  `collect_campaign_share_manifest_item_artifacts` and share payload section shaping before shifting to artifact materialization or
+  follow-up is the remaining share payload section shaping and any last materialization holdouts around
+  `build_campaign_share_manifest_payload` before shifting to artifact materialization or
   presentation-surface follow-up work.
 
 Exit criteria:
