@@ -144,10 +144,12 @@ Progress update:
 - `diag_campaign` has now landed another share-manifest seam around combined-zip field mutation:
   - `apply_campaign_share_manifest_combined_zip` now routes through dedicated field-building and share-section apply helpers,
   - helper-level regression coverage now locks combined-zip field projection plus section-local mutation without going through the full finalize path.
-- The next decision point in this area is no longer broad report/outcome shaping; the higher-ROI
-  follow-up is the remaining final materialization/update holdouts around share artifact handoff and
-  any residual write-time mutation before shifting to artifact materialization or
-  presentation-surface follow-up work.
+- `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
+  - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
+  - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.
+- The next decision point in this area is no longer whether `diag_campaign` still needs another small share slice; the higher-ROI
+  follow-up is now the remaining artifact resolution/materialization holdouts in `commands::artifacts`
+  and `commands::resolve` before presentation-surface follow-up work.
 
 Exit criteria:
 

@@ -504,6 +504,107 @@ mod tests {
             "unexpected error: {err}"
         );
     }
+
+    #[test]
+    fn resolve_meta_artifact_paths_from_meta_sidecar_keeps_valid_sidecar() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-meta-sidecar-valid-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let sidecar = root.join("bundle.meta.json");
+        std::fs::write(
+            &sidecar,
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+            }))
+            .unwrap(),
+        )
+        .expect("write meta sidecar");
+
+        let paths = resolve_meta_artifact_paths_from_meta_sidecar(&sidecar, 0)
+            .expect("resolve meta sidecar");
+
+        assert_eq!(paths.canonical_path, sidecar);
+        assert_eq!(paths.default_out, paths.canonical_path);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn resolve_meta_artifact_paths_from_meta_sidecar_falls_back_to_adjacent_bundle() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-meta-sidecar-fallback-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let bundle_path = root.join("bundle.json");
+        let sidecar = root.join("bundle.meta.json");
+        std::fs::write(
+            &bundle_path,
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": 2,
+                "run_id": "run-1",
+                "windows": [],
+                "warmup_frames": 0,
+            }))
+            .unwrap(),
+        )
+        .expect("write bundle json");
+        std::fs::write(
+            &sidecar,
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 99,
+            }))
+            .unwrap(),
+        )
+        .expect("write invalid meta sidecar");
+
+        let paths =
+            resolve_meta_artifact_paths_from_meta_sidecar(&sidecar, 0).expect("fallback to bundle");
+
+        assert_eq!(paths.default_out, root.join("bundle.meta.json"));
+        assert_eq!(paths.canonical_path, root.join("bundle.meta.json"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn resolve_meta_artifact_paths_from_bundle_dir_prefers_root_meta_sidecar() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-meta-bundle-dir-root-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let bundle_dir = root.join("bundle-dir");
+        let root_meta = bundle_dir.join("_root").join("bundle.meta.json");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root_meta.parent().expect("root meta parent"))
+            .expect("create root meta dir");
+        std::fs::write(
+            &root_meta,
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+            }))
+            .unwrap(),
+        )
+        .expect("write root meta sidecar");
+
+        let paths = resolve_meta_artifact_paths_from_bundle_dir(&bundle_dir, 0)
+            .expect("resolve bundle dir");
+
+        assert_eq!(paths.canonical_path, root_meta);
+        assert_eq!(paths.default_out, paths.canonical_path);
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
 
 #[derive(Debug)]
@@ -768,56 +869,86 @@ fn resolve_meta_artifact_paths(
     let resolved = resolve::resolve_bundle_ref(src)?;
     let src = resolved.bundle_dir;
 
-    let (canonical_path, default_out) = if src.is_file()
+    if meta_sidecar_source_is_direct(&src) {
+        resolve_meta_artifact_paths_from_meta_sidecar(&src, warmup_frames)
+    } else if src.is_dir() {
+        resolve_meta_artifact_paths_from_bundle_dir(&src, warmup_frames)
+    } else {
+        build_meta_artifact_paths_from_bundle_path(
+            &crate::resolve_bundle_artifact_path(&src),
+            warmup_frames,
+        )
+    }
+}
+
+fn meta_sidecar_source_is_direct(src: &Path) -> bool {
+    src.is_file()
         && src
             .file_name()
             .and_then(|s| s.to_str())
             .is_some_and(|s| s == "bundle.meta.json")
-    {
-        if sidecars::try_read_sidecar_json_v1(&src, "bundle_meta", warmup_frames).is_some() {
-            (src.clone(), src.clone())
-        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
-            let canonical =
-                crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-            let out = crate::default_meta_out_path(&bundle_path);
-            (canonical, out)
-        } else {
-            return Err(format!(
-                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
-                src.display()
-            ));
-        }
-    } else if src.is_dir() {
-        let direct = src.join("bundle.meta.json");
-        if direct.is_file()
-            && sidecars::try_read_sidecar_json_v1(&direct, "bundle_meta", warmup_frames).is_some()
-        {
-            (direct.clone(), direct)
-        } else {
-            let root = src.join("_root").join("bundle.meta.json");
-            if root.is_file()
-                && sidecars::try_read_sidecar_json_v1(&root, "bundle_meta", warmup_frames).is_some()
-            {
-                (root.clone(), root)
-            } else {
-                let bundle_path = crate::resolve_bundle_artifact_path(&src);
-                let canonical =
-                    crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-                let out = crate::default_meta_out_path(&bundle_path);
-                (canonical, out)
-            }
-        }
-    } else {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
-        let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-        let out = crate::default_meta_out_path(&bundle_path);
-        (canonical, out)
-    };
+}
 
+fn build_meta_artifact_paths_from_bundle_path(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<MetaArtifactPaths, String> {
+    let canonical_path = crate::bundle_index::ensure_bundle_meta_json(bundle_path, warmup_frames)?;
+    let default_out = crate::default_meta_out_path(bundle_path);
     Ok(MetaArtifactPaths {
         canonical_path,
         default_out,
     })
+}
+
+fn resolve_meta_artifact_paths_from_meta_sidecar(
+    src: &Path,
+    warmup_frames: u64,
+) -> Result<MetaArtifactPaths, String> {
+    if sidecars::try_read_sidecar_json_v1(src, "bundle_meta", warmup_frames).is_some() {
+        return Ok(MetaArtifactPaths {
+            canonical_path: src.to_path_buf(),
+            default_out: src.to_path_buf(),
+        });
+    }
+
+    let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(src) else {
+        return Err(format!(
+            "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
+            src.display()
+        ));
+    };
+    build_meta_artifact_paths_from_bundle_path(&bundle_path, warmup_frames)
+}
+
+fn resolve_meta_artifact_paths_from_bundle_dir(
+    src: &Path,
+    warmup_frames: u64,
+) -> Result<MetaArtifactPaths, String> {
+    let direct = src.join("bundle.meta.json");
+    if direct.is_file()
+        && sidecars::try_read_sidecar_json_v1(&direct, "bundle_meta", warmup_frames).is_some()
+    {
+        return Ok(MetaArtifactPaths {
+            canonical_path: direct.clone(),
+            default_out: direct,
+        });
+    }
+
+    let root = src.join("_root").join("bundle.meta.json");
+    if root.is_file()
+        && sidecars::try_read_sidecar_json_v1(&root, "bundle_meta", warmup_frames).is_some()
+    {
+        return Ok(MetaArtifactPaths {
+            canonical_path: root.clone(),
+            default_out: root,
+        });
+    }
+
+    build_meta_artifact_paths_from_bundle_path(
+        &crate::resolve_bundle_artifact_path(src),
+        warmup_frames,
+    )
 }
 
 fn materialize_meta_output(canonical_path: &Path, out: &Path) -> Result<(), String> {
