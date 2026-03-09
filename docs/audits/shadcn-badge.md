@@ -14,8 +14,8 @@ This audit compares Fret's shadcn-aligned `Badge` against the upstream shadcn/ui
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/badge.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/badge.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/badge.tsx`
 
 ## Fret implementation
 
@@ -27,7 +27,7 @@ This audit compares Fret's shadcn-aligned `Badge` against the upstream shadcn/ui
 
 - Pass: `Badge::new(label)` covers the common shadcn authoring path.
 - Pass: `Badge::variant(...)` covers the upstream `default | secondary | destructive | outline` recipe surface.
-- Pass: Link-style composition is supported without a separate generic `compose()` builder; Fret models the upstream `asChild` outcome through badge-owned activation/render composition.
+- Pass: Link-style composition is supported without a separate generic `compose()` builder; Fret models the upstream `render` / `asChild` outcome through badge-owned activation/render composition.
 
 ### Layout & geometry (shadcn parity)
 
@@ -36,6 +36,12 @@ This audit compares Fret's shadcn-aligned `Badge` against the upstream shadcn/ui
 - Pass: Label uses `font-medium` (not semibold).
 - Pass: Defaults to `shrink-0` and `overflow-hidden` so the badge behaves like shadcn's `inline-flex` chip in constrained rows.
 - Note: Width is label/font dependent, so we gate height only.
+
+### Gallery / docs parity
+
+- Pass: The gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Variants`, `With Icon`, `With Spinner`, `Link`, `Custom Colors`, `RTL`, and `API Reference`.
+- Pass: The docs-aligned `Demo` now stays focused on the four primary badge variants, while compact numeric count chips moved to a Fret-only follow-up section so existing diag targets stay stable.
+- Pass: Link composition remains an explicit badge-owned render surface rather than a generic child/slot merge API.
 
 ## Validation
 
