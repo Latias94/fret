@@ -26,7 +26,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘P").into_element(cx))
                             .test_id("ui-gallery-dropdown-menu-demo-profile")
                             // ui-gallery diag scripts: assert this updates the global status bar.
-                            .on_select("ui_gallery.menu.dropdown.apple")
+                            .action("ui_gallery.menu.dropdown.apple")
                             .into(),
                         shadcn::DropdownMenuItem::new("Billing")
                             .trailing(shadcn::DropdownMenuShortcut::new("⌘B").into_element(cx))

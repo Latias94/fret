@@ -16,7 +16,10 @@ def main() -> None:
         "default menu teaching surfaces prefer action(...)",
         roots=[
             Path("apps/fret-ui-gallery/src/ui/snippets/context_menu"),
+            Path("apps/fret-ui-gallery/src/ui/snippets/dropdown_menu"),
             Path("apps/fret-ui-gallery/src/ui/snippets/menubar"),
+            Path("apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs"),
+            Path("apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs"),
         ],
         patterns=[
             r"\.on_select\s*\(",

@@ -59,6 +59,7 @@ Current conclusion:
 | --- | --- | --- | --- | --- |
 | `Button` | `action(...)`, `action_payload(...)`, legacy `on_click(CommandId)` | generic pressable dispatch; default authoring already converged | Aligned | Keep current dual surface; treat `on_click(...)` as compat naming only |
 | `CommandItem` / command palette entries | `on_select(CommandId)` plus `on_select_action(...)` / `on_select_value_action(...)`; host-command catalog builders derive from `CommandMeta` | palette items naturally map to registry metadata, shortcut display, and gating snapshots | Mostly aligned | Keep command-first catalog APIs; keep action-first callback path for custom items |
+| `DropdownMenuItem` / `DropdownMenuCheckboxItem` / `DropdownMenuRadioItem` | `on_select(CommandId)` only (plus `trailing_on_select(...)` on item rows) | menu rows dispatch through command gating and may expose trailing command affordances | Default-facing blocker | Add `action(...)` / `trailing_action(...)` aliases first; keep command-centric internals and trailing command pipeline intact |
 | `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem` | `on_select(CommandId)` only | menu rows display shortcut labels and dispatch through command gating | Default-facing blocker | Add `action(...)` alias first; keep command-centric internals and shortcut display logic |
 | `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `on_select(CommandId)` only | same as context menu, plus stronger OS/menu parity expectations | Default-facing blocker | Same as context menu: action-first alias on public builders, command-centric core retained |
 | `NavigationMenuLink` / `NavigationMenuItem` | `on_click(CommandId)` only | current activation path reuses command gating/dispatch | Medium blocker | Add `action(...)` alias; this surface reads like a regular app-facing widget, not a registry API |
@@ -75,6 +76,7 @@ Representative evidence:
 
 - `ecosystem/fret-ui-shadcn/src/button.rs`
 - `ecosystem/fret-ui-shadcn/src/command.rs`
+- `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
@@ -255,14 +257,31 @@ Progress update (as of 2026-03-09):
 
 Then add action-first aliases to:
 
-1. `ContextMenuItem` family
-2. `MenubarItem` family
+1. `DropdownMenuItem` family
+2. `ContextMenuItem` family
+3. `MenubarItem` family
 
 Guardrail:
 
-- keep shortcut display, gating, and command metadata integration unchanged internally.
+- keep shortcut display, trailing command affordances, gating, and command metadata integration unchanged internally.
 
-Progress update (as of 2026-03-09):
+Progress update (as of 2026-03-09, follow-up):
+
+- `DropdownMenuItem::action(...)` / `trailing_action(...)`,
+  `DropdownMenuCheckboxItem::action(...)`,
+  `DropdownMenuRadioItemSpec::action(...)`, and
+  `DropdownMenuRadioItem::action(...)` now exist in
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`.
+- The main dropdown-menu gallery teaching snippets now also prefer `action(...)`:
+  - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/basic.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs`
+- The gallery overlay preview surfaces now also prefer `action(...)` for dropdown/context menu rows:
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs`
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`
+- `tools/gate_menu_action_default_surfaces.py` now covers dropdown-menu snippets in addition to
+  context-menu / menubar snippets, plus the two overlay preview teaching surfaces above.
+
+Previous phase-2 progress:
 
 - `ContextMenuItem::action(...)`, `ContextMenuCheckboxItem::action(...)`,
   `ContextMenuRadioItemSpec::action(...)`, and `ContextMenuRadioItem::action(...)` now exist in
