@@ -57,6 +57,8 @@ mod portals;
 mod selection;
 #[path = "paint_only/semantics.rs"]
 mod semantics;
+#[path = "paint_only/surface_content.rs"]
+mod surface_content;
 #[path = "paint_only/surface_frame.rs"]
 mod surface_frame;
 #[path = "paint_only/surface_models.rs"]
@@ -120,6 +122,7 @@ use self::semantics::{
     SurfaceSemanticsParams, build_surface_semantics_value, collect_edge_paint_diagnostics,
     collect_portal_diagnostics,
 };
+use self::surface_content::{SurfaceRegionChildrenParams, build_surface_region_children};
 use self::surface_frame::{PrepareSurfaceFrameParams, prepare_surface_frame};
 use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
 use self::transactions::{
@@ -907,168 +910,45 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 cx.pointer_region_on_pointer_cancel(on_pointer_cancel);
                 cx.pointer_region_on_wheel(on_wheel);
                 cx.pointer_region_on_pinch_gesture(on_pinch);
-
-                let view_for_paint = view_for_paint;
-                let grid_ops = grid_cache_value.ops.clone();
-                let node_draws = nodes_cache_value.draws.clone();
-                let edge_draws = edges_cache_value.draws.clone();
-                let geom_for_paint = derived_cache_value.geom.clone();
-                let style_tokens = style_tokens.clone();
-                let hovered_node_value = hovered_node_value;
-                let selected_nodes = effective_selected_nodes.clone();
-                let marquee_value = marquee_value.clone();
-                let node_drag_value = node_drag_value.clone();
-                let hover_anchor_store = hover_anchor_store.clone();
-                let portals_disabled = portals_disabled;
-
-                // Clone values needed by the paint closure so the originals remain available for
-                // portal hosting below.
-                let node_draws_for_paint = node_draws.clone();
-                let edge_draws_for_paint = edge_draws.clone();
-                let style_tokens_for_paint = style_tokens.clone();
-                let selected_nodes_for_paint = selected_nodes.clone();
-                let node_drag_for_paint = node_drag_value.clone();
-                let paint_overrides_for_paint = paint_overrides_ref.clone();
-                // Ensure canvas paint-cache invalidation tracks interactive state changes even when
-                // the surface rerenders outside the canvas node (e.g. portal layout updates).
-                let graph_model_id = graph.id();
-                let view_state_model_id = view_state.id();
-                let hovered_node_model_id = hovered_node.id();
-                let node_drag_model_id = node_drag.clone().id();
-                let marquee_drag_model_id = marquee_drag.clone().id();
-                let canvas = cx.canvas(canvas, move |p| {
-                    // Declare paint dependencies for paint-cache invalidation. Without this, the
-                    // canvas node can replay cached ops while portals update, which reads as
-                    // "drag not following" (chrome decouples from labels).
-                    p.observe_model_id(graph_model_id, Invalidation::Paint);
-                    p.observe_model_id(view_state_model_id, Invalidation::Paint);
-                    p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
-                    p.observe_model_id(node_drag_model_id, Invalidation::Paint);
-                    p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
-
-                    paint_debug_grid_cached(
-                        p,
-                        view_for_paint,
-                        grid_ops.clone(),
-                        &style_tokens_for_paint,
-                    );
-                    paint_nodes_cached(
-                        p,
-                        view_for_paint,
-                        cull_margin_screen_px,
-                        node_draws_for_paint.clone(),
-                        &style_tokens_for_paint,
-                        hovered_node_value,
-                        selected_nodes_for_paint.as_slice(),
-                        node_drag_for_paint.as_ref(),
-                        paint_overrides_for_paint.as_deref(),
-                    );
-                    paint_edges_cached(
-                        p,
-                        view_for_paint,
-                        cull_margin_screen_px,
-                        edge_draws_for_paint.clone(),
-                        geom_for_paint.clone(),
-                        node_drag_for_paint.as_ref(),
-                        &style_tokens_for_paint,
-                        paint_overrides_for_paint.as_deref(),
-                    );
-                });
-
-                let mut out: Vec<AnyElement> = Vec::new();
-                out.push(canvas);
-                let mut overlay_children: Vec<AnyElement> = Vec::new();
-                let hovered_portal_hosted = if portals_enabled && !portals_disabled {
-                    host_visible_portal_labels(
-                        cx,
-                        &mut overlay_children,
-                        &graph,
-                        node_draws.as_ref(),
-                        grid_cache_value.bounds,
-                        view_for_paint,
-                        cull_margin_screen_px,
-                        portal_max_nodes,
-                        hovered_node_value,
-                        selected_nodes.as_slice(),
-                        node_drag_value.as_ref(),
-                        &portal_bounds_store,
-                        &portal_measured_geometry_state,
-                        measured_geometry.is_some(),
-                        &style_tokens,
-                        &theme,
-                    )
-                } else {
-                    false
-                };
-
-                // Keep a best-effort hovered bounds record independent of portal hosting caps.
-                if sync_hover_anchor_store_in_models(
-                    cx.app.models_mut(),
-                    &hover_anchor_store,
-                    hovered_node_value,
-                    node_draws.as_deref().map(|draws| draws.as_slice()),
-                    view_for_paint,
-                    node_drag_value.as_ref(),
-                ) {
-                    cx.request_frame();
-                }
-
-                // Hover tooltip is an incremental declarative overlay example. It consumes the
-                // retained-like hover state computed from paint-only hit tests, but renders the
-                // chrome as a normal element subtree (screen-space, semantic zoom).
-                //
-                // Positioning prefers `PortalBoundsStore` so this milestone demonstrates the full
-                // bounds-query loop (host subtree → harvest bounds → consume bounds).
-                // Keep this diagnostics-only. When portals are hosted, avoid duplicating portal
-                // label content: the tooltip should focus on debug details (anchor source, ids).
-                push_hover_tooltip_overlay_if_needed(
+                build_surface_region_children(
                     cx,
-                    &mut overlay_children,
-                    HoverTooltipOverlayParams {
-                        graph: &graph,
-                        portal_bounds_store: &portal_bounds_store,
-                        hover_anchor_store: &hover_anchor_store,
-                        style_tokens: &style_tokens,
+                    SurfaceRegionChildrenParams {
+                        canvas,
+                        graph: graph.clone(),
+                        view_state: view_state.clone(),
+                        controller: controller.clone(),
+                        hovered_node_model: hovered_node.clone(),
+                        node_drag_model: node_drag.clone(),
+                        marquee_drag_model: marquee_drag.clone(),
+                        hover_anchor_store: hover_anchor_store.clone(),
+                        portal_bounds_store: portal_bounds_store.clone(),
+                        portal_measured_geometry_state: portal_measured_geometry_state.clone(),
+                        measured_geometry_present: measured_geometry.is_some(),
+                        portals_enabled,
+                        portals_disabled,
+                        portal_max_nodes,
+                        cull_margin_screen_px,
+                        min_zoom,
+                        max_zoom,
                         diag_keys_enabled,
                         panning,
                         marquee_active,
                         node_dragging,
-                        hovered_node: hovered_node_value,
-                        hovered_portal_hosted,
-                        portals_disabled,
-                        bounds: grid_cache_value.bounds,
-                        view: view_for_paint,
+                        view_for_paint,
+                        grid_bounds: grid_cache_value.bounds,
+                        grid_ops: grid_cache_value.ops.clone(),
+                        node_draws: nodes_cache_value.draws.clone(),
+                        edge_draws: edges_cache_value.draws.clone(),
+                        geom_for_paint: derived_cache_value.geom.clone(),
+                        style_tokens: style_tokens.clone(),
+                        theme: theme.clone(),
+                        hovered_node_value,
+                        selected_nodes: effective_selected_nodes.clone(),
+                        marquee_value: marquee_value.clone(),
+                        node_drag_value: node_drag_value.clone(),
+                        paint_overrides_ref: paint_overrides_ref.clone(),
                     },
-                );
-
-                // Diagnostics-only: if Ctrl+9 was pressed before portal bounds arrived, apply the
-                // fit request once we have harvested at least one portal rect.
-                //
-                // This keeps scripted gates deterministic without requiring arbitrary sleeps.
-                apply_pending_fit_to_portals(
-                    cx,
-                    &view_state,
-                    &controller,
-                    &portal_bounds_store,
-                    portals_enabled,
-                    portals_disabled,
-                    grid_cache_value.bounds,
-                    min_zoom,
-                    max_zoom,
-                );
-
-                // Marquee chrome must render above portals, so keep it as a normal overlay element
-                // instead of drawing it in the canvas paint pass.
-                push_marquee_overlay_if_active(
-                    cx,
-                    &mut overlay_children,
-                    marquee_value.as_ref(),
-                    grid_cache_value.bounds,
-                    &style_tokens,
-                );
-                push_overlay_layer_if_needed(cx, &mut out, overlay_children);
-
-                out
+                )
             })]
         },
     )

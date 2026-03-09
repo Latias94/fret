@@ -863,6 +863,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     sync, portal measured-geometry flush, cache refresh, and semantics preparation through the
     private `paint_only/surface_frame.rs` seam, so declarative paint-only surface assembly no
     longer keeps the full pre-render context preparation block embedded inline.
+  - Progress: `paint_only.rs` now also routes canvas paint closure wiring, portal hosting, hover
+    anchor sync, hover tooltip append, fit-to-portals replay, marquee overlay append, and final
+    overlay flush through the private `paint_only/surface_content.rs` seam, so declarative
+    paint-only surface assembly no longer keeps the full post-handler render/output block embedded
+    inline.
 
 ## M5 - Compatibility retained convergence
 
