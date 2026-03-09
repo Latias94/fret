@@ -946,6 +946,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `command_view.rs`, `command_move.rs`, `command_edit.rs`, `command_edit_remove.rs`,
     `command_focus_cycle.rs`, and `command_focus_port.rs` no longer re-embed the same
     redraw-plus-paint-invalidation tail blocks inline.
+  - Progress: event/timer paint invalidation now also routes through the private
+    `canvas/widget/paint_invalidation.rs` seam, so `event_clipboard_feedback.rs`,
+    `event_timer_toast.rs`, `timer_motion_shared.rs`, `keyboard_pan_activation.rs`,
+    `pointer_wheel_pan.rs`, and `pointer_wheel_zoom.rs` no longer re-embed the same
+    event-scope redraw-plus-paint-invalidation tail blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

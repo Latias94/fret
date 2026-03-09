@@ -67,6 +67,5 @@ fn apply_viewport_zoom<M: NodeGraphCanvasMiddleware>(
 }
 
 fn finish_viewport_zoom<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }

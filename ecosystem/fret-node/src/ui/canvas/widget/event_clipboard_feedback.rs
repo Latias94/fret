@@ -1,8 +1,7 @@
 use super::*;
 
 pub(super) fn request_paste_feedback<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn show_clipboard_unavailable_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(

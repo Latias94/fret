@@ -54,6 +54,5 @@ pub(super) fn handle_pan_activation_key_up<H: UiHost, M: NodeGraphCanvasMiddlewa
 }
 
 fn invalidate_pan_activation<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }

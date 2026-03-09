@@ -15,7 +15,6 @@ pub(super) fn clear_expired_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     canvas.interaction.toast = None;
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }

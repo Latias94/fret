@@ -41,7 +41,6 @@ pub(super) fn handle_scroll_pan<H: UiHost, M: NodeGraphCanvasMiddleware>(
         state.pan.x += dx * speed;
         state.pan.y += dy * speed;
     });
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }
