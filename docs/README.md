@@ -9,6 +9,12 @@ New to the repo? Start with:
 - Setup (native: toolchain + OS deps + fast builds): [docs/setup.md](./setup.md)
 - Examples index (templates + cookbook + gallery + labs): [docs/examples/README.md](./examples/README.md)
 
+Default onboarding ladder:
+
+- **Default**: `hello` → `simple-todo` → `todo`
+- **Comparison**: `simple_todo_v2_target` when you want to compare authoring density or local-state/list tradeoffs
+- **Advanced**: gallery, interop, docking, renderer, and maintainer harnesses
+
 ## Command conventions (docs)
 
 Unless a document says otherwise:
@@ -124,6 +130,10 @@ now taught as `LocalState` + view runtime + typed actions.
   - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
   - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, router availability sync, background scheduling, RAF effects).
+- Surface taxonomy:
+  - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
+  - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples
+  - **Advanced**: gallery, viewport/interop, docking, renderer, maintainer harnesses
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`

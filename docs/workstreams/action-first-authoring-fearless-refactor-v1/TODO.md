@@ -338,9 +338,24 @@ ID format:
     - `apps/fret-cookbook/examples/gizmo_basics.rs`
     - `apps/fret-cookbook/examples/theme_switching_basics.rs`
     - `apps/fret-cookbook/examples/simple_todo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_chain_of_thought_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_checkpoint_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_test_results_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_persona_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs`
     - `apps/fret-cookbook/examples/drag_basics.rs`
     - `apps/fret-cookbook/examples/effects_layer_basics.rs`
     - `apps/fret-cookbook/examples/text_input_basics.rs`
+  - Next likely slice (as of 2026-03-09): keep this pass focused on remaining table-heavy ui-gallery
+    reference pages where `Table*::build(...)` removes real density noise without widening the
+    helper surface; `ai_artifact_demo.rs` does not currently need this pass, so any next slice
+    should be chosen only from remaining reference pages that still contain substantial eager
+    `Table*::new(...).into_element(cx)` sections after this selector/documentation cleanup.
   - Follow-up polish (same slice, 2026-03-07): late-landing cleanup continued on already-listed `assets_reload_epoch_basics`, `undo_basics`, and `embedded_viewport_basics` to keep builder-first composition consistent after the broader cookbook sweep.
   - Additional 2026-03-07 polish: trimmed remaining builder-path noise in those same pages (button/test_id ordering, alert/header late-landing, and small row composition cleanup) without changing their runtime contracts.
   - Additional 2026-03-07 follow-up: `icons_and_assets_basics` now keeps the page header, card shells, image/svg status rows, and the final content stack on the late-landing builder path, while `customv1_basics` folds `panel_shell(...)`, the preview/body stacks, and the top-level card body into `push_ui()` so only semantics-driven controls and the final scaffold boundary still land eagerly.
@@ -432,7 +447,7 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
     - `examples/README.md`
     - `docs/examples/README.md`
     - `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
-- [ ] AFA-postv1-003 Decide whether all top-level example links should collapse to one canonical docs
+- [ ] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
   page while preserving `examples/README.md` as a GitHub portal alias.
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
@@ -486,11 +501,11 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
 
-Current sequencing note (as of 2026-03-08):
+Current sequencing note (as of 2026-03-09):
 
-- first: local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`), with the next concrete target being todo-like view-owned collections,
-- second: narrow widget-local action sugar (`AFA-postv1-003`) once the collection/shared-state boundary is clearer,
-- third: continue builder-first convergence where it removes real noise but avoid helper sprawl,
+- first: productize the current default path (onboarding ladder, default/comparison/advanced taxonomy, helper visibility) and keep docs/templates/examples aligned on that story,
+- second: continue local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`) only where real medium-surface evidence still shows a state-boundary cliff after the doc/product pass,
+- third: re-evaluate narrow widget-local action sugar (`AFA-postv1-003`) only if at least two real medium surfaces still look materially noisier than the root-handler path,
 - fourth: only after the first three stabilize, re-evaluate narrow macros (`AFA-postv1-005`).
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
@@ -630,7 +645,7 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem{Spec,}` and `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem{Spec,}` all gain `action(...)` aliases, and command-audit docs record the phase-2 progress.
   - Status (as of 2026-03-09): those aliases now exist in `ecosystem/fret-ui-shadcn/src/context_menu.rs` and `ecosystem/fret-ui-shadcn/src/menubar.rs`; the broader gallery menu surface now also prefers `action(...)` across the main context-menu and menubar snippets (`basic`, `usage`, `demo`, `checkboxes`/`checkbox`, `radio`, `destructive`, `groups`, `icons`, `shortcuts`, `sides`, `submenu`, `rtl`, `parts`, `with_icons`), and `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` records the pass while keeping command-centric routing/storage unchanged.
 
-- [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
+- [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow widget-local action-sugar pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.
   - Status note: `apps/fret-cookbook/examples/simple_todo_v2_target.rs` now proves `LocalState<Vec<_>>` is already viable for a small keyed todo list and no longer needs per-row checkbox models either; label/control parity for snapshot/action discrete controls is now closed, so the remaining question is which write/event ergonomics buys the next density win.
@@ -639,6 +654,10 @@ Current sequencing note (as of 2026-03-08):
   - Update (as of 2026-03-08, toggle source alignment): `ecosystem/fret-ui-shadcn/src/toggle.rs` now lands the same narrow snapshot/action pattern via `Toggle::from_pressed(...)` plus `action(...)` / `action_payload(...)`, and `apps/fret-cookbook/examples/toggle_basics.rs` now demonstrates the path on a minimal view-local example.
   - Update (as of 2026-03-08, action-only control parity): `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs` plus `ecosystem/fret-ui-kit/src/primitives/control_registry.rs` now let label-forwarded pointer activation record command payload/source metadata, and `Checkbox` / `Switch` / `Toggle` all register command-backed `control_id` entries for snapshot/action paths. That closes the shared discrete-widget parity gap, so the next density decision can focus on widget-local action sugar vs broader invalidation ergonomics rather than on label forwarding.
   - Update (as of 2026-03-09): the keyed-list/default local-collection target is now considered closed enough for planning purposes. The recommended next step is to **productize the existing path first** (`hello` → `simple-todo` → `todo`, default/comparison/advanced taxonomy, helper visibility), and to defer any new default helper until that narrative is stable.
+  - Status (as of 2026-03-09): decision made. The post-v1 execution order is now fixed in docs:
+    productize the current default path first, revisit local-state / invalidation only where real
+    medium-surface evidence still remains after that pass, then re-evaluate narrow widget-local
+    action sugar, and keep macros last and optional.
 
 - [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
   - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.

@@ -59,152 +59,53 @@ fn chain_of_thought_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement 
                ty: &'static str,
                default: &'static str,
                desc: &'static str| {
-        shadcn::TableRow::new(
-            5,
-            vec![
-                shadcn::TableCell::new(cx.text(part)).into_element(cx),
-                shadcn::TableCell::new(cx.text(method)).into_element(cx),
-                shadcn::TableCell::new(cx.text(ty)).into_element(cx),
-                shadcn::TableCell::new(cx.text(default)).into_element(cx),
-                shadcn::TableCell::new(cx.text(desc)).into_element(cx),
-            ],
-        )
+        shadcn::TableRow::build(5, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(method)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(ty)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(default)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(desc)));
+        })
         .border_bottom(true)
-        .into_element(cx)
     };
 
-    shadcn::Table::new(vec![
-        shadcn::TableHeader::new(vec![
-            shadcn::TableRow::new(
-                5,
-                vec![
-                    shadcn::TableHead::new("Part").into_element(cx),
-                    shadcn::TableHead::new("Method").into_element(cx),
-                    shadcn::TableHead::new("Type").into_element(cx),
-                    shadcn::TableHead::new("Default").into_element(cx),
-                    shadcn::TableHead::new("Description").into_element(cx),
-                ],
-            )
-            .border_bottom(true)
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::TableBody::new(vec![
-            row(
-                cx,
-                "ChainOfThought",
-                "open_model",
-                "Model<bool>",
-                "None",
-                "Controlled open state.",
-            ),
-            row(
-                cx,
-                "ChainOfThought",
-                "default_open",
-                "bool",
-                "false",
-                "Initial open state for uncontrolled usage.",
-            ),
-            row(
-                cx,
-                "ChainOfThought",
-                "header / content",
-                "builder methods",
-                "-",
-                "Docs-style chained composition for the two compound parts used by the official examples.",
-            ),
-            row(
-                cx,
-                "ChainOfThought",
-                "children",
-                "IntoIterator<Item = Header | Content>",
-                "-",
-                "Lower-level typed child list when you prefer building the compound parts as a batch.",
-            ),
-            row(
-                cx,
-                "ChainOfThought",
-                "into_element_with_children",
-                "FnOnce(&mut ElementContext) -> Vec<AnyElement>",
-                "-",
-                "Lower-level escape hatch when child construction must happen inside a live scope.",
-            ),
-            row(
-                cx,
-                "ChainOfThought",
-                "test_id_root / gap / refine_layout",
-                "builder methods",
-                "w_full + gap 4",
-                "Root diagnostics id, vertical spacing, and layout refinement.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtHeader",
-                "children",
-                "IntoIterator<Item = AnyElement>",
-                "\"Chain of Thought\"",
-                "Overrides the default header label with composed children.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtContent",
-                "new(children)",
-                "IntoIterator<Item = AnyElement>",
-                "-",
-                "Wraps step content in the collapsible body.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtStep",
-                "new(label)",
-                "impl Into<Arc<str>>",
-                "status = complete, icon = dot",
-                "Creates a step with upstream-aligned defaults.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtStep",
-                "label_children / description_children",
-                "IntoIterator<Item = AnyElement>",
-                "None",
-                "Rich slot APIs for custom label and description content.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtStep",
-                "status / icon / children",
-                "builder methods",
-                "complete / dot / empty",
-                "Visual status, leading icon, and trailing custom body content.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtSearchResults",
-                "new(children)",
-                "IntoIterator<Item = AnyElement>",
-                "gap 2 + wrap",
-                "Wraps badges like the official search result row.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtSearchResult",
-                "new(label)",
-                "impl Into<Arc<str>>",
-                "secondary badge",
-                "Badge-shaped search result pill with normal label weight.",
-            ),
-            row(
-                cx,
-                "ChainOfThoughtImage",
-                "new(children) / caption",
-                "builder methods",
-                "caption = None",
-                "Muted rounded image frame with optional caption text.",
-            ),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(5, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Method").into_element(cx));
+                        out.push(shadcn::TableHead::new("Type").into_element(cx));
+                        out.push(shadcn::TableHead::new("Default").into_element(cx));
+                        out.push(shadcn::TableHead::new("Description").into_element(cx));
+                    })
+                    .border_bottom(true)
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row(cx, "ChainOfThought", "open_model", "Model<bool>", "None", "Controlled open state."));
+                out.push_ui(cx, row(cx, "ChainOfThought", "default_open", "bool", "false", "Initial open state for uncontrolled usage."));
+                out.push_ui(cx, row(cx, "ChainOfThought", "header / content", "builder methods", "-", "Docs-style chained composition for the two compound parts used by the official examples."));
+                out.push_ui(cx, row(cx, "ChainOfThought", "children", "IntoIterator<Item = Header | Content>", "-", "Lower-level typed child list when you prefer building the compound parts as a batch."));
+                out.push_ui(cx, row(cx, "ChainOfThought", "into_element_with_children", "FnOnce(&mut ElementContext) -> Vec<AnyElement>", "-", "Lower-level escape hatch when child construction must happen inside a live scope."));
+                out.push_ui(cx, row(cx, "ChainOfThought", "test_id_root / gap / refine_layout", "builder methods", "w_full + gap 4", "Root diagnostics id, vertical spacing, and layout refinement."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtHeader", "children", "IntoIterator<Item = AnyElement>", "\"Chain of Thought\"", "Overrides the default header label with composed children."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtContent", "new(children)", "IntoIterator<Item = AnyElement>", "-", "Wraps step content in the collapsible body."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "new(label)", "impl Into<Arc<str>>", "status = complete, icon = dot", "Creates a step with upstream-aligned defaults."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "label_children / description_children", "IntoIterator<Item = AnyElement>", "None", "Rich slot APIs for custom label and description content."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtStep", "status / icon / children", "builder methods", "complete / dot / empty", "Visual status, leading icon, and trailing custom body content."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtSearchResults", "new(children)", "IntoIterator<Item = AnyElement>", "gap 2 + wrap", "Wraps badges like the official search result row."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtSearchResult", "new(label)", "impl Into<Arc<str>>", "secondary badge", "Badge-shaped search result pill with normal label weight."));
+                out.push_ui(cx, row(cx, "ChainOfThoughtImage", "new(children) / caption", "builder methods", "caption = None", "Muted rounded image frame with optional caption text."));
+            }),
+        );
+    })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)
 }
