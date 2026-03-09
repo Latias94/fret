@@ -9,14 +9,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .entries_parts(
             shadcn::MenubarContent::new(),
             [
-                shadcn::MenubarItem::new("New Tab")
-                    .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx))
-                    .into(),
-                shadcn::MenubarItem::new("New Window").into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("New Tab")
+                        .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx))
+                        .into(),
+                    shadcn::MenubarItem::new("New Window").into(),
+                ])
+                .into(),
                 shadcn::MenubarSeparator::new().into(),
-                shadcn::MenubarItem::new("Share").into(),
-                shadcn::MenubarSeparator::new().into(),
-                shadcn::MenubarItem::new("Print").into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("Share").into(),
+                    shadcn::MenubarItem::new("Print").into(),
+                ])
+                .into(),
             ],
         );
 

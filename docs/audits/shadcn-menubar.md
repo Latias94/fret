@@ -15,9 +15,9 @@ examples in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`
-- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/menubar.tsx`
-- Reference example: `repo-ref/ui/apps/v4/registry/bases/radix/examples/menubar-example.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`
+- Reference implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`
+- Reference example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/menubar-demo.tsx`
 
 Key upstream behaviors/surfaces:
 
@@ -67,6 +67,12 @@ Key upstream behaviors/surfaces:
   + `overflow-y-auto` outcome (best-effort, renderer-driven).
 - Pass: Panel width uses a shadcn-like `min-width` baseline but grows when long checkbox/radio labels
   require more space (mirrors upstream `min-w-*` behavior rather than a fixed `w-*`).
+- Pass: Call-site panel width overrides now map cleanly to shadcn-style content ownership via
+  `MenubarContent::min_width(...)` and `MenubarContent::submenu_min_width(...)`; this is the
+  correct place to model upstream example-level overrides such as `MenubarContent className="w-64"`.
+- Note: Default-style ownership remains split on purpose: menubar root width stays caller-owned
+  (page/layout negotiation), while panel chrome + baseline `min-width` stay recipe-owned and
+  explicit panel width overrides are content-owned.
 - Note: The "grow to fit long labels" width currently uses a deterministic text-width heuristic to
   avoid introducing a renderer-coupled measurement dependency into the recipe layer. If this proves
   brittle across fonts, consider plumbing a text measurement service through the UI host/runtime and

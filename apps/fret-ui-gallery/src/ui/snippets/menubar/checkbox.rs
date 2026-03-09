@@ -72,28 +72,30 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let view = shadcn::MenubarMenu::new("View").entries([
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            view_bookmarks_bar.clone(),
-            "Always Show Bookmarks Bar",
-        )),
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            view_full_urls.clone(),
-            "Always Show Full URLs",
-        )),
-        shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Reload")
-                .inset(true)
-                .trailing(shadcn::MenubarShortcut::new("⌘R").into_element(cx)),
-        ),
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Force Reload")
-                .disabled(true)
-                .inset(true)
-                .trailing(shadcn::MenubarShortcut::new("⇧⌘R").into_element(cx)),
-        ),
-    ]);
+    let view = shadcn::MenubarTrigger::new("View")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new().min_width(Px(256.0)),
+            [
+                shadcn::MenubarCheckboxItem::new(
+                    view_bookmarks_bar.clone(),
+                    "Always Show Bookmarks Bar",
+                )
+                .into(),
+                shadcn::MenubarCheckboxItem::new(view_full_urls.clone(), "Always Show Full URLs")
+                    .into(),
+                shadcn::MenubarSeparator::new().into(),
+                shadcn::MenubarItem::new("Reload")
+                    .inset(true)
+                    .trailing(shadcn::MenubarShortcut::new("⌘R").into_element(cx))
+                    .into(),
+                shadcn::MenubarItem::new("Force Reload")
+                    .disabled(true)
+                    .inset(true)
+                    .trailing(shadcn::MenubarShortcut::new("⇧⌘R").into_element(cx))
+                    .into(),
+            ],
+        );
 
     let format = shadcn::MenubarMenu::new("Format").entries([
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(

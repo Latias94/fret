@@ -351,6 +351,8 @@ impl MenubarTrigger {
 pub struct MenubarContent {
     window_margin: Option<Px>,
     side_offset: Option<Px>,
+    min_width: Option<Px>,
+    submenu_min_width: Option<Px>,
     typeahead_timeout_ticks: Option<u64>,
     modal: Option<bool>,
     align_leading_icons: Option<bool>,
@@ -364,6 +366,8 @@ impl std::fmt::Debug for MenubarContent {
         f.debug_struct("MenubarContent")
             .field("window_margin", &self.window_margin)
             .field("side_offset", &self.side_offset)
+            .field("min_width", &self.min_width)
+            .field("submenu_min_width", &self.submenu_min_width)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("modal", &self.modal)
             .field("align_leading_icons", &self.align_leading_icons)
@@ -386,6 +390,16 @@ impl MenubarContent {
 
     pub fn side_offset(mut self, offset: Px) -> Self {
         self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = Some(min_width);
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = Some(min_width);
         self
     }
 
@@ -431,6 +445,12 @@ impl MenubarContent {
         }
         if let Some(v) = self.side_offset {
             menu.menu.side_offset = v;
+        }
+        if let Some(v) = self.min_width {
+            menu.menu.min_width = v;
+        }
+        if let Some(v) = self.submenu_min_width {
+            menu.menu.submenu_min_width = v;
         }
         if let Some(v) = self.typeahead_timeout_ticks {
             menu.menu.typeahead_timeout_ticks = v;
@@ -1431,6 +1451,8 @@ pub struct MenubarMenu {
     test_id: Option<Arc<str>>,
     window_margin: Px,
     side_offset: Px,
+    min_width: Px,
+    submenu_min_width: Px,
     typeahead_timeout_ticks: u64,
 }
 
@@ -1441,6 +1463,8 @@ impl std::fmt::Debug for MenubarMenu {
             .field("disabled", &self.disabled)
             .field("window_margin", &self.window_margin)
             .field("side_offset", &self.side_offset)
+            .field("min_width", &self.min_width)
+            .field("submenu_min_width", &self.submenu_min_width)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .finish()
     }
@@ -1454,6 +1478,8 @@ impl MenubarMenu {
             test_id: None,
             window_margin: Px(8.0),
             side_offset: Px(8.0),
+            min_width: Px(192.0),
+            submenu_min_width: Px(128.0),
             typeahead_timeout_ticks: 30,
         }
     }
@@ -1505,6 +1531,16 @@ impl MenubarMenu {
 
     pub fn side_offset(mut self, offset: Px) -> Self {
         self.side_offset = offset;
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = min_width;
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = min_width;
         self
     }
 
@@ -1784,6 +1820,8 @@ impl MenubarMenuEntries {
                 if overlay_presence.present && enabled {
                     let side_offset = menu.side_offset;
                     let window_margin = menu.window_margin;
+                    let min_width = menu.min_width;
+                    let submenu_min_width = menu.submenu_min_width;
                     let typeahead_timeout_ticks = menu.typeahead_timeout_ticks;
                     let (on_dismiss_request, on_close_auto_focus) =
                         menu::root::menu_close_auto_focus_guard_hooks(
@@ -1840,7 +1878,7 @@ impl MenubarMenuEntries {
                         let font_line_height = theme.metric_token("font.line_height");
                         let mut desired = menu_panel_desired_size(
                             &entries,
-                            Px(192.0),
+                            min_width,
                             font_size,
                             font_line_height,
                             pad_x,
@@ -2591,7 +2629,7 @@ impl MenubarMenuEntries {
                                                                           .map(|submenu_entries| {
                                                                               menu_panel_desired_size(
                                                                                   submenu_entries,
-                                                                                  Px(128.0),
+                                                                                  submenu_min_width,
                                                                                   font_size,
                                                                                   font_line_height,
                                                                                   pad_x,
@@ -2602,7 +2640,7 @@ impl MenubarMenuEntries {
                                                                           .unwrap_or_else(|| {
                                                                               menu_panel_desired_size(
                                                                                   &[],
-                                                                                  Px(128.0),
+                                                                                  submenu_min_width,
                                                                                   font_size,
                                                                                   font_line_height,
                                                                                   pad_x,
@@ -2995,7 +3033,7 @@ impl MenubarMenuEntries {
                             .map(|submenu_entries| {
                                 menu_panel_desired_size(
                                     submenu_entries,
-                                    Px(128.0),
+                                    submenu_min_width,
                                     font_size,
                                     font_line_height,
                                     pad_x,
@@ -3006,7 +3044,7 @@ impl MenubarMenuEntries {
                             .unwrap_or_else(|| {
                                 menu_panel_desired_size(
                                     &[],
-                                    Px(128.0),
+                                    submenu_min_width,
                                     font_size,
                                     font_line_height,
                                     pad_x,
@@ -4002,6 +4040,20 @@ mod tests {
         );
 
         assert_eq!(entries.menu.side_offset, Px(3.0));
+    }
+
+    #[test]
+    fn menubar_content_width_builders_update_menu_entry_config() {
+        let menu = MenubarMenu::new("File");
+        let entries = menu.entries_parts(
+            MenubarContent::new()
+                .min_width(Px(256.0))
+                .submenu_min_width(Px(176.0)),
+            Vec::<MenubarEntry>::new(),
+        );
+
+        assert_eq!(entries.menu.min_width, Px(256.0));
+        assert_eq!(entries.menu.submenu_min_width, Px(176.0));
     }
 
     #[test]
