@@ -59,13 +59,11 @@ pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     if canvas.interaction.hover_edge_anchor != new_hover_anchor {
         canvas.interaction.hover_edge_anchor = new_hover_anchor;
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::paint_invalidation::invalidate_paint(cx);
     }
 
     if canvas.interaction.hover_edge != new_hover {
         canvas.interaction.hover_edge = new_hover;
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::paint_invalidation::invalidate_paint(cx);
     }
 }

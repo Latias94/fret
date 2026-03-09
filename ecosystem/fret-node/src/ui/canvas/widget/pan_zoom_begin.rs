@@ -30,8 +30,7 @@ pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     canvas.emit_move_start(snapshot, ViewportMoveKind::PanDrag);
     cx.capture_pointer(cx.node);
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }
 

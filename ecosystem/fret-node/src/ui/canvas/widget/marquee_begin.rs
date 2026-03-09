@@ -19,6 +19,5 @@ pub(super) fn begin_background_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
         clear_selection_on_up,
     });
     cx.capture_pointer(cx.node);
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }

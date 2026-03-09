@@ -42,8 +42,7 @@ pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         state.pan.x += delta_canvas.x;
         state.pan.y += delta_canvas.y;
     });
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }
 

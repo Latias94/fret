@@ -549,6 +549,11 @@ real editors.
   `pointer_down_double_click_background.rs`, `pointer_down_double_click_edge.rs`,
   `pointer_down_gesture_start.rs`, and `pointer_up_finish.rs` stop re-embedding the same
   event-scope redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
+- pan/marquee/group-drag/hover wire-drag event tails now also route through the same private
+  `canvas/widget/paint_invalidation.rs` seam, so `pan_zoom_begin.rs`, `pan_zoom_move.rs`,
+  `marquee_begin.rs`, `group_drag.rs`, `group_resize.rs`, `hover.rs`, and `wire_drag_helpers.rs`
+  stop re-embedding the same event-scope redraw-plus-paint-invalidation tail blocks inline while
+  keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
