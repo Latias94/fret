@@ -984,6 +984,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `paint_root/cached_edges/single_rect.rs`, `paint_root/cached_edges/tile_path.rs`,
     `retained_widget_layout_drain.rs`, and `wire_drag/commit_cx.rs` no longer re-embed the same
     next-frame redraw request blocks inline.
+  - Progress: `paint_edges/main.rs` now routes hash/glow-bounds helper logic through the private
+    `canvas/widget/paint_edges/support.rs` seam, so the root edge-paint surface no longer keeps
+    the full helper set for stable cache keys and glow bounds math embedded inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
