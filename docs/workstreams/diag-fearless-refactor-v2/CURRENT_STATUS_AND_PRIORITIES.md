@@ -225,7 +225,10 @@ The capability-source side of that behavior is now also aligned:
   `crates/fret-diag/src/lib.rs`,
 - the shared loader now follows the same fallback order used by diagnostics tooling:
   direct, `_root`, then parent `capabilities.json`,
-- `diag doctor` now reports normalized capabilities from that same resolved source path.
+- `diag doctor` now reports normalized capabilities from that same resolved source path,
+- the first-pass non-filesystem direction is now documented in
+  `NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md` as an additive provenance contract instead of a
+  replacement for filesystem paths.
 
 The DevTools/MCP defer audit makes another boundary explicit:
 

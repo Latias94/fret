@@ -345,3 +345,6 @@ The next likely follow-up is one of:
 - document/consumer adoption of the new policy-skip counter and source-path fields,
 - or a later explicit decision on whether any non-filesystem transport should expose the same
   capability-source contract.
+
+That contract direction is now captured in
+`docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`.

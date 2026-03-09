@@ -203,6 +203,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     `CAMPAIGN_METADATA_EXECUTION_ADOPTION_AUDIT.md`,
   - [x] first-pass campaign capability preflight design captured in
     `CAMPAIGN_CAPABILITY_PREFLIGHT_V1.md`,
+  - [x] first-pass non-filesystem capability-source direction captured in
+    `NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`,
   - [~] keep `requires_capabilities` / `flake_policy` passive until campaign-level preflight or
     retry orchestration has a concrete consumer.
     - [x] campaign-level capability preflight is now partially landed,

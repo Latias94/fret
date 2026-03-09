@@ -98,6 +98,13 @@ Recommended work:
 - document that answer before another consumer depends on filesystem-only assumptions,
 - keep the first extension additive rather than replacing the current string-based source field.
 
+Recent landing in this priority bucket:
+
+- the first-pass contract direction now lives in
+  `NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`,
+- the documented recommendation is to keep filesystem path reporting unchanged and grow
+  non-filesystem provenance through an additive source object rather than fabricated paths.
+
 Definition of done:
 
 - the repo has one documented answer for how capability provenance is reported outside the
