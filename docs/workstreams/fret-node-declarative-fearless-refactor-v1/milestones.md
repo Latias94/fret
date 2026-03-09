@@ -484,6 +484,10 @@ real editors.
 - cancel-path residual cleanup, hover/focus reset, and pan-drag reset now also route through the
   private `canvas/widget/cancel_session.rs` seam, so cancel/pointer-up helpers stop re-embedding
   the same interaction cleanup blocks inline while keeping the same behavior.
+- left-click hit routes, pan-zoom start, marquee selection, and wire-commit cleanup now also reuse
+  the expanded private `canvas/widget/focus_session.rs` seam, so pointer-down helpers stop
+  re-embedding the same edge-focus and hover-port hint resets inline while keeping the same
+  behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

@@ -15,7 +15,7 @@ pub(super) fn handle_port_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     zoom: f32,
     port: PortId,
 ) {
-    canvas.interaction.focused_edge = None;
+    super::super::focus_session::clear_edge_focus(&mut canvas.interaction);
     let port_base_connectable = canvas
         .graph
         .read_ref(cx.app, |graph| {
@@ -90,11 +90,7 @@ pub(super) fn handle_port_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
     let yank = (modifiers.ctrl || modifiers.meta)
         .then(|| canvas.yank_reconnectable_edges_from_port(cx.app, &snapshot.interaction, port));
 
@@ -163,9 +159,7 @@ pub(super) fn handle_edge_anchor_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.marquee = None;
     canvas.interaction.focused_edge =
         (snapshot.interaction.edges_focusable && edge_selectable).then_some(edge);
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
+    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
     canvas.interaction.hover_edge = None;
 
     if edge_selectable {

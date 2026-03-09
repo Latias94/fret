@@ -56,7 +56,6 @@ fn cancel_previous_motion<H: UiHost, M: NodeGraphCanvasMiddleware>(
 }
 
 fn clear_competing_interactions<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
-    canvas.interaction.hover_edge = None;
     canvas.interaction.pending_group_drag = None;
     canvas.interaction.group_drag = None;
     canvas.interaction.pending_group_resize = None;
@@ -71,9 +70,5 @@ fn clear_competing_interactions<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeG
     canvas.interaction.edge_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::focus_session::clear_hover_edge_focus_and_hover_port_hints(&mut canvas.interaction);
 }

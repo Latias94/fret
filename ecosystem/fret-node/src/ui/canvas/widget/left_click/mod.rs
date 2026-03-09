@@ -73,11 +73,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
         canvas.interaction.click_connect = false;
         canvas.interaction.pending_marquee = None;
         canvas.interaction.marquee = None;
-        canvas.interaction.focused_edge = None;
-        canvas.interaction.hover_port = None;
-        canvas.interaction.hover_port_valid = false;
-        canvas.interaction.hover_port_convertible = false;
-        canvas.interaction.hover_port_diagnostic = None;
+        super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
 
         super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers, false);
         return true;

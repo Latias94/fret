@@ -35,10 +35,7 @@ pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
 
     if snapshot.interaction.elements_selectable {
         canvas.update_view_state(cx.app, |s| {
@@ -108,11 +105,7 @@ pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
     let offset = Point::new(
         Px(position.x.0 - rect.origin.x.0),
         Px(position.y.0 - rect.origin.y.0),
@@ -219,10 +212,7 @@ pub(super) fn handle_edge_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.pending_edge_insert_drag = None;
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.click_connect = false;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
     let edge_selectable = canvas
         .graph
         .read_ref(cx.app, |g| {

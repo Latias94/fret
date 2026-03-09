@@ -26,7 +26,7 @@ pub(super) fn update_active_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
         );
 
     canvas.interaction.marquee = Some(marquee);
-    canvas.interaction.focused_edge = None;
+    super::focus_session::clear_edge_focus(&mut canvas.interaction);
     super::marquee_selection_apply::apply_marquee_selection(
         canvas,
         cx.app,

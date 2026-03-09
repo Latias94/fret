@@ -97,8 +97,7 @@ fn clear_for_group_resize<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCa
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    clear_hover_port_state(canvas);
+    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
 }
 
 fn clear_for_group_drag<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
@@ -114,8 +113,7 @@ fn clear_for_group_drag<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanv
     canvas.interaction.edge_insert_drag = None;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    clear_hover_port_state(canvas);
+    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
 }
 
 fn clear_for_background_interaction<M: NodeGraphCanvasMiddleware>(
@@ -137,15 +135,7 @@ fn clear_for_background_interaction<M: NodeGraphCanvasMiddleware>(
     canvas.interaction.click_connect = false;
     canvas.interaction.pending_marquee = None;
     canvas.interaction.marquee = None;
-    canvas.interaction.focused_edge = None;
-    clear_hover_port_state(canvas);
-}
-
-fn clear_hover_port_state<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
 }
 
 fn select_group_for_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
