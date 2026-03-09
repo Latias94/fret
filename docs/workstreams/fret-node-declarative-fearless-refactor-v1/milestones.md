@@ -509,6 +509,10 @@ real editors.
   `canvas/conversion/conversion_candidates.rs` and
   `canvas/conversion/conversion_plan.rs` seams, so both root modules stop re-embedding small pure
   helper blocks inline while keeping the same root exports.
+- `ui/canvas/snaplines.rs` now also routes snap-anchor extraction and best-guide delta selection
+  through the private `canvas/snaplines/snaplines_align.rs` seam, so the root snaplines module
+  stops re-embedding small pure alignment helpers inline while keeping the same result contract and
+  tests.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1207,6 +1211,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/conversion.rs`
 - `ecosystem/fret-node/src/ui/canvas/conversion/conversion_candidates.rs`
 - `ecosystem/fret-node/src/ui/canvas/conversion/conversion_plan.rs`
+- `ecosystem/fret-node/src/ui/canvas/snaplines.rs`
+- `ecosystem/fret-node/src/ui/canvas/snaplines/snaplines_align.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

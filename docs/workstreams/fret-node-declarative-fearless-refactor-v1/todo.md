@@ -921,6 +921,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/conversion/conversion_candidates.rs` and
     `canvas/conversion/conversion_plan.rs` seams, so both root modules now mainly hold root
     re-exports and shared imports.
+  - Progress: `ui/canvas/snaplines.rs` now routes snap-anchor extraction and best-guide delta
+    selection through the private `canvas/snaplines/snaplines_align.rs` seam, so the root
+    snaplines module now mainly holds shared result types plus tests.
 
 ## M5 - Compatibility retained convergence
 
