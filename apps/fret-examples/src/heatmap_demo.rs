@@ -184,7 +184,7 @@ pub fn build_app() -> App {
     app
 }
 
-fn build_fn_driver() -> FnDriver<HeatmapDemoDriver, HeatmapDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         HeatmapDemoDriver::default(),
         create_window_state,

@@ -192,7 +192,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<CandlestickDemoDriver, CandlestickDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         CandlestickDemoDriver::default(),
         create_window_state,

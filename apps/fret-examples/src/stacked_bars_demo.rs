@@ -210,7 +210,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<StackedBarsDemoDriver, StackedBarsDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         StackedBarsDemoDriver::default(),
         create_window_state,
