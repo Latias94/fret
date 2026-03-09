@@ -1238,9 +1238,18 @@ impl ElementHostWidget {
 
         let children_layout_invalidated =
             direct_children_layout_invalidated || descendant_subtree_layout_dirty;
-        let force_barrier_child_root_relayout = post_layout_extents_mode
-            && descendant_subtree_layout_dirty
-            && !direct_children_layout_invalidated;
+        let forced_barrier_child_roots: Vec<NodeId> = if post_layout_extents_mode {
+            cx.children
+                .iter()
+                .copied()
+                .filter(|&child| {
+                    cx.tree.node_subtree_layout_dirty(child) && !cx.tree.node_layout_invalidated(child)
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let force_barrier_child_root_relayout = !forced_barrier_child_roots.is_empty();
         let at_end_with_invalidated_child = at_scroll_extent_edge && children_layout_invalidated;
 
         let mut intrinsic_cached_max_child: Option<Size> = None;
@@ -1802,29 +1811,19 @@ impl ElementHostWidget {
         cx.with_overflow_context(overflow_ctx, |cx| {
             if !is_probe_layout {
                 if force_barrier_child_root_relayout {
-                    for &child in cx.children {
+                    for &child in &forced_barrier_child_roots {
                         cx.tree.invalidate(child, Invalidation::Layout);
                     }
                 }
                 let solve_started = profile_cfg.is_some().then(Instant::now);
                 match cx.children {
                     [child] => {
-                        if force_barrier_child_root_relayout {
-                            cx.solve_barrier_child_root(*child, content_bounds);
-                        } else {
-                            cx.solve_barrier_child_root_if_needed(*child, content_bounds);
-                        }
+                        cx.solve_barrier_child_root_if_needed(*child, content_bounds);
                     }
                     children => {
-                        if force_barrier_child_root_relayout {
-                            for &child in children {
-                                cx.solve_barrier_child_root(child, content_bounds);
-                            }
-                        } else {
-                            let roots: Vec<(NodeId, Rect)> =
-                                children.iter().map(|&c| (c, content_bounds)).collect();
-                            cx.solve_barrier_child_roots_if_needed(&roots);
-                        }
+                        let roots: Vec<(NodeId, Rect)> =
+                            children.iter().map(|&c| (c, content_bounds)).collect();
+                        cx.solve_barrier_child_roots_if_needed(&roots);
                     }
                 }
                 if let Some(started) = solve_started {
@@ -2242,29 +2241,19 @@ impl ElementHostWidget {
                 cx.with_overflow_context(overflow_ctx, |cx| {
                     if !is_probe_layout {
                         if force_barrier_child_root_relayout {
-                            for &child in cx.children {
+                            for &child in &forced_barrier_child_roots {
                                 cx.tree.invalidate(child, Invalidation::Layout);
                             }
                         }
                         let solve_started = profile_cfg.is_some().then(Instant::now);
                         match cx.children {
                             [child] => {
-                                if force_barrier_child_root_relayout {
-                                    cx.solve_barrier_child_root(*child, content_bounds);
-                                } else {
-                                    cx.solve_barrier_child_root_if_needed(*child, content_bounds);
-                                }
+                                cx.solve_barrier_child_root_if_needed(*child, content_bounds);
                             }
                             children => {
-                                if force_barrier_child_root_relayout {
-                                    for &child in children {
-                                        cx.solve_barrier_child_root(child, content_bounds);
-                                    }
-                                } else {
-                                    let roots: Vec<(NodeId, Rect)> =
-                                        children.iter().map(|&c| (c, content_bounds)).collect();
-                                    cx.solve_barrier_child_roots_if_needed(&roots);
-                                }
+                                let roots: Vec<(NodeId, Rect)> =
+                                    children.iter().map(|&c| (c, content_bounds)).collect();
+                                cx.solve_barrier_child_roots_if_needed(&roots);
                             }
                         }
                         if let Some(started) = solve_started {
