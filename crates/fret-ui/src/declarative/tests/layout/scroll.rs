@@ -3723,6 +3723,602 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_off_edge() {
 
 
 #[test]
+fn scroll_axis_both_grows_width_when_only_descendant_dirty_at_edge() {
+    let mut app = TestHost::new();
+    let wide = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(48.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let mut scene = Scene::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        wide: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                axis: crate::element::ScrollAxis::Both,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        cx.observe_model(&wide, Invalidation::Layout);
+                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+
+                        let mut content = crate::element::ContainerProps::default();
+                        content.layout.size.width =
+                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
+                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+
+                        vec![cx.container(content, |_cx| Vec::new())]
+                    })]
+                })]
+            },
+        )]
+    }
+
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-grow-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().x;
+    assert!(max0.0 > 0.0, "expected initial non-zero x scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(max0, Px(0.0)));
+    let _ = app.models_mut().update(&wide, |v| *v = true);
+    app.advance_frame();
+
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-grow-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root1);
+
+    let scroll_node = ui.children(root1)[0];
+    let child_root = ui.children(scroll_node)[0];
+    let observed_container = ui.children(child_root)[0];
+
+    assert!(ui.node_needs_layout(observed_container));
+    ui.test_set_layout_invalidation(child_root, false);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().x;
+    assert!(
+        content1.width.0 > content0.width.0 + 0.5,
+        "expected x content extent to grow even when only a descendant remains dirty at edge: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected x max offset to grow under descendant-only invalidation at edge: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
+fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_at_edge() {
+    let mut app = TestHost::new();
+    let wide = app.models_mut().insert(true);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(48.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let mut scene = Scene::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        wide: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                axis: crate::element::ScrollAxis::Both,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        cx.observe_model(&wide, Invalidation::Layout);
+                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+
+                        let mut content = crate::element::ContainerProps::default();
+                        content.layout.size.width =
+                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
+                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+
+                        vec![cx.container(content, |_cx| Vec::new())]
+                    })]
+                })]
+            },
+        )]
+    }
+
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-shrink-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().x;
+    assert!(max0.0 > 0.0, "expected initial non-zero x scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(max0, Px(0.0)));
+    let _ = app.models_mut().update(&wide, |v| *v = false);
+    app.advance_frame();
+
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-shrink-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root1);
+
+    let scroll_node = ui.children(root1)[0];
+    let child_root = ui.children(scroll_node)[0];
+    let observed_container = ui.children(child_root)[0];
+
+    assert!(ui.node_needs_layout(observed_container));
+    ui.test_set_layout_invalidation(child_root, false);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().x;
+    let off1 = scroll_handle.offset().x;
+    assert!(
+        content1.width.0 + 0.5 < content0.width.0,
+        "expected x content extent to shrink when only a descendant remains dirty at edge: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        max1.0 + 0.5 < max0.0,
+        "expected x max offset to shrink under descendant-only invalidation at edge: before={max0:?} after={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected x offset to clamp after descendant-only shrink at edge: offset={off1:?} max={max1:?} content={content1:?}"
+    );
+}
+
+
+#[test]
+fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureLayoutNode {
+        measured: Size,
+        layout_size: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(48.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-mixed-child-invalidation-growth-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Both,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node0 = ui.children(root0)[0];
+    let leaf_a0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(150.0), Px(40.0)),
+    });
+    let root_a0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_a0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(150.0), Px(40.0)),
+        ),
+    });
+    let leaf_b0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(140.0), Px(40.0)),
+    });
+    let root_b0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_b0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(140.0), Px(40.0)),
+        ),
+    });
+    ui.set_children(root_a0, vec![leaf_a0]);
+    ui.set_children(root_b0, vec![leaf_b0]);
+    ui.set_children(scroll_node0, vec![root_a0, root_b0]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let max0 = scroll_handle.max_offset().x;
+    scroll_handle.set_offset(fret_core::Point::new(max0, Px(0.0)));
+
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-mixed-child-invalidation-growth-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Both,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node1 = ui.children(root1)[0];
+    let leaf_a1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(160.0), Px(40.0)),
+    });
+    let root_a1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_a1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(160.0), Px(40.0)),
+        ),
+    });
+    let leaf_b1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(260.0), Px(40.0)),
+    });
+    let root_b1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_b1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(40.0)),
+        ),
+    });
+    ui.set_children(root_a1, vec![leaf_a1]);
+    ui.set_children(root_b1, vec![leaf_b1]);
+    ui.set_children(scroll_node1, vec![root_a1, root_b1]);
+
+    assert!(ui.node_needs_layout(root_a1));
+    assert!(ui.node_needs_layout(leaf_b1));
+    ui.test_set_layout_invalidation(root_b1, false);
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().x;
+    assert!(
+        (content1.width.0 - 260.0).abs() <= 0.5,
+        "expected descendant-only x-growth root to remain authoritative at edge even when a sibling root is directly invalidated: after={content1:?}"
+    );
+    assert!(
+        (max1.0 - 140.0).abs() <= 0.5,
+        "expected x max offset to reflect the 260px descendant-only growth root at edge: content={content1:?} max={max1:?}"
+    );
+}
+
+#[test]
+fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureLayoutNode {
+        measured: Size,
+        layout_size: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(48.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-mixed-child-invalidation-shrink-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Both,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node0 = ui.children(root0)[0];
+    let leaf_a0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(240.0), Px(40.0)),
+    });
+    let root_a0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_a0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(40.0)),
+        ),
+    });
+    let leaf_b0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(280.0), Px(40.0)),
+    });
+    let root_b0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_b0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(280.0), Px(40.0)),
+        ),
+    });
+    ui.set_children(root_a0, vec![leaf_a0]);
+    ui.set_children(root_b0, vec![leaf_b0]);
+    ui.set_children(scroll_node0, vec![root_a0, root_b0]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let max0 = scroll_handle.max_offset().x;
+    scroll_handle.set_offset(fret_core::Point::new(max0, Px(0.0)));
+
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-mixed-child-invalidation-shrink-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Both,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node1 = ui.children(root1)[0];
+    let leaf_a1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(260.0), Px(40.0)),
+    });
+    let root_a1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_a1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(40.0)),
+        ),
+    });
+    let leaf_b1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(140.0), Px(40.0)),
+    });
+    let root_b1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(48.0)),
+        layout_size: Size::new(Px(120.0), Px(48.0)),
+        child: leaf_b1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(140.0), Px(40.0)),
+        ),
+    });
+    ui.set_children(root_a1, vec![leaf_a1]);
+    ui.set_children(root_b1, vec![leaf_b1]);
+    ui.set_children(scroll_node1, vec![root_a1, root_b1]);
+
+    assert!(ui.node_needs_layout(root_a1));
+    assert!(ui.node_needs_layout(leaf_b1));
+    ui.test_set_layout_invalidation(root_b1, false);
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().x;
+    let off1 = scroll_handle.offset().x;
+    assert!(
+        (content1.width.0 - 260.0).abs() <= 0.5,
+        "expected descendant-only x-shrink root to stop dominating at edge once a sibling root remains directly invalidated: after={content1:?}"
+    );
+    assert!(
+        (max1.0 - 140.0).abs() <= 0.5,
+        "expected x max offset to reflect the remaining 260px directly-invalidated root at edge: content={content1:?} max={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected x offset to clamp within the mixed-child shrink extent at edge: offset={off1:?} max={max1:?} content={content1:?}"
+    );
+}
+
+
+#[test]
 fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_authoritative() {
     struct FixedLeaf {
         size: Size,
