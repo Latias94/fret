@@ -1,6 +1,7 @@
 mod cached_budgeted;
 mod chrome;
 mod custom_paths;
+mod labels;
 mod main;
 mod markers;
 mod overlays;

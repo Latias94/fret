@@ -999,6 +999,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     edge-insert/insert-node-drop marker projection through the private
     `canvas/widget/paint_edges/prepare.rs` seam, so the root edge-paint surface no longer
     re-embeds edge width classification and marker projection setup inline.
+  - Progress: `paint_edges/main.rs` now also routes static edge-label drawing plus label/marker
+    budget stats publication through the private `canvas/widget/paint_edges/labels.rs` seam, so
+    the root edge-paint surface no longer re-embeds label tail orchestration and budget registry
+    publication inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

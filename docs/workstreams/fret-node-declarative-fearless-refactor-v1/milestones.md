@@ -591,6 +591,10 @@ real editors.
   insert-node-drop marker projection through the private `canvas/widget/paint_edges/prepare.rs`
   seam, so the root edge-paint surface stops re-embedding edge width classification and marker
   projection setup inline.
+- `paint_edges/main.rs` now also routes static edge-label drawing plus label/marker budget stats
+  publication through the private `canvas/widget/paint_edges/labels.rs` seam, so the root
+  edge-paint surface stops re-embedding label tail orchestration and budget registry publication
+  inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
