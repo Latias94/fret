@@ -708,6 +708,11 @@ real editors.
   `ui/canvas/widget/paint_nodes/full_nodes.rs`, and
   `ui/canvas/widget/paint_nodes/full_ports.rs` seams, so `paint_nodes/full.rs` now mainly keeps
   shared paint setup, skin hint collection, and top-level draw ordering explicit.
+- dynamic selected-node chrome/ring logic and port-adorners now also route through the private
+  `ui/canvas/widget/paint_nodes/dynamic_nodes.rs` and
+  `ui/canvas/widget/paint_nodes/dynamic_ports.rs` seams, while
+  `paint_nodes/dynamic_from_geometry.rs` reuses the shared insert-preview helper and now mainly
+  keeps transient paint setup plus top-level orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

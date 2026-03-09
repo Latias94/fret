@@ -1,4 +1,6 @@
 mod dynamic_from_geometry;
+mod dynamic_nodes;
+mod dynamic_ports;
 mod full;
 mod full_nodes;
 mod full_ports;

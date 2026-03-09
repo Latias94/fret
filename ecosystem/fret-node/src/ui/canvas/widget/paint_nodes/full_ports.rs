@@ -108,7 +108,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
     }
 
-    fn paint_marked_pin<H: UiHost>(
+    pub(super) fn paint_marked_pin<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
         rect: Rect,
@@ -140,7 +140,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         });
     }
 
-    fn paint_pin_ring<H: UiHost>(
+    pub(super) fn paint_pin_ring<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
         rect: Rect,
