@@ -15,19 +15,7 @@ pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     zoom: f32,
 ) {
     let mut new_hover_anchor: Option<(EdgeId, EdgeEndpoint)> = None;
-    if canvas.interaction.wire_drag.is_none()
-        && canvas.interaction.insert_node_drag_preview.is_none()
-        && canvas.interaction.pending_edge_insert_drag.is_none()
-        && canvas.interaction.edge_insert_drag.is_none()
-        && canvas.interaction.edge_drag.is_none()
-        && canvas.interaction.node_drag.is_none()
-        && canvas.interaction.node_resize.is_none()
-        && canvas.interaction.group_drag.is_none()
-        && canvas.interaction.group_resize.is_none()
-        && canvas.interaction.marquee.is_none()
-        && canvas.interaction.context_menu.is_none()
-        && canvas.interaction.searcher.is_none()
-    {
+    if super::interaction_gate::allow_edge_hover_anchor(&canvas.interaction) {
         let target_edge = canvas
             .interaction
             .focused_edge

@@ -4,27 +4,11 @@ pub(super) fn allow_close_button_cursor(
     has_close_command: bool,
     interaction: &InteractionState,
 ) -> bool {
-    has_close_command
-        && interaction.node_drag.is_none()
-        && interaction.node_resize.is_none()
-        && interaction.wire_drag.is_none()
-        && interaction.pending_edge_insert_drag.is_none()
-        && interaction.edge_insert_drag.is_none()
-        && interaction.edge_drag.is_none()
-        && !interaction.panning
+    super::interaction_gate::allow_close_button_cursor(has_close_command, interaction)
 }
 
 pub(super) fn allow_canvas_detail_cursor(interaction: &InteractionState) -> bool {
-    interaction.node_drag.is_none()
-        && interaction.node_resize.is_none()
-        && interaction.wire_drag.is_none()
-        && interaction.pending_edge_insert_drag.is_none()
-        && interaction.edge_insert_drag.is_none()
-        && interaction.edge_drag.is_none()
-        && !interaction.panning
-        && interaction.marquee.is_none()
-        && interaction.context_menu.is_none()
-        && interaction.searcher.is_none()
+    super::interaction_gate::allow_canvas_detail_cursor(interaction)
 }
 
 #[cfg(test)]

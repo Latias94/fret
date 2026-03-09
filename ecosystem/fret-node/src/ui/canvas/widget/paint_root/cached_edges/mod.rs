@@ -29,14 +29,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let replay_delta = Point::new(Px(0.0), Px(0.0));
 
         // --- Edges (static + overlays) ---
-        let edges_cache_allowed = self.interaction.pending_wire_drag.is_none()
-            && self.interaction.wire_drag.is_none()
-            && self.interaction.suspended_wire_drag.is_none()
-            && self.interaction.pending_edge_insert_drag.is_none()
-            && self.interaction.edge_insert_drag.is_none()
-            && self.interaction.edge_drag.is_none()
-            && self.interaction.pending_insert_node_drag.is_none()
-            && self.interaction.insert_node_drag_preview.is_none();
+        let edges_cache_allowed =
+            crate::ui::canvas::widget::interaction_gate::allow_edges_cache(&self.interaction);
 
         let edge_anchor_target_id = self
             .interaction

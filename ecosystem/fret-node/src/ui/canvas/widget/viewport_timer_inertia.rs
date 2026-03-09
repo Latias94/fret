@@ -15,25 +15,7 @@ pub(super) fn stop_pan_inertia_timer<H: UiHost, M: NodeGraphCanvasMiddleware>(
 pub(super) fn pan_inertia_should_tick<M: NodeGraphCanvasMiddleware>(
     canvas: &NodeGraphCanvasWith<M>,
 ) -> bool {
-    if canvas.interaction.searcher.is_some() || canvas.interaction.context_menu.is_some() {
-        return false;
-    }
-    if canvas.interaction.panning {
-        return false;
-    }
-    canvas.interaction.pending_marquee.is_none()
-        && canvas.interaction.marquee.is_none()
-        && canvas.interaction.pending_node_drag.is_none()
-        && canvas.interaction.node_drag.is_none()
-        && canvas.interaction.pending_group_drag.is_none()
-        && canvas.interaction.group_drag.is_none()
-        && canvas.interaction.pending_group_resize.is_none()
-        && canvas.interaction.group_resize.is_none()
-        && canvas.interaction.pending_node_resize.is_none()
-        && canvas.interaction.node_resize.is_none()
-        && canvas.interaction.pending_wire_drag.is_none()
-        && canvas.interaction.wire_drag.is_none()
-        && canvas.interaction.edge_drag.is_none()
+    super::interaction_gate::pan_inertia_should_tick(&canvas.interaction)
 }
 
 pub(super) fn maybe_start_pan_inertia_timer<H: UiHost, M: NodeGraphCanvasMiddleware>(

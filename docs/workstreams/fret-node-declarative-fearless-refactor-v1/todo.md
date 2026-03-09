@@ -890,6 +890,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/widget_surface.rs` seam, so the root widget module now mainly holds the module
     map and shared type definitions while constructor/config/style-sync/cull helper orchestration
     lives beside the rest of the retained widget internals.
+  - Progress: repeated `InteractionState` gate predicates for cursor/hover/edge-cache/pan-inertia
+    now route through the private `canvas/widget/interaction_gate.rs` seam, so widget submodules no
+    longer duplicate the same busy/idle interaction checks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

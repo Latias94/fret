@@ -205,6 +205,7 @@ mod insert_execution_feedback;
 mod insert_execution_plan;
 mod insert_execution_point;
 mod insert_node_drag;
+mod interaction_gate;
 mod interaction_policy;
 mod keyboard_pan_activation;
 mod keyboard_shortcuts;

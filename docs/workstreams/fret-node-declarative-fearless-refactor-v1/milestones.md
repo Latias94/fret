@@ -474,6 +474,9 @@ real editors.
   `canvas/widget/widget_surface.rs` seam, so the root widget module stops re-embedding constructor,
   config/style-sync, fit-on-mount, and shared cull/render helper orchestration inline while
   keeping the same retained canvas contract and module map.
+- repeated `InteractionState` gate predicates for cursor/hover/edge-cache/pan-inertia now also
+  route through the private `canvas/widget/interaction_gate.rs` seam, so widget submodules stop
+  re-embedding the same busy/idle interaction checks inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
@@ -1191,6 +1194,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/interaction_gate.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`
