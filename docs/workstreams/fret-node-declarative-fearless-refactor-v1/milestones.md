@@ -493,6 +493,10 @@ real editors.
 - `ui/canvas/workflow.rs` now also routes wire-drop insert planning through the private
   `canvas/workflow/workflow_insert.rs` seam, so the root workflow module stops re-embedding the
   insert/autoconnect planner inline while keeping the same root export and tests.
+- `ui/canvas/searcher.rs` now also routes query scoring/normalization and row builders through the
+  private `canvas/searcher/searcher_score.rs` and `canvas/searcher/searcher_build.rs` seams, so the
+  root searcher module stops re-embedding scoring/catalog assembly helpers inline while keeping the
+  same row types, constants, and root exports.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1179,6 +1183,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/state/state_geometry_cache.rs`
 - `ecosystem/fret-node/src/ui/canvas/workflow.rs`
 - `ecosystem/fret-node/src/ui/canvas/workflow/workflow_insert.rs`
+- `ecosystem/fret-node/src/ui/canvas/searcher.rs`
+- `ecosystem/fret-node/src/ui/canvas/searcher/searcher_score.rs`
+- `ecosystem/fret-node/src/ui/canvas/searcher/searcher_build.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

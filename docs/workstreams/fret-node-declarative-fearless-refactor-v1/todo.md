@@ -906,6 +906,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `ui/canvas/workflow.rs` now routes wire-drop insert planning through the private
     `canvas/workflow/workflow_insert.rs` seam, so the root workflow module now mainly holds the
     shared plan type, root re-export, and tests.
+  - Progress: `ui/canvas/searcher.rs` now routes query scoring/normalization and row builders
+    through the private `canvas/searcher/searcher_score.rs` and
+    `canvas/searcher/searcher_build.rs` seams, so the root searcher module now mainly holds shared
+    row types, constants, and root re-exports.
 
 ## M5 - Compatibility retained convergence
 
