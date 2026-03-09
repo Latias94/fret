@@ -16,10 +16,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::DropdownMenuContent::new(),
         |_cx| {
             vec![
-                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
-                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Billing")),
-                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
-                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Subscription")),
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("My Account").into(),
+                    shadcn::DropdownMenuItem::new("Profile").into(),
+                    shadcn::DropdownMenuItem::new("Billing").into(),
+                    shadcn::DropdownMenuSeparator::new().into(),
+                ])),
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuItem::new("Team").into(),
+                    shadcn::DropdownMenuItem::new("Subscription").into(),
+                ])),
             ]
         },
     )
