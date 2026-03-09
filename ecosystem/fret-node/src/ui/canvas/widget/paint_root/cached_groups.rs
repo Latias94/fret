@@ -16,23 +16,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         nodes_cache_tile_size_canvas: f32,
     ) {
         // --- Groups (static, cached) ---
-        let groups_key = {
-            let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_groups.v1");
-            b.add_u64(base_key.graph_rev);
-            b.add_u32(base_key.zoom_bits);
-            b.add_u32(base_key.node_origin_x_bits);
-            b.add_u32(base_key.node_origin_y_bits);
-            b.add_u64(base_key.draw_order.lo);
-            b.add_u64(base_key.draw_order.hi);
-            b.add_u64(base_key.presenter_rev);
-            b.add_u64(base_key.edge_types_rev);
-            b.add_u64(base_key.overrides_rev);
-            b.add_u64(style_key);
-            b.add_f32_bits(nodes_cache_tile_size_canvas);
-            b.add_u32(cache_rect.origin.x.0.to_bits());
-            b.add_u32(cache_rect.origin.y.0.to_bits());
-            b.finish()
-        };
+        let groups_key = super::static_cache::static_layer_cache_key(
+            "fret-node.canvas.static_groups.v1",
+            base_key,
+            style_key,
+            nodes_cache_tile_size_canvas,
+            cache_rect,
+        );
 
         let replay_delta = Point::new(Px(0.0), Px(0.0));
         if !super::static_cache::try_replay_static_scene_cache(
