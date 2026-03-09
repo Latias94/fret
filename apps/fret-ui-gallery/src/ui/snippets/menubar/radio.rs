@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
 use fret_core::Px;
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -36,20 +37,46 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let profiles = shadcn::MenubarMenu::new("Profiles").entries([
         shadcn::MenubarEntry::RadioGroup(
             shadcn::MenubarRadioGroup::new(profile.clone())
-                .item(shadcn::MenubarRadioItemSpec::new("andy", "Andy"))
-                .item(shadcn::MenubarRadioItemSpec::new("benoit", "Benoit"))
-                .item(shadcn::MenubarRadioItemSpec::new("luis", "Luis")),
+                .item(
+                    shadcn::MenubarRadioItemSpec::new("andy", "Andy")
+                        .action(CommandId::new("ui_gallery.menubar.radio.profile.andy")),
+                )
+                .item(
+                    shadcn::MenubarRadioItemSpec::new("benoit", "Benoit")
+                        .action(CommandId::new("ui_gallery.menubar.radio.profile.benoit")),
+                )
+                .item(
+                    shadcn::MenubarRadioItemSpec::new("luis", "Luis")
+                        .action(CommandId::new("ui_gallery.menubar.radio.profile.luis")),
+                ),
         ),
         shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Edit...").inset(true)),
-        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Add Profile...").inset(true)),
+        shadcn::MenubarEntry::Item(
+            shadcn::MenubarItem::new("Edit...")
+                .inset(true)
+                .action(CommandId::new("ui_gallery.menubar.radio.profile.edit")),
+        ),
+        shadcn::MenubarEntry::Item(
+            shadcn::MenubarItem::new("Add Profile...")
+                .inset(true)
+                .action(CommandId::new("ui_gallery.menubar.radio.profile.add")),
+        ),
     ]);
 
     let themes = shadcn::MenubarMenu::new("Theme").entries([shadcn::MenubarEntry::RadioGroup(
         shadcn::MenubarRadioGroup::new(theme.clone())
-            .item(shadcn::MenubarRadioItemSpec::new("light", "Light"))
-            .item(shadcn::MenubarRadioItemSpec::new("dark", "Dark"))
-            .item(shadcn::MenubarRadioItemSpec::new("system", "System")),
+            .item(
+                shadcn::MenubarRadioItemSpec::new("light", "Light")
+                    .action(CommandId::new("ui_gallery.menubar.radio.theme.light")),
+            )
+            .item(
+                shadcn::MenubarRadioItemSpec::new("dark", "Dark")
+                    .action(CommandId::new("ui_gallery.menubar.radio.theme.dark")),
+            )
+            .item(
+                shadcn::MenubarRadioItemSpec::new("system", "System")
+                    .action(CommandId::new("ui_gallery.menubar.radio.theme.system")),
+            ),
     )]);
 
     shadcn::Menubar::new([profiles, themes])

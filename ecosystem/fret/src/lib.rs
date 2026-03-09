@@ -18,8 +18,9 @@
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
 //!   hatches when you need runner-level customization but
 //!   still want the `fret` defaults/bootstrap story.
-//! - `fret::run_native_with_compat_driver(...)` is a compatibility path for existing low-level
-//!   integrations that still implement `fret_launch::WinitAppDriver` directly.
+//! - `fret::run_native_with_compat_driver(...)` is an advanced low-level interop path (non-default)
+//!   for retained/bridge integrations that still implement `fret_launch::WinitAppDriver`
+//!   directly.
 //!
 //! ## Getting started (desktop)
 //!

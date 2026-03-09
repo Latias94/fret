@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — App Entry Policy Decision Draft
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 ## Decision summary
 
@@ -136,9 +136,41 @@ Why this is second-best:
 
 ---
 
+## Deprecation window
+
+Recommended window:
+
+- **Deprecation start:** 2026-03-09
+  - this is when the in-tree story became coherent enough to freeze the default path:
+    - no in-tree example/demo callers remain on `App::ui*`,
+    - `ecosystem/fret/src/app_entry.rs` already marks the closure-root entry methods as deprecated,
+    - README/rustdoc policy tests already lock `view::<V>()` / `view_with_hooks::<V>(...)` as the
+      only default path.
+- **Earliest removal date:** 2026-06-09
+  - equivalent to a **minimum 90-day downstream migration window**.
+- **Additional release condition:** do not remove the APIs before **at least one published release**
+  of `fret` has shipped with the deprecation warnings and updated docs.
+
+Practical interpretation:
+
+- The repo can keep cleaning docs, templates, and remaining advanced bridges immediately.
+- It should **not** hard-delete `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` before both
+  conditions are true:
+  1. the date is on or after **2026-06-09**, and
+  2. downstream users have had at least one published release carrying the deprecation.
+
+Why this window is the recommended baseline:
+
+- it is short enough to keep momentum,
+- long enough to be defensible for a public facade surface,
+- and it avoids turning “deprecated” into an indefinite state with no removal checkpoint.
+
+---
+
 ## Exit criteria before deprecation starts
 
-Do **not** start code deprecation until all of the following are true:
+These criteria are now satisfied for the start of the deprecation window; they remain the
+prerequisites for eventual hard delete:
 
 1. remaining in-tree advanced demos using `ui(...)` / `ui_with_hooks(...)` are inventoried,
 2. each such demo is classified as either:
@@ -164,12 +196,13 @@ Do **not** start code deprecation until all of the following are true:
 ### Stage 3 — Gate + deprecation
 
 - add a narrow gate that prevents first-contact docs/templates from teaching `.ui(...)`,
-- add deprecation warnings if/when the migration set is small enough.
+- keep the deprecation warnings in place through the minimum window above.
 
 ### Stage 4 — Remove or quarantine
 
 - preferred: remove the public `.ui(...)` surface from `fret`,
 - fallback: quarantine it as explicitly advanced/compat if full removal is still too disruptive.
+- earliest hard-delete checkpoint: **2026-06-09 + one published deprecated release**.
 
 ---
 

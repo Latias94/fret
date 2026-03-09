@@ -1,7 +1,7 @@
 # Teaching-Surface Local-State Inventory (Draft)
 
 Status: draft, post-v1 audit
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -22,6 +22,8 @@ These surfaces already serve as evidence for the intended default authoring mode
 - `apps/fret-cookbook/examples/query_basics.rs`
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
 - `apps/fret-cookbook/examples/text_input_basics.rs`
+- `apps/fret-cookbook/examples/overlay_basics.rs`
+- `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-cookbook/examples/date_picker_basics.rs`
 - `apps/fret-cookbook/examples/form_basics.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
@@ -37,7 +39,9 @@ These surfaces already serve as evidence for the intended default authoring mode
 Those examples collectively cover:
 
 - straightforward local writes,
+- local overlay/interop examples that still bridge model-centered widget boundaries with `local.clone_model()`,
 - command availability and widget interop,
+- cross-frontend action convergence (declarative + IMUI + GenUI) while keeping the shared counter on `use_local*`,
 - controlled widget bridges that still require `Model<T>` at the component boundary,
 - pure toggle demos that still bridge into model-centered widgets,
 - mixed editor/render-option demos that bridge multiple model-centered widgets on one page,
@@ -80,9 +84,8 @@ first wave of `use_local*` migration.
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
 - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
 - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
-- `apps/fret-cookbook/examples/imui_action_basics.rs`
 
-Reason: background execution, viewport coordination, diagnostics surfaces, or IMUI/host interop are
+Reason: background execution, viewport coordination, diagnostics surfaces, or host interop are
 part of the teaching goal.
 
 ### Component APIs that are still model-centered today

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -39,9 +40,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             |_cx| {
                 vec![shadcn::ContextMenuEntry::RadioGroup(
                     shadcn::ContextMenuRadioGroup::new(theme_mode.clone())
-                        .item(shadcn::ContextMenuRadioItemSpec::new("system", "System"))
-                        .item(shadcn::ContextMenuRadioItemSpec::new("light", "Light"))
-                        .item(shadcn::ContextMenuRadioItemSpec::new("dark", "Dark")),
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("system", "System")
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.radio.theme.system",
+                                )),
+                        )
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("light", "Light")
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.radio.theme.light",
+                                )),
+                        )
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("dark", "Dark").action(
+                                CommandId::new("ui_gallery.context_menu.radio.theme.dark"),
+                            ),
+                        ),
                 )]
             },
         )

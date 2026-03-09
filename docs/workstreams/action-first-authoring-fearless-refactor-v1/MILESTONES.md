@@ -10,10 +10,16 @@ Related:
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Widget-contract audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MODEL_CENTERED_WIDGET_CONTRACT_AUDIT.md`
+- Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
+- Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
+- `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 
 ---
 
-## Current status snapshot (as of 2026-03-07)
+## Current status snapshot (as of 2026-03-09)
 
 This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
 teaching surfaces, and gates line up.
@@ -22,7 +28,7 @@ teaching surfaces, and gates line up.
 - **M1**: Met (typed unit actions exist; keymap/palette/menu/pointer triggers converge on the same dispatch pipeline, with diagnostics traces explaining availability/dispatch outcomes).
 - **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
-- **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, while broader builder-first and explicit-model cleanup continue).
+- **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, default teaching/reference surfaces have moved off `use_state`, and broader builder-first cleanup continues).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
 - **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
 - **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
@@ -52,6 +58,9 @@ Adoption note (as of 2026-03-07):
   path, and `apps/fret-cookbook/src/scaffold.rs` now keeps the shared page-shell root `test_id` on
   that same path. That leaves `date_picker_basics` as the intentionally documented host-boundary
   exception.
+- Local-state cleanup has narrowed as well: `overlay_basics` and `imui_action_basics` now use
+  `use_local*`, so the default/runtime teaching surfaces no longer demonstrate `use_state::<T>()`
+  as the local-state story.
 
 Evidence anchors (verified in-tree as of 2026-03-08):
 
@@ -66,6 +75,8 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (third medium cookbook example on the same path; validates command availability + keymap gating against `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*` without view-held `Model<bool>` fields, now uses `Switch::from_checked(...).action(...)` for its view-local allow-command toggle plus a disabled snapshot indicator for panel state, and keeps coordinated gate reads on `LocalState::read_in(...)` inside the generic transaction/availability closures)
 - `apps/fret-cookbook/examples/toggle_basics.rs` (new focused cookbook example proving `Toggle::from_pressed(...).action(...)` on view-local state without a `Model<bool>` bridge)
 - `apps/fret-cookbook/examples/text_input_basics.rs` (validates `use_local*` + `state.layout(cx).value_*` / `state.paint(cx).value_*` + direct `Input::new(&LocalState<String>)` interop while keeping command availability on the generic models path)
+- `apps/fret-cookbook/examples/overlay_basics.rs` (now keeps dialog open state and the underlay counter on `use_local*`, using `LocalState::clone_model()` only at the model-centered dialog/widget boundary)
+- `apps/fret-cookbook/examples/imui_action_basics.rs` (now keeps the shared counter on `use_local*` while still proving declarative + IMUI + GenUI action dispatch convergence)
 - `apps/fret-cookbook/examples/date_picker_basics.rs` (extends the same bridge pattern to `DatePicker::new_controllable(...)`, proving the authoring side can still prefer `use_local*` even when the widget API remains model-centered; the selected row stays builder-first, while the current picker/card sink still lands at the widget host boundary when a concrete `AnyElement` is required)
 - `apps/fret-cookbook/examples/form_basics.rs` (extends the same local-state path to multi-field validation/reset flows while intentionally keeping cross-field coordination on `on_action_notify_models`)
 - `apps/fret-cookbook/examples/simple_todo.rs` (first keyed-list hybrid on the post-v1 path: draft and `next_id` use `use_local*`, while the dynamic `todos` collection intentionally stays on `Model<Vec<_>>`; generic model-store reads now stay on `LocalState::read_in(...)` rather than leaking `local.model()` back into the default path)
@@ -149,6 +160,17 @@ Post-v1 direction (recommended):
   - The app-entry blocker now has a concrete recommended direction in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`: `view::<V>()` as the only default path, `.ui(...)` as a temporary advanced bridge on a staged path to deprecation/removal.
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now records that the in-tree `App::ui*` callers have been migrated; the remaining work is deprecation/removal sequencing rather than demo conversion.
   - Progress update (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now deprecates the closure-root app-entry methods, and `ecosystem/fret/src/lib.rs` plus `ecosystem/fret/README.md` are locked by an in-crate policy test so `view::<V>()` remains the only default path.
+  - Deprecation-window update (as of 2026-03-09): `APP_ENTRY_POLICY_DECISION_DRAFT.md` now fixes the minimum downstream window for `App::ui*` at 2026-03-09 → earliest removal 2026-06-09, and still requires at least one published release carrying the deprecation warnings before hard delete is allowed.
+  - Execution update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now turns those blockers into an ordered cleanup sequence, with `App::ui*` identified as the closest hard-delete/quarantine candidate and the compat runner / `use_state` / command-first widget decisions left as explicit next policy checkpoints.
+  - Compat-runner update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md` now shows that `run_native_with_compat_driver(...)` still serves three real in-tree caller families (plot/chart demos, low-level renderer/asset demos, advanced shell demos), so the next step is a keep-vs-quarantine policy call rather than an immediate hard delete.
+  - Compat-runner decision draft (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` as an advanced low-level interop seam for now, updating docs to mark it as non-default, and deferring any hard delete until a clearer quarantine boundary or replacement path exists.
+  - Compat-runner wording update (as of 2026-03-09): the workstream checklist/gap-analysis side is now aligned with README/rustdoc, so Stage 3 is blocked only on future keep-vs-quarantine product decisions rather than wording drift.
+  - `use_state` inventory update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md` now shows that the starter/reference leaks are closed (`hello`, the `hello` scaffold template, the gallery action-first snippet, `overlay_basics`, and `imui_action_basics` now use `use_local*`), leaving `use_state` present only as explicit runtime/API substrate plus migration/contract documentation.
+  - `use_state` decision draft (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md` now recommends keeping `use_state` for now as an explicit raw-model hook, treating `use_local*` as the only default local-state teaching path, and deferring any deprecation until the repo decides whether that explicit seam is permanent or should later move behind a narrower gate/deprecation path.
+  - `use_state` gate update (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference source files, `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and `tools/pre_release.ps1` now runs the gate with the other teaching-surface policy checks.
+  - Command-first widget audit update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now scopes the remaining blocker into already-aligned dual-surface widgets (`Button`, `CommandItem`), menu-family alias candidates (`ContextMenu*`, `Menubar*`), and low-risk app-facing alias candidates (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`).
+  - Command-first alias update (as of 2026-03-09): `BreadcrumbItem::action(...)`, `NavigationMenuLink::action(...)`, and `NavigationMenuItem::action(...)` now exist in `ecosystem/fret-ui-shadcn`, and the navigation-menu gallery snippets now prefer the action-first spelling while command-centric internals remain unchanged.
+  - Menu-family alias update (as of 2026-03-09): `ContextMenu*` and `Menubar*` item/checkbox/radio builders now also expose `action(...)` aliases, and the broader gallery menu surface now prefers that spelling across the main context-menu / menubar snippets (including `demo`, `checkboxes`/`checkbox`, `radio`, `submenu`, `rtl`, and icon/group variants), so the remaining command-first blocker is narrower and mostly about future docs/default-surface adoption rather than missing builder APIs.
 
 ---
 

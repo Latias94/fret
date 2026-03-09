@@ -612,6 +612,15 @@ impl ContextMenuItem {
         self
     }
 
+    /// Bind a stable action ID to this context-menu item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn submenu(mut self, entries: impl IntoIterator<Item = ContextMenuEntry>) -> Self {
         self.submenu = Some(entries.into_iter().collect());
         self
@@ -766,6 +775,15 @@ impl ContextMenuCheckboxItem {
         self
     }
 
+    /// Bind a stable action ID to this context-menu checkbox item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -853,6 +871,15 @@ impl ContextMenuRadioItemSpec {
         self
     }
 
+    /// Bind a stable action ID to this context-menu radio item spec (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -933,6 +960,15 @@ impl ContextMenuRadioItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Bind a stable action ID to this context-menu radio item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
         self
     }
 
@@ -4684,7 +4720,7 @@ mod tests {
         let entries: Vec<ContextMenuEntry> = (0..100)
             .map(|i| {
                 ContextMenuEntry::Item(
-                    ContextMenuItem::new(format!("Item {i}")).on_select(CommandId::new("noop")),
+                    ContextMenuItem::new(format!("Item {i}")).action(CommandId::new("noop")),
                 )
             })
             .collect();
@@ -4700,9 +4736,9 @@ mod tests {
     #[test]
     fn estimated_menu_panel_height_shrinks_for_short_menus() {
         let entries = vec![
-            ContextMenuEntry::Item(ContextMenuItem::new("Apple").on_select(CommandId::new("noop"))),
+            ContextMenuEntry::Item(ContextMenuItem::new("Apple").action(CommandId::new("noop"))),
             ContextMenuEntry::Item(
-                ContextMenuItem::new("Orange").on_select(CommandId::new("noop")),
+                ContextMenuItem::new("Orange").action(CommandId::new("noop")),
             ),
         ];
         let entries = entries.as_slice();

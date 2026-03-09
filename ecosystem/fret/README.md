@@ -121,7 +121,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
-- Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
+- Advanced low-level interop driver path (compat seam, non-default): `fret::run_native_with_compat_driver(...)`
 
 ## What remains first-class on `fret`
 
@@ -163,7 +163,7 @@ Mapping (rough):
 - `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
 - `fret::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
 - `fret::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
-- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)`
+- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

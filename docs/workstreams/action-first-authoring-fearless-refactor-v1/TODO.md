@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -11,6 +11,12 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
+- Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
+- Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
+- `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 
 ADRs (decision gates for this workstream):
 
@@ -567,6 +573,61 @@ Current sequencing note (as of 2026-03-08):
   - Goal: make the policy decision visible in code and lock the default docs path while leaving a removal window for downstream users.
   - Evidence target: deprecated `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` plus a narrow gate that keeps `view::<V>()` as the only default path in `ecosystem/fret` README/rustdoc.
   - Status (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now marks the closure-root app-entry methods as deprecated advanced bridges, `ecosystem/fret/src/lib.rs` and `ecosystem/fret/README.md` now describe `view::<V>()` / `view_with_hooks::<V>(...)` as the only default path, and `ecosystem/fret/src/lib.rs` test `authoring_surface_policy_tests` locks that wording in-tree.
+
+- [x] AFA-postv1-013 Publish a hard-delete execution checklist for the remaining post-v1 compat surfaces.
+  - Goal: turn the blocker inventory into an ordered, landable cleanup sequence instead of leaving the next phase as an implicit policy discussion.
+  - Evidence target: one workstream note that classifies stage order, per-surface status, and exit criteria for app-entry closure surfaces, compat runner entry points, `use_state`, and command-first widget contracts.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now defines the execution order, exit criteria, and immediate next action, and `HARD_DELETE_GAP_ANALYSIS.md` now points to it as the operational follow-up.
+
+- [x] AFA-postv1-013b Define the `App::ui*` downstream deprecation window explicitly.
+  - Goal: stop treating app-entry removal timing as an abstract future decision and give downstream users a concrete minimum warning window.
+  - Evidence target: the app-entry policy draft and hard-delete execution checklist both record the same deprecation start date, earliest removal date, and release condition.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now defines the window as 2026-03-09 → earliest removal 2026-06-09 plus one published deprecated release, and `HARD_DELETE_EXECUTION_CHECKLIST.md` / `HARD_DELETE_GAP_ANALYSIS.md` now consume that same rule.
+
+- [x] AFA-postv1-014 Publish a caller inventory for `run_native_with_compat_driver(...)`.
+  - Goal: replace vague “plot/interop demos still use it” language with a concrete in-tree family breakdown before deciding whether the compat runner should be kept, quarantined, or removed.
+  - Evidence target: one inventory note that classifies current callers by family and states whether they look like migration leftovers or intentional advanced interop surfaces.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md` now records the current callers (plot/chart retained-driver demos, low-level renderer/asset demos, and advanced shell demos), and `HARD_DELETE_EXECUTION_CHECKLIST.md` now uses that inventory to move Stage 3 from “unscoped” to “partially scoped”.
+
+- [x] AFA-postv1-015 Publish a policy decision draft for `run_native_with_compat_driver(...)`.
+  - Goal: decide whether the compat runner is actually a near-term hard-delete candidate or an intentionally retained advanced interop seam.
+  - Evidence target: one decision note that states the recommended product stance and the conditions under which future quarantine/removal would become reasonable.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` for now as an advanced low-level interop seam, `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 3 as “decision drafted”, and `ecosystem/fret/README.md` plus `ecosystem/fret/src/lib.rs` now describe the surface as non-default advanced interop rather than an ambiguous generic compat path.
+
+- [x] AFA-postv1-015b Finish compat-runner wording alignment in the workstream docs.
+  - Goal: close the gap between the policy draft and the execution docs so Stage 3 is no longer blocked on basic wording drift.
+  - Evidence target: the policy draft, hard-delete checklist, and gap analysis all describe `run_native_with_compat_driver(...)` as a retained advanced low-level interop seam and no longer leave README/rustdoc alignment as open work.
+  - Status (as of 2026-03-09): `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`, `HARD_DELETE_EXECUTION_CHECKLIST.md`, and `HARD_DELETE_GAP_ANALYSIS.md` now all treat the remaining work as policy/quarantine follow-up rather than docs wording cleanup.
+
+- [x] AFA-postv1-016 Publish a caller inventory for `use_state::<T>()`.
+  - Goal: replace vague “a few starter/reference snippets still use it” language with a concrete in-tree breakdown before deciding whether `use_state` should be kept, deprecated, or repointed later.
+  - Evidence target: one inventory note that classifies current `use_state` callers by starter/reference/API-substrate role and distinguishes runtime callers from contract docs.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md` now records that `hello`, the `hello` scaffold template, the gallery action-first snippet, `overlay_basics`, and `imui_action_basics` have all moved to `use_local*`; direct runtime/teaching-surface callers are now cleared and `use_state` remains only as explicit runtime/API substrate plus migration/contract documentation.
+
+- [x] AFA-postv1-017 Publish a policy decision draft for `use_state::<T>()`.
+  - Goal: decide whether `use_state` is a near-term deprecation target or an intentionally retained explicit raw-model seam.
+  - Evidence target: one decision note that states the default teaching rule, the explicit low-level rule, and the preconditions for any future deprecation.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md` now recommends keeping `use_state` for now as an explicit raw-model hook while `use_local*` remains the only default local-state teaching path; `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 4 with starter/reference cleanup complete, `docs/examples/todo-app-golden-path.md` no longer lists `use_state` as a generic default hook, and all current first-contact/reference code paths now follow that policy in code.
+
+- [x] AFA-postv1-018 Add a narrow default-path gate against reintroducing `use_state::<T>()`.
+  - Goal: keep first-contact docs/templates/examples on `use_local*` after the current cleanup lands, without banning explicit raw-model usage in advanced/runtime code.
+  - Evidence target: one narrow source/docs/template gate or equivalent repo-local assertion that fails if the approved first-contact surfaces drift back to `use_state`.
+  - Status (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference files (`hello`, `overlay_basics`, `imui_action_basics`, the gallery action-first snippet, and `docs/examples/todo-app-golden-path.md`), `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and `tools/pre_release.ps1` now runs the new gate alongside the other teaching-surface policy checks.
+
+- [x] AFA-postv1-019 Publish a command-first widget contract audit for the remaining post-v1 blocker families.
+  - Goal: replace vague “public `CommandId`-first widget contracts still remain” language with a concrete family split and a landable migration order.
+  - Evidence target: one workstream note that distinguishes command-catalog surfaces from app-facing builder APIs and recommends which widget families should gain action-first aliases first.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now classifies the remaining pressure into already-aligned dual-surface widgets (`Button`, `CommandItem`), menu-family blockers (`ContextMenu*`, `Menubar*`), medium-risk app-facing surfaces (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`), and a staged alias-first migration order.
+
+- [x] AFA-postv1-020 Land the first action-first alias pass for command-shaped widget builders.
+  - Goal: prove that public builder naming can converge on the action-first story without rewriting command-centric internals.
+  - Evidence target: at least one low-risk family (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) gains an action-first alias and docs/examples prefer it.
+  - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) now prefer the action-first spelling, and the first navigation-menu gating tests now use the alias as the default public path.
+
+- [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
+  - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.
+  - Evidence target: `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem{Spec,}` and `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem{Spec,}` all gain `action(...)` aliases, and command-audit docs record the phase-2 progress.
+  - Status (as of 2026-03-09): those aliases now exist in `ecosystem/fret-ui-shadcn/src/context_menu.rs` and `ecosystem/fret-ui-shadcn/src/menubar.rs`; the broader gallery menu surface now also prefers `action(...)` across the main context-menu and menubar snippets (`basic`, `usage`, `demo`, `checkboxes`/`checkbox`, `radio`, `destructive`, `groups`, `icons`, `shortcuts`, `sides`, `submenu`, `rtl`, `parts`, `with_icons`), and `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` records the pass while keeping command-centric routing/storage unchanged.
 
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.

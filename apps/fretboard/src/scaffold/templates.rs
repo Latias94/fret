@@ -743,12 +743,11 @@ impl View for HelloView {{
     }}
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {{
-        let click_count = cx.use_state::<u32>();
-        let click_count_value = cx.watch_model(&click_count).layout().value_or(0);
+        let click_count_state = cx.use_local::<u32>();
+        let click_count_value = click_count_state.layout(cx).value_or(0);
 
-        cx.on_action_notify_models::<act::Click>({{
-            let click_count = click_count.clone();
-            move |models| models.update(&click_count, |v| *v = v.saturating_add(1)).is_ok()
+        cx.on_action_notify_local_update::<act::Click, u32>(&click_count_state, |v| {{
+            *v = v.saturating_add(1);
         }});
 
         ui::v_flex(|cx| {{
@@ -1319,8 +1318,10 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
-        assert!(src.contains("cx.on_action_notify_models::<act::Click>"));
-        assert!(!src.contains("cx.on_action_notify_model_update::<act::Click"));
+        assert!(src.contains("let click_count_state = cx.use_local::<u32>();"));
+        assert!(src.contains("cx.on_action_notify_local_update::<act::Click, u32>"));
+        assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
+        assert!(!src.contains("cx.use_state::<u32>()"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }

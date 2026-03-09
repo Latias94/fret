@@ -95,10 +95,10 @@ impl View for ImUiActionBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().value_or(0);
+        let count_state = cx.use_local::<u32>();
+        let count_value = count_state.watch(cx).layout().value_or(0);
 
-        cx.on_action_notify_model_update::<act::Inc, u32>(count.clone(), |v| {
+        cx.on_action_notify_local_update::<act::Inc, u32>(&count_state, |v| {
             *v = v.saturating_add(1);
         });
 

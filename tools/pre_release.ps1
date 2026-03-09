@@ -130,6 +130,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Teaching surfaces policy (default local-state path stays on use_local*)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_no_use_state_in_default_teaching_surfaces.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no legacy stack helpers)" `
   "python" `
   @(

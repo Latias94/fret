@@ -253,7 +253,7 @@ impl View for TodoView {
 
 The view runtime renders the same declarative IR (`Elements`) but provides a cohesive authoring loop:
 
-- view-local “hooks” (`use_selector`, `use_query`, `use_state`),
+- view-local hooks (`use_local*`, `use_selector`, `use_query`),
 - typed action handler registration,
 - `notify → dirty → reuse` semantics via view cache roots.
 

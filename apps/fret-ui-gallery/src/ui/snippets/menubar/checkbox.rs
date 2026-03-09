@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
 use fret_core::Px;
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -76,19 +77,25 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
             view_bookmarks_bar.clone(),
             "Always Show Bookmarks Bar",
-        )),
+        )
+        .action(CommandId::new(
+            "ui_gallery.menubar.checkbox.view_bookmarks_bar",
+        ))),
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
             view_full_urls.clone(),
             "Always Show Full URLs",
-        )),
+        )
+        .action(CommandId::new("ui_gallery.menubar.checkbox.view_full_urls"))),
         shadcn::MenubarEntry::Separator,
         shadcn::MenubarEntry::Item(
             shadcn::MenubarItem::new("Reload")
+                .action(CommandId::new("ui_gallery.menubar.checkbox.reload"))
                 .inset(true)
                 .trailing(shadcn::MenubarShortcut::new("⌘R").into_element(cx)),
         ),
         shadcn::MenubarEntry::Item(
             shadcn::MenubarItem::new("Force Reload")
+                .action(CommandId::new("ui_gallery.menubar.checkbox.force_reload"))
                 .disabled(true)
                 .inset(true)
                 .trailing(shadcn::MenubarShortcut::new("⇧⌘R").into_element(cx)),
@@ -99,15 +106,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
             format_strikethrough.clone(),
             "Strikethrough",
-        )),
+        )
+        .action(CommandId::new(
+            "ui_gallery.menubar.checkbox.format_strikethrough",
+        ))),
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
             format_code.clone(),
             "Code",
-        )),
+        )
+        .action(CommandId::new("ui_gallery.menubar.checkbox.format_code"))),
         shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
             format_superscript.clone(),
             "Superscript",
-        )),
+        )
+        .action(CommandId::new(
+            "ui_gallery.menubar.checkbox.format_superscript",
+        ))),
     ]);
 
     shadcn::Menubar::new([view, format])

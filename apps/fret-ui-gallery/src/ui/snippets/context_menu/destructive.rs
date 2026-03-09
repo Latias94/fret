@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
@@ -21,10 +22,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             |_cx| {
                 vec![
-                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Rename")),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Rename")
+                            .action(CommandId::new("ui_gallery.context_menu.destructive.rename")),
+                    ),
                     shadcn::ContextMenuEntry::Separator,
                     shadcn::ContextMenuEntry::Item(
                         shadcn::ContextMenuItem::new("Delete project")
+                            .action(CommandId::new(
+                                "ui_gallery.context_menu.destructive.delete_project",
+                            ))
                             .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
                             .test_id("ui-gallery-context-menu-destructive-delete"),
                     ),

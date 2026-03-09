@@ -33,10 +33,10 @@ impl View for HelloView {
             "RenderedAgain"
         };
 
-        let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().value_or(0);
+        let count_state = cx.use_local::<u32>();
+        let count_value = count_state.layout(cx).value_or(0);
 
-        cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
+        cx.on_action_notify_local_update::<act::Click, u32>(&count_state, |v| {
             *v = v.saturating_add(1);
             println!("hello: clicked");
         });

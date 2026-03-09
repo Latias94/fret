@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Px;
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -12,11 +13,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .entries([
                 shadcn::MenubarEntry::Item(
                     shadcn::MenubarItem::new("علامة تبويب جديدة")
+                        .action(CommandId::new("ui_gallery.menubar.rtl.new_tab"))
                         .test_id("ui-gallery-menubar-rtl-new-tab")
                         .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx)),
                 ),
                 shadcn::MenubarEntry::Item(
                     shadcn::MenubarItem::new("نافذة جديدة")
+                        .action(CommandId::new("ui_gallery.menubar.rtl.new_window"))
                         .test_id("ui-gallery-menubar-rtl-new-window")
                         .trailing(shadcn::MenubarShortcut::new("⌘N").into_element(cx)),
                 ),
@@ -27,10 +30,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .submenu([
                             shadcn::MenubarEntry::Item(
                                 shadcn::MenubarItem::new("Sub Alpha")
+                                    .action(CommandId::new("ui_gallery.menubar.rtl.sub_alpha"))
                                     .test_id("ui-gallery-menubar-rtl-sub-alpha"),
                             ),
                             shadcn::MenubarEntry::Item(
                                 shadcn::MenubarItem::new("Sub Beta")
+                                    .action(CommandId::new("ui_gallery.menubar.rtl.sub_beta"))
                                     .test_id("ui-gallery-menubar-rtl-sub-beta"),
                             ),
                         ]),
@@ -38,6 +43,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::MenubarEntry::Separator,
                 shadcn::MenubarEntry::Item(
                     shadcn::MenubarItem::new("طباعة...")
+                        .action(CommandId::new("ui_gallery.menubar.rtl.print"))
                         .test_id("ui-gallery-menubar-rtl-print")
                         .trailing(shadcn::MenubarShortcut::new("⌘P").into_element(cx)),
                 ),
