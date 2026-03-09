@@ -872,6 +872,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     wiring, and pointer-region shell assembly through the private `paint_only/surface_shell.rs`
     seam, so declarative paint-only surface assembly no longer keeps the full
     `semantics_with_id(..., move |cx, element| { ... })` shell block embedded inline.
+  - Progress: `paint_only.rs` now also routes geometry quantization, rectangle helpers, marquee
+    math, node-drag delta/commit helpers, and point hit-testing through the private
+    `paint_only/surface_math.rs` seam, so declarative paint-only surface assembly no longer keeps
+    the shared geometry and gesture math helper set embedded inline.
 
 ## M5 - Compatibility retained convergence
 
