@@ -212,6 +212,7 @@ Post-v1 direction (recommended):
   - Curated internal menu follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` now uses `DropdownMenuItem::action(...)` / `trailing_action(...)`, `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now lowers stable unit action ids through `DropdownMenuItem::action(...)`, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit post-v1 residue slice from drifting back to `.on_select(...)`.
   - Intentional command-surface inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now marks command palette/catalog, `DataTable` business-table wiring, compat/conformance tests, and callback-style non-menu widgets as intentional retained surfaces rather than the next generic migration target, so this track is now in maintenance mode unless a new default-facing leak appears.
   - Current-vs-target v2 note (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now makes the next-stage framing explicit: v1 migration is effectively complete, action/menu residue is no longer the main work item, and the highest-value remaining gap is productization plus tracked-write/invalidation ergonomics.
+  - `notify()` policy draft (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now fixes the near-term direction for `AFA-postv1-004`: keep `notify()` as a low-level escape hatch, keep tracked writes as the boring default rerender path, and do not reopen generic invalidation helper design unless a new medium-surface contradiction appears.
 
 ---
 
