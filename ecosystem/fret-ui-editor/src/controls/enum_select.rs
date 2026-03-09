@@ -411,6 +411,7 @@ fn request_overlay<H: UiHost>(
     let open_for_list = open.clone();
     let open_for_dismiss = open.clone();
     let list_test_id = options.list_test_id.clone();
+    let item_test_id_prefix = list_test_id.clone();
     let search_test_id = options.search_test_id.clone();
 
     let overlay_id = cx
@@ -573,6 +574,7 @@ fn request_overlay<H: UiHost>(
                                                 return vec![cx.text("No matches")];
                                             }
 
+                                            let item_test_id_prefix = item_test_id_prefix.clone();
                                             filtered
                                                 .iter()
                                                 .enumerate()
@@ -585,6 +587,7 @@ fn request_overlay<H: UiHost>(
                                                         &open_for_list,
                                                         it.clone(),
                                                         density,
+                                                        item_test_id_prefix.clone(),
                                                     )
                                                 })
                                                 .collect::<Vec<_>>()
@@ -637,12 +640,19 @@ fn enum_select_row<H: UiHost>(
     open: &Model<bool>,
     item: EnumSelectItem,
     density: EditorDensity,
+    item_test_id_prefix: Option<Arc<str>>,
 ) -> AnyElement {
     let selected = cx
         .get_model_cloned(model, Invalidation::Paint)
         .unwrap_or(None)
         .as_deref()
         .is_some_and(|v| v == item.value.as_ref());
+    let item_test_id = item_test_id_prefix.as_ref().map(|prefix| {
+        Arc::<str>::from(format!(
+            "{prefix}.item.{}",
+            sanitize_test_id_segment(item.value.as_ref())
+        ))
+    });
 
     let (bg_hover, fg_hover, fg) = {
         let theme = Theme::global(&*cx.app);
@@ -657,7 +667,7 @@ fn enum_select_row<H: UiHost>(
     let model_for_activate = model.clone();
     let open_for_activate = open.clone();
 
-    cx.pressable(
+    let mut el = cx.pressable(
         PressableProps {
             layout: LayoutStyle {
                 size: SizeStyle {
@@ -672,6 +682,7 @@ fn enum_select_row<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(fret_core::SemanticsRole::ListBoxOption),
                 label: Some(item.label.clone()),
+                test_id: item_test_id.clone(),
                 selected,
                 pos_in_set: Some((idx as u32) + 1),
                 set_size: Some(total as u32),
@@ -738,7 +749,42 @@ fn enum_select_row<H: UiHost>(
                 },
             )]
         },
-    )
+    );
+
+    if let Some(test_id) = item_test_id.as_ref() {
+        el = el.test_id(test_id.clone());
+    }
+
+    el
+}
+
+fn sanitize_test_id_segment(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut prev_dash = false;
+
+    for ch in raw.chars() {
+        let c = ch.to_ascii_lowercase();
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+            prev_dash = false;
+        } else if !prev_dash {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+
+    while out.starts_with('-') {
+        out.remove(0);
+    }
+    while out.ends_with('-') {
+        out.pop();
+    }
+
+    if out.is_empty() {
+        out.push_str("item");
+    }
+
+    out
 }
 
 fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
@@ -757,6 +803,21 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
             );
             m
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_test_id_segment;
+
+    #[test]
+    fn enum_select_item_test_id_segment_is_stable_ascii() {
+        assert_eq!(sanitize_test_id_segment("Lit"), "lit");
+        assert_eq!(
+            sanitize_test_id_segment("Material / Matcap"),
+            "material-matcap"
+        );
+        assert_eq!(sanitize_test_id_segment("  "), "item");
     }
 }
 

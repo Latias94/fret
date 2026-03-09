@@ -21,8 +21,8 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use crate::controls::{
     AxisDragValue, AxisDragValueOptions, NumericFormatFn, NumericParseFn, NumericValidateFn,
 };
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
+use crate::primitives::EditorTokenKeys;
 
 fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
     theme.color_by_key(key).unwrap_or(fallback)
@@ -129,16 +129,14 @@ where
             wrap: false,
         },
         move |cx| {
-            vec![
-                AxisDragValue::new(label, color, model, format, parse)
-                    .validate(validate)
-                    .options(AxisDragValueOptions {
-                        size: fret_ui_kit::Size::Small,
-                        reset: reset.clone(),
-                        ..Default::default()
-                    })
-                    .into_element(cx),
-            ]
+            vec![AxisDragValue::new(label, color, model, format, parse)
+                .validate(validate)
+                .options(AxisDragValueOptions {
+                    size: fret_ui_kit::Size::Small,
+                    reset: reset.clone(),
+                    ..Default::default()
+                })
+                .into_element(cx)]
         },
     )
 }

@@ -22,12 +22,12 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_icon_segment, editor_joined_input_frame_with_overrides,
+    editor_icon_segment, editor_joined_input_frame_with_overrides, EditorInputGroupFrameOverrides,
 };
 use crate::primitives::style::EditorStyle;
+use crate::primitives::EditorTokenKeys;
 
 #[derive(Debug, Clone)]
 pub struct NumericInputOptions {

@@ -1,0 +1,214 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-authoring-parity-shared-models",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "parity", "editor", "regression"],
+    "target_hints": [
+      "Uses the shared-model parity section in imui_editor_proof_demo.",
+      "Proves declarative and fret-ui-editor::imui controls mutate the same editor models."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.name" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.name" },
+        "text": "Shared Cube"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.name.clear" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.name" },
+        "text": "<empty>"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.name" },
+      "text": "Parity Probe"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.name" },
+        "text": "Parity Probe"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.name.clear" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.name" },
+        "text": "<empty>"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.enabled" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.enabled" },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.enabled" },
+        "text": "false"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.enabled" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.enabled" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.enabled" },
+        "text": "true"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.mode" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.declarative.mode.list.item.matcap"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.declarative.mode.list.item.matcap"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.declarative.mode.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.mode" },
+        "text": "matcap"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.mode" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.imui.mode.list.item.lit"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.imui.mode.list.item.lit"
+      },
+      "stable_frames": 1
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.imui.mode.list"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.mode" },
+        "text": "shared mode: lit (Lit)"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-authoring-parity-shared-models"
+    }
+  ]
+}
