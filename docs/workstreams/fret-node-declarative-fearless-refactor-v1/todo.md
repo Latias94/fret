@@ -914,6 +914,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     adapters through the private `canvas/middleware/middleware_chain.rs` and
     `canvas/middleware/middleware_validation.rs` seams, so the root middleware module now mainly
     holds shared trait/context/outcome types plus root re-exports.
+  - Progress: `ui/canvas/route_math.rs` now routes curve primitives and route tangent helpers
+    through the private `canvas/route_math/route_math_curve.rs` and
+    `canvas/route_math/route_math_tangent.rs` seams, while `ui/canvas/conversion.rs` now routes
+    conversion candidate building and insert-plan helpers through the private
+    `canvas/conversion/conversion_candidates.rs` and
+    `canvas/conversion/conversion_plan.rs` seams, so both root modules now mainly hold root
+    re-exports and shared imports.
 
 ## M5 - Compatibility retained convergence
 

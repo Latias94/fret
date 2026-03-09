@@ -502,6 +502,13 @@ real editors.
   `canvas/middleware/middleware_validation.rs` seams, so the root middleware module stops
   re-embedding chain/validation implementations inline while keeping the same trait/context
   contracts and root exports.
+- `ui/canvas/route_math.rs` now also routes curve primitives and route tangent helpers through the
+  private `canvas/route_math/route_math_curve.rs` and
+  `canvas/route_math/route_math_tangent.rs` seams, while `ui/canvas/conversion.rs` now routes
+  conversion candidate building and insert-plan helpers through the private
+  `canvas/conversion/conversion_candidates.rs` and
+  `canvas/conversion/conversion_plan.rs` seams, so both root modules stop re-embedding small pure
+  helper blocks inline while keeping the same root exports.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1194,6 +1201,12 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/middleware.rs`
 - `ecosystem/fret-node/src/ui/canvas/middleware/middleware_chain.rs`
 - `ecosystem/fret-node/src/ui/canvas/middleware/middleware_validation.rs`
+- `ecosystem/fret-node/src/ui/canvas/route_math.rs`
+- `ecosystem/fret-node/src/ui/canvas/route_math/route_math_curve.rs`
+- `ecosystem/fret-node/src/ui/canvas/route_math/route_math_tangent.rs`
+- `ecosystem/fret-node/src/ui/canvas/conversion.rs`
+- `ecosystem/fret-node/src/ui/canvas/conversion/conversion_candidates.rs`
+- `ecosystem/fret-node/src/ui/canvas/conversion/conversion_plan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
