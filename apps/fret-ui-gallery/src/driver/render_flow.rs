@@ -1559,6 +1559,33 @@ mod tests {
     }
 
     #[test]
+    fn gallery_calendar_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_CALENDAR);
+
+        for target in [
+            "ui-gallery-calendar-demo-content",
+            "ui-gallery-calendar-usage-content",
+            "ui-gallery-calendar-hijri-content",
+            "ui-gallery-calendar-basic-content",
+            "ui-gallery-calendar-range-content",
+            "ui-gallery-calendar-caption-content",
+            "ui-gallery-calendar-presets-content",
+            "ui-gallery-calendar-time-content",
+            "ui-gallery-calendar-booked-content",
+            "ui-gallery-calendar-custom-cell-content",
+            "ui-gallery-calendar-week-numbers-content",
+            "ui-gallery-calendar-rtl-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Calendar page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_card_compositions_keep_consistent_card_widths() {
         let mut rendered = render_gallery_page(PAGE_CARD);
 

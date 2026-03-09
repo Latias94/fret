@@ -343,7 +343,7 @@ canonical for breadth/presence/audit state; this queue adds priority, risk class
 
 | Component | Rust module | Priority | Risk class | Primary upstream truth | Likely owner layer | Default style owner | Recommended first gate | Why now |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Calendar | `calendar` | P0 | Field-family grid + selection + responsive layout | shadcn docs/examples + Base UI + APG | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Focused layout/a11y test + gallery evidence | Still `Unreviewed`; likely to surface width ownership and keyboard-grid drift |
+| Calendar | `calendar` | P0 | Field-family grid + selection + responsive layout | shadcn docs/examples + Base UI + APG | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Focused layout/a11y test + intrinsic-width unit test + gallery page-alignment evidence | Reviewed 2026-03: recipe defaults are correct (`bg/p` + day chrome), while `rounded-lg border` and page/demo shell width remain caller-owned |
 | Date Picker | `date_picker` | P0 | Popover + field + calendar composition | shadcn docs/examples + Radix + Base UI | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Gallery/diag repro + focused geometry test | High-risk composition surface; likely to repeat Calendar and Popover mismatches |
 | Navigation Menu | `navigation_menu` | P0 | Overlay viewport + responsive sizing + focus routing | Radix + shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Overlay placement/scripted open-state gate | Already complex; easy to regress viewport-owned vs caller-owned sizing |
 | Sidebar | `sidebar` | P0 | Container negotiation + responsive layout ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery geometry invariant | Most likely to accidentally bake page width/flex defaults into the recipe |
@@ -384,7 +384,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | breadcrumb | `breadcrumb` | Present | Unreviewed |  |
 | button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
-| calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
+| calendar | `calendar` | Present | In review | Audit: `docs/audits/shadcn-calendar.md`; headless month grid lives in `fret-ui-kit` (`headless::calendar`); caller owns `rounded/border` and page width, recipe owns inner chrome |
 | card | `card` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
 | carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |

@@ -32,17 +32,18 @@ pub(super) fn preview_calendar(
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
             "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
+            "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
             "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
             "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
-            "Upstream Calendar is a DayPicker-style wrapper, so richer day-cell customization would more likely land as a dedicated slot API than a generic children API.",
+            "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements, so a generic children API is not currently warranted.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview starts with the shadcn docs flow (Demo -> Usage), then adds curated examples and Fret-specific regression surfaces.",
+            "Preview mirrors the shadcn docs path first (Demo -> Usage -> Persian/Hijri -> core examples -> RTL), then appends Fret-only regression surfaces.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -53,9 +54,13 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Selected Date", basic)
+            DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
                 .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-single")
+                .test_id_prefix("ui-gallery-calendar-hijri")
+                .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+            DocSection::new("Basic", basic)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Range Calendar", range)
                 .max_w(Px(980.0))
@@ -65,10 +70,6 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-caption")
                 .code_rust_from_file_region(snippets::month_year_selector::SOURCE, "example"),
-            DocSection::new("Date of Birth Picker", date_of_birth_picker)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-dob")
-                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
             DocSection::new("Presets", presets)
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-presets")
@@ -77,10 +78,6 @@ pub(super) fn preview_calendar(
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-time")
                 .code_rust_from_file_region(snippets::date_and_time_picker::SOURCE, "example"),
-            DocSection::new("Natural Language Picker", natural_language_picker)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-natural-language")
-                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
             DocSection::new("Booked dates", booked_dates)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-booked")
@@ -97,10 +94,14 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
+            DocSection::new("Date of Birth Picker", date_of_birth_picker)
                 .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-hijri")
-                .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+                .test_id_prefix("ui-gallery-calendar-dob")
+                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
+            DocSection::new("Natural Language Picker", natural_language_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-natural-language")
+                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
             DocSection::new("Locale (WIP)", locale)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-locale")
