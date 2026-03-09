@@ -65,7 +65,7 @@ Builder-seam inventory update (as of 2026-03-09):
 | P0 | Default-path productization | The runtime path exists, but users still infer the intended story from scattered examples/docs. This is the largest remaining adoption risk. | Default/comparison/advanced taxonomy is still uneven across docs, templates, cookbook, and gallery. | Tighten the onboarding ladder and keep the same recommended path visible everywhere. |
 | P1 | Invalidation ergonomics (`AFA-postv1-004`) | This remains important because it defines the default rerender rule, even though the next move now looks more like policy/productization than API expansion. | Keep the policy explicit: tracked writes rerender by default, `notify()` stays an escape hatch, and only reopen API work if a new real medium surface contradicts that rule. | Keep `notify()` as a low-level escape hatch; avoid adding another generic helper unless evidence changes. |
 | P1 | Local-state ergonomics (`AFA-postv1-001`) | `LocalState<T>` is viable, but still model-backed and still visibly different from the north-star plain-Rust feel. | Evidence must come from real medium surfaces, not from synthetic micro helpers. | Improve the local-state boundary only if it reduces real coordination noise without weakening runtime semantics. |
-| P2 | Builder-first last-mile seams (`AFA-postv1-002`) | Broad cleanup already landed; the remaining value is only in cross-cutting host/root seams that still force eager landing. | The seam must affect multiple real surfaces or block the default path directly. | Finish a small number of high-leverage root/container seams; stop leaf-by-leaf churn. |
+| P2 | Builder-first last-mile seams (`AFA-postv1-002`, maintenance mode) | The broad cleanup plus the later `Alert` / `ScrollArea` / `Field` closures mean this is no longer an active expansion track. | Reopen only if a new cross-surface host/root seam still forces eager landing across multiple real default-facing surfaces. | Keep existing builders; avoid more family-by-family expansion without new evidence. |
 | P3 | Keyed-list / payload-row handler ergonomics (`AFA-postv1-003`, maintenance mode) | A deliberately narrow helper already landed and current todo-like surfaces adopted it, so this is no longer an active expansion track. | Reopen only if a new medium surface shows the same row-local pressure beyond the existing todo-like evidence; command/query/form surfaces still do not count. | Keep the current helper as-is; do not widen keyed-list sugar without new evidence. |
 | P4 | Hard-delete/quarantine follow-through | Important for facade hygiene, but not the next authoring-density win. | Deprecation windows and product-policy decisions must mature first. | Continue policy/gate work; do not let cleanup displace the higher-value authoring surfaces above. |
 
@@ -118,12 +118,12 @@ Recommended deliverables:
 - one small runtime/API move only if it clearly removes repeated tracked-write noise,
 - diagnostics evidence showing rebuild reasons stay explainable.
 
-### 3. Finish only the highest-leverage builder-first seams
+### 3. Re-open builder-first seam work only with new evidence
 
 Recommended deliverables:
 
-- target only seams that still force eager `AnyElement` landing across multiple surfaces,
-- avoid more local demo-by-demo cleanup unless it closes a reusable root/container seam,
+- none by default,
+- reopen only if a new seam still forces eager `AnyElement` landing across multiple surfaces,
 - treat families with existing builders but low migration (for example `Card`) as adoption work,
   not as automatic new-surface candidates.
 

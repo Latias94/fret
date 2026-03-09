@@ -63,8 +63,13 @@ Adoption note (as of 2026-03-07):
   ergonomics in maintenance mode unless new evidence appears; macros stay last.
 - Active shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now narrows the next truly worthwhile
   surfaces to default-path productization first, invalidation/local-state ergonomics second,
-  builder-first last-mile seams third, and keyed-list / payload-row handler ergonomics only after
-  those passes.
+  while builder-first last-mile seams and keyed-list / payload-row handler ergonomics are both now
+  in maintenance mode unless new evidence appears.
+- Builder-first follow-up decision (as of 2026-03-09): after the narrow `Alert`, `ScrollArea`, and
+  `Field` family closures, `AFA-postv1-002` is now treated as closed for this pass. Remaining
+  density is mainly adoption of existing builders or advanced/runtime-owned seams, so reopen only
+  if a new cross-surface host/root boundary still forces eager landing in multiple real
+  default-facing surfaces.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,
@@ -244,6 +249,10 @@ Post-v1 direction (recommended):
   - Medium-surface builder follow-up (as of 2026-03-09): `Alert::build(...)` plus `AlertAction::build(...)` now close one deliberately narrow alert-family seam in `ecosystem/fret-ui-shadcn/src/alert.rs`, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, and the main ui-gallery alert snippets) now use that late-landing path instead of pre-collecting alert children.
   - Medium-surface builder follow-up (as of 2026-03-09): `ScrollArea::build(...)` now closes the next narrow runtime-owned seam in `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, and the first real surfaces (`markdown_and_code_basics`, `async_playground_demo`, and the main ui-gallery scroll-area demo) now keep viewport children on the late-landing path without widening the helper surface.
   - Medium-surface builder follow-up (as of 2026-03-09): `FieldSet::build(...)`, `FieldGroup::build(...)`, and `Field::build(...)` now close the next dense form-layout seam in `ecosystem/fret-ui-shadcn/src/field.rs`, and the first real surfaces (`ui-gallery` field `input`, field `fieldset`, and form `demo`) now keep field-family children on the late-landing path instead of pre-collecting them.
+  - Builder-first maintenance update (as of 2026-03-09): with those families closed, the remaining
+    builder-density pressure is now primarily adoption or advanced/runtime-owned seams rather than
+    an active helper-design track. `AFA-postv1-002` therefore moves to maintenance mode unless new
+    cross-surface host/root evidence appears.
 
 ---
 

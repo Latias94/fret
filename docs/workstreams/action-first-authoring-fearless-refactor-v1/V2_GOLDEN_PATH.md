@@ -139,7 +139,7 @@ bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 The clearest remaining gaps are now narrower:
 
 - keyed-list / payload-row flows now have one narrow helper for local collection mutation, but the root action table still remains visible by design,
-- builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
+- builder-first `.child(...)` composition is largely in maintenance mode now; `ui::children!` remains common in some medium surfaces, but the remaining pressure is mostly adoption or advanced/runtime-owned seams rather than a missing generic builder family,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
   not have to infer the intended path from scattered examples,
 - `DataTable` remains a separate business-table/reference surface whose current pressure is more
@@ -163,11 +163,15 @@ The next post-v1 pass should stay disciplined:
    - keep `hello` → `simple-todo` → `todo` as the obvious onboarding ladder,
    - make default/comparison/advanced surfaces explicit in docs and templates,
    - avoid promoting more helpers until that teaching surface is boring and consistent.
-2. **Keep keyed-list / payload-row ergonomics in maintenance mode second**
+2. **Keep builder-first seam work in maintenance mode second**
+   - the last clearly repeated medium families are already closed for this pass,
+   - reopen only if a new cross-surface host/root seam still forces eager landing across multiple
+     real default-facing surfaces.
+3. **Keep keyed-list / payload-row ergonomics in maintenance mode third**
    - the current narrow helper is enough for the existing todo-like evidence slice,
    - only reopen this track if another medium surface still looks materially noisier than the
      root-handler path after the product pass.
-3. **Keep macros third and optional**
+4. **Keep macros fourth and optional**
    - no new macro work is required for v2 success,
    - only revisit narrow composition macros if builder-first cleanup still leaves repeated structural noise.
 
