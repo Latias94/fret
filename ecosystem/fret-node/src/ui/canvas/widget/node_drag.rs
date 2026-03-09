@@ -95,7 +95,6 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     canvas.emit_node_drag(drag.primary, &drag.node_ids);
 
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }

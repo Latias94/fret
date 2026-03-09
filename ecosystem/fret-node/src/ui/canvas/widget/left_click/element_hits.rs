@@ -59,8 +59,7 @@ pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         start_size_opt,
     });
     cx.capture_pointer(cx.node);
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -154,8 +153,7 @@ pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     });
     cx.capture_pointer(cx.node);
 
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn handle_edge_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -210,6 +208,5 @@ pub(super) fn handle_edge_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         });
     }
     cx.capture_pointer(cx.node);
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
 }

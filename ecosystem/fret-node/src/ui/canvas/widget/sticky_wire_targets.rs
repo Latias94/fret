@@ -73,6 +73,5 @@ fn inspect_non_port_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 fn finish_sticky_wire_target_picker<H: UiHost>(cx: &mut fret_ui::retained_bridge::EventCx<'_, H>) {
     cx.stop_propagation();
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }

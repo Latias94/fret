@@ -26,8 +26,7 @@ pub(super) fn handle_sticky_wire_ignored_release<H: UiHost, M: NodeGraphCanvasMi
         && canvas.interaction.wire_drag.is_some()
     {
         canvas.interaction.sticky_wire_ignore_next_up = false;
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::paint_invalidation::invalidate_paint(cx);
         return true;
     }
 
@@ -56,8 +55,7 @@ pub(super) fn handle_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
         canvas.emit_move_start(snapshot, ViewportMoveKind::PanInertia);
     }
     cx.release_pointer_capture();
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
     true
 }
 

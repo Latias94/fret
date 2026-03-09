@@ -554,6 +554,13 @@ real editors.
   `marquee_begin.rs`, `group_drag.rs`, `group_resize.rs`, `hover.rs`, and `wire_drag_helpers.rs`
   stop re-embedding the same event-scope redraw-plus-paint-invalidation tail blocks inline while
   keeping the same behavior.
+- pointer-up / left-click / marquee-selection / node-drag / sticky-wire event tails now also route
+  through the same private `canvas/widget/paint_invalidation.rs` seam, so
+  `pointer_up_left_route.rs`, `pointer_up_state.rs`, `left_click/group_background.rs`,
+  `left_click/connection_hits.rs`, `left_click/element_hits.rs`, `marquee_selection.rs`,
+  `node_drag.rs`, `node_resize/move_update.rs`, `sticky_wire_connect.rs`, and
+  `sticky_wire_targets.rs` stop re-embedding the same event-scope redraw-plus-paint-invalidation
+  tail blocks inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

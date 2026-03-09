@@ -24,8 +24,7 @@ pub(super) fn handle_left_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
         canvas.interaction.hover_edge = None;
         cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::paint_invalidation::invalidate_paint(cx);
         return true;
     }
 

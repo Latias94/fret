@@ -166,7 +166,6 @@ pub(in super::super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMid
     }
     canvas.interaction.node_resize = Some(resize);
 
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
     true
 }

@@ -103,6 +103,5 @@ fn plan_sticky_wire_connect_outcome<H: UiHost, M: NodeGraphCanvasMiddleware>(
 fn finish_sticky_wire_pointer_down<H: UiHost>(cx: &mut fret_ui::retained_bridge::EventCx<'_, H>) {
     cx.release_pointer_capture();
     cx.stop_propagation();
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }
