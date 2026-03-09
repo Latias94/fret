@@ -726,6 +726,14 @@ real editors.
   `canvas/widget/retained_widget_semantics_value.rs` seams, so retained semantics sync
   no longer keeps descendant arbitration and accessibility value string assembly in one
   surface.
+- `retained_widget_layout.rs` now routes model observation, diagnostics publish,
+  child layout, and post-layout queue drain through the private
+  `canvas/widget/retained_widget_layout_observe.rs`,
+  `canvas/widget/retained_widget_layout_publish.rs`,
+  `canvas/widget/retained_widget_layout_children.rs`, and
+  `canvas/widget/retained_widget_layout_drain.rs` seams, so retained layout sync no
+  longer keeps mixed observation, diagnostics, child placement, and queue drain logic in
+  one surface.
 - `delete.rs` now routes delete-op construction, removable-id collection,
   and deletable predicates through the private
   `canvas/widget/delete_ops_builder.rs`,
@@ -918,6 +926,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_semantics_focus.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_semantics_value.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_children.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_drain.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_observe.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_publish.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder.rs`

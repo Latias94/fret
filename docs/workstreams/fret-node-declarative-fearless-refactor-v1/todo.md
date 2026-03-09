@@ -657,6 +657,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/retained_widget_semantics_value.rs` seams, so retained semantics sync
     no longer keeps descendant arbitration and accessibility value string assembly in one
     surface.
+  - Progress: `retained_widget_layout.rs` now routes model observation, diagnostics
+    publish, child layout, and post-layout queue drain through the private
+    `canvas/widget/retained_widget_layout_observe.rs`,
+    `canvas/widget/retained_widget_layout_publish.rs`,
+    `canvas/widget/retained_widget_layout_children.rs`, and
+    `canvas/widget/retained_widget_layout_drain.rs` seams, so retained layout sync no
+    longer keeps mixed observation, diagnostics, child placement, and queue drain logic in
+    one surface.
   - Progress: `delete.rs` now routes delete-op construction, removable-id
     collection, and deletable predicates through the private
     `canvas/widget/delete_ops_builder.rs`,
