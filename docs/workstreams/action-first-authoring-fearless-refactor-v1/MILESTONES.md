@@ -47,8 +47,9 @@ Adoption note (as of 2026-03-07):
 - Post-v1 repo-shape note: the remaining authoring work is ergonomics + teaching-surface convergence,
   not a Bevy-style single-package root `examples/` rewrite and not an expansion of `ecosystem/fret`
   into the repo?s canonical example host.
-- Active post-v1 order: local-state / invalidation ergonomics first, then narrow widget-local action
-  sugar, and only then a decision on macros.
+- Active post-v1 order: productize the current default path first (onboarding ladder +
+  default/comparison/advanced taxonomy), then revisit narrow widget-local action sugar, and only
+  then a decision on macros.
 - Adjacent examples-side polish is also underway: `apps/fret-examples` now uses the same builder-first
   guidance for decorate-only `test_id` / semantics patches in `todo_demo` and the utility-window /
   hit-test demos where the host sink already accepts builders; raw pointer-region and container roots
@@ -115,7 +116,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` use the default path; `Undo`/`Redo` keep the host-side RAF effect)
 - `apps/fret-cookbook/examples/simple_todo.rs` (now uses a hybrid local-state + explicit-model split for keyed dynamic-list authoring)
 - `apps/fret-cookbook/examples/simple_todo_v2_target.rs` (comparison target now keeps the keyed list in `LocalState<Vec<TodoRow>>`, uses `Checkbox::from_checked(...).action_payload(...)` for row toggles, and makes the remaining visible gap more precise: row-level event ergonomics still prefer root handler registration)
-- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, `docs/examples/todo-app-golden-path.md` (current baseline vs v2 north-star is now documented explicitly; text widgets are no longer the main blocker, while simple todo-style collection ergonomics remain the clearest post-v1 design gap)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, `docs/examples/todo-app-golden-path.md` (current baseline vs v2 north-star is now documented explicitly; text widgets and keyed-list default viability are no longer the main blockers, and the next gap is framed as productization/default-path clarity plus narrower event/composition ergonomics)
 - `apps/fret-cookbook/examples/virtual_list_basics.rs` (prefers `on_action_notify_models` for scroll actions)
 - `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)

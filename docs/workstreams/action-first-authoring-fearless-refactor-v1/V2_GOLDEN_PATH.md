@@ -1,7 +1,7 @@
 # Authoring v2 Golden Path (Draft)
 
 Status: draft, post-v1 guidance
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -127,7 +127,10 @@ The clearest remaining gaps are now narrower:
 
 - widget-local `listener` / `dispatch` sugar is still not the default path,
 - builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
-- remaining explicit-model collection examples are now comparison-only or intentionally advanced rather than default-surface blockers.
+- product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
+  not have to infer the intended path from scattered examples,
+- remaining explicit-model collection examples are now comparison-only or intentionally advanced rather
+  than default-surface blockers.
 
 `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`, and
 `apps/fretboard/src/scaffold/templates.rs` now collectively show that the current v2 path already
@@ -135,6 +138,21 @@ covers cookbook, app-grade, and scaffold keyed-list surfaces via `LocalState<Vec
 payload row actions, and snapshot checkbox bindings. That shifts the remaining visible pressure more
 toward handler placement, default-path documentation, and narrower widget ergonomics rather than
 macros or another round of generic tracked-write helpers.
+
+## Current recommendation order (2026-03-09)
+
+The next post-v1 pass should stay disciplined:
+
+1. **Productize the current default path first**
+   - keep `hello` → `simple-todo` → `todo` as the obvious onboarding ladder,
+   - make default/comparison/advanced surfaces explicit in docs and templates,
+   - avoid promoting more helpers until that teaching surface is boring and consistent.
+2. **Re-evaluate narrow widget-local action sugar second**
+   - only if at least two real medium surfaces still look materially noisier than the root-handler path,
+   - keep action identity and root handler table semantics visible.
+3. **Keep macros third and optional**
+   - no new macro work is required for v2 success,
+   - only revisit narrow composition macros if builder-first cleanup still leaves repeated structural noise.
 
 ## What is *not* default yet
 
