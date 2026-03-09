@@ -903,6 +903,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     cache preview/key helpers through the private `canvas/state/state_paste_series.rs`,
     `canvas/state/state_viewport_animation.rs`, and `canvas/state/state_geometry_cache.rs` seams,
     so the root state module now mainly holds shared state/data types plus tests.
+  - Progress: `ui/canvas/workflow.rs` now routes wire-drop insert planning through the private
+    `canvas/workflow/workflow_insert.rs` seam, so the root workflow module now mainly holds the
+    shared plan type, root re-export, and tests.
 
 ## M5 - Compatibility retained convergence
 
