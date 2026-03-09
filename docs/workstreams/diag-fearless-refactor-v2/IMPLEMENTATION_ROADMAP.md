@@ -188,7 +188,12 @@ Recommended PR slices:
 4. [done] extend summary rows for `diag matrix` and `diag perf`,
 5. [done] write `regression.summary.json` under a stable location,
 6. [done] define a first campaign-level aggregation/index output over many summary artifacts,
-7. [next] tighten stable reason-code and evidence-path conventions across all lanes,
+7. [in progress] tighten stable reason-code and evidence-path conventions across all lanes,
+   - the repo-level contract is drafted,
+   - shared summary serde, summarize/dashboard wording, campaign share payload fields, run-manifest
+     `paths`, and artifact-lint compatibility now adopt canonical vocabulary additively,
+   - the next pass should inspect residual persisted names such as manifest `files[].id` and any
+     older exact-name consumers before adding more aliases or dual-write bridges,
 8. [next] decide whether aggregation should stay as `diag summarize` or become part of a
    future `diag campaign` surface.
 
@@ -323,7 +328,7 @@ Recommended PR slices:
    - next recommended landing: continue inside `diag_campaign` by extracting the next summary-finalize execution/timing seam if it can be kept small; otherwise revisit any newly exposed artifact/materialization holdout that now looks clearly higher ROI than the remaining campaign finalize helpers
    - remaining known holdouts: `diag_suite` now mainly keeps a few one-time setup and session-root-adjacent helpers that intentionally do not require bundle materialization, `diag_run::cmd_run` is mostly resolved-path setup plus exclusive transport dispatch, `diag_campaign` share-manifest handoff is substantially sliced, `commands/resolve` entry shaping plus session/script-result/bundle normalization are substantially de-risked, and the larger artifact/evidence orchestration surface may now pay better in `diag_campaign` or any newly exposed artifact/materialization holdout than in further tiny `resolve` slices
  3. stabilize metadata and evidence vocabulary beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`, capability tags, flake policy),
- 4. add richer lane composition (`matrix`, `perf`, `nightly/full`) only after the first seam slices settle,
+ 4. add richer lane composition (`matrix`, `perf`, canonical `nightly`, legacy alias `full`) only after the first seam slices settle,
  5. decide whether campaign runs should persist a dashboard text or HTML projection,
  6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term,
 7. remove legacy top-level `suites` / `scripts` compatibility only after manifest authoring and evidence contracts stabilize.

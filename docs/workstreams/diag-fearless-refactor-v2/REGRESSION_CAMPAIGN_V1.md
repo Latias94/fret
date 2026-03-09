@@ -4,6 +4,11 @@ Status: Draft
 
 Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
+Related notes:
+
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+
 ## 0) Why this note exists
 
 Fret already has strong diagnostics primitives:
@@ -148,6 +153,13 @@ Typical contents:
 - richer packing and archival,
 - flake classification instead of immediate developer interruption.
 
+Vocabulary rule:
+
+- `nightly` is the canonical persisted broad lane name.
+- `full` may remain as a user-facing selector or convenience alias, but summaries and aggregate
+  artifacts should normalize broad scheduled runs to `nightly` unless the repo later gives `full`
+  a distinct semantic meaning.
+
 ## 4) Campaign metadata model
 
 Campaign orchestration becomes much easier if suites and scripts can expose lightweight metadata.
@@ -165,13 +177,19 @@ Recommended metadata fields:
 - `feature_tags`
   - e.g. `overlay`, `docking`, `text_input`, `virtual_list`, `ai_ui`
 - `requires_capabilities`
-  - strong dependency on runtime/export capabilities
+  - strong dependency on stable runtime/export capability tags
 - `flake_policy`
   - e.g. `fail_fast`, `retry_once`, `retry_three`, `classify_only`
 - `evidence_profile`
   - e.g. `bounded`, `with_screenshots`, `with_pack`, `perf_heavy`
 
 This metadata should not become a dumping ground. The point is to support scheduling and ownership, not to encode all logic.
+
+Vocabulary rule:
+
+- lane names, `flake_policy`, and `requires_capabilities` should reuse the normalized vocabulary in
+  `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md` rather than introducing local synonyms in
+  campaign manifests, docs, or dashboards.
 
 ## 5) Orchestration rules
 
@@ -202,12 +220,22 @@ Recommended top-level fields:
 - campaign name and version
 - run id / created time
 - selected lanes
-- totals: passed / failed / flaky / skipped
+- totals using the normalized status vocabulary
 - per-item result rows
 - stable `reason_code`
 - evidence bundle/artifact paths
 - pack paths when generated
 - flake classification results
+
+More specifically, campaign outputs should align with the canonical status set:
+
+- `passed`
+- `failed_deterministic`
+- `failed_flaky`
+- `failed_tooling`
+- `failed_timeout`
+- `skipped_policy`
+- `quarantined`
 
 ### 5.3 Campaigns should prefer bounded evidence by default
 
@@ -243,6 +271,9 @@ Suggested result classes:
 Important policy rule:
 
 - quarantine should be visible and explicit in summaries; it must not silently become “green”.
+- flake handling policy and result status must remain separate:
+  - `flake_policy` describes retry/classification behavior,
+  - `failed_flaky` and `quarantined` are normalized result states.
 
 ## 7) Suggested execution policies by context
 
@@ -276,6 +307,7 @@ Default target:
 - broad `correctness`
 - selected `matrix`
 - selected `perf`
+- `nightly` as the canonical persisted broad lane label
 
 Extra expectation:
 
@@ -304,7 +336,9 @@ Recommended v1 scope:
 2. define metadata requirements,
 3. define `regression.summary.json`,
 4. define flake classification vocabulary,
-5. align README/TODO/MILESTONES to treat campaigns as a first-class layer.
+5. align README/TODO/MILESTONES to treat campaigns as a first-class layer,
+6. align lane/status/reason/evidence path wording with
+   `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`.
 
 Recommended v1 non-goals:
 
@@ -329,6 +363,8 @@ being `campaign`, `regression`, or another near-synonym.
 This note is successful when:
 
 - the repo has one shared vocabulary for regression lanes,
+- broad scheduled runs normalize to `nightly` in persisted artifacts even if `full` remains a
+  user-facing alias,
 - `suite`, `matrix`, `perf`, `repeat`, and `shrink` are understood as parts of one larger workflow,
 - GUI and CLI can both consume the same campaign model,
 - future implementation work can land incrementally without re-arguing the basics each time.
