@@ -720,6 +720,12 @@ real editors.
   `canvas/widget/retained_widget_layout.rs`, and
   `canvas/widget/retained_widget_cull_window.rs` seams, so retained widget frame
   orchestration no longer stays embedded in one mixed surface.
+- `retained_widget_semantics.rs` now routes active-descendant lookup and
+  semantics value assembly through the private
+  `canvas/widget/retained_widget_semantics_focus.rs` and
+  `canvas/widget/retained_widget_semantics_value.rs` seams, so retained semantics sync
+  no longer keeps descendant arbitration and accessibility value string assembly in one
+  surface.
 - `delete.rs` now routes delete-op construction, removable-id collection,
   and deletable predicates through the private
   `canvas/widget/delete_ops_builder.rs`,
@@ -909,6 +915,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/command_focus_port.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_frame.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_semantics.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_semantics_focus.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_semantics_value.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete.rs`

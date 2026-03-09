@@ -294,6 +294,8 @@ mod retained_widget_runtime_event;
 mod retained_widget_runtime_paint;
 mod retained_widget_runtime_shared;
 mod retained_widget_semantics;
+mod retained_widget_semantics_focus;
+mod retained_widget_semantics_value;
 mod right_click;
 mod searcher;
 mod searcher_activation;

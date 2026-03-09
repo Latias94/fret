@@ -651,6 +651,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/retained_widget_layout.rs`, and
     `canvas/widget/retained_widget_cull_window.rs` seams, so retained widget frame
     orchestration no longer stays embedded in one mixed surface.
+  - Progress: `retained_widget_semantics.rs` now routes active-descendant lookup and
+    semantics value assembly through the private
+    `canvas/widget/retained_widget_semantics_focus.rs` and
+    `canvas/widget/retained_widget_semantics_value.rs` seams, so retained semantics sync
+    no longer keeps descendant arbitration and accessibility value string assembly in one
+    surface.
   - Progress: `delete.rs` now routes delete-op construction, removable-id
     collection, and deletable predicates through the private
     `canvas/widget/delete_ops_builder.rs`,
