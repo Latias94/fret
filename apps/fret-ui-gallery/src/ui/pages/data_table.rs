@@ -17,6 +17,7 @@ pub(super) fn preview_data_table(
         [
             "Data Table in shadcn is a guide recipe, not a single fixed widget; treat this page as a living parity surface.",
             "Default recipe here means: explicit TableState + TableViewOutput + one toolbar + one footer, without pretending business-table state can be hidden.",
+            "Everything below Default Recipe should be read as advanced reference material, not as the baseline authoring path.",
             "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
             "When extending this page, prefer deterministic state rows and stable test IDs so diag scripts can gate regressions.",
             "Future refactor can split column/header/view-options into reusable subcomponents mirroring upstream guide chapters.",
@@ -28,22 +29,22 @@ pub(super) fn preview_data_table(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
+            "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page starts with a curated default recipe, then keeps denser business-table variants as advanced reference material backed by Fret's headless engine.",
         ),
         vec![
             DocSection::new("Default Recipe", default_demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::default_demo::SOURCE, "example"),
-            DocSection::new("Basic Demo", basic_demo)
+            DocSection::new("Advanced Reference", basic_demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::basic_demo::SOURCE, "example"),
-            DocSection::new("Guide Demo", demo)
+            DocSection::new("Advanced Guide", demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
-            DocSection::new("RTL", rtl_demo)
+            DocSection::new("Advanced RTL", rtl_demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::rtl_demo::SOURCE, "example"),
-            DocSection::new("Code", code_preview)
+            DocSection::new("Reference Outline", code_preview)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-data-table-code")
                 .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),

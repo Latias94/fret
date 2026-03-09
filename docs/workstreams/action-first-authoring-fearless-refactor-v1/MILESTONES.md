@@ -7,6 +7,8 @@ Related:
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
+- Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
@@ -57,6 +59,14 @@ Adoption note (as of 2026-03-07):
 - Active post-v1 order: productize the current default path first (onboarding ladder +
   default/comparison/advanced taxonomy), then revisit narrow widget-local action sugar, and only
   then a decision on macros.
+- Active shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now narrows the next truly worthwhile
+  surfaces to default-path productization first, invalidation/local-state ergonomics second,
+  builder-first last-mile seams third, and widget-local action sugar only after those passes.
+- Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
+  and label contract explicitly, and `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`,
+  `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `apps/fret-ui-gallery/README.md`,
+  the `data_table` gallery page framing, and generated scaffold READMEs now align on the same
+  default/comparison/advanced framing.
 - Business-table note: `DataTable` is now explicitly treated as a separate post-v1 audit/problem
   space. It should not keep the primitive `Table` builder-first cleanup milestone artificially
   open.

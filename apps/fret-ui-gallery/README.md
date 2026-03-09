@@ -2,6 +2,13 @@
 
 Native + web gallery app for validating `fret-ui-shadcn` component behavior.
 
+Surface taxonomy:
+
+- **Advanced / reference**: use this app for component discovery, conformance checks, and product
+  polish after the default onboarding ladder.
+- **Not the default learning surface**: start with `hello`, `simple-todo`, and `todo` first if you
+  are learning the authoring model.
+
 ## Features
 
 By default the gallery only exposes a small set of Core pages + the Shadcn component set.

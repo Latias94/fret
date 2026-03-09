@@ -6,6 +6,7 @@ Last updated: 2026-03-09
 Related:
 
 - Proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
+- Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Migration notes: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
 

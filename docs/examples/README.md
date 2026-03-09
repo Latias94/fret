@@ -3,6 +3,12 @@
 This repo has multiple “example-shaped” entry points. This page is the shortest path to choosing
 the right one.
 
+Default reading rule:
+
+- start on the **Default** ladder,
+- use **Comparison** surfaces only when you are intentionally reviewing ergonomics,
+- treat **Advanced** surfaces as reference/product-validation layers, not as first-contact teaching material.
+
 ## 0) Boring ladder (recommended)
 
 These are intentionally stable and should be your default onboarding path:
@@ -92,6 +98,16 @@ Note: cookbook examples are separate binaries today, so scripts are per-example 
 ## 2) UI Gallery (component catalog + conformance)
 
 The UI gallery is a larger, multi-page app intended for component discovery and parity testing.
+
+Taxonomy: this is an **Advanced** surface.
+
+Use it when:
+
+- you want to inspect component recipes and parity,
+- you need a conformance/regression target,
+- you are validating product polish after learning the default ladder.
+
+Do not use it as the first place to learn the authoring model.
 
 - Native (lite by default): `cargo run -p fret-ui-gallery`
 - Full catalog: `cargo run -p fret-ui-gallery --features gallery-full`

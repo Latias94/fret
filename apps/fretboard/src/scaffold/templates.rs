@@ -1127,6 +1127,7 @@ cargo run --release
 - Theme: shadcn new-york-v4 (Slate / Light)
 {icons_line}{palette_line}
 {ui_assets_line}
+- Ladder position: third rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
 - Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
@@ -1206,6 +1207,7 @@ cargo run --release
 - Theme: shadcn new-york-v4 (Slate / Light)
 {icons_line}{palette_line}
 {ui_assets_line}
+- Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
 - Default entrypoints: start with `on_action_notify_models` for coordinated writes, use payload actions for per-row list interactions, and keep `on_activate*` for local widget glue only.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
@@ -1256,6 +1258,7 @@ cargo run --release
 
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
 {icons_line}{palette_line}
+- Ladder position: first rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Default entrypoints: start with `on_action_notify_models`; use `on_activate*` only for local pressable glue.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
@@ -1379,6 +1382,7 @@ mod tests {
         assert!(hello.contains("Read model values near the top of `render()`"));
         assert!(hello.contains("Default entrypoints"));
         assert!(hello.contains("cookbook/reference-only host-side glue"));
+        assert!(hello.contains("first rung of the default onboarding path"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
@@ -1388,6 +1392,7 @@ mod tests {
         assert!(simple.contains("Read tracked state near the top of `render()`"));
         assert!(simple.contains("start with `on_action_notify_models`"));
         assert!(simple.contains("cookbook/reference-only host-side glue"));
+        assert!(simple.contains("second rung of the default onboarding path"));
 
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
@@ -1395,5 +1400,6 @@ mod tests {
         assert!(todo.contains(
             "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
         ));
+        assert!(todo.contains("third rung of the default onboarding path"));
     }
 }

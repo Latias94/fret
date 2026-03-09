@@ -142,6 +142,12 @@ Current gate for the curated recipe:
 
 - `tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json`
 
+Current gallery positioning:
+
+- `Default Recipe` is the intended baseline section.
+- `Advanced Reference`, `Advanced Guide`, and `Advanced RTL` are intentionally labeled as
+  non-default follow-up material.
+
 ---
 
 ## Decision summary

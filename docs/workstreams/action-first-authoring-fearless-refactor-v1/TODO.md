@@ -9,6 +9,8 @@ Related:
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
+- Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
@@ -517,6 +519,13 @@ Current sequencing note (as of 2026-03-09):
 - second: continue local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`) only where real medium-surface evidence still shows a state-boundary cliff after the doc/product pass,
 - third: re-evaluate narrow widget-local action sugar (`AFA-postv1-003`) only if at least two real medium surfaces still look materially noisier than the root-handler path,
 - fourth: only after the first three stabilize, re-evaluate narrow macros (`AFA-postv1-005`).
+- shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now fixes the current priority order explicitly so
+  `DataTable` helper churn, broad macros, and compat cleanup do not displace the higher-value
+  default-path and invalidation work.
+- productization note (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the
+  repo-wide ladder and label contract explicitly, and the examples index, todo golden-path note,
+  cookbook README/index, gallery README/page framing, and generated scaffold READMEs now use that same
+  default/comparison/advanced framing.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics

@@ -9,6 +9,14 @@ This document shows what we want a first-time Fret user to write when building a
 
 It is intentionally “golden path”: advanced apps may assemble crates manually.
 
+Taxonomy:
+
+- **Default** follow-up: this document is the richer third rung (`todo`) after `hello` and
+  `simple-todo`.
+- **Comparison**: `simple_todo_v2_target` remains a side-by-side evaluation surface, not the
+  onboarding default.
+- **Advanced**: gallery/interop/renderer/docking surfaces are outside this document's scope.
+
 ## Onboarding ladder (progressive disclosure)
 
 Prefer an explicit ladder instead of starting with the full baseline on minute 1:
