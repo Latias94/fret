@@ -383,7 +383,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | badge | `badge` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
 | breadcrumb | `breadcrumb` | Present | In review | Semantics alignment landed for root/list/current-page/presentation affordances; gallery usage now mirrors shadcn docs via primitives while the compact builder remains a Fret shorthand; audit: `docs/audits/shadcn-breadcrumb.md`; gates: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` |
 | button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
-| button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
+| button-group | `button_group` | Present | In review | Audit: `docs/audits/shadcn-button-group.md`; gallery order now mirrors shadcn docs with dedicated `Usage` / `Accessibility` / `ButtonGroup vs ToggleGroup` / `API Reference` sections; `ButtonGroupText` keeps an explicit `.children(...)` surface while `Flex-1 items` stays a Fret-only caller-owned layout example |
 | calendar | `calendar` | Present | In review | Audit: `docs/audits/shadcn-calendar.md`; headless month grid lives in `fret-ui-kit` (`headless::calendar`); gallery now includes upstream doc-only `About` / `Date Picker` / `Selected Date (With TimeZone)` sections before examples; caller owns `rounded/border` and page width, recipe owns inner chrome |
 | card | `card` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
 | carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
