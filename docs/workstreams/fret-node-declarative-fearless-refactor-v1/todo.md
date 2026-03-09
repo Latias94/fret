@@ -1113,6 +1113,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/paint_render_data/edges.rs` seam, so `collect.rs` stops re-embedding the
     same edge iteration, override application, bounds rejection, rank calculation, and stable sort
     tail inline.
+  - Progress: full node-paint insert-preview, node chrome/body, and port/pin tails now also route
+    through the private `ui/canvas/widget/paint_nodes/full_preview.rs`,
+    `ui/canvas/widget/paint_nodes/full_nodes.rs`, and
+    `ui/canvas/widget/paint_nodes/full_ports.rs` seams, so `paint_nodes/full.rs` now mainly keeps
+    shared paint setup, skin hint collection, and top-level draw ordering explicit.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

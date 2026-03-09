@@ -703,6 +703,11 @@ real editors.
   assembly now also route through the private `ui/canvas/widget/paint_render_data/edges.rs` seam,
   so `collect.rs` stops re-embedding the same edge iteration, override application, bounds
   rejection, rank calculation, and stable sort tail inline.
+- full node-paint insert-preview, node chrome/body, and port/pin tails now also route through the
+  private `ui/canvas/widget/paint_nodes/full_preview.rs`,
+  `ui/canvas/widget/paint_nodes/full_nodes.rs`, and
+  `ui/canvas/widget/paint_nodes/full_ports.rs` seams, so `paint_nodes/full.rs` now mainly keeps
+  shared paint setup, skin hint collection, and top-level draw ordering explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
