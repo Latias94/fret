@@ -68,6 +68,10 @@ Current convergence snapshot (as of 2026-03-09):
   default/comparison/advanced portal rather than a flat example dump.
 - `apps/fret-ui-gallery/README.md` already frames the gallery as advanced/reference instead of a
   first-contact learning surface.
+- `ecosystem/fret/README.md` now points back to the same `hello` -> `simple-todo` -> `todo`
+  ladder instead of implying that the facade README itself is the canonical example path.
+- `apps/fretboard/src/scaffold/templates.rs` already emits template READMEs that repeat the same
+  ladder positioning and default-entrypoint guidance.
 
 ### 2. The default path must stay intentionally small
 

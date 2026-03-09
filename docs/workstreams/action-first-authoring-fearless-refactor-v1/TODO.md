@@ -701,13 +701,14 @@ Current sequencing note (as of 2026-03-09):
 
 - [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
   - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
-  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `docs/examples/README.md` now states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` now frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, and `apps/fret-ui-gallery/README.md` now repeats the same “use after the ladder” order explicitly.
+  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `docs/examples/README.md` now states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` now frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` now points back to the same ladder instead of presenting the facade README as the canonical example host.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
     - `docs/examples/README.md`
     - `apps/fret-cookbook/README.md`
     - `apps/fret-cookbook/EXAMPLES.md`
     - `apps/fret-ui-gallery/README.md`
+    - `ecosystem/fret/README.md`
 
 - [x] AFA-postv1-026 Close one medium-surface builder seam in the `Alert` family.
   - Goal: prove that post-v1 builder-density work can stay narrow and evidence-driven instead of reopening broad helper expansion.

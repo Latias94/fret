@@ -13,7 +13,7 @@ applications while keeping the framework/kernel crates (`crates/*`) policy-light
 ## Boundary note
 
 `fret` is the golden-path authoring facade for application code. It is intentionally **not** the
-repo?s canonical example host.
+repo's canonical example host.
 
 - Use `docs/examples/README.md` for the canonical learning/index path.
 - Use `examples/README.md` as the GitHub-friendly portal.
@@ -26,6 +26,17 @@ For repository overview / architecture docs, see the monorepo README:
 https://github.com/Latias94/fret
 
 ## Quick start (in this repo)
+
+If you are learning the repo's default path, follow this ladder in order:
+
+1. `hello`
+2. `simple-todo`
+3. `todo`
+
+- Index: `docs/examples/README.md`
+- The generated template READMEs repeat the same ladder and explain where each rung fits.
+- Use `fretboard new todo` when you want the richer third-rung baseline, not as a replacement for
+  the first two rungs.
 
 Generate a runnable starter:
 
