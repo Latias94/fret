@@ -678,6 +678,10 @@ real editors.
   `ui/canvas/widget/widget_surface/fit_view.rs` seam, so `widget_surface.rs` stops re-embedding
   the same fit-on-mount option setup, node-id collection, and one-shot framing tail inline while
   keeping the public builder surface unchanged.
+- widget-surface style/transport builders now also route through the private
+  `ui/canvas/widget/widget_surface/builders.rs` seam, so `widget_surface.rs` stops re-embedding
+  the same style-reset, geometry-reset, and transport-key reset tails inline while keeping the
+  app-facing builder API unchanged.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,7 +1,7 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    fn reset_geometry_cache_keys(&mut self) {
+    pub(in super::super) fn reset_geometry_cache_keys(&mut self) {
         self.geometry.geom_key = None;
         self.geometry.index_key = None;
         self.geometry.drag_preview = None;
