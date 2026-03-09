@@ -559,6 +559,7 @@ Current sequencing note (as of 2026-03-08):
   - Frame-hook update (as of 2026-03-08): `apps/fret-examples/src/image_heavy_memory_demo.rs` now uses `view_with_hooks::<ImageHeavyMemoryView>(...)`, proving a demo that only needs `record_engine_frame(...)` also does not require `ui_with_hooks(...)`.
   - Editor-proof update (as of 2026-03-09): `apps/fret-examples/src/imui_editor_proof_demo.rs` now uses `view_with_hooks::<ImUiEditorProofView>(...)`, so Batch B is complete and the remaining `ui_with_hooks(...)` callers are now limited to Batch C interop demos.
   - Batch C update (as of 2026-03-09): `apps/fret-examples/src/external_texture_imports_demo.rs` now uses `view_with_hooks::<ExternalTextureImportsView>(...)`, reducing the remaining closure-root app-entry risk to the two platform video-import demos.
+  - Windows-video update (as of 2026-03-09): `apps/fret-examples/src/external_video_imports_mf_demo.rs` now uses `view_with_hooks::<ExternalVideoImportsMfView>(...)`, so the remaining app-entry migration risk is now isolated to the AVF/macOS demo.
 
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.

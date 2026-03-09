@@ -40,7 +40,7 @@ enum ExternalVideoImportsMode {
     MfVideoDx12GpuCopy,
 }
 
-struct ExternalVideoImportsState {
+struct ExternalVideoImportsMfView {
     show: fret_runtime::Model<bool>,
     mode: ExternalVideoImportsMode,
 
@@ -53,20 +53,26 @@ struct ExternalVideoImportsState {
     mf_importer: Option<wmf::MfVideoNativeExternalImporter>,
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
-    ExternalVideoImportsState {
-        show: app.models_mut().insert(true),
-        // Use BGRA to align with Media Foundation's RGB32 output (little-endian BGRA).
-        target: ImportedViewportRenderTarget::new(
-            wgpu::TextureFormat::Bgra8UnormSrgb,
-            RenderTargetColorSpace::Srgb,
-        ),
-        target_px_size: (1, 1),
-        desired_target_px_size: (1280, 720),
-        checker_texture: None,
-        mode: ExternalVideoImportsMode::CheckerGpu,
-        #[cfg(target_os = "windows")]
-        mf_importer: None,
+impl fret::view::View for ExternalVideoImportsMfView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            show: app.models_mut().insert(true),
+            // Use BGRA to align with Media Foundation's RGB32 output (little-endian BGRA).
+            target: ImportedViewportRenderTarget::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+            ),
+            target_px_size: (1, 1),
+            desired_target_px_size: (1280, 720),
+            checker_texture: None,
+            mode: ExternalVideoImportsMode::CheckerGpu,
+            #[cfg(target_os = "windows")]
+            mf_importer: None,
+        }
+    }
+
+    fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements {
+        render_view(cx.elements(), self)
     }
 }
 
@@ -75,20 +81,20 @@ fn on_event(
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut ExternalVideoImportsState,
+    st: &mut fret::view::ViewWindowState<ExternalVideoImportsMfView>,
     event: &Event,
 ) {
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = app.models_mut().update(&st.show, |v| *v = !*v);
+        let _ = app.models_mut().update(&st.view.show, |v| *v = !*v);
         app.request_redraw(window);
     }
 
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyI
     {
-        st.mode = match st.mode {
+        st.view.mode = match st.view.mode {
             ExternalVideoImportsMode::CheckerGpu => {
                 #[cfg(target_os = "windows")]
                 {
@@ -112,14 +118,14 @@ fn on_event(
         };
         #[cfg(target_os = "windows")]
         {
-            st.mf_importer = None;
+            st.view.mf_importer = None;
         }
-        st.checker_texture = None;
+        st.view.checker_texture = None;
         app.request_redraw(window);
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsState) -> Elements {
+fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsMfView) -> Elements {
     cx.observe_model(&st.show, Invalidation::Layout);
 
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
@@ -205,32 +211,33 @@ fn record_engine_frame(
     app: &mut App,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut ExternalVideoImportsState,
+    st: &mut fret::view::ViewWindowState<ExternalVideoImportsMfView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _scale_factor: f32,
     _tick_id: fret_runtime::TickId,
     frame_id: fret_runtime::FrameId,
 ) -> EngineFrameUpdate {
-    let show = app.models().read(&st.show, |v| *v).unwrap_or(true);
+    let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);
     let mut update = EngineFrameUpdate::default();
 
     if !show {
-        st.target.push_unregister(&mut update);
-        st.checker_texture = None;
-        st.target_px_size = (1, 1);
+        st.view.target.push_unregister(&mut update);
+        st.view.checker_texture = None;
+        st.view.target_px_size = (1, 1);
         #[cfg(target_os = "windows")]
         {
-            st.mf_importer = None;
+            st.view.mf_importer = None;
         }
         return update;
     }
 
     let metadata = RenderTargetMetadata::default();
-    match st.mode {
+    match st.view.mode {
         ExternalVideoImportsMode::CheckerGpu => {
-            let desired = st.desired_target_px_size;
-            let needs_realloc = st.checker_texture.is_none() || st.target_px_size != desired;
+            let desired = st.view.desired_target_px_size;
+            let needs_realloc =
+                st.view.checker_texture.is_none() || st.view.target_px_size != desired;
             if needs_realloc {
                 let view_formats = [wgpu::TextureFormat::Bgra8UnormSrgb];
                 let texture = context.device.create_texture(&wgpu::TextureDescriptor {
@@ -249,32 +256,35 @@ fn record_engine_frame(
                         | wgpu::TextureUsages::COPY_DST,
                     view_formats: &view_formats,
                 });
-                st.checker_texture = Some(texture);
-                st.target_px_size = desired;
+                st.view.checker_texture = Some(texture);
+                st.view.target_px_size = desired;
             }
 
             let texture = st
+                .view
                 .checker_texture
                 .as_ref()
                 .expect("checker texture allocated");
             let view = texture.create_view(&wgpu::TextureViewDescriptor {
-                format: Some(st.target.format()),
+                format: Some(st.view.target.format()),
                 ..Default::default()
             });
 
-            if !st.target.is_registered() {
-                let _ = st
-                    .target
-                    .ensure_registered(renderer, view.clone(), st.target_px_size);
+            if !st.view.target.is_registered() {
+                let _ = st.view.target.ensure_registered(
+                    renderer,
+                    view.clone(),
+                    st.view.target_px_size,
+                );
             }
 
-            st.target.push_update_with_fallbacks(
+            st.view.target.push_update_with_fallbacks(
                 &mut update,
                 RenderTargetIngestStrategy::Owned,
                 ImportedViewportFallbacks {
                     owned: Some(ImportedViewportFallbackUpdate::new(
                         view.clone(),
-                        st.target_px_size,
+                        st.view.target_px_size,
                         metadata,
                         None,
                     )),
@@ -326,30 +336,32 @@ fn record_engine_frame(
                 .filter(|v| !v.is_empty())
             else {
                 tracing::info!("FRET_MF_VIDEO_PATH is not set; falling back to checker mode");
-                st.mode = ExternalVideoImportsMode::CheckerGpu;
-                st.mf_importer = None;
+                st.view.mode = ExternalVideoImportsMode::CheckerGpu;
+                st.view.mf_importer = None;
                 return update;
             };
 
             let recreate = st
+                .view
                 .mf_importer
                 .as_ref()
                 .map(|v| v.path() != path || v.prefer_dx12_gpu_copy())
                 .unwrap_or(true);
             if recreate {
-                st.mf_importer = Some(wmf::MfVideoNativeExternalImporter::new(path, false));
+                st.view.mf_importer = Some(wmf::MfVideoNativeExternalImporter::new(path, false));
             }
 
             let caps = app
                 .global::<RendererCapabilities>()
                 .expect("renderer capabilities must be set before record_engine_frame");
             let frame = st
+                .view
                 .mf_importer
                 .as_ref()
                 .expect("mf importer created")
                 .frame();
 
-            match st.target.push_native_external_import_update(
+            match st.view.target.push_native_external_import_update(
                 renderer,
                 &mut update,
                 context,
@@ -357,8 +369,8 @@ fn record_engine_frame(
                 frame,
             ) {
                 Ok(()) => {
-                    if let Some(size) = st.mf_importer.as_ref().and_then(|v| v.last_size()) {
-                        st.target_px_size = size;
+                    if let Some(size) = st.view.mf_importer.as_ref().and_then(|v| v.last_size()) {
+                        st.view.target_px_size = size;
                     }
                 }
                 Err(err) => {
@@ -366,8 +378,8 @@ fn record_engine_frame(
                         ?err,
                         "MF CPU upload native adapter import failed; falling back to checker mode"
                     );
-                    st.mode = ExternalVideoImportsMode::CheckerGpu;
-                    st.mf_importer = None;
+                    st.view.mode = ExternalVideoImportsMode::CheckerGpu;
+                    st.view.mf_importer = None;
                 }
             }
         }
@@ -379,30 +391,32 @@ fn record_engine_frame(
                 .filter(|v| !v.is_empty())
             else {
                 tracing::info!("FRET_MF_VIDEO_PATH is not set; falling back to checker mode");
-                st.mode = ExternalVideoImportsMode::CheckerGpu;
-                st.mf_importer = None;
+                st.view.mode = ExternalVideoImportsMode::CheckerGpu;
+                st.view.mf_importer = None;
                 return update;
             };
 
             let recreate = st
+                .view
                 .mf_importer
                 .as_ref()
                 .map(|v| v.path() != path || !v.prefer_dx12_gpu_copy())
                 .unwrap_or(true);
             if recreate {
-                st.mf_importer = Some(wmf::MfVideoNativeExternalImporter::new(path, true));
+                st.view.mf_importer = Some(wmf::MfVideoNativeExternalImporter::new(path, true));
             }
 
             let caps = app
                 .global::<RendererCapabilities>()
                 .expect("renderer capabilities must be set before record_engine_frame");
             let frame = st
+                .view
                 .mf_importer
                 .as_ref()
                 .expect("mf importer created")
                 .frame();
 
-            match st.target.push_native_external_import_update(
+            match st.view.target.push_native_external_import_update(
                 renderer,
                 &mut update,
                 context,
@@ -410,8 +424,8 @@ fn record_engine_frame(
                 frame,
             ) {
                 Ok(()) => {
-                    if let Some(size) = st.mf_importer.as_ref().and_then(|v| v.last_size()) {
-                        st.target_px_size = size;
+                    if let Some(size) = st.view.mf_importer.as_ref().and_then(|v| v.last_size()) {
+                        st.view.target_px_size = size;
                     }
                 }
                 Err(err) => {
@@ -419,8 +433,8 @@ fn record_engine_frame(
                         ?err,
                         "MF DX12 GPU copy native adapter import failed; falling back to CPU upload mode"
                     );
-                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
-                    st.mf_importer = None;
+                    st.view.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
+                    st.view.mf_importer = None;
                 }
             }
         }
@@ -445,7 +459,7 @@ pub fn run() -> anyhow::Result<()> {
             "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
             (980.0, 720.0),
         )
-        .ui_with_hooks(init_window, view, |driver| {
+        .view_with_hooks::<ExternalVideoImportsMfView>(|driver| {
             driver
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)

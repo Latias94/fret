@@ -45,7 +45,7 @@ Current conclusion:
 | `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<EmbeddedViewportDemoView>(...)`; `EmbeddedViewportView` now lets retained viewport recording compose with `ViewWindowState<V>` |
 | `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `done` | migrated on 2026-03-09 to `view_with_hooks::<ExternalTextureImportsView>(...)`; shows that one Batch C interop demo also fits the view runtime hook path without closure-root state |
 | `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
-| `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `migrate-to-view` | same reasoning as AVF demo |
+| `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `done` | migrated on 2026-03-09 to `view_with_hooks::<ExternalVideoImportsMfView>(...)`; narrows the remaining closure-root app-entry risk to the AVF/macOS video path |
 | `apps/fret-examples/src/image_heavy_memory_demo.rs` | memory/perf-oriented demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<ImageHeavyMemoryView>(...)`; confirms frame-recorder-only demos also fit the view runtime hook path |
 | `apps/fret-examples/src/imui_editor_proof_demo.rs` | IMUI/editor proof demo | `done` | migrated on 2026-03-09 to `view_with_hooks::<ImUiEditorProofView>(...)`; confirms the editor-grade docking + embedded viewport proof also fits the view runtime hook path |
 
@@ -117,7 +117,7 @@ These should be migrated only after the policy and hook path are already proven 
 
 - `apps/fret-examples/src/external_texture_imports_demo.rs` _(done on 2026-03-09)_
 - `apps/fret-examples/src/external_video_imports_avf_demo.rs`
-- `apps/fret-examples/src/external_video_imports_mf_demo.rs`
+- `apps/fret-examples/src/external_video_imports_mf_demo.rs` _(done on 2026-03-09)_
 
 Decision gate:
 
@@ -125,7 +125,7 @@ Decision gate:
 
 Status update:
 
-- Batch C has started: `external_texture_imports_demo` now runs through `view_with_hooks::<ExternalTextureImportsView>(...)`, so the remaining risk is concentrated in the platform video-import demos.
+- Batch C is almost complete: `external_texture_imports_demo` and `external_video_imports_mf_demo` now run through `view_with_hooks::<...>(...)`, leaving only the AVF/macOS video-import path as the remaining closure-root app-entry risk.
 
 ---
 
