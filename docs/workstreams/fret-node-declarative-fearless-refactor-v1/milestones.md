@@ -407,6 +407,9 @@ real editors.
 - Declarative left-pointer down snapshot/arming helpers now also live under the private
   `paint_only/pointer_down.rs` seam, so the main paint-only surface stops re-embedding pan arming,
   hit snapshot reads, and selection/marquee arming branches inline.
+- Declarative diagnostics hotkeys, preset application, and keyboard zoom reducers now also live
+  under the private `paint_only/diag.rs` seam, so the main paint-only surface stops re-embedding
+  keyboard/diagnostics branching inline.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1060,6 +1063,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_lifecycle.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/diag.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
