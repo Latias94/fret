@@ -14,6 +14,10 @@ use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
 };
+use fret_diag::{
+    DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
+    dashboard_human_lines_from_projection, project_dashboard_summary,
+};
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
     DevtoolsSessionRemovedV1, DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1,
@@ -1625,6 +1629,35 @@ struct RegressionDashboardResultV1 {
     index_json: Option<String>,
 }
 
+impl From<DashboardCountEntry> for DashboardCountEntryV1 {
+    fn from(value: DashboardCountEntry) -> Self {
+        Self {
+            key: value.key,
+            count: value.count,
+        }
+    }
+}
+
+impl From<DashboardReasonCodeEntry> for DashboardReasonCodeEntryV1 {
+    fn from(value: DashboardReasonCodeEntry) -> Self {
+        Self {
+            reason_code: value.reason_code,
+            count: value.count,
+        }
+    }
+}
+
+impl From<DashboardFailingSummaryEntry> for DashboardFailingSummaryEntryV1 {
+    fn from(value: DashboardFailingSummaryEntry) -> Self {
+        Self {
+            path: value.path,
+            lane: value.lane,
+            failures: value.failures,
+            items_total: value.items_total,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct BundleDumpLatestRequestV1 {
     #[serde(default)]
@@ -2155,162 +2188,44 @@ fn build_regression_dashboard_result(
     include_json: bool,
     index_json: Option<String>,
 ) -> RegressionDashboardResultV1 {
-    let kind = payload
-        .get("kind")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-    let out_dir = payload
-        .get("out_dir")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-    let summaries_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| rows.len() as u64)
-        .unwrap_or(0);
-    let items_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
-                .sum::<u64>()
-        })
-        .unwrap_or(0);
-    let status_counters = dashboard_counter_entries(payload, "/counters/by_status");
-    let lane_counters = dashboard_counter_entries(payload, "/counters/by_lane");
-    let tool_counters = dashboard_counter_entries(payload, "/counters/by_tool");
-    let top_reason_codes = dashboard_reason_code_entries(payload, top);
-    let failing_summaries = dashboard_failing_summary_entries(payload, top);
-
-    let mut lines = vec![format!("dashboard index: {}", index_path.display())];
-    if let Some(kind) = kind.as_deref() {
-        lines.push(format!("kind: {kind}"));
-    }
-    if let Some(out_dir) = out_dir.as_deref() {
-        lines.push(format!("out_dir: {out_dir}"));
-    }
-    lines.push(format!("summaries_total: {summaries_total}"));
-    lines.push(format!("items_total: {items_total}"));
-    push_counter_lines(&mut lines, "status counters", &status_counters);
-    push_counter_lines(&mut lines, "lane counters", &lane_counters);
-    push_counter_lines(&mut lines, "tool counters", &tool_counters);
-    if !top_reason_codes.is_empty() {
-        lines.push("top reason codes:".to_string());
-        for row in &top_reason_codes {
-            lines.push(format!("  {}: {}", row.reason_code, row.count));
-        }
-    }
-    if !failing_summaries.is_empty() {
-        lines.push("failing summaries:".to_string());
-        for row in &failing_summaries {
-            lines.push(format!(
-                "  {} | lane={} failures={} items={}",
-                row.path, row.lane, row.failures, row.items_total
-            ));
-        }
-    }
+    let projection = project_dashboard_summary(payload, top);
+    let human_summary = dashboard_human_lines_from_projection(index_path, &projection).join("\n");
 
     RegressionDashboardResultV1 {
         schema_version: 1,
         dir,
         index_path: index_path.to_string_lossy().to_string(),
-        kind,
-        out_dir,
-        summaries_total,
-        items_total,
-        status_counters,
-        lane_counters,
-        tool_counters,
-        top_reason_codes,
-        failing_summaries,
-        human_summary: lines.join(
-            "
-",
-        ),
+        kind: projection.kind,
+        out_dir: projection.out_dir,
+        summaries_total: projection.summaries_total as u64,
+        items_total: projection.items_total,
+        status_counters: projection
+            .status_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        lane_counters: projection
+            .lane_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        tool_counters: projection
+            .tool_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        top_reason_codes: projection
+            .top_reason_codes
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        failing_summaries: projection
+            .failing_summaries
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        human_summary,
         index_json: if include_json { index_json } else { None },
-    }
-}
-
-fn dashboard_counter_entries(
-    payload: &serde_json::Value,
-    pointer: &str,
-) -> Vec<DashboardCountEntryV1> {
-    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
-        return Vec::new();
-    };
-    let mut rows: Vec<DashboardCountEntryV1> = obj
-        .iter()
-        .filter_map(|(key, value)| {
-            Some(DashboardCountEntryV1 {
-                key: key.to_string(),
-                count: value.as_u64()?,
-            })
-        })
-        .collect();
-    rows.sort_by(|a, b| a.key.cmp(&b.key));
-    rows
-}
-
-fn dashboard_reason_code_entries(
-    payload: &serde_json::Value,
-    top: usize,
-) -> Vec<DashboardReasonCodeEntryV1> {
-    payload
-        .get("top_reason_codes")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .take(top)
-                .map(|row| DashboardReasonCodeEntryV1 {
-                    reason_code: row
-                        .get("reason_code")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    count: row.get("count").and_then(|v| v.as_u64()).unwrap_or(0),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn dashboard_failing_summary_entries(
-    payload: &serde_json::Value,
-    top: usize,
-) -> Vec<DashboardFailingSummaryEntryV1> {
-    payload
-        .get("failing_summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .take(top)
-                .map(|row| DashboardFailingSummaryEntryV1 {
-                    path: row
-                        .get("path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    lane: row
-                        .get("lane")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
-                    items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn push_counter_lines(lines: &mut Vec<String>, title: &str, rows: &[DashboardCountEntryV1]) {
-    if rows.is_empty() {
-        return;
-    }
-    lines.push(format!("{title}:"));
-    for row in rows {
-        lines.push(format!("  {}: {}", row.key, row.count));
     }
 }
 
@@ -2811,7 +2726,7 @@ mod tests {
                 { "items_total": 3 }
             ],
             "counters": {
-                "by_status": { "passed": 3, "failed_deterministic": 2 },
+                "by_status": { "passed": 3, "failed_deterministic": 2, "skipped_policy": 1 },
                 "by_lane": { "smoke": 1, "perf": 1 },
                 "by_tool": { "suite": 1, "perf": 1 }
             },
@@ -2838,6 +2753,15 @@ mod tests {
         assert_eq!(result.items_total, 5);
         assert_eq!(result.top_reason_codes.len(), 1);
         assert_eq!(result.failing_summaries.len(), 1);
+        assert!(
+            result
+                .status_counters
+                .iter()
+                .any(|entry| entry.key == "skipped_policy" && entry.count == 1)
+        );
+        assert!(result.human_summary.contains("normalized status counters:"));
+        assert!(result.human_summary.contains("skipped_policy: 1"));
+        assert!(result.human_summary.contains("non-passing summaries:"));
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
     }

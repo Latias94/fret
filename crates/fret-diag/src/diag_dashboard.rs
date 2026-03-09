@@ -15,6 +15,45 @@ struct DashboardOptions {
     top: usize,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum DashboardOutputPresentation {
+    Text(String),
+    Lines(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardCountEntry {
+    pub key: String,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardReasonCodeEntry {
+    pub reason_code: String,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardFailingSummaryEntry {
+    pub path: String,
+    pub lane: String,
+    pub failures: u64,
+    pub items_total: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardSummaryProjection {
+    pub kind: Option<String>,
+    pub out_dir: Option<String>,
+    pub summaries_total: usize,
+    pub items_total: u64,
+    pub status_counters: Vec<DashboardCountEntry>,
+    pub lane_counters: Vec<DashboardCountEntry>,
+    pub tool_counters: Vec<DashboardCountEntry>,
+    pub top_reason_codes: Vec<DashboardReasonCodeEntry>,
+    pub failing_summaries: Vec<DashboardFailingSummaryEntry>,
+}
+
 pub(crate) fn cmd_dashboard(ctx: DashboardCmdContext) -> Result<(), String> {
     let DashboardCmdContext {
         rest,
@@ -28,15 +67,9 @@ pub(crate) fn cmd_dashboard(ctx: DashboardCmdContext) -> Result<(), String> {
         resolve_dashboard_index_path(&workspace_root, &resolved_out_dir, &positionals)?;
     let payload = load_dashboard_index(&index_path)?;
 
-    if stats_json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
-        );
-        return Ok(());
-    }
-
-    print_dashboard_human(&index_path, &payload, opts.top);
+    let presentation =
+        build_dashboard_output_presentation(&index_path, &payload, opts.top, stats_json)?;
+    emit_dashboard_output_presentation(presentation);
     Ok(())
 }
 
@@ -130,36 +163,27 @@ fn load_dashboard_index(index_path: &Path) -> Result<serde_json::Value, String> 
         .map_err(|e| format!("invalid dashboard index {}: {}", index_path.display(), e))
 }
 
-fn print_counter_map(payload: &serde_json::Value, pointer: &str, title: &str) {
-    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
-        return;
-    };
-    if obj.is_empty() {
-        return;
+fn dashboard_counter_lines(entries: &[DashboardCountEntry], title: &str) -> Vec<String> {
+    if entries.is_empty() {
+        return Vec::new();
     }
-    println!("{title}:");
-    for (key, value) in obj {
-        if let Some(count) = value.as_u64() {
-            println!("  {key}: {count}");
-        }
+    let mut lines = vec![format!("{title}:")];
+    for entry in entries {
+        lines.push(format!("  {}: {}", entry.key, entry.count));
     }
+    lines
 }
 
-fn print_dashboard_human(index_path: &Path, payload: &serde_json::Value, top: usize) {
-    println!("dashboard index: {}", index_path.display());
-    if let Some(kind) = payload.get("kind").and_then(|v| v.as_str()) {
-        println!("kind: {kind}");
-    }
-    if let Some(out_dir) = payload.get("out_dir").and_then(|v| v.as_str()) {
-        println!("out_dir: {out_dir}");
-    }
-
-    let summaries_total = payload
+fn dashboard_summaries_total(payload: &serde_json::Value) -> usize {
+    payload
         .get("summaries")
         .and_then(|v| v.as_array())
         .map(|rows| rows.len())
-        .unwrap_or(0);
-    let items_total = payload
+        .unwrap_or(0)
+}
+
+fn dashboard_items_total(payload: &serde_json::Value) -> u64 {
+    payload
         .pointer("/summaries")
         .and_then(|v| v.as_array())
         .map(|rows| {
@@ -167,44 +191,178 @@ fn print_dashboard_human(index_path: &Path, payload: &serde_json::Value, top: us
                 .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
                 .sum::<u64>()
         })
-        .unwrap_or(0);
-    println!("summaries_total: {summaries_total}");
-    println!("items_total: {items_total}");
+        .unwrap_or(0)
+}
 
-    print_counter_map(payload, "/counters/by_status", "status counters");
-    print_counter_map(payload, "/counters/by_lane", "lane counters");
-    print_counter_map(payload, "/counters/by_tool", "tool counters");
+pub fn dashboard_counter_entries(
+    payload: &serde_json::Value,
+    pointer: &str,
+) -> Vec<DashboardCountEntry> {
+    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
+        return Vec::new();
+    };
+    let mut rows: Vec<DashboardCountEntry> = obj
+        .iter()
+        .filter_map(|(key, value)| {
+            value.as_u64().map(|count| DashboardCountEntry {
+                key: key.to_string(),
+                count,
+            })
+        })
+        .collect();
+    rows.sort_by(|left, right| left.key.cmp(&right.key));
+    rows
+}
 
-    if let Some(rows) = payload.get("top_reason_codes").and_then(|v| v.as_array())
-        && !rows.is_empty()
-    {
-        println!("top reason codes:");
-        for row in rows.iter().take(top) {
-            let reason_code = row
+pub fn dashboard_reason_code_entries(
+    payload: &serde_json::Value,
+    top: usize,
+) -> Vec<DashboardReasonCodeEntry> {
+    let Some(rows) = payload.get("top_reason_codes").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+
+    rows.iter()
+        .take(top)
+        .map(|row| DashboardReasonCodeEntry {
+            reason_code: row
                 .get("reason_code")
                 .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
-            let count = row.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
-            println!("  {reason_code}: {count}");
-        }
-    }
+                .unwrap_or("<unknown>")
+                .to_string(),
+            count: row.get("count").and_then(|v| v.as_u64()).unwrap_or(0),
+        })
+        .collect()
+}
 
-    if let Some(rows) = payload.get("failing_summaries").and_then(|v| v.as_array())
-        && !rows.is_empty()
-    {
-        println!("failing summaries:");
-        for row in rows.iter().take(top) {
-            let path = row
+pub fn dashboard_failing_summary_entries(
+    payload: &serde_json::Value,
+    top: usize,
+) -> Vec<DashboardFailingSummaryEntry> {
+    let Some(rows) = payload.get("failing_summaries").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+
+    rows.iter()
+        .take(top)
+        .map(|row| DashboardFailingSummaryEntry {
+            path: row
                 .get("path")
                 .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
-            let failures = row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0);
-            let items_total = row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0);
-            let lane = row
+                .unwrap_or("<unknown>")
+                .to_string(),
+            lane: row
                 .get("lane")
                 .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
-            println!("  {path} | lane={lane} failures={failures} items={items_total}");
+                .unwrap_or("<unknown>")
+                .to_string(),
+            failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
+            items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
+        })
+        .collect()
+}
+
+pub fn project_dashboard_summary(
+    payload: &serde_json::Value,
+    top: usize,
+) -> DashboardSummaryProjection {
+    DashboardSummaryProjection {
+        kind: payload
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string),
+        out_dir: payload
+            .get("out_dir")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string),
+        summaries_total: dashboard_summaries_total(payload),
+        items_total: dashboard_items_total(payload),
+        status_counters: dashboard_counter_entries(payload, "/counters/by_status"),
+        lane_counters: dashboard_counter_entries(payload, "/counters/by_lane"),
+        tool_counters: dashboard_counter_entries(payload, "/counters/by_tool"),
+        top_reason_codes: dashboard_reason_code_entries(payload, top),
+        failing_summaries: dashboard_failing_summary_entries(payload, top),
+    }
+}
+
+pub fn dashboard_human_lines_from_projection(
+    index_path: &Path,
+    projection: &DashboardSummaryProjection,
+) -> Vec<String> {
+    let mut lines = vec![format!("regression index: {}", index_path.display())];
+    if let Some(kind) = projection.kind.as_deref() {
+        lines.push(format!("kind: {kind}"));
+    }
+    if let Some(out_dir) = projection.out_dir.as_deref() {
+        lines.push(format!("out_dir: {out_dir}"));
+    }
+
+    lines.push(format!("summaries_total: {}", projection.summaries_total));
+    lines.push(format!("items_total: {}", projection.items_total));
+
+    lines.extend(dashboard_counter_lines(
+        &projection.status_counters,
+        "normalized status counters",
+    ));
+    lines.extend(dashboard_counter_lines(
+        &projection.lane_counters,
+        "canonical lane counters",
+    ));
+    lines.extend(dashboard_counter_lines(
+        &projection.tool_counters,
+        "tool counters",
+    ));
+    if !projection.top_reason_codes.is_empty() {
+        lines.push("top reason codes:".to_string());
+        for row in &projection.top_reason_codes {
+            lines.push(format!("  {}: {}", row.reason_code, row.count));
+        }
+    }
+    if !projection.failing_summaries.is_empty() {
+        lines.push("non-passing summaries:".to_string());
+        for row in &projection.failing_summaries {
+            lines.push(format!(
+                "  {} | lane={} failures={} items={}",
+                row.path, row.lane, row.failures, row.items_total
+            ));
+        }
+    }
+    lines
+}
+
+fn dashboard_human_lines(
+    index_path: &Path,
+    payload: &serde_json::Value,
+    top: usize,
+) -> Vec<String> {
+    let projection = project_dashboard_summary(payload, top);
+    dashboard_human_lines_from_projection(index_path, &projection)
+}
+
+fn build_dashboard_output_presentation(
+    index_path: &Path,
+    payload: &serde_json::Value,
+    top: usize,
+    stats_json: bool,
+) -> Result<DashboardOutputPresentation, String> {
+    if stats_json {
+        Ok(DashboardOutputPresentation::Text(
+            serde_json::to_string_pretty(payload).map_err(|e| e.to_string())?,
+        ))
+    } else {
+        Ok(DashboardOutputPresentation::Lines(dashboard_human_lines(
+            index_path, payload, top,
+        )))
+    }
+}
+
+fn emit_dashboard_output_presentation(presentation: DashboardOutputPresentation) {
+    match presentation {
+        DashboardOutputPresentation::Text(text) => println!("{text}"),
+        DashboardOutputPresentation::Lines(lines) => {
+            for line in lines {
+                println!("{line}");
+            }
         }
     }
 }
@@ -241,5 +399,125 @@ mod tests {
         assert_eq!(resolved, index_path);
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn dashboard_counter_lines_render_non_empty_map() {
+        let payload = serde_json::json!({
+            "counters": {
+                "by_status": {
+                    "passed": 3,
+                    "failed_deterministic": 1
+                }
+            }
+        });
+
+        let entries = dashboard_counter_entries(&payload, "/counters/by_status");
+        let lines = dashboard_counter_lines(&entries, "normalized status counters");
+
+        assert_eq!(
+            lines.first().map(String::as_str),
+            Some("normalized status counters:")
+        );
+        assert!(lines.iter().any(|line| line == "  passed: 3"));
+        assert!(lines.iter().any(|line| line == "  failed_deterministic: 1"));
+    }
+
+    #[test]
+    fn dashboard_human_lines_include_summary_and_failure_sections() {
+        let payload = serde_json::json!({
+            "kind": "diag_regression_index",
+            "out_dir": "F:/repo/out",
+            "counters": {
+                "by_status": { "failed_deterministic": 2 },
+                "by_lane": { "smoke": 2 },
+                "by_tool": { "fretboard diag suite": 2 }
+            },
+            "top_reason_codes": [
+                { "reason_code": "assert.focus_restore.mismatch", "count": 2 }
+            ],
+            "failing_summaries": [
+                { "path": "suite/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 }
+            ],
+            "summaries": [
+                { "items_total": 4 }
+            ]
+        });
+
+        let lines =
+            dashboard_human_lines(Path::new("F:/repo/out/regression.index.json"), &payload, 5);
+
+        assert_eq!(
+            lines.first().map(String::as_str),
+            Some("regression index: F:/repo/out/regression.index.json")
+        );
+        assert!(lines.iter().any(|line| line == "summaries_total: 1"));
+        assert!(lines.iter().any(|line| line == "items_total: 4"));
+        assert!(lines.iter().any(|line| line == "top reason codes:"));
+        assert!(lines.iter().any(|line| line == "non-passing summaries:"));
+        assert!(lines.iter().any(|line| {
+            line == "  suite/regression.summary.json | lane=smoke failures=2 items=4"
+        }));
+    }
+
+    #[test]
+    fn project_dashboard_summary_and_human_lines_share_same_projection() {
+        let payload = serde_json::json!({
+            "kind": "diag_regression_index",
+            "out_dir": "F:/repo/out",
+            "counters": {
+                "by_status": { "failed_deterministic": 2 },
+                "by_lane": { "smoke": 2 },
+                "by_tool": { "fretboard diag suite": 2 }
+            },
+            "top_reason_codes": [
+                { "reason_code": "assert.focus_restore.mismatch", "count": 2 }
+            ],
+            "failing_summaries": [
+                { "path": "suite/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 }
+            ],
+            "summaries": [
+                { "items_total": 4 }
+            ]
+        });
+
+        let projection = project_dashboard_summary(&payload, 5);
+        let lines = dashboard_human_lines_from_projection(
+            Path::new("F:/repo/out/regression.index.json"),
+            &projection,
+        );
+
+        assert_eq!(projection.summaries_total, 1);
+        assert_eq!(projection.items_total, 4);
+        assert_eq!(projection.top_reason_codes.len(), 1);
+        assert_eq!(projection.failing_summaries.len(), 1);
+        assert!(lines.iter().any(|line| line == "top reason codes:"));
+        assert!(lines.iter().any(|line| line == "non-passing summaries:"));
+        assert!(lines.iter().any(|line| {
+            line == "  suite/regression.summary.json | lane=smoke failures=2 items=4"
+        }));
+    }
+
+    #[test]
+    fn build_dashboard_output_presentation_uses_pretty_json_when_requested() {
+        let payload = serde_json::json!({
+            "kind": "diag_regression_index",
+            "summaries": []
+        });
+
+        let presentation = build_dashboard_output_presentation(
+            Path::new("F:/repo/out/regression.index.json"),
+            &payload,
+            5,
+            true,
+        )
+        .expect("build dashboard presentation");
+
+        match presentation {
+            DashboardOutputPresentation::Text(text) => {
+                assert!(text.contains("\"kind\": \"diag_regression_index\""));
+            }
+            DashboardOutputPresentation::Lines(_) => panic!("expected text presentation"),
+        }
     }
 }
