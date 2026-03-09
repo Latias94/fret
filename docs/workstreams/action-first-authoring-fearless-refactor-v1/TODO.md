@@ -348,6 +348,13 @@ ID format:
     - `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
     - `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs`
     - `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/footer.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/rtl.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/actions.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs`
     - `apps/fret-cookbook/examples/drag_basics.rs`
     - `apps/fret-cookbook/examples/effects_layer_basics.rs`
     - `apps/fret-cookbook/examples/text_input_basics.rs`
