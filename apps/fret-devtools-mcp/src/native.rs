@@ -8,7 +8,8 @@ use std::time::Duration;
 use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
+    RegressionSummaryV1,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -1608,6 +1609,14 @@ struct DashboardFailingSummaryEntryV1 {
     items_total: u64,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+struct RegressionDashboardEvidenceV1 {
+    #[serde(default)]
+    capability_sources: Vec<String>,
+    #[serde(default)]
+    capabilities_check_paths: Vec<String>,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct RegressionDashboardResultV1 {
     schema_version: u32,
@@ -1624,6 +1633,10 @@ struct RegressionDashboardResultV1 {
     tool_counters: Vec<DashboardCountEntryV1>,
     top_reason_codes: Vec<DashboardReasonCodeEntryV1>,
     failing_summaries: Vec<DashboardFailingSummaryEntryV1>,
+    #[serde(default)]
+    capability_sources: Vec<String>,
+    #[serde(default)]
+    capabilities_check_paths: Vec<String>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
@@ -2180,6 +2193,91 @@ fn session_resource_uris(
     uris
 }
 
+fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(path) = value.get("path").and_then(|value| value.as_str())
+        && !path.trim().is_empty()
+    {
+        return Some(path.to_string());
+    }
+    if let Some(label) = value.get("label").and_then(|value| value.as_str())
+        && !label.trim().is_empty()
+    {
+        return Some(label.to_string());
+    }
+    let transport = value.get("transport").and_then(|value| value.as_str());
+    let session_id = value.get("session_id").and_then(|value| value.as_str());
+    match (transport, session_id) {
+        (Some(transport), Some(session_id))
+            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
+        {
+            Some(format!("{transport}:{session_id}"))
+        }
+        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
+        _ => None,
+    }
+}
+
+fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashboardEvidenceV1 {
+    let Ok(summary_json) = std::fs::read_to_string(summary_path) else {
+        return RegressionDashboardEvidenceV1::default();
+    };
+    let Ok(summary) = serde_json::from_str::<RegressionSummaryV1>(&summary_json) else {
+        return RegressionDashboardEvidenceV1::default();
+    };
+    let mut evidence = RegressionDashboardEvidenceV1::default();
+    for item in summary.items {
+        if item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+        let capability_source = item
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.extra.as_ref())
+            .and_then(|extra| extra.get("capability_source"))
+            .and_then(capability_source_display_from_value)
+            .or_else(|| {
+                item.source
+                    .as_ref()
+                    .and_then(|source| source.metadata.as_ref())
+                    .and_then(|metadata| metadata.get("capability_source"))
+                    .and_then(capability_source_display_from_value)
+            })
+            .or_else(|| {
+                item.evidence
+                    .as_ref()
+                    .and_then(|evidence| evidence.extra.as_ref())
+                    .and_then(|extra| extra.get("capabilities_source_path"))
+                    .and_then(|value| value.as_str())
+                    .filter(|value| !value.trim().is_empty())
+                    .map(ToString::to_string)
+            });
+        if let Some(source) = capability_source
+            && !evidence
+                .capability_sources
+                .iter()
+                .any(|existing| existing == &source)
+        {
+            evidence.capability_sources.push(source);
+        }
+        if let Some(check_path) = item
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.extra.as_ref())
+            .and_then(|extra| extra.get("capabilities_check_path"))
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(ToString::to_string)
+            && !evidence
+                .capabilities_check_paths
+                .iter()
+                .any(|existing| existing == &check_path)
+        {
+            evidence.capabilities_check_paths.push(check_path);
+        }
+    }
+    evidence
+}
+
 fn build_regression_dashboard_result(
     dir: String,
     index_path: &Path,
@@ -2189,7 +2287,28 @@ fn build_regression_dashboard_result(
     index_json: Option<String>,
 ) -> RegressionDashboardResultV1 {
     let projection = project_dashboard_summary(payload, top);
-    let human_summary = dashboard_human_lines_from_projection(index_path, &projection).join("\n");
+    let summary_path = index_path.with_file_name(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let evidence = collect_regression_dashboard_evidence(&summary_path);
+    let mut human_lines = dashboard_human_lines_from_projection(index_path, &projection);
+    if !evidence.capability_sources.is_empty() {
+        human_lines.push("capability sources:".to_string());
+        human_lines.extend(
+            evidence
+                .capability_sources
+                .iter()
+                .map(|source| format!("  - {source}")),
+        );
+    }
+    if !evidence.capabilities_check_paths.is_empty() {
+        human_lines.push("capability checks:".to_string());
+        human_lines.extend(
+            evidence
+                .capabilities_check_paths
+                .iter()
+                .map(|path| format!("  - {path}")),
+        );
+    }
+    let human_summary = human_lines.join("\n");
 
     RegressionDashboardResultV1 {
         schema_version: 1,
@@ -2224,6 +2343,8 @@ fn build_regression_dashboard_result(
             .into_iter()
             .map(Into::into)
             .collect(),
+        capability_sources: evidence.capability_sources,
+        capabilities_check_paths: evidence.capabilities_check_paths,
         human_summary,
         index_json: if include_json { index_json } else { None },
     }
@@ -2718,6 +2839,15 @@ mod tests {
 
     #[test]
     fn build_regression_dashboard_result_limits_top_rows_and_builds_human_summary() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-regression-dashboard-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let index_path = dir.join("regression.index.json");
+        let summary_path = dir.join("regression.summary.json");
         let payload = serde_json::json!({
             "kind": "diag_regression_index",
             "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
@@ -2739,10 +2869,44 @@ mod tests {
                 { "path": "b/regression.summary.json", "lane": "perf", "failures": 1, "items_total": 3 }
             ]
         });
+        let summary_payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "evidence": {
+                        "extra": {
+                            "capability_source": {
+                                "kind": "filesystem",
+                                "path": "target/fret-diag/capabilities.json",
+                                "label": "filesystem:target/fret-diag/capabilities.json",
+                                "transport": "filesystem",
+                                "session_id": null
+                            },
+                            "capabilities_check_path": "target/fret-diag/campaigns/ui-gallery/check.capabilities.json"
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(
+            &summary_path,
+            serde_json::to_vec_pretty(&summary_payload).unwrap(),
+        )
+        .unwrap();
 
         let result = build_regression_dashboard_result(
             "target/fret-diag/campaigns/ui-gallery-pr".to_string(),
-            Path::new("F:/repo/target/fret-diag/campaigns/ui-gallery-pr/regression.index.json"),
+            &index_path,
             &payload,
             1,
             false,
@@ -2764,6 +2928,73 @@ mod tests {
         assert!(result.human_summary.contains("non-passing summaries:"));
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
+        assert_eq!(
+            result.capability_sources,
+            vec!["target/fret-diag/capabilities.json".to_string()]
+        );
+        assert_eq!(
+            result.capabilities_check_paths,
+            vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
+        );
+        assert!(result.human_summary.contains("capability sources:"));
+        assert!(result.human_summary.contains("capability checks:"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn collect_regression_dashboard_evidence_falls_back_to_capability_source_label() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-regression-evidence-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let summary_path = dir.join("regression.summary.json");
+        let summary_payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "source": {
+                        "metadata": {
+                            "capability_source": {
+                                "kind": "transport_session",
+                                "path": null,
+                                "label": "devtools_ws:session-123",
+                                "transport": "devtools_ws",
+                                "session_id": "session-123"
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(
+            &summary_path,
+            serde_json::to_vec_pretty(&summary_payload).unwrap(),
+        )
+        .unwrap();
+
+        let evidence = collect_regression_dashboard_evidence(&summary_path);
+
+        assert_eq!(
+            evidence.capability_sources,
+            vec!["devtools_ws:session-123".to_string()]
+        );
+        assert!(evidence.capabilities_check_paths.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
