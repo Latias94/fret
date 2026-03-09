@@ -275,10 +275,12 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] stable reason-code contract documented at the repo level,
     - in progress: adoption is now partially landed in shared summary/dashboard/campaign wording,
       but residual consumer/path naming still needs one review pass
-  - [ ] evidence bundle/artifact paths,
-    - in progress: current summary emitters already attach bounded artifact/evidence paths,
-      the repo-level path vocabulary is now documented, and run-manifest `paths` plus artifact lint
-      already adopt canonical names additively
+  - [x] evidence bundle/artifact paths,
+    - evidence: `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
+    - implementation: orchestrated outputs keep canonical item evidence fields in
+      `RegressionEvidenceV1`, keep aggregate `summary_path` / `index_path` /
+      `share_manifest_path` / `capabilities_check_path` distinct from item evidence, and retain
+      additive alias compatibility for legacy reader spellings
   - [ ] optional compact pack for sharing.
 
 ## M4 — DevTools GUI alignment

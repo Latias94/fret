@@ -32,6 +32,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/BUNDLE_ARTIFACT_ALIAS_AUDIT.md`
 - `docs/workstreams/diag-fearless-refactor-v2/LAYER_B_PAYLOAD_FAMILIES_AUDIT_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/RUN_MANIFEST_BUNDLE_JSON_CHUNK_INDEX_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
 
 Related workstreams and context:
 
