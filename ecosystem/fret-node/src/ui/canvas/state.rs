@@ -14,6 +14,10 @@ pub use super::resize_handle::NodeResizeHandle;
 use super::searcher::SearcherRow;
 use super::snaplines::SnapGuides;
 
+mod state_geometry_cache;
+mod state_paste_series;
+mod state_viewport_animation;
+
 #[derive(Debug, Clone)]
 pub(crate) struct ViewSnapshot {
     pub(crate) pan: CanvasPoint,
@@ -110,36 +114,6 @@ pub(crate) struct PasteSeries {
     pub(crate) count: u32,
 }
 
-impl PasteSeries {
-    pub(crate) fn next(prev: Option<Self>, anchor: CanvasPoint, zoom: f32) -> (Self, CanvasPoint) {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-
-        let threshold = 6.0 / zoom;
-        let step = 24.0 / zoom;
-
-        let mut count = 0u32;
-        if let Some(series) = prev {
-            let dx = anchor.x - series.anchor.x;
-            let dy = anchor.y - series.anchor.y;
-            let d2 = dx * dx + dy * dy;
-            if d2.is_finite() && d2 <= threshold * threshold {
-                count = series.count.saturating_add(1);
-            }
-        }
-
-        let next = Self { anchor, count };
-        let at = CanvasPoint {
-            x: anchor.x + count as f32 * step,
-            y: anchor.y + count as f32 * step,
-        };
-        (next, at)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{CanvasPoint, PasteSeries, ViewportAnimationEase};
@@ -219,27 +193,6 @@ pub(crate) enum ViewportAnimationEase {
     Linear,
     Smoothstep,
     CubicInOut,
-}
-
-impl ViewportAnimationEase {
-    pub(crate) fn apply(self, t: f32) -> f32 {
-        let t = if t.is_finite() {
-            t.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        match self {
-            Self::Linear => t,
-            Self::Smoothstep => t * t * (3.0 - 2.0 * t),
-            Self::CubicInOut => {
-                if t < 0.5 {
-                    4.0 * t * t * t
-                } else {
-                    1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
-                }
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -554,83 +507,6 @@ pub(crate) struct GeometryCache {
     pub(crate) index: Arc<super::spatial::CanvasSpatialDerived>,
     pub(crate) drag_preview: Option<DragPreviewCache>,
     pub(crate) counters: DerivedBuildCounters,
-}
-
-impl GeometryCache {
-    pub(crate) fn clear_drag_preview(&mut self) {
-        self.drag_preview = None;
-    }
-
-    /// Ensures the cache is keyed for the given geometry base.
-    ///
-    /// Returns `true` when the key changed and callers should rebuild geometry-dependent caches.
-    pub(crate) fn ensure_geom_key(&mut self, geom_key: GeometryCacheKey) -> bool {
-        if self.geom_key == Some(geom_key) {
-            return false;
-        }
-        self.geom_key = Some(geom_key);
-        self.index_key = None;
-        self.clear_drag_preview();
-        self.counters.geom_rebuilds = self.counters.geom_rebuilds.saturating_add(1);
-        true
-    }
-
-    /// Ensures the cache is keyed for the given spatial index configuration.
-    ///
-    /// Returns `true` when the key changed and callers should rebuild the spatial index.
-    pub(crate) fn ensure_index_key(&mut self, index_key: SpatialIndexCacheKey) -> bool {
-        if self.index_key == Some(index_key) {
-            return false;
-        }
-        self.index_key = Some(index_key);
-        self.clear_drag_preview();
-        self.counters.index_rebuilds = self.counters.index_rebuilds.saturating_add(1);
-        true
-    }
-
-    pub(crate) fn drag_preview_rebuild_needed(
-        &self,
-        kind: DragPreviewKind,
-        base_index_key: SpatialIndexCacheKey,
-    ) -> bool {
-        self.drag_preview
-            .as_ref()
-            .is_none_or(|cache| cache.kind != kind || cache.base_index_key != base_index_key)
-    }
-
-    pub(crate) fn set_drag_preview(&mut self, cache: DragPreviewCache) {
-        self.drag_preview = Some(cache);
-    }
-
-    pub(crate) fn drag_preview_outputs_for_rev(
-        &mut self,
-        preview_rev: u64,
-        update: impl FnOnce(
-            &mut DragPreviewCacheMetaMut<'_>,
-            &mut super::geometry::CanvasGeometry,
-            &mut super::spatial::CanvasSpatialDerived,
-        ),
-    ) -> Option<(
-        Arc<super::geometry::CanvasGeometry>,
-        Arc<super::spatial::CanvasSpatialDerived>,
-    )> {
-        let cache = self.drag_preview.as_mut()?;
-        if cache.preview_rev != preview_rev {
-            let node_positions = &mut cache.node_positions;
-            let node_rects = &mut cache.node_rects;
-            let node_ports = &cache.node_ports;
-            let geom_mut = Arc::make_mut(&mut cache.geom);
-            let index_mut = Arc::make_mut(&mut cache.index);
-            let mut meta = DragPreviewCacheMetaMut {
-                node_positions,
-                node_rects,
-                node_ports,
-            };
-            update(&mut meta, geom_mut, index_mut);
-            cache.preview_rev = preview_rev;
-        }
-        Some((cache.geom.clone(), cache.index.clone()))
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

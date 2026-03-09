@@ -485,6 +485,11 @@ real editors.
   `canvas/spatial/spatial_adjacency.rs`, and `canvas/spatial/spatial_derived.rs` seams, so the
   root spatial module stops re-embedding index/adjacency/derived implementation blocks inline while
   keeping the same spatial cache contract and test surface.
+- `ui/canvas/state.rs` now also routes paste-series stepping, viewport easing, and geometry-cache
+  preview/key helpers through the private `canvas/state/state_paste_series.rs`,
+  `canvas/state/state_viewport_animation.rs`, and `canvas/state/state_geometry_cache.rs` seams, so
+  the root state module stops re-embedding isolated helper impl blocks inline while keeping the
+  same shared state contract and tests.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1165,6 +1170,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/spatial/spatial_index.rs`
 - `ecosystem/fret-node/src/ui/canvas/spatial/spatial_adjacency.rs`
 - `ecosystem/fret-node/src/ui/canvas/spatial/spatial_derived.rs`
+- `ecosystem/fret-node/src/ui/canvas/state.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_paste_series.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_viewport_animation.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_geometry_cache.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

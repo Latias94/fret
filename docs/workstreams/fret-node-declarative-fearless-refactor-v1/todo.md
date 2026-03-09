@@ -899,6 +899,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     and derived spatial wrapper helpers through the private `canvas/spatial/spatial_index.rs`,
     `canvas/spatial/spatial_adjacency.rs`, and `canvas/spatial/spatial_derived.rs` seams, so the
     root spatial module now mainly holds shared type definitions plus tests.
+  - Progress: `ui/canvas/state.rs` now routes paste-series stepping, viewport easing, and geometry
+    cache preview/key helpers through the private `canvas/state/state_paste_series.rs`,
+    `canvas/state/state_viewport_animation.rs`, and `canvas/state/state_geometry_cache.rs` seams,
+    so the root state module now mainly holds shared state/data types plus tests.
 
 ## M5 - Compatibility retained convergence
 
