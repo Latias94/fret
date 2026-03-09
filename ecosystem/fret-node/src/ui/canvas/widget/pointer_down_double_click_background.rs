@@ -43,8 +43,7 @@ pub(super) fn handle_background_zoom_double_click<H: UiHost, M: NodeGraphCanvasM
         ViewportMoveEndOutcome::Ended,
     );
     cx.stop_propagation();
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    paint_invalidation::invalidate_paint(cx);
     true
 }
 

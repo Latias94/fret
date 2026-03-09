@@ -10,7 +10,6 @@ pub(in super::super) fn handle_edge_insert_drag_move<H: UiHost, M: NodeGraphCanv
     };
     drag.pos = position;
     canvas.interaction.edge_insert_drag = Some(drag);
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    invalidate_paint(cx);
     true
 }

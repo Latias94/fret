@@ -951,6 +951,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `event_timer_toast.rs`, `timer_motion_shared.rs`, `keyboard_pan_activation.rs`,
     `pointer_wheel_pan.rs`, and `pointer_wheel_zoom.rs` no longer re-embed the same
     event-scope redraw-plus-paint-invalidation tail blocks inline.
+  - Progress: edge-drag / edge-insert drag / double-click / pointer-up event tails now also
+    route through the same private `canvas/widget/paint_invalidation.rs` seam, so
+    `edge_drag/move_start.rs`, `edge_drag/pointer_up.rs`, `edge_insert_drag/drag.rs`,
+    `edge_insert_drag/pending.rs`, `pointer_down_double_click_background.rs`,
+    `pointer_down_double_click_edge.rs`, `pointer_down_gesture_start.rs`, and
+    `pointer_up_finish.rs` no longer re-embed the same event-scope
+    redraw-plus-paint-invalidation tail blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

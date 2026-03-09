@@ -100,6 +100,5 @@ fn edge_double_click_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 fn finish_double_click<H: UiHost>(cx: &mut EventCx<'_, H>) {
     cx.stop_propagation();
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    paint_invalidation::invalidate_paint(cx);
 }

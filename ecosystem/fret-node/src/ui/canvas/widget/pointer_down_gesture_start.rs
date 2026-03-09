@@ -56,8 +56,7 @@ pub(super) fn handle_pending_right_click_start<H: UiHost, M: NodeGraphCanvasMidd
         start_pos: position,
     });
     cx.capture_pointer(cx.node);
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    paint_invalidation::invalidate_paint(cx);
     true
 }
 

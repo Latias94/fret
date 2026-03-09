@@ -26,7 +26,6 @@ pub(in super::super) fn handle_pending_edge_insert_drag_move<
         pending,
         position,
     );
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    invalidate_paint(cx);
     true
 }
