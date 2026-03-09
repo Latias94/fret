@@ -352,7 +352,7 @@ canonical for breadth/presence/audit state; this queue adds priority, risk class
 | Input OTP | `input_otp` | P0 | Text engine + slot metrics + focus choreography | shadcn docs/examples + Base UI | `fret-ui-shadcn` + runtime text surfaces | Recipe-heavy | Focus/input invariant test | High chance of a11y/focus drift and per-slot geometry regressions |
 | Form | `form` | P1 | Public-surface drift + field ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery usage anchor + focused unit test | Often reveals helper/API weight issues more than mechanism bugs |
 | Field | `field` | P1 | Description/error ownership + width negotiation | shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Layout invariant test | Already present/in-review; likely next place width defaults get over-baked |
-| Input Group | `input_group` | P1 | Slot stretch + icon/affordance sizing | shadcn docs/examples + Base UI | `fret-ui-shadcn` | Mixed | Geometry invariant test | Common place for `min-w-0` / `items-stretch` mistakes |
+| Input Group | `input_group` | P1 | Slot stretch + icon/affordance sizing | shadcn docs/examples + Base UI | `fret-ui-shadcn` | Mixed | Root-width override unit test + gallery page-alignment evidence | Reviewed 2026-03: root `w-full min-w-0` is recipe-owned because upstream source defines it, but caller layout refinements must still override explicit width choices |
 | Table | `table` | P1 | Caller-owned width/overflow + semantics | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery layout invariant | Easy to conflate table shell constraints with recipe defaults |
 | Pagination | `pagination` | P1 | Inline layout + truncation + responsive ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Geometry/truncation invariant | Likely small but repetitive width/ellipsis ownership decisions |
 | Breadcrumb | `breadcrumb` | P1 | Inline overflow + separator ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Layout/truncation invariant | Similar risk profile to Pagination; good low-cost cleanup after P0 |
@@ -400,7 +400,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | form | `form` | Present | Unreviewed |  |
 | hover-card | `hover_card` | Present | In review | Hover intent + anchored placement; supports custom anchor via `HoverCard::anchor_element(...)`; audit: `docs/audits/shadcn-hover-card.md` |
 | input | `input` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`input-demo`) |
-| input-group | `input_group` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`input-group-dropdown`) |
+| input-group | `input_group` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`input-group-dropdown`); root `w-full min-w-0` remains recipe-owned, with caller override gated in `ecosystem/fret-ui-shadcn/src/input_group.rs`; gallery docs-order gate: `apps/fret-ui-gallery/src/driver/render_flow.rs` |
 | input-otp | `input_otp` | Present | Unreviewed | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
 | item | `item` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`item-avatar`) |
 | kbd | `kbd` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`kbd-demo`) |

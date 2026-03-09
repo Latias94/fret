@@ -385,11 +385,14 @@ impl InputGroup {
             );
 
             let root_layout = decl_style::layout_style(theme, {
-                let mut root = self.layout.relative().w_full().min_w_0();
+                let mut root = LayoutRefinement::default().relative().w_full().min_w_0();
                 if !is_block_layout && self.control == InputGroupControlKind::Input {
                     root = root.h_px(resolved.min_height);
                 }
-                root
+                // Match shadcn's `className` override path: recipe defaults stay baked into the
+                // root, but caller refinements should still win when they explicitly override
+                // width/height/constraints.
+                root.merge(self.layout)
             });
 
             let root_shadow = {
@@ -2365,6 +2368,40 @@ mod tests {
                     el.semantics_decoration.as_ref().and_then(|d| d.role),
                     Some(SemanticsRole::Group)
                 );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_root_keeps_recipe_width_default_but_allows_caller_override() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_root_width_ownership",
+            |cx| {
+                let intrinsic_model: Model<String> = cx.app.models_mut().insert(String::new());
+                let fill = InputGroup::new(intrinsic_model)
+                    .test_id("input_group.fill")
+                    .into_element(cx);
+                let fill_props = find_container_with_test_id(&fill, "input_group.fill")
+                    .expect("expected InputGroup root container");
+                assert_eq!(fill_props.layout.size.width, Length::Fill);
+                assert_eq!(fill_props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+                let fixed_model: Model<String> = cx.app.models_mut().insert(String::new());
+                let fixed = InputGroup::new(fixed_model)
+                    .test_id("input_group.fixed")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+                    .into_element(cx);
+                let fixed_props = find_container_with_test_id(&fixed, "input_group.fixed")
+                    .expect("expected InputGroup root container");
+                assert_eq!(fixed_props.layout.size.width, Length::Px(Px(240.0)));
+                assert_eq!(fixed_props.layout.size.min_width, Some(Length::Px(Px(0.0))));
             },
         );
     }

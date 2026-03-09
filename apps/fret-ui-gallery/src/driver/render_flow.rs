@@ -1586,6 +1586,35 @@ mod tests {
     }
 
     #[test]
+    fn gallery_input_group_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_INPUT_GROUP);
+
+        for target in [
+            "ui-gallery-input-group-demo",
+            "ui-gallery-input-group-align-inline-start-content",
+            "ui-gallery-input-group-align-inline-end-content",
+            "ui-gallery-input-group-align-block-start-content",
+            "ui-gallery-input-group-align-block-end-content",
+            "ui-gallery-input-group-icon-content",
+            "ui-gallery-input-group-text-content",
+            "ui-gallery-input-group-button-content",
+            "ui-gallery-input-group-kbd-content",
+            "ui-gallery-input-group-dropdown-content",
+            "ui-gallery-input-group-spinner-content",
+            "ui-gallery-input-group-textarea-content",
+            "ui-gallery-input-group-custom-input-content",
+            "ui-gallery-input-group-rtl-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Input Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_date_picker_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page(PAGE_DATE_PICKER);
 
