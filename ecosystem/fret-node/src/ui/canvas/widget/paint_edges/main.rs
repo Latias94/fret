@@ -1,13 +1,9 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
-use fret_core::scene::DropShadowV1;
 use fret_core::scene::PaintBindingV1;
-use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 
-use super::markers::WireHighlightPaint;
 use super::preview::push_drop_marker;
-use super::support::{glow_bounds_for_custom_path, glow_bounds_for_edge_route, stable_hash_u64};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -163,161 +159,28 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .chain(edges_selected)
             .chain(edges_hovered)
         {
-            let outline = if edge.selected {
-                interaction_hint.wire_outline_selected
-            } else {
-                interaction_hint.wire_outline_base
-            };
-            if let Some(outline) = outline
-                && outline.width_mul.is_finite()
-                && outline.width_mul > 1.0e-3
-                && outline.color.a > 0.0
-            {
-                if !outline_budget.try_consume(1) {
-                    outline_budget_skipped = outline_budget_skipped.saturating_add(1);
-                } else {
-                    let outline_width = edge.width * outline.width_mul.max(0.0);
-                    if let Some(custom) = custom_paths.get(&edge.id) {
-                        let dash = edge
-                            .dash
-                            .map(|p| (p.dash.0.to_bits(), p.gap.0.to_bits(), p.phase.0.to_bits()));
-                        let key = (custom.cache_key, outline_width.to_bits(), dash);
-                        let outline_cache_key = stable_hash_u64(1, &key);
-                        if let Some(path) = self.paint_cache.wire_path_from_commands(
-                            cx.services,
-                            outline_cache_key,
-                            &custom.commands,
-                            zoom,
-                            cx.scale_factor,
-                            outline_width,
-                            edge.dash,
-                        ) {
-                            cx.scene.push(SceneOp::Path {
-                                order: DrawOrder(2),
-                                origin: Point::new(Px(0.0), Px(0.0)),
-                                path,
-                                paint: outline.color.into(),
-                            });
-                        }
-                    } else if let Some(path) = self.paint_cache.wire_path(
-                        cx.services,
-                        edge.route,
-                        edge.from,
-                        edge.to,
-                        zoom,
-                        cx.scale_factor,
-                        outline_width,
-                        edge.dash,
-                    ) {
-                        cx.scene.push(SceneOp::Path {
-                            order: DrawOrder(2),
-                            origin: Point::new(Px(0.0), Px(0.0)),
-                            path,
-                            paint: outline.color.into(),
-                        });
-                    }
-                }
-            }
+            let custom = custom_paths.get(&edge.id);
+            let chrome = self.prepare_edge_chrome(
+                cx,
+                custom,
+                interaction_hint,
+                edge.selected,
+                edge.hovered,
+                edge.id,
+                edge.from,
+                edge.to,
+                edge.route,
+                edge.color,
+                edge.width,
+                edge.dash,
+                zoom,
+                &mut outline_budget,
+                &mut outline_budget_skipped,
+                &mut highlight_budget,
+                &mut highlight_budget_skipped,
+            );
 
-            let glow = edge
-                .selected
-                .then_some(interaction_hint.wire_glow_selected)
-                .flatten();
-
-            let glow_bounds = glow.and_then(|g| {
-                if let Some(custom) = custom_paths.get(&edge.id) {
-                    glow_bounds_for_custom_path(
-                        &custom.commands,
-                        zoom,
-                        edge.width,
-                        g.blur_radius_px,
-                    )
-                } else {
-                    glow_bounds_for_edge_route(
-                        edge.route,
-                        edge.from,
-                        edge.to,
-                        zoom,
-                        edge.width,
-                        g.blur_radius_px,
-                    )
-                }
-            });
-
-            let mut glow_pushed = false;
-            if let Some(glow) = glow
-                && let Some(bounds) = glow_bounds
-            {
-                let z = zoom.max(1.0e-6);
-                let blur_canvas = (glow.blur_radius_px / z).max(0.0);
-                let mut color = edge.color;
-                let alpha_mul = if glow.alpha_mul.is_finite() {
-                    glow.alpha_mul.clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
-                cx.scene.push(SceneOp::PushEffect {
-                    bounds,
-                    mode: EffectMode::FilterContent,
-                    chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
-                        DropShadowV1 {
-                            offset_px: Point::new(Px(0.0), Px(0.0)),
-                            blur_radius_px: Px(blur_canvas),
-                            downsample: glow.downsample,
-                            color,
-                        }
-                        .sanitize(),
-                    )]),
-                    quality: EffectQuality::Auto,
-                });
-                glow_pushed = true;
-            }
-
-            let highlight_hint = if edge.hovered {
-                interaction_hint.wire_highlight_hovered
-            } else if edge.selected {
-                interaction_hint.wire_highlight_selected
-            } else {
-                None
-            };
-            let highlight = if let Some(hint) = highlight_hint {
-                let width_mul = if hint.width_mul.is_finite() {
-                    hint.width_mul.clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                let alpha_mul = if hint.alpha_mul.is_finite() {
-                    hint.alpha_mul.clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                let width = edge.width * width_mul;
-                if width.is_finite() && width > 1.0e-3 && alpha_mul > 1.0e-6 {
-                    if !highlight_budget.try_consume(1) {
-                        highlight_budget_skipped = highlight_budget_skipped.saturating_add(1);
-                        None
-                    } else {
-                        let mut color = hint.color.unwrap_or_else(|| {
-                            let t = 0.45;
-                            Color {
-                                r: edge.color.r + (1.0 - edge.color.r) * t,
-                                g: edge.color.g + (1.0 - edge.color.g) * t,
-                                b: edge.color.b + (1.0 - edge.color.b) * t,
-                                a: edge.color.a,
-                            }
-                        });
-                        color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
-                        (color.a > 0.0).then_some(WireHighlightPaint { width, color })
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
-            let (_stop, skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
+            let (_stop, skipped) = if let Some(custom) = custom {
                 let fallback = Point::new(
                     Px(edge.to.x.0 - edge.from.x.0),
                     Px(edge.to.y.0 - edge.from.y.0),
@@ -339,7 +202,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.color,
                     edge.width,
                     edge.dash,
-                    highlight,
+                    chrome.highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -359,7 +222,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.color,
                     edge.width,
                     edge.dash,
-                    highlight,
+                    chrome.highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -369,7 +232,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             };
             marker_budget_skipped = marker_budget_skipped.saturating_add(skipped);
 
-            if glow_pushed {
+            if chrome.glow_pushed {
                 cx.scene.push(SceneOp::PopEffect);
             }
         }

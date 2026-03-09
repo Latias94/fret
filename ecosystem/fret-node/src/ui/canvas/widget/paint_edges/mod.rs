@@ -1,4 +1,5 @@
 mod cached_budgeted;
+mod chrome;
 mod custom_paths;
 mod main;
 mod markers;

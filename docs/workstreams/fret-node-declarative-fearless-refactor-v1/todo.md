@@ -991,6 +991,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     style/path emission through the private `canvas/widget/paint_edges/preview.rs` seam, so the
     root edge-paint surface no longer re-embeds preview marker geometry and preview wire paint
     orchestration inline while keeping the same preview behavior.
+  - Progress: `paint_edges/main.rs` now also routes selected/base outline paint, selected glow
+    effect setup, and selected/hovered highlight resolution through the private
+    `canvas/widget/paint_edges/chrome.rs` seam, so the root edge-paint surface no longer
+    re-embeds edge chrome orchestration inline while keeping the same wire/marker draw behavior.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
