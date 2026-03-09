@@ -17,6 +17,7 @@ Related:
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Widget-contract audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MODEL_CENTERED_WIDGET_CONTRACT_AUDIT.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
@@ -75,6 +76,9 @@ Adoption note (as of 2026-03-07):
   workstream into one page: default-path convergence is effectively complete, builder/keyed-list/
   invalidation tracks are in maintenance mode, `AFA-postv1-001` remains the main architectural
   question, and the remaining cleanup work belongs to the staged hard-delete/quarantine sequence.
+- App-entry cleanup update (as of 2026-03-09): `APP_ENTRY_REMOVAL_PLAYBOOK.md` now records the
+  concrete delete-vs-quarantine execution steps for `App::ui*`, so the hard-delete track has a
+  ready-to-run patch plan once the deprecation window and published-release preconditions are met.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,

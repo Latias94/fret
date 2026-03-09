@@ -18,6 +18,7 @@ Related:
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
@@ -545,6 +546,10 @@ Current sequencing note (as of 2026-03-09):
   `003` / `004` are maintenance-mode tracks, `AFA-postv1-001` remains open only as an
   architectural local-state question, and the remaining cleanup pressure is primarily in the
   staged hard-delete/quarantine sequence.
+- app-entry removal note (as of 2026-03-09): `APP_ENTRY_REMOVAL_PLAYBOOK.md` now records the
+  concrete delete-vs-quarantine execution checklist for `App::ui*` once the deprecation window and
+  published-release preconditions are satisfied, so the repo no longer has to reconstruct that
+  patch plan ad hoc when the checkpoint arrives.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics

@@ -2,6 +2,11 @@
 
 Last updated: 2026-03-09
 
+Related:
+
+- Caller inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
+- Removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
+
 ## Decision summary
 
 Recommended decision:
@@ -203,6 +208,7 @@ prerequisites for eventual hard delete:
 - preferred: remove the public `.ui(...)` surface from `fret`,
 - fallback: quarantine it as explicitly advanced/compat if full removal is still too disruptive.
 - earliest hard-delete checkpoint: **2026-06-09 + one published deprecated release**.
+- use `APP_ENTRY_REMOVAL_PLAYBOOK.md` as the execution checklist once that checkpoint is reached.
 
 ---
 
