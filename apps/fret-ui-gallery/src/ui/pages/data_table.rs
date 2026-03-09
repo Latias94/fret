@@ -7,6 +7,7 @@ pub(super) fn preview_data_table(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
+    let default_demo = snippets::default_demo::render(cx);
     let basic_demo = snippets::basic_demo::render(cx);
     let demo = snippets::guide_demo::render(cx, state);
     let rtl_demo = snippets::rtl_demo::render(cx);
@@ -15,6 +16,7 @@ pub(super) fn preview_data_table(
         cx,
         [
             "Data Table in shadcn is a guide recipe, not a single fixed widget; treat this page as a living parity surface.",
+            "Default recipe here means: explicit TableState + TableViewOutput + one toolbar + one footer, without pretending business-table state can be hidden.",
             "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
             "When extending this page, prefer deterministic state rows and stable test IDs so diag scripts can gate regressions.",
             "Future refactor can split column/header/view-options into reusable subcomponents mirroring upstream guide chapters.",
@@ -29,6 +31,9 @@ pub(super) fn preview_data_table(
             "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
         ),
         vec![
+            DocSection::new("Default Recipe", default_demo)
+                .max_w(Px(980.0))
+                .code_rust_from_file_region(snippets::default_demo::SOURCE, "example"),
             DocSection::new("Basic Demo", basic_demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::basic_demo::SOURCE, "example"),

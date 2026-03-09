@@ -222,6 +222,7 @@ Current scripts (as of 2026-03-04):
 - `tools/diag-scripts/cookbook/undo-basics/cookbook-undo-basics-smoke.json`
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
+- `tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json` (locks the curated business-table default slice: toolbar + table + footer + simple pagination loop)
 
 Notes:
 

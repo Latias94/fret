@@ -10,6 +10,8 @@ Related:
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
+- DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
@@ -511,6 +513,7 @@ practical steps:
 Current sequencing note (as of 2026-03-09):
 
 - first: productize the current default path (onboarding ladder, default/comparison/advanced taxonomy, helper visibility) and keep docs/templates/examples aligned on that story,
+- productization note: treat `DataTable` as a separate business-table/reference-surface audit rather than continuing the primitive `Table` builder-first cleanup under that same bucket,
 - second: continue local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`) only where real medium-surface evidence still shows a state-boundary cliff after the doc/product pass,
 - third: re-evaluate narrow widget-local action sugar (`AFA-postv1-003`) only if at least two real medium surfaces still look materially noisier than the root-handler path,
 - fourth: only after the first three stabilize, re-evaluate narrow macros (`AFA-postv1-005`).
@@ -652,6 +655,18 @@ Current sequencing note (as of 2026-03-09):
   - Evidence target: `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem{Spec,}` and `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem{Spec,}` all gain `action(...)` aliases, and command-audit docs record the phase-2 progress.
   - Status (as of 2026-03-09): those aliases now exist in `ecosystem/fret-ui-shadcn/src/context_menu.rs` and `ecosystem/fret-ui-shadcn/src/menubar.rs`; the broader gallery menu surface now also prefers `action(...)` across the main context-menu and menubar snippets (`basic`, `usage`, `demo`, `checkboxes`/`checkbox`, `radio`, `destructive`, `groups`, `icons`, `shortcuts`, `sides`, `submenu`, `rtl`, `parts`, `with_icons`), and `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` records the pass while keeping command-centric routing/storage unchanged.
 
+- [x] AFA-postv1-022 Audit `DataTable` authoring as a separate post-v1 surface instead of treating it as more primitive `Table` builder cleanup.
+  - Goal: determine whether the remaining density pressure is really another `build(...)` / `into_element(cx)` problem or a higher-level business-table recipe/productization problem.
+  - Evidence target: one short audit note that classifies `DataTable` against primitive `Table`, the current gallery demos, and the v2 golden-path story.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md` now concludes that primitive `Table` builder-first cleanup is largely closed for the current pass, while `DataTable` remains a denser business-table integration surface whose pressure comes from state/output/toolbar wiring rather than missing leaf builders.
+
+- [x] AFA-postv1-023 Decide whether the repo needs a curated `DataTable` default recipe or golden-path note.
+  - Goal: decide whether business-table authoring should stay purely advanced/reference-only or gain one deliberately scoped “default” recipe without widening the generic helper surface.
+  - Guardrail: any curated recipe must keep `TableState`, `output_model`, row-key strategy, and action/command boundaries visible rather than hiding them behind a macro or opaque helper.
+  - Status (as of 2026-03-09): decision made. The repo keeps a docs-first `DataTable` default recipe in `DATA_TABLE_GOLDEN_PATH.md`, treating `DataTable` as a medium/advanced business-table surface rather than a first-contact example, and defers helper/macro expansion until that curated recipe still proves insufficient in real demos.
+  - Evidence update (as of 2026-03-09): `apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs` and `apps/fret-ui-gallery/src/ui/pages/data_table.rs` now provide the first curated default-recipe gallery slice aligned with that note.
+  - Gate update (as of 2026-03-09): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json --dir target/fret-diag/ui-gallery-data-table-default-recipe --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery` passes locally and emits bounded artifacts for the curated recipe slice.
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow widget-local action-sugar pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.
@@ -661,6 +676,7 @@ Current sequencing note (as of 2026-03-09):
   - Update (as of 2026-03-08, toggle source alignment): `ecosystem/fret-ui-shadcn/src/toggle.rs` now lands the same narrow snapshot/action pattern via `Toggle::from_pressed(...)` plus `action(...)` / `action_payload(...)`, and `apps/fret-cookbook/examples/toggle_basics.rs` now demonstrates the path on a minimal view-local example.
   - Update (as of 2026-03-08, action-only control parity): `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs` plus `ecosystem/fret-ui-kit/src/primitives/control_registry.rs` now let label-forwarded pointer activation record command payload/source metadata, and `Checkbox` / `Switch` / `Toggle` all register command-backed `control_id` entries for snapshot/action paths. That closes the shared discrete-widget parity gap, so the next density decision can focus on widget-local action sugar vs broader invalidation ergonomics rather than on label forwarding.
   - Update (as of 2026-03-09): the keyed-list/default local-collection target is now considered closed enough for planning purposes. The recommended next step is to **productize the existing path first** (`hello` → `simple-todo` → `todo`, default/comparison/advanced taxonomy, helper visibility), and to defer any new default helper until that narrative is stable.
+  - Update (as of 2026-03-09, business-table scope): `DATA_TABLE_AUTHORING_AUDIT.md` now records that `DataTable` should be treated as a separate productization/reference-surface question rather than as evidence that primitive `Table` builder-first cleanup is still incomplete.
   - Status (as of 2026-03-09): decision made. The post-v1 execution order is now fixed in docs:
     productize the current default path first, revisit local-state / invalidation only where real
     medium-surface evidence still remains after that pass, then re-evaluate narrow widget-local

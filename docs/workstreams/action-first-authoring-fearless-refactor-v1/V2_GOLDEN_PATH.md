@@ -129,6 +129,8 @@ The clearest remaining gaps are now narrower:
 - builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
   not have to infer the intended path from scattered examples,
+- `DataTable` remains a separate business-table/reference surface whose current pressure is more
+  about state/output/toolbar recipe assembly than about missing primitive builder helpers,
 - remaining explicit-model collection examples are now comparison-only or intentionally advanced rather
   than default-surface blockers.
 
@@ -162,8 +164,14 @@ These remain valid, but they are not the default golden path:
 - widget-local `listener` / `dispatch` / `shortcut` sugar
 - another default transaction helper beyond `on_action_notify_models::<A>(...)`
 - macros beyond existing minimal helpers
+- `DataTable` as a default first-contact teaching surface; until a curated recipe exists, treat it as
+  an advanced business-table integration example
 - broad `ui::children!`-heavy trees when a root/section/trigger builder already exists
 - early `into_element(cx)` just to attach semantics or diagnostics hooks when the surrounding sink already accepts builders (for example numeric badges/text or other decorate-only patches); if a sink still requires concrete `AnyElement`s, land exactly at that boundary instead of inventing extra adapters
+
+For the business-table tier specifically, use
+`docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md` as the
+curated note instead of treating `DataTable` as part of the first-contact/default onboarding path.
 
 ## Promotion rule for new helpers
 
