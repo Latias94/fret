@@ -23,6 +23,8 @@ use crate::layout as shadcn_layout;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
+
+pub type DrawerDirection = DrawerSide;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::{
     shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
@@ -843,7 +845,12 @@ impl Drawer {
         self
     }
 
-    /// Optional escape hatch: allow non-bottom drawers by forwarding to `Sheet`.
+    /// Upstream-aligned placement setter (`direction` in shadcn/ui / Vaul docs).
+    pub fn direction(self, direction: DrawerDirection) -> Self {
+        self.side(direction)
+    }
+
+    /// Optional compatibility escape hatch: allow non-bottom drawers by forwarding to `Sheet`.
     pub fn side(mut self, side: DrawerSide) -> Self {
         self.side = side;
         self.inner = self.inner.side(side);

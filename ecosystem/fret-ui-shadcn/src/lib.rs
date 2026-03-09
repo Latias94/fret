@@ -230,8 +230,9 @@ pub use dialog::{
 };
 pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_direction_provider};
 pub use drawer::{
-    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
-    DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
+    DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
+    DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
