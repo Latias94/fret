@@ -29,7 +29,7 @@ This note compresses the current hard-delete situation into one matrix:
 | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | No in-tree example/demo callers remain | Removed from default docs; deprecated in code | Policy mostly closed: deprecate now, remove/quarantine later after window | **Closest** | Wait for deprecation window + one published deprecated release, then decide delete vs compat quarantine |
 | `run_native_with_compat_driver(...)` | Still has 20 direct in-tree call sites across 3 real families | Explicitly non-default advanced interop seam | Policy draft says “keep for now” | **Deferred** | Do not force deletion; only revisit if a future quarantine boundary or replacement path appears |
 | `ViewCx::use_state::<T>()` | 0 direct runtime/teaching-surface callers outside runtime/API substrate | Removed from starter/reference/default teaching path | Policy draft says “keep as explicit raw-model seam, non-default” | **Deferred** | Keep default-path gate stable; revisit only if the repo wants to deprecate the raw-model seam itself |
-| Command-first widget builders (`ContextMenu*`, `Menubar*`, remaining app-facing command APIs) | Partial alias migration done; menu-family core remains | Still partially visible on default-facing widget surfaces | Policy direction is clear, implementation still incomplete | **Lowest delete readiness, highest remaining code pressure** | Finish action-first alias pass on remaining menu-family/public builders and then gate default docs/examples |
+| Command-first widget builders (`ContextMenu*`, `Menubar*`, remaining app-facing command APIs) | Public alias pass landed; remaining `on_select(...)`/command-shaped usage is now mostly adoption/internal residue | Still partially visible on some default-facing and internal helper surfaces | Policy direction is clear; next work is teaching-surface adoption + gate strategy | **Lowest delete readiness, narrow remaining code pressure** | Keep migrating remaining app-facing/internal helper surfaces to `action(...)`, then gate default docs/examples where avoidable |
 
 ---
 
@@ -68,13 +68,13 @@ The important shift is:
 So there is no strong reason to spend immediate implementation effort here unless the repo decides
 that explicit raw-model hooks must eventually leave the public facade.
 
-### 4. Command-first widget contracts are now the main remaining code-facing cleanup track
+### 4. Command-first widget contracts are still the main remaining code-facing cleanup track
 
 Unlike the other three items, this one still has:
 
 - visible default-surface inconsistency,
-- clear implementation-scoped follow-up,
-- and a plausible narrow landing plan.
+- a narrow implementation-scoped follow-up,
+- and a plausible gate/adoption landing plan.
 
 So if the repo wants one more **real code cleanup** step rather than another policy note, this is
 the best candidate.
@@ -86,9 +86,10 @@ the best candidate.
 1. Keep `App::ui*` in deprecation mode until the documented window expires.
 2. Keep compat runner documented as advanced interop; do not spend near-term cleanup budget on it.
 3. Keep `use_state` as non-default/raw-model and preserve the default-path gate.
-4. Put the next real implementation pass on command-first widget aliases, especially:
-   - `ContextMenu*`
-   - `Menubar*`
+4. Put the next real implementation pass on the remaining command-first adoption/gate work,
+   especially around:
+   - `ContextMenu*` / `Menubar*` helper surfaces and internal app-facing callers,
+   - default-surface docs/examples gates after the alias path is consistently preferred.
    - any remaining default-facing menu/item builders that still force command-shaped naming.
 
 ---

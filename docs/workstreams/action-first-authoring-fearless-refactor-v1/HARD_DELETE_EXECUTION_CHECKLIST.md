@@ -51,7 +51,7 @@ Non-scope:
 | `App::ui*` closure-root entry | Deprecated in code; no in-tree example/demo callers remain; minimum deprecation window is now defined | Low once docs/tests stay locked | Medium |
 | `run_native_with_compat_driver(...)` | Still public; now explicitly classified as advanced low-level interop | Low for default path, medium for facade size | Deferred |
 | `use_state::<T>()` alias | Still user-visible; now classified as explicit raw-model hook, not default local state | Low for default path, medium for facade clarity | Deferred |
-| `CommandId`-first widget contracts | Still visible in multiple component APIs | Medium | Low |
+| `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, but command-shaped usage still remains in some surfaces | Medium | Low |
 
 Interpretation:
 
@@ -59,7 +59,8 @@ Interpretation:
 - The other three items still need explicit product-surface decisions before deletion would be
   defensible.
 - Of those three, the only one that still looks like immediate implementation work is the
-  command-first widget family; compat runner and `use_state` are currently policy-held seams.
+  remaining command-first widget **adoption/gate** pass; compat runner and `use_state` are
+  currently policy-held seams.
 
 ---
 
@@ -207,8 +208,8 @@ Checklist:
 | --- | --- | --- |
 | Audit the remaining public command-first widgets | Done | `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now classifies menu/command/navigation/snackbar families |
 | Split mechanism-level vs default-facing APIs | In progress | audit recommends keeping catalog/mechanism surfaces command-centric while adding aliases to app-facing widget builders |
-| Add typed-action-first adapters where needed | In progress | low-risk alias pass landed for `BreadcrumbItem` and `NavigationMenu*`; menu-family item APIs remain |
-| Update teaching surfaces | In progress | navigation-menu gallery snippets now prefer `action(...)`; broader docs/examples still need the later menu-family pass |
+| Add typed-action-first adapters where needed | Mostly done | low-risk alias pass plus `ContextMenu*` / `Menubar*` menu-family aliases are now landed |
+| Update teaching surfaces | In progress | navigation-menu, context-menu, and menubar gallery snippets prefer `action(...)`; remaining app/internal helper surfaces and focused gates still need follow-through |
 | Add focused docs/examples gate | Open | lock the post-decision teaching path |
 
 Hard-delete exit criteria:
@@ -218,7 +219,8 @@ Hard-delete exit criteria:
 
 Recommended next action:
 
-- start with the low-risk alias family from the audit (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) before touching the heavier menu stack.
+- keep the alias surface stable and finish the remaining app/internal helper migration plus the
+  default-surface gate strategy before discussing any command-shaped API deprecation.
 
 ---
 
@@ -266,8 +268,8 @@ If the repo wants the next move to stay narrow and landable, the next concrete s
 1. keep the `App::ui*` deprecation window visible and enforced in docs,
 2. finish documentation alignment for the compat-runner policy,
 3. keep `use_state` on its current non-default/raw-model policy unless the facade policy changes,
-4. use the next real implementation pass on command-first widget aliases, especially the remaining
-   `ContextMenu*` / `Menubar*` public builders,
+4. use the next real implementation pass on remaining command-first widget adoption/gates,
+   especially `ContextMenu*` / `Menubar*` internal helper surfaces and default docs/examples,
 5. only revisit compat-runner quarantine later if facade-size pressure justifies it.
 
 That order keeps the already-completed app-entry progress from stalling while avoiding premature
