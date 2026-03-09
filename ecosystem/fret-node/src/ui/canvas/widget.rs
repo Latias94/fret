@@ -199,6 +199,7 @@ mod pointer_wheel_motion;
 mod pointer_wheel_pan;
 mod pointer_wheel_viewport;
 mod pointer_wheel_zoom;
+mod press_session;
 use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_candidates;

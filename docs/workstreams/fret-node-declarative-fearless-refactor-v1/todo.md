@@ -902,6 +902,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: left-click hit routes, pan-zoom start, marquee selection, and wire-commit cleanup
     now reuse the expanded private `canvas/widget/focus_session.rs` seam, so pointer-down helpers
     no longer re-embed the same edge-focus and hover-port hint resets inline.
+  - Progress: left-click pointer-down preparation and pan-start competing-session cleanup now route
+    through the private `canvas/widget/press_session.rs` seam, so retained widget hit handlers no
+    longer re-embed the same pending-drag / marquee / edge-insert reset blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

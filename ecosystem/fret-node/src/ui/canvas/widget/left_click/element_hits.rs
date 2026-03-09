@@ -19,23 +19,7 @@ pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     handle: NodeResizeHandle,
     zoom: f32,
 ) {
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_resize_hit(&mut canvas.interaction);
 
     if snapshot.interaction.elements_selectable {
         canvas.update_view_state(cx.app, |s| {
@@ -89,23 +73,7 @@ pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     multi_selection_pressed: bool,
     zoom: f32,
 ) {
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_node_hit(&mut canvas.interaction);
     let offset = Point::new(
         Px(position.x.0 - rect.origin.x.0),
         Px(position.y.0 - rect.origin.y.0),
@@ -199,20 +167,7 @@ pub(super) fn handle_edge_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     edge: crate::core::EdgeId,
     multi_selection_pressed: bool,
 ) {
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.click_connect = false;
-    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_edge_hit(&mut canvas.interaction);
     let edge_selectable = canvas
         .graph
         .read_ref(cx.app, |g| {

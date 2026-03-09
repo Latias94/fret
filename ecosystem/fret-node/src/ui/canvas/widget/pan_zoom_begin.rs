@@ -56,19 +56,5 @@ fn cancel_previous_motion<H: UiHost, M: NodeGraphCanvasMiddleware>(
 }
 
 fn clear_competing_interactions<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::focus_session::clear_hover_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::press_session::prepare_for_pan_begin(&mut canvas.interaction);
 }

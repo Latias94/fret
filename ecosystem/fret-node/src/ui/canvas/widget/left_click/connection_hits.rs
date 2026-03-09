@@ -76,21 +76,7 @@ pub(super) fn handle_port_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         return;
     }
 
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_port_hit(&mut canvas.interaction);
     let yank = (modifiers.ctrl || modifiers.meta)
         .then(|| canvas.yank_reconnectable_edges_from_port(cx.app, &snapshot.interaction, port));
 
@@ -141,26 +127,9 @@ pub(super) fn handle_edge_anchor_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         .ok()
         .unwrap_or(false);
 
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
+    super::super::press_session::prepare_for_edge_anchor_hit(&mut canvas.interaction);
     canvas.interaction.focused_edge =
         (snapshot.interaction.edges_focusable && edge_selectable).then_some(edge);
-    super::super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
-    canvas.interaction.hover_edge = None;
 
     if edge_selectable {
         canvas.update_view_state(cx.app, |s| {

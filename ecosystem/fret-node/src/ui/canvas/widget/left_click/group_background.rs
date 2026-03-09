@@ -83,59 +83,17 @@ pub(super) fn handle_background_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 }
 
 fn clear_for_group_resize<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_group_resize(&mut canvas.interaction);
 }
 
 fn clear_for_group_drag<M: NodeGraphCanvasMiddleware>(canvas: &mut NodeGraphCanvasWith<M>) {
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_group_drag(&mut canvas.interaction);
 }
 
 fn clear_for_background_interaction<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
 ) {
-    canvas.interaction.edge_drag = None;
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = None;
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = None;
-    canvas.interaction.pending_group_resize = None;
-    canvas.interaction.group_resize = None;
-    canvas.interaction.pending_node_drag = None;
-    canvas.interaction.node_drag = None;
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.node_resize = None;
-    canvas.interaction.pending_wire_drag = None;
-    canvas.interaction.wire_drag = None;
-    canvas.interaction.click_connect = false;
-    canvas.interaction.pending_marquee = None;
-    canvas.interaction.marquee = None;
-    super::super::focus_session::clear_edge_focus_and_hover_port_hints(&mut canvas.interaction);
+    super::super::press_session::prepare_for_background_interaction(&mut canvas.interaction);
 }
 
 fn select_group_for_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
