@@ -1586,6 +1586,31 @@ mod tests {
     }
 
     #[test]
+    fn gallery_date_picker_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_DATE_PICKER);
+
+        for target in [
+            "ui-gallery-date-picker-demo",
+            "ui-gallery-date-picker-usage-content",
+            "ui-gallery-date-picker-basic",
+            "ui-gallery-date-picker-range",
+            "ui-gallery-date-picker-dob",
+            "ui-gallery-date-picker-input",
+            "ui-gallery-date-picker-time",
+            "ui-gallery-date-picker-natural-language",
+            "ui-gallery-date-picker-rtl",
+            "ui-gallery-date-picker-label-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Date Picker page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_card_compositions_keep_consistent_card_widths() {
         let mut rendered = render_gallery_page(PAGE_CARD);
 

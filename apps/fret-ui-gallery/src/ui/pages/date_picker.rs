@@ -451,12 +451,6 @@ pub(super) fn preview_date_picker(
                 )
                 .max_w(Px(980.0))
                 .no_shell(),
-            DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control`, `DatePicker::control_id`, and `DatePicker::test_id_prefix` to focus the trigger and keep derived automation anchors stable.")
-                .test_id_prefix("ui-gallery-date-picker-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example")
-                .max_w(Px(980.0))
-                .no_shell(),
             DocSection::new("Range Picker", range)
                 .description("A date picker component for selecting a range of dates.")
                 .code_rust_from_file_region(
@@ -501,6 +495,12 @@ pub(super) fn preview_date_picker(
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control`, `DatePicker::control_id`, and `DatePicker::test_id_prefix` to focus the trigger and keep derived automation anchors stable.")
+                .test_id_prefix("ui-gallery-date-picker-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example")
                 .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Extras: With Presets", presets)

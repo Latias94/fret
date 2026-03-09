@@ -13,6 +13,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::DatePicker::new_controllable(cx, None::<Model<Option<Date>>>, None, None, false)
             .control_id(control_id.clone())
             .test_id_prefix("ui-gallery-date-picker-label")
+            .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 
     shadcn::FieldGroup::new([shadcn::Field::new([

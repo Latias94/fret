@@ -344,7 +344,7 @@ canonical for breadth/presence/audit state; this queue adds priority, risk class
 | Component | Rust module | Priority | Risk class | Primary upstream truth | Likely owner layer | Default style owner | Recommended first gate | Why now |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Calendar | `calendar` | P0 | Field-family grid + selection + responsive layout | shadcn docs/examples + Base UI + APG | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Focused layout/a11y test + intrinsic-width unit test + gallery page-alignment evidence | Reviewed 2026-03: recipe defaults are correct (`bg/p` + day chrome), while `rounded-lg border` and page/demo shell width remain caller-owned |
-| Date Picker | `date_picker` | P0 | Popover + field + calendar composition | shadcn docs/examples + Radix + Base UI | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Gallery/diag repro + focused geometry test | High-risk composition surface; likely to repeat Calendar and Popover mismatches |
+| Date Picker | `date_picker` | P0 | Popover + field + calendar composition | shadcn docs/examples + Radix + Base UI | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Trigger-width ownership unit test + gallery page-alignment evidence | Reviewed 2026-03: trigger width is caller-owned; compact builder keeps recipe-owned trigger chrome and `PopoverContent` `w-auto p-0` |
 | Navigation Menu | `navigation_menu` | P0 | Overlay viewport + responsive sizing + focus routing | Radix + shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Overlay placement/scripted open-state gate | Already complex; easy to regress viewport-owned vs caller-owned sizing |
 | Sidebar | `sidebar` | P0 | Container negotiation + responsive layout ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery geometry invariant | Most likely to accidentally bake page width/flex defaults into the recipe |
 | Drawer | `drawer` | P0 | Sheet-like overlay policy + responsive presentation | Radix semantics + shadcn composition | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Overlay open/close gate + geometry invariant | Defaults likely to drift between mobile/full-height container concerns |
@@ -437,7 +437,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | Surface | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (web listbox height, open-state goldens: `combobox-demo.open.json`, `combobox-demo.vp375x320.open.json`) |
-| date picker | `date_picker` | Present | Unreviewed | `Popover` + `Calendar` recipe; v1 is single-date selection |
+| date picker | `date_picker` | Present | In review | `Popover` + `Calendar` recipe; trigger width is caller-owned; audit: `docs/audits/shadcn-date-picker.md`; gates: `ecosystem/fret-ui-shadcn/src/date_picker.rs`, `apps/fret-ui-gallery/src/driver/render_flow.rs` |
 | data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `experimental::DataGridElement` for rich per-cell UI |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
