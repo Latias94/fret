@@ -3,6 +3,7 @@ mod internal_drop;
 mod internal_move;
 mod pending;
 mod prelude;
+mod session;
 
 use prelude::*;
 

@@ -915,6 +915,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: pending node/group drag activation and early-abort cleanup now also route through the
     private `canvas/widget/pending_drag_session.rs` seam, so pending drag helpers no longer
     re-embed the same pending-slot abort and activation-state construction blocks inline.
+  - Progress: pending insert-node drag abort/finish and pending wire/edge-insert activation now
+    also route through the private `canvas/widget/insert_node_drag/session.rs` and
+    `canvas/widget/pending_connection_session.rs` seams, so insert/connection pending helpers no
+    longer re-embed the same capture-release and pending-to-active construction blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

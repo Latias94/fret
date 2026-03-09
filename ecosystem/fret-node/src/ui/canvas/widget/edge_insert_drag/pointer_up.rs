@@ -6,9 +6,7 @@ pub(in super::super) fn handle_edge_insert_left_up<H: UiHost, M: NodeGraphCanvas
     position: Point,
 ) -> bool {
     if canvas.interaction.pending_edge_insert_drag.take().is_some() {
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
+        super::super::pointer_up_finish::finish_pointer_up(cx);
         return true;
     }
 
@@ -17,9 +15,7 @@ pub(in super::super) fn handle_edge_insert_left_up<H: UiHost, M: NodeGraphCanvas
             canvas.open_edge_insert_node_picker(cx.app, cx.window, drag.edge, position);
         }
         canvas.interaction.hover_edge = None;
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
+        super::super::pointer_up_finish::finish_pointer_up(cx);
         return true;
     }
 

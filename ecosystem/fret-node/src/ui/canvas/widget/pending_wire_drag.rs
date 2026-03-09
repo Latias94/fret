@@ -4,7 +4,7 @@ use fret_ui::UiHost;
 use super::threshold::exceeds_drag_threshold;
 use super::wire_drag;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{ViewSnapshot, WireDrag};
+use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn handle_pending_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -26,12 +26,10 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
         return true;
     }
 
-    canvas.interaction.pending_wire_drag = None;
-    let kind = pending.kind.clone();
-    canvas.interaction.wire_drag = Some(WireDrag {
-        kind: pending.kind,
-        pos: pending.start_pos,
-    });
+    let kind = super::pending_connection_session::activate_pending_wire_drag(
+        &mut canvas.interaction,
+        pending,
+    );
     canvas.emit_connect_start(snapshot, &kind);
 
     wire_drag::handle_wire_drag_move(canvas, cx, snapshot, position, modifiers, zoom)

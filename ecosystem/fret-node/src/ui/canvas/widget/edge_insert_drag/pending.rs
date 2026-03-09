@@ -21,11 +21,11 @@ pub(in super::super) fn handle_pending_edge_insert_drag_move<
         return true;
     }
 
-    canvas.interaction.pending_edge_insert_drag = None;
-    canvas.interaction.edge_insert_drag = Some(EdgeInsertDrag {
-        edge: pending.edge,
-        pos: position,
-    });
+    super::super::pending_connection_session::activate_pending_edge_insert_drag(
+        &mut canvas.interaction,
+        pending,
+        position,
+    );
     cx.request_redraw();
     cx.invalidate_self(Invalidation::Paint);
     true
