@@ -695,6 +695,7 @@ Current sequencing note (as of 2026-03-09):
   - Goal: replace vague “public `CommandId`-first widget contracts still remain” language with a concrete family split and a landable migration order.
   - Evidence target: one workstream note that distinguishes command-catalog surfaces from app-facing builder APIs and recommends which widget families should gain action-first aliases first.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now classifies the remaining pressure into already-aligned dual-surface widgets (`Button`, `CommandItem`), menu-family blockers (`DropdownMenu*`, `ContextMenu*`, `Menubar*`), medium-risk app-facing surfaces (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`), and a staged alias-first migration order.
+  - Docs alignment update (as of 2026-03-09): `docs/component-author-guide.md` now explicitly teaches the split between action-first public builder naming and command-pipeline/keymap lowering, so this track no longer has a stale top-level authoring doc leaking the old `CommandId`-first mental model.
 
 - [x] AFA-postv1-020 Land the first action-first alias pass for command-shaped widget builders.
   - Goal: prove that public builder naming can converge on the action-first story without rewriting command-centric internals.

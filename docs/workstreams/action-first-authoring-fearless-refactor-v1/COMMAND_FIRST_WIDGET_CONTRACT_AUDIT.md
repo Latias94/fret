@@ -200,15 +200,14 @@ Recommendation:
 - Keep `action_command(...)` and the historical `action(...)` spelling as additive compatibility
   surfaces until the repo decides whether this family should deprecate command-shaped naming.
 
-### 6) One documentation note is now stale relative to the action-first surface
+### 6) Component author docs now need to stay aligned with the action-first surface
 
 Representative evidence:
 
 - `docs/component-author-guide.md`
 
-Current wording still says:
-
-- “Commands + shortcuts: always go through `CommandId` + keymap”
+Previous wording overstated the old rule by making the public authoring story sound fully
+`CommandId`-first.
 
 Assessment:
 
@@ -216,11 +215,16 @@ Assessment:
 - It is too strong for the current public authoring story because the repo now intentionally
   teaches typed actions first and only lowers to command IDs at the routing boundary.
 
-Recommendation:
+Status update (as of 2026-03-09):
 
-- Update this guide in a later follow-up so it distinguishes:
-  - runtime identity / menu-keymap integration,
-  - versus default public builder naming on ecosystem widgets.
+- `docs/component-author-guide.md` now distinguishes:
+  - default public builder naming (`action(...)` / typed actions first),
+  - versus runtime identity / menu-keymap integration lowering through the command pipeline.
+
+Practical implication:
+
+- this documentation mismatch is no longer a reason to treat command-first cleanup as an active
+  broad migration track.
 
 ---
 
