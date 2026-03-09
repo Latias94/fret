@@ -16,6 +16,7 @@ pub mod panes;
 pub mod tab_drag;
 mod tab_strip;
 pub mod tabs;
+mod theme_tokens;
 
 pub use command_scope::WorkspaceCommandScope;
 pub use frame::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};

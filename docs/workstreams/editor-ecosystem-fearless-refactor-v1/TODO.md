@@ -83,7 +83,10 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       one-way seeding/aliasing only, no reverse dependency.
       Evidence: ADR 0316 plus
       `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
-- [ ] `EER-THEME-044` Add missing-token fallback and diagnostics checks for the new namespaces per ADR 0270.
+- [x] `EER-THEME-044` Add missing-token fallback and diagnostics checks for the new namespaces per ADR 0270.
+      Evidence: `ecosystem/fret-workspace/src/theme_tokens.rs`,
+      `ecosystem/fret-workspace/src/frame.rs`, and
+      `ecosystem/fret-workspace/src/tab_strip/theme.rs`.
 - [x] `EER-THEME-045` Document whether workspace shell and docking should share visual presets via aliasing,
       not via crate coupling.
       Current decision: align shell and docking visuals by adapter aliasing/seeding, not by moving
@@ -101,7 +104,9 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       and theme token fallback on editor/workspace namespaces.
       Current status: authoring parity is now covered by
       `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs` and the promoted diagnostics script,
-      while workspace-shell and token-fallback gates remain open.
+      workspace token fallback is now covered by
+      `ecosystem/fret-workspace/src/theme_tokens.rs` unit tests, while workspace-shell
+      focus/command-scope gates remain open.
 - [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
       Current status: the `imui` proof surface now has anchored code + gate evidence, but the
       rest of the workstream still needs the same crate-to-proof mapping.

@@ -132,6 +132,14 @@ Progress:
 - The current adapter recommendation is now explicit:
   keep stable seeding in adapter crates such as `fret-ui-shadcn`, keep owner-local proof presets
   optional, and avoid creating a dedicated editor/workspace adapter crate before namespace cleanup.
+- `fret-workspace` now has a small internal token resolver surface in
+  `ecosystem/fret-workspace/src/theme_tokens.rs`.
+- Shell frame/top bar/status bar now read
+  `workspace.frame.*`, `workspace.top_bar.*`, and `workspace.status_bar.*` with generic fallback
+  preserved, and shell tabstrip chrome now resolves canonical `workspace.tabstrip.*` keys before
+  legacy `workspace.tab_strip.*` compatibility spellings.
+- Focused unit coverage now locks the ADR 0270 fallback story for these workspace namespaces in
+  `ecosystem/fret-workspace/src/theme_tokens.rs`.
 
 ## M5 - Proofs, gates, and cleanup
 
