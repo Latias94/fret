@@ -186,6 +186,7 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
     element.children.iter().any(subtree_has_flex_grow)
 }
 
+#[cfg(test)]
 fn kind_layout(kind: &ElementKind) -> Option<&LayoutStyle> {
     match kind {
         ElementKind::Container(props) => Some(&props.layout),
