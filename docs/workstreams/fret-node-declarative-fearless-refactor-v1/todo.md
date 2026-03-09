@@ -1025,6 +1025,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/edge_anchor.rs` seam, so `paint_root/immediate.rs` and
     `paint_root/cached_edges/mod.rs` stop re-embedding the same reconnectability gate and anchor
     target resolution logic while keeping cached-vs-immediate data sourcing explicit.
+  - Progress: static scene cache tile/window planning now also routes through the private
+    `canvas/widget/static_scene_cache_plan.rs` seam, so `paint_root/cached.rs` and
+    `retained_widget_cull_window_key.rs` stop re-embedding the same power-of-two tile sizing and
+    centered single-tile window math inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

@@ -332,6 +332,7 @@ mod searcher_rows;
 mod searcher_ui;
 mod selection;
 mod split_edge_execution;
+mod static_scene_cache_plan;
 mod sticky_wire;
 mod sticky_wire_connect;
 mod sticky_wire_targets;

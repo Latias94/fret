@@ -26,7 +26,7 @@ pub(super) fn build_cull_window_key(bounds: Rect, snapshot: &ViewSnapshot) -> Op
         return None;
     }
 
-    let nodes_tile_size_screen_px = next_power_of_two_at_least(
+    let nodes_tile_size_screen_px = static_scene_cache_plan::next_power_of_two_at_least(
         STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
         viewport_max_screen_px * STATIC_NODES_TILE_MUL,
     );
@@ -40,14 +40,14 @@ pub(super) fn build_cull_window_key(bounds: Rect, snapshot: &ViewSnapshot) -> Op
         },
     );
     let viewport_rect = viewport.visible_canvas_rect();
-    let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
-    let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
-    if !center_x.is_finite() || !center_y.is_finite() {
+    let Some(tile_rect) = static_scene_cache_plan::centered_single_tile_rect(
+        viewport_rect,
+        nodes_cache_tile_size_canvas,
+    ) else {
         return None;
-    }
-
-    let tile_x = (center_x / nodes_cache_tile_size_canvas).floor() as i32;
-    let tile_y = (center_y / nodes_cache_tile_size_canvas).floor() as i32;
+    };
+    let tile_x = (tile_rect.origin.x.0 / nodes_cache_tile_size_canvas).floor() as i32;
+    let tile_y = (tile_rect.origin.y.0 / nodes_cache_tile_size_canvas).floor() as i32;
 
     let mut builder = TileCacheKeyBuilder::new("fret-node.canvas.cull_window.v1");
     builder
@@ -56,10 +56,4 @@ pub(super) fn build_cull_window_key(bounds: Rect, snapshot: &ViewSnapshot) -> Op
         .add_i32(tile_x)
         .add_i32(tile_y);
     Some(builder.finish())
-}
-
-fn next_power_of_two_at_least(min: u32, value: f32) -> u32 {
-    let target = value.ceil().max(1.0) as u32;
-    let pow2 = target.checked_next_power_of_two().unwrap_or(0x8000_0000);
-    pow2.max(min)
 }

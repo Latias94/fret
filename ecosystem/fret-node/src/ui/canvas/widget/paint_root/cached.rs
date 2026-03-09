@@ -12,12 +12,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN: u32 = 1024;
     const STATIC_EDGES_TILE_SIZE_SCREEN_PX: u32 = 2048;
 
-    fn next_power_of_two_at_least(min: u32, value: f32) -> u32 {
-        let target = value.ceil().max(1.0) as u32;
-        let pow2 = target.checked_next_power_of_two().unwrap_or(0x8000_0000);
-        pow2.max(min)
-    }
-
     pub(in super::super) fn paint_root<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
@@ -123,10 +117,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && cx.bounds.size.height.0.is_finite();
 
         let viewport_max_screen_px = cx.bounds.size.width.0.max(cx.bounds.size.height.0);
-        let nodes_tile_size_screen_px = Self::next_power_of_two_at_least(
-            Self::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
-            viewport_max_screen_px * Self::STATIC_NODES_TILE_MUL,
-        );
+        let nodes_tile_size_screen_px =
+            crate::ui::canvas::widget::static_scene_cache_plan::next_power_of_two_at_least(
+                Self::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
+                viewport_max_screen_px * Self::STATIC_NODES_TILE_MUL,
+            );
 
         let nodes_cache_tile_size_canvas = (nodes_tile_size_screen_px as f32 / zoom).max(1.0);
         let edges_cache_tile_size_canvas =
@@ -136,25 +131,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && nodes_cache_tile_size_canvas >= viewport_w
             && nodes_cache_tile_size_canvas >= viewport_h
         {
-            let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
-            let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
-            if center_x.is_finite() && center_y.is_finite() {
-                let tile_x = (center_x / nodes_cache_tile_size_canvas).floor() as i32;
-                let tile_y = (center_y / nodes_cache_tile_size_canvas).floor() as i32;
-                let origin = Point::new(
-                    Px(tile_x as f32 * nodes_cache_tile_size_canvas),
-                    Px(tile_y as f32 * nodes_cache_tile_size_canvas),
-                );
-                Some(Rect::new(
-                    origin,
-                    Size::new(
-                        Px(nodes_cache_tile_size_canvas),
-                        Px(nodes_cache_tile_size_canvas),
-                    ),
-                ))
-            } else {
-                None
-            }
+            crate::ui::canvas::widget::static_scene_cache_plan::centered_single_tile_rect(
+                viewport_rect,
+                nodes_cache_tile_size_canvas,
+            )
         } else {
             None
         };
@@ -163,25 +143,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && edges_cache_tile_size_canvas >= viewport_w
             && edges_cache_tile_size_canvas >= viewport_h
         {
-            let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
-            let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
-            if center_x.is_finite() && center_y.is_finite() {
-                let tile_x = (center_x / edges_cache_tile_size_canvas).floor() as i32;
-                let tile_y = (center_y / edges_cache_tile_size_canvas).floor() as i32;
-                let origin = Point::new(
-                    Px(tile_x as f32 * edges_cache_tile_size_canvas),
-                    Px(tile_y as f32 * edges_cache_tile_size_canvas),
-                );
-                Some(Rect::new(
-                    origin,
-                    Size::new(
-                        Px(edges_cache_tile_size_canvas),
-                        Px(edges_cache_tile_size_canvas),
-                    ),
-                ))
-            } else {
-                None
-            }
+            crate::ui::canvas::widget::static_scene_cache_plan::centered_single_tile_rect(
+                viewport_rect,
+                edges_cache_tile_size_canvas,
+            )
         } else {
             None
         };

@@ -617,6 +617,10 @@ real editors.
   `canvas/widget/paint_root/edge_anchor.rs` seam, so `paint_root/immediate.rs` and
   `paint_root/cached_edges/mod.rs` stop re-embedding the same reconnectability gate and anchor
   target resolution logic while keeping cached-vs-immediate data sourcing explicit.
+- static scene cache tile/window planning now also routes through the private
+  `canvas/widget/static_scene_cache_plan.rs` seam, so `paint_root/cached.rs` and
+  `retained_widget_cull_window_key.rs` stop re-embedding the same power-of-two tile sizing and
+  centered single-tile window math inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
