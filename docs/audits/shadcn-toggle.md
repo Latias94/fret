@@ -1,5 +1,4 @@
-# shadcn/ui v4 Audit — Toggle
-
+# shadcn/ui v4 Audit - Toggle
 
 ## Upstream references (non-normative)
 
@@ -9,61 +8,44 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Toggle` against the upstream shadcn/ui v4 docs and
-the `new-york-v4` implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Toggle` against the upstream shadcn/ui v4 base docs,
+base examples, and the existing toggle web gates.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/toggle.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle.tsx`
-- Underlying primitive: Radix `@radix-ui/react-toggle`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/toggle.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/toggle.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/toggle-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-outline.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-text.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-sizes.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-rtl.tsx`
+- Existing chrome gates: `goldens/shadcn-web/v4/new-york-v4/toggle-demo.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-demo.focus.json`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/toggle.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/toggle.rs`
 
 ## Audit checklist
 
-### Composition surface
+### Authoring surface
 
-- Pass: Exposes a Radix-shaped `ToggleRoot` primitive surface (pressed + defaultPressed), while keeping
-  the ergonomic shadcn-aligned `Toggle` builder for styling/variants.
-- Pass: Supports controlled state via `Model<bool>`.
-- Pass: Supports uncontrolled initial state via `defaultPressed` (`Toggle::uncontrolled(...)` /
-  `Toggle::default_pressed(...)` / `toggle_uncontrolled(...)`).
-- Pass: Supports a source-aligned snapshot/action path via `Toggle::from_pressed(...)` plus
-  `action(...)` / `action_payload(...)`, so action-first views can render a toggle from plain local
-  state without allocating a `Model<bool>`.
-- Pass: Supports `variant` (`default` / `outline`) and `size` (`sm` / `default` / `lg`).
-- Pass: Supports both text labels (`label(...)`) and arbitrary children (`children(...)`).
+- Pass: `Toggle::uncontrolled(false)` plus `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` covers the documented toggle surface.
+- Pass: `children([...])` is the source-aligned Fret equivalent of upstream child content, while `label(...)` remains the ergonomic shortcut for common icon-plus-text cases.
+- Pass: `Toggle::new(model)` and `Toggle::from_pressed(...)` continue to cover controlled and action-first authoring without widening the public surface further.
+- Pass: no extra generic `asChild` / `compose()` API is needed here because `children([...])` already covers the composable content story.
 
-### Interaction behavior
+### Layout & default-style ownership
 
-- Pass: Activation toggles the boolean model when a controlled/uncontrolled model path is used.
-- Pass: Snapshot/action toggles can render from plain local state and dispatch typed actions without a model handle.
-- Pass: Disabled state prevents interaction and uses disabled styling.
-- Pass: A11y uses button semantics and exposes `pressed` state.
+- Pass: toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream toggle source defines those defaults on the component itself.
+- Pass: surrounding toolbar layout, wrapping behavior, and page/grid negotiation remain caller-owned.
+- Pass: pressed, hover, and focus-visible outcomes continue to be covered by the existing toggle chrome gates; this pass does not reveal a mechanism-layer gap.
 
-### Visual defaults (shadcn parity)
+### Gallery / docs parity
 
-- Pass: Size scale matches shadcn’s wrapper (`h-8 / h-9 / h-10` and matching `min-w-*`) via
-  `component.toggle.h{,_sm,_lg}` tokens (with `36px/32px/40px` fallbacks).
-- Pass: Horizontal padding matches shadcn (`px-2 / px-1.5 / px-2.5`) via
-  `component.toggle.px{,_sm,_lg}` tokens (with `8px/6px/10px` fallbacks).
-- Pass: `data-[state=on]` styling matches: `bg-accent` + `text-accent-foreground`.
-- Pass: Outline variant hover matches: `hover:bg-accent` + `hover:text-accent-foreground`.
-- Pass: Outline variant uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
-- Pass: Focus-visible styling includes a ring-colored outline border plus an outward focus ring
-  (best-effort, matching `border-ring` and `ring-ring/50`).
+- Pass: the gallery now mirrors the upstream base Toggle docs path first: `Demo`, `Usage`, `Outline`, `With Text`, `Size`, `Disabled`, and `RTL`.
+- Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the Fret-specific `control_id(...)` bridge.
+- Pass: the old `Notes` section is replaced by a clearer `API Reference` section that records public-surface and ownership choices.
+- Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-shadcn toggle`
-- `cargo test -p fret-ui-shadcn --lib toggle_pressed_value_exposes_semantics_without_model --message-format short`
-- `cargo check -p fret-cookbook --example toggle_basics --message-format short`
-- `cargo test -p fret-ui-shadcn --lib field_label_click_dispatches_action_for_snapshot_toggle_control --message-format short`
-
-## Follow-ups (recommended)
-
-- Pass: Snapshot/action toggles now participate in `control_id` / label forwarding with the same command-backed activation path as the model-backed contract.
-- Consider an icon-sizing helper to match shadcn’s default `svg.size-4` rule.
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`, `toggle-demo.focus`)
