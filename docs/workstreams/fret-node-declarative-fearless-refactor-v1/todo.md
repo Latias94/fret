@@ -1068,6 +1068,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: cached static group/node layer-key planning now also routes through the same private
     `canvas/widget/paint_root/static_cache.rs` seam, so `cached_groups.rs` and `cached_nodes.rs`
     stop re-embedding the same base-key/style-key/tile-origin cache key assembly inline.
+  - Progress: paint-root cache prune tails now also route through smaller private helpers in
+    `canvas/widget/paint_root/prune.rs`, so the root prune entry keeps static tile-cache cleanup
+    and dynamic paint-cache cleanup as explicit, separately reviewable responsibilities.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

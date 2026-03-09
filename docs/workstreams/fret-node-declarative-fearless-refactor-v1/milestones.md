@@ -659,6 +659,9 @@ real editors.
 - cached static group/node layer-key planning now also routes through the same private
   `canvas/widget/paint_root/static_cache.rs` seam, so `cached_groups.rs` and `cached_nodes.rs`
   stop re-embedding the same base-key/style-key/tile-origin cache key assembly inline.
+- paint-root cache prune tails now also route through smaller private helpers in
+  `canvas/widget/paint_root/prune.rs`, so the root prune entry keeps static tile-cache cleanup and
+  dynamic paint-cache cleanup as explicit, separately reviewable responsibilities.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
