@@ -5,6 +5,7 @@ Last updated: 2026-03-09
 Related:
 
 - Gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
+- Status matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - App-entry policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
 - App-entry inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
@@ -57,6 +58,8 @@ Interpretation:
 - The app-entry surface is the closest to final cleanup.
 - The other three items still need explicit product-surface decisions before deletion would be
   defensible.
+- Of those three, the only one that still looks like immediate implementation work is the
+  command-first widget family; compat runner and `use_state` are currently policy-held seams.
 
 ---
 
@@ -262,11 +265,10 @@ If the repo wants the next move to stay narrow and landable, the next concrete s
 
 1. keep the `App::ui*` deprecation window visible and enforced in docs,
 2. finish documentation alignment for the compat-runner policy,
-3. then decide whether the next implementation work is:
-   - app-entry hard delete/quarantine,
-   - first-contact `use_state` migration,
-   - command-first widget audit,
-   - or a future compat-runner quarantine only if facade-size pressure justifies it later.
+3. keep `use_state` on its current non-default/raw-model policy unless the facade policy changes,
+4. use the next real implementation pass on command-first widget aliases, especially the remaining
+   `ContextMenu*` / `Menubar*` public builders,
+5. only revisit compat-runner quarantine later if facade-size pressure justifies it.
 
 That order keeps the already-completed app-entry progress from stalling while avoiding premature
 deletions in the other three areas.

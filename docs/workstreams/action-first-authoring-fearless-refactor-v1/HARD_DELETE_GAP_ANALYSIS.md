@@ -5,6 +5,7 @@ Last updated: 2026-03-09
 Related execution sequence:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
@@ -21,6 +22,8 @@ Short answer:
 - The remaining blockers are no longer architectural unknowns; they are now mostly **surface-policy decisions** plus a small number of **migration/gating tasks**.
 - The concrete execution order for those decisions now lives in
   `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`.
+- A compressed “what is actually next” read now also lives in
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`.
 
 ---
 
@@ -43,6 +46,16 @@ Reference anchors:
 ---
 
 ## Remaining blockers before broader hard deletes
+
+Current prioritization (2026-03-09):
+
+- `App::ui*` is no longer blocked by in-tree migration work; it is now mostly waiting on the
+  deprecation window and final delete-vs-quarantine timing.
+- `run_native_with_compat_driver(...)` and `use_state::<T>()` are both currently better framed as
+  intentional advanced/non-default seams than as near-term hard-delete targets.
+- The main remaining **implementation-scoped** cleanup pressure is now the command-first widget
+  family, especially the remaining menu/public-builder surfaces audited in
+  `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`.
 
 ## 1) App-entry closure surface still exists as a supported public path
 

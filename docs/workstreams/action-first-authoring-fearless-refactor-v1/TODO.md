@@ -615,6 +615,11 @@ Current sequencing note (as of 2026-03-09):
   - Evidence target: one workstream note that classifies stage order, per-surface status, and exit criteria for app-entry closure surfaces, compat runner entry points, `use_state`, and command-first widget contracts.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now defines the execution order, exit criteria, and immediate next action, and `HARD_DELETE_GAP_ANALYSIS.md` now points to it as the operational follow-up.
 
+- [x] AFA-postv1-013c Publish a hard-delete status matrix that separates waiting/deferred seams from the next real cleanup track.
+  - Goal: make it obvious which remaining blockers are still code migration work versus policy-held advanced/non-default seams.
+  - Evidence target: one matrix that classifies `App::ui*`, compat runner, `use_state`, and command-first widget contracts by readiness and next action.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md` now records the narrowed endgame: `App::ui*` is mainly waiting on deprecation timing, compat runner and `use_state` are currently retained advanced/non-default seams, and the remaining command-first widget family is the main implementation-scoped cleanup track.
+
 - [x] AFA-postv1-013b Define the `App::ui*` downstream deprecation window explicitly.
   - Goal: stop treating app-entry removal timing as an abstract future decision and give downstream users a concrete minimum warning window.
   - Evidence target: the app-entry policy draft and hard-delete execution checklist both record the same deprecation start date, earliest removal date, and release condition.
