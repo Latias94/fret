@@ -917,19 +917,17 @@ impl View for TodoView {
             }
         });
 
-        cx.on_payload_action_notify::<act::Toggle>({
-            let todos_state = todos_state.clone();
-            move |host, _action_cx, id| {
-                todos_state.update_in_if(host.models_mut(), |rows| {
-                    if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                        row.done = !row.done;
-                        true
-                    } else {
-                        false
-                    }
-                })
-            }
-        });
+        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            },
+        );
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary);
@@ -1348,7 +1346,7 @@ mod tests {
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
-        assert!(src.contains("cx.on_payload_action_notify::<act::Toggle>"));
+        assert!(src.contains("cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.use_local::<String>();"));
         assert!(src.contains("let next_id_state = cx.use_local_with(|| 3u64);"));

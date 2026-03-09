@@ -114,6 +114,7 @@ For post-v1 best-practice authoring, the intended direction is:
 - `count.update_in(models, |value| { ... })` / `count.set_in(models, value)` are store-only transaction helpers; `count.update_in_if(models, |value| -> bool { ... })` is the handled-aware variant for collection-style writes. They become rerendering writes when used under `on_action_notify_models::<A>(...)`, while `on_action_notify_local_*` / `update_action(...)` / `update_action_if(...)` are the direct tracked-write path
 - `count.value_in_or_default(models)` / `count.value_in_or(models, fallback)` for the common store-side read path, and `count.read_in(models, |value| ...)` / `count.revision_in(models)` when the closure needs a custom projection or revision check
 - `let query_state = query_handle.layout(cx).value_or_else(QueryState::<T>::default);` for query results, instead of reopening `query_handle.model()` at the teaching surface
+- `cx.on_payload_action_notify_local_update_if::<act::ToggleRow, Vec<Row>>(&rows, |rows, id| { ... })` as the narrow keyed-list / payload-row helper when the remaining noise is just local collection mutation boilerplate
 
 Keep explicit `notify()` for:
 
@@ -129,7 +130,7 @@ bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 
 The clearest remaining gaps are now narrower:
 
-- keyed-list / payload-row handler placement still has no narrower default path beyond the root action table,
+- keyed-list / payload-row flows now have one narrow helper for local collection mutation, but the root action table still remains visible by design,
 - builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
   not have to infer the intended path from scattered examples,
@@ -141,9 +142,10 @@ The clearest remaining gaps are now narrower:
 `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`, and
 `apps/fretboard/src/scaffold/templates.rs` now collectively show that the current v2 path already
 covers cookbook, app-grade, and scaffold keyed-list surfaces via `LocalState<Vec<TodoRow>>`,
-payload row actions, and snapshot checkbox bindings. That shifts the remaining visible pressure more
-toward handler placement, default-path documentation, and narrower widget ergonomics rather than
-macros or another round of generic tracked-write helpers.
+payload row actions, snapshot checkbox bindings, and the new narrow
+`on_payload_action_notify_local_update_if::<...>(...)` helper. That shifts the remaining visible
+pressure more toward default-path documentation and narrower widget ergonomics rather than macros or
+another round of generic tracked-write helpers.
 
 ## Current recommendation order (2026-03-09)
 

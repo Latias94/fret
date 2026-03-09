@@ -77,6 +77,10 @@ Adoption note (as of 2026-03-07):
   invalidation still belongs to the explicit render-time escape hatch path, and command/keymap plus
   cross-field form root handling remain intentional ownership boundaries rather than the best sugar
   targets.
+- Keyed-list helper prototype update (as of 2026-03-09): `ecosystem/fret/src/view.rs` now adds the
+  deliberately narrow `ViewCx::on_payload_action_notify_local_update_if::<A, T>(...)` helper, and
+  `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`,
+  plus the generated simple-todo scaffold now use it for payload-row local collection mutations.
 - Business-table note: `DataTable` is now explicitly treated as a separate post-v1 audit/problem
   space. It should not keep the primitive `Table` builder-first cleanup milestone artificially
   open.
