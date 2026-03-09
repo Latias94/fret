@@ -272,7 +272,7 @@ ID format:
       - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-level command scope fallback for `workspace.*` commands)
     - Scripted diagnostics gate:
       - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
-      - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
+      - `tools/diag_gate_action_first_authoring_v1.py` (includes workspace shell demo gate)
 - [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-05):

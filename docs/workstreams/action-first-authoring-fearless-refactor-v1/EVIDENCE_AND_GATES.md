@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -65,7 +65,7 @@ Editor-grade adoption (workspace shell demo):
 - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-level command scope applies model commands even when UI hooks are not idempotent; requests redraw when applied)
 - `apps/fret-examples/src/workspace_shell_demo.rs` (applies workspace model commands first, then dispatches UI hooks; records a driver-handled dispatch decision when UI hooks are non-idempotent so scripted gates still observe `handled=true`)
 - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (gates `source_kind=pointer` for `workspace.tab.close.doc-a-0`)
-- `tools/diag_gate_action_first_authoring_v1.ps1` (includes the workspace shell demo gate)
+- `tools/diag_gate_action_first_authoring_v1.py` (includes the workspace shell demo gate)
 
 View/cache observability (diagnostics):
 
@@ -231,11 +231,11 @@ Notes:
 
 Gate runner:
 
-- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/dfa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`; keeps output paths short to avoid Windows path-length issues during schema2 bundle dumps)
+- `python tools/diag_gate_action_first_authoring_v1.py` (default output: `target/dfa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`; keeps output paths short to avoid Windows path-length issues during schema2 bundle dumps)
   - Note: the gate script builds cookbook examples with `--features cookbook-diag` (and enables per-example feature bundles such as `cookbook-imui` when required) so the launched demos expose the diagnostics transport.
   - Cold builds / cold GPU shader caches can occasionally cause timeouts. The gate script retries timed-out runs once with a larger timeout by default.
-    - Defaults: `-TimeoutMs 180000 -TimeoutMsRetry 600000 -TimeoutRetryCount 1`
-    - Manual override (if needed): `pwsh tools/diag_gate_action_first_authoring_v1.ps1 -TimeoutMs 600000 -TimeoutRetryCount 0`
+    - Defaults: `--timeout-ms 180000 --timeout-ms-retry 600000 --timeout-retry-count 1`
+    - Manual override (if needed): `python tools/diag_gate_action_first_authoring_v1.py --timeout-ms 600000 --timeout-retry-count 0`
 
 ### 2.3 wasm smoke (build-only)
 
@@ -264,7 +264,7 @@ Prefer `cargo nextest run` when available.
   - `cargo check -p fret -p fret-ui-kit --target wasm32-unknown-unknown`
   - `tools/gates_wasm_smoke.ps1`
 - Run the Action-first authoring diagnostics gate set (commands/keymap + modal barrier + cross-frontend):
-  - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
+  - `python tools/diag_gate_action_first_authoring_v1.py`
 - Prevent legacy MVU drift in-tree (compile-time grep gates):
   - `python tools/gate_no_mvu_in_tree.py`
   - `python tools/gate_no_mvu_in_cookbook.py`

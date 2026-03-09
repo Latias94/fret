@@ -36,8 +36,8 @@ This note is intentionally operational rather than aspirational:
 | `tools/gate_no_stack_in_cookbook.ps1` | deleted; `tools/gate_no_stack_in_cookbook.py` is canonical | Removed wrapper | Done |
 | `tools/gate_no_stack_in_examples.ps1` | deleted; `tools/gate_no_stack_in_examples.py` is canonical | Removed wrapper | Done |
 | `tools/gate_no_stack_in_ui_gallery_shell.ps1` | deleted; `tools/gate_no_stack_in_ui_gallery_shell.py` is canonical | Removed wrapper | Done |
-| `tools/diag_gate_action_first_authoring_v1.ps1` | no Python twin yet | Python migration candidate | High-value next candidate |
-| `tools/diag_gate_interaction_kernel_v1.ps1` | no Python twin yet | Python migration candidate | High-value next candidate |
+| `tools/diag_gate_action_first_authoring_v1.ps1` | deleted; `tools/diag_gate_action_first_authoring_v1.py` is canonical | Removed wrapper | Done |
+| `tools/diag_gate_interaction_kernel_v1.ps1` | deleted; `tools/diag_gate_interaction_kernel_v1.py` is canonical | Removed wrapper | Done |
 | `tools/diag_scripts_refresh.ps1` | no Python twin yet | Python migration candidate | Medium-value maintenance candidate |
 | `tools/gates_delinea_fast.ps1` | no Python twin yet | Python migration candidate | Candidate if this workstream stays active |
 | `tools/gates_wasm_smoke.ps1` | no Python twin yet | Mixed shell / platform runner | Audit before migrating |
@@ -68,12 +68,12 @@ Guardrail used:
 
 ### Phase 2 — Migrate high-value diag runners
 
-Best next real migration targets:
+Completed:
 
 1. `tools/diag_gate_action_first_authoring_v1.ps1`
 2. `tools/diag_gate_interaction_kernel_v1.ps1`
 
-Why:
+Why these were prioritized:
 
 - they appear in active workstream docs,
 - they are repeatedly used as “canonical” gates,
