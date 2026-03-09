@@ -1175,6 +1175,11 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `ui/canvas/snaplines.rs` now routes snap-anchor extraction and best-guide delta
     selection through the private `canvas/snaplines/snaplines_align.rs` seam, so the root
     snaplines module now mainly holds shared result types plus tests.
+  - Progress: align/distribute planning now also routes element collection, per-mode delta
+    planning, extent-shift computation, and group/node op application through the private
+    `ui/canvas/widget/move_ops/align_distribute/support.rs` seam, so
+    `move_ops/align_distribute/plan.rs` now mainly keeps the top-level planning orchestration
+    explicit.
 
 ## M5 - Compatibility retained convergence
 
