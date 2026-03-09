@@ -221,6 +221,7 @@ Post-v1 direction (recommended):
   - `notify()` policy draft (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now fixes the near-term direction for `AFA-postv1-004`: keep `notify()` as a low-level escape hatch, keep tracked writes as the boring default rerender path, and do not reopen generic invalidation helper design unless a new medium-surface contradiction appears.
   - Productization ingress update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md`, `docs/examples/README.md`, `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, and `apps/fret-ui-gallery/README.md` now repeat the same default/comparison/advanced framing, reducing the remaining post-v1 work from taxonomy drift to keeping those ingress docs stable.
   - Medium-surface builder follow-up (as of 2026-03-09): `Alert::build(...)` plus `AlertAction::build(...)` now close one deliberately narrow alert-family seam in `ecosystem/fret-ui-shadcn/src/alert.rs`, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, and the main ui-gallery alert snippets) now use that late-landing path instead of pre-collecting alert children.
+  - Medium-surface builder follow-up (as of 2026-03-09): `ScrollArea::build(...)` now closes the next narrow runtime-owned seam in `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, and the first real surfaces (`markdown_and_code_basics`, `async_playground_demo`, and the main ui-gallery scroll-area demo) now keep viewport children on the late-landing path without widening the helper surface.
 
 ---
 

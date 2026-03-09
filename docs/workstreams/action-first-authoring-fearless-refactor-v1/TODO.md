@@ -720,6 +720,16 @@ Current sequencing note (as of 2026-03-09):
     - `apps/fret-ui-gallery/src/ui/snippets/alert/basic.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/alert/action.rs`
 
+- [x] AFA-postv1-027 Close one medium-surface builder seam in the `ScrollArea` family.
+  - Goal: keep the post-v1 builder-density pass focused on one runtime-owned root seam instead of reopening general helper expansion.
+  - Status (as of 2026-03-09): `ScrollArea::build(...)` now keeps viewport children on the builder path while preserving the existing axis / scrollbar / viewport-test-id configuration seam; the first real surfaces (`markdown_and_code_basics`, `async_playground_demo`, ui-gallery scroll-area demo) have migrated without broadening the default authoring story.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+    - `apps/fret-examples/src/async_playground_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs`
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.

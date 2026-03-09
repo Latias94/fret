@@ -39,6 +39,7 @@ Examples:
 
 - `shadcn::Card::build(...)`
 - `shadcn::Alert::build(...)`
+- `shadcn::ScrollArea::build(...)`
 - `shadcn::Dialog::build(cx, trigger, content)`
 - `shadcn::AlertDialog::build(cx, trigger, content)`
 - `shadcn::Popover::build(cx, trigger, content)`

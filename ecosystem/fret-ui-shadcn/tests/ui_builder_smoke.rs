@@ -18,7 +18,7 @@ use fret_ui_shadcn::{
     DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
     DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, DropdownMenuEntry, Empty,
     HoverCardContent, Kbd, Menubar, Popover, PopoverContent, PopoverDescription, PopoverHeader,
-    PopoverTitle, Progress, Select, Sheet, SheetContent, SheetDescription, SheetFooter,
+    PopoverTitle, Progress, ScrollArea, Select, Sheet, SheetContent, SheetDescription, SheetFooter,
     SheetHeader, SheetTitle, Slider, Switch, TableBody, TableCaption, TableFooter, TableHead,
     TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
 };
@@ -197,20 +197,24 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
             .ui()
             .p_2()
             .into_element(cx, |cx| {
-                vec![primitives::BreadcrumbList::new()
-                    .ui()
-                    .p_2()
-                    .into_element(cx, |cx| {
-                        vec![primitives::BreadcrumbItem::new()
-                            .ui()
-                            .p_2()
-                            .into_element(cx, |cx| {
-                                vec![primitives::BreadcrumbLink::new("Home")
-                                    .ui()
-                                    .p_0()
-                                    .into_element(cx)]
-                            })]
-                    })]
+                vec![
+                    primitives::BreadcrumbList::new()
+                        .ui()
+                        .p_2()
+                        .into_element(cx, |cx| {
+                            vec![primitives::BreadcrumbItem::new().ui().p_2().into_element(
+                                cx,
+                                |cx| {
+                                    vec![
+                                        primitives::BreadcrumbLink::new("Home")
+                                            .ui()
+                                            .p_0()
+                                            .into_element(cx),
+                                    ]
+                                },
+                            )]
+                        }),
+                ]
             });
 
         let _ = primitives::BreadcrumbSeparator::new().ui().into_element(cx);
@@ -278,6 +282,12 @@ fn ui_builder_smoke_applies_supported_patches() {
     .ui()
     .p_4()
     .border_1()
+    .build();
+    let _ = ScrollArea::build::<fret_ui_app::App, _>(|cx, out: &mut Vec<AnyElement>| {
+        out.push_ui(cx, ui::text("row"));
+    })
+    .ui()
+    .w_full()
     .build();
     let _ = Badge::new("x").ui().px_2().build();
     let _ = Kbd::new("x").ui().px_2().build();

@@ -445,6 +445,7 @@ fn catalog_panel(
     theme: ThemeSnapshot,
     selected: QueryId,
 ) -> AnyElement {
+    let catalog_scroll = st.catalog_scroll.clone();
     let header = ui::text("Catalog")
         .font_semibold()
         .text_sm()
@@ -455,17 +456,21 @@ fn catalog_panel(
         .bg(ColorRef::Color(theme.color_token("card")))
         .into_element(cx);
 
-    let list = shadcn::ScrollArea::new([ui::v_flex_build(|cx, out| {
-        for id in QueryId::ALL {
-            out.push(catalog_item(cx, st, theme.clone(), selected, id));
-        }
+    let list = shadcn::ScrollArea::build(|cx, out| {
+        out.push_ui(
+            cx,
+            ui::v_flex_build(|cx, out| {
+                for id in QueryId::ALL {
+                    out.push(catalog_item(cx, st, theme.clone(), selected, id));
+                }
+            })
+            .gap(Space::N1)
+            .p(Space::N2)
+            .w_full()
+            .items_stretch(),
+        );
     })
-    .gap(Space::N1)
-    .p(Space::N2)
-    .w_full()
-    .items_stretch()
-    .into_element(cx)])
-    .scroll_handle(st.catalog_scroll.clone())
+    .scroll_handle(catalog_scroll)
     .type_(ScrollAreaType::Hover)
     .refine_layout(LayoutRefinement::default().size_full())
     .into_element(cx);

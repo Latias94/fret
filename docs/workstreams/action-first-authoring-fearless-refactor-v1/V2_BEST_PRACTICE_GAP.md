@@ -204,7 +204,9 @@ The first disciplined post-v1 answer is now in place:
 
 - `Alert::build(...)` and `AlertAction::build(...)` close one repeated alert-family seam without adding a new helper family,
 - cookbook `form_basics` / `assets_reload_epoch_basics` plus the main ui-gallery alert snippets now serve as the evidence slice,
-- so the remaining medium-surface pressure has shifted away from alert composition and toward other still-repeated families only if they show the same cross-surface pattern.
+- `ScrollArea::build(...)` now closes the next repeated runtime-root seam while preserving the existing scroll config surface,
+- cookbook `markdown_and_code_basics`, `async_playground_demo`, and the main ui-gallery scroll-area demo now serve as the second evidence slice,
+- so the remaining medium-surface pressure has shifted away from alert/scroll-area composition and toward other still-repeated families only if they show the same cross-surface pattern.
 
 ---
 
