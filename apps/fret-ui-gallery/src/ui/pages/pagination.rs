@@ -15,6 +15,7 @@ pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "API reference: `ecosystem/fret-ui-shadcn/src/pagination.rs`.",
             "Pagination already exposes the upstream-shaped parts surface (`Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`), so the main parity gap here was usage clarity rather than missing mechanism or a generic compose builder.",
             "Fret keeps navigation wiring in the app layer: `PaginationLink` exposes command/action hooks instead of a DOM-specific `href`, while preserving link semantics and active-page state.",
+            "The root approximates upstream `<nav aria-label=\"pagination\">` with `Region + label`, and the content/items emit `List/ListItem` semantics to mirror the upstream `ul/li` structure.",
             "RTL examples validate icon direction + number shaping under RTL.",
         ],
     );

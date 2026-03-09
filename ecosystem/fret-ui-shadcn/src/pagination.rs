@@ -3,7 +3,7 @@ use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y,
-    PressableKeyActivation, PressableProps, SemanticsDecoration,
+    PressableKeyActivation, PressableProps, SemanticsDecoration, SemanticsProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -109,7 +109,7 @@ impl Pagination {
 
         el.attach_semantics(
             SemanticsDecoration::default()
-                .role(SemanticsRole::Panel)
+                .role(SemanticsRole::Region)
                 .label("pagination"),
         )
     }
@@ -144,6 +144,7 @@ impl PaginationContent {
             },
             move |_cx| children,
         )
+        .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List))
     }
 }
 
@@ -158,8 +159,15 @@ impl PaginationItem {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.child
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let child = self.child;
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::ListItem,
+                ..Default::default()
+            },
+            move |_cx| vec![child],
+        )
     }
 }
 
@@ -649,6 +657,43 @@ mod tests {
                 .and_then(|d| d.label.as_deref()),
             Some("pagination"),
             "expected Pagination to attach an a11y label"
+        );
+        assert_eq!(
+            el.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Region),
+            "expected Pagination to approximate the upstream navigation landmark with Region semantics"
+        );
+    }
+
+    #[test]
+    fn pagination_content_and_item_emit_list_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationContent::new([PaginationItem::new(
+                PaginationLink::new([cx.text("1")]).into_element(cx),
+            )
+            .into_element(cx)])
+            .into_element(cx)
+        });
+
+        assert_eq!(
+            el.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::List),
+            "expected PaginationContent to approximate upstream <ul> semantics"
+        );
+
+        let Some(item) = el.children.first() else {
+            panic!("expected PaginationContent to render one child");
+        };
+        let ElementKind::Semantics(props) = &item.kind else {
+            panic!("expected PaginationItem to wrap its child in a semantics node");
+        };
+        assert_eq!(
+            props.role,
+            SemanticsRole::ListItem,
+            "expected PaginationItem to approximate upstream <li> semantics"
         );
     }
 
