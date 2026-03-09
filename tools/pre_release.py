@@ -123,6 +123,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_menu_action_curated_internal_surfaces.py")],
     )
     _run_checked(
+        "Compat runner default-surface policy",
+        [py, str(repo_root / "tools/gate_compat_runner_default_surface.py")],
+    )
+    _run_checked(
         "Teaching surfaces policy (no legacy stack helpers)",
         [py, str(repo_root / "tools/gate_no_stack_in_cookbook.py")],
     )

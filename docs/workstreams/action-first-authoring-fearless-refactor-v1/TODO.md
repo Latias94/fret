@@ -18,6 +18,7 @@ Related:
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
+- Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
@@ -570,6 +571,10 @@ Current sequencing note (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records the boundary rule for the remaining
   command-shaped surfaces, so future work only reopens this lane on default-path leak or explicit
   deprecation rather than treating it as generic residue.
+- source-alignment audit note (as of 2026-03-09): `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` now
+  records that the remaining hard-delete / retained-seam decisions are source-aligned, and the
+  missing compat-runner default-path gate is now closed by
+  `tools/gate_compat_runner_default_surface.py`.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -709,6 +714,15 @@ Current sequencing note (as of 2026-03-09):
   - Status (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the
     quarantine-first path, and the policy/checklist/status summary docs all point to it as the next
     concrete action only if the repo later chooses surface reduction.
+
+- [x] AFA-postv1-015d Close the compat-runner default-surface gate gap.
+  - Goal: make the source-facing policy enforceable so first-contact docs cannot drift toward
+    `run_native_with_compat_driver(...)` while the seam remains intentionally retained.
+  - Evidence target: one narrow gate that requires advanced/non-default wording on the `fret`
+    facade surface and fails if approved first-contact docs start recommending compat-runner entry.
+  - Status (as of 2026-03-09): `tools/gate_compat_runner_default_surface.py` now enforces that
+    split, `tools/pre_release.py` runs it in the canonical policy suite, and
+    `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` records the source-vs-docs alignment result.
 
 - [x] AFA-postv1-016 Publish a caller inventory for `use_state::<T>()`.
   - Goal: replace vague “a few starter/reference snippets still use it” language with a concrete in-tree breakdown before deciding whether `use_state` should be kept, deprecated, or repointed later.

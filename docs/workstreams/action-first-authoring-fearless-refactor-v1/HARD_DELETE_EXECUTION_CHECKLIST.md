@@ -13,6 +13,7 @@ Related:
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
 - Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
+- Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
@@ -153,7 +154,7 @@ Checklist:
 | Decide keep-vs-remove policy | Done (draft) | `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` recommends “keep now, reevaluate later” |
 | If keeping: document as advanced interop | Done | README / crate docs / workstream notes now describe the surface as non-default advanced low-level interop |
 | If removing: migrate/relocate remaining demos first | Open | avoid breaking the only real interop proof points |
-| Add docs gate for default-path exclusion | Open | narrow gate, not a global ban |
+| Add docs gate for default-path exclusion | Done | `tools/gate_compat_runner_default_surface.py` now keeps first-contact docs off `run_native_with_compat_driver(...)` while requiring advanced/non-default wording on the `fret` facade |
 
 Current policy exit criteria:
 
