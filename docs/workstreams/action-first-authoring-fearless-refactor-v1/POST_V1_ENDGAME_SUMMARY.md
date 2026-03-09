@@ -9,6 +9,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
@@ -144,6 +145,9 @@ The repo still has real cleanup work, but it is narrower now:
 - `use_state` as an explicit raw-model seam,
 - remaining command-first widget contracts that are still intentionally retained or separately
   tracked.
+
+`HARD_DELETE_ENDGAME_INDEX.md` now acts as the one-page entrypoint for these lanes before opening
+the deeper matrix/checklist/playbooks.
 
 That app-entry lane now has an execution note as well:
 

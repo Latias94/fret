@@ -9,6 +9,7 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -88,6 +89,10 @@ Adoption note (as of 2026-03-07):
 - `use_state` cleanup update (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records the
   future keep-vs-deprecate execution path for the explicit raw-model seam, so the repo can shrink
   that surface later without reopening the already-closed default-path migration question.
+- Hard-delete index update (as of 2026-03-09): `HARD_DELETE_ENDGAME_INDEX.md` now compresses the
+  three lane-specific playbooks plus the command-first retained-seam track into one reviewer-facing
+  entrypoint, so the repo has a single “start here” note before opening the deeper matrix/checklist
+  docs.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,

@@ -4,6 +4,7 @@ Last updated: 2026-03-09
 
 Related:
 
+- Endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
 - Execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - App-entry inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
@@ -22,6 +23,9 @@ This note compresses the current hard-delete situation into one matrix:
 
 > Which old/compat surfaces are actually still blocking cleanup, which ones are already policy-closed,
 > and which one is the next real implementation target?
+
+For the quickest one-page entrypoint before opening this matrix, start with
+`HARD_DELETE_ENDGAME_INDEX.md`.
 
 ---
 

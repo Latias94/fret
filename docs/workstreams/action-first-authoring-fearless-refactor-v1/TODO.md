@@ -17,6 +17,7 @@ Related:
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
+- Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
@@ -560,6 +561,10 @@ Current sequencing note (as of 2026-03-09):
   future keep-vs-deprecate execution checklist for the explicit raw-model seam, so a later
   surface-reduction pass can proceed without relitigating whether the default local-state migration
   is already complete.
+- hard-delete index note (as of 2026-03-09): `HARD_DELETE_ENDGAME_INDEX.md` now acts as the
+  one-page entrypoint for `App::ui*`, compat runner, `use_state`, and command-first retained-seam
+  cleanup, so future work can start from a single reviewer-facing summary before opening the
+  deeper matrix/checklist/playbooks.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
