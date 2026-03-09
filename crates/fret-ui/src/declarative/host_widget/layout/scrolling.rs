@@ -145,6 +145,8 @@ struct ScrollOverflowObservedExtents {
 struct ScrollOverflowObservedNode {
     extent: Size,
     children: Vec<NodeId>,
+    pinned_to_content_extent_x: bool,
+    pinned_to_content_extent_y: bool,
 }
 
 const SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE: f32 = 32.0;
@@ -187,7 +189,12 @@ fn record_scroll_overflow_candidate<T: ScrollOverflowTree>(
     }
 }
 
-fn trust_scroll_overflow_nonleaf_axis(own: f32, child_frontier: f32, child_count: usize) -> Px {
+fn trust_scroll_overflow_nonleaf_axis(
+    own: f32,
+    child_frontier: f32,
+    child_count: usize,
+    pinned_to_content_extent: bool,
+) -> Px {
     let own = own.max(0.0);
     let child_frontier = child_frontier.max(0.0);
     if child_frontier <= 0.0 {
@@ -198,6 +205,9 @@ fn trust_scroll_overflow_nonleaf_axis(own: f32, child_frontier: f32, child_count
     }
     if child_count != 1 {
         return Px(own.max(child_frontier));
+    }
+    if pinned_to_content_extent && child_frontier + 0.5 < own {
+        return Px(child_frontier);
     }
     if own <= child_frontier + SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE {
         return Px(own.max(child_frontier));
@@ -236,11 +246,13 @@ fn validate_scroll_overflow_observed_subtree(
                 info.extent.width.0,
                 child_frontier.width.0,
                 info.children.len(),
+                info.pinned_to_content_extent_x,
             ),
             trust_scroll_overflow_nonleaf_axis(
                 info.extent.height.0,
                 child_frontier.height.0,
                 info.children.len(),
+                info.pinned_to_content_extent_y,
             ),
         )
     } else {
@@ -462,6 +474,12 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                     ScrollOverflowObservedNode {
                         extent: Size::new(Px(right), Px(bottom)),
                         children,
+                        pinned_to_content_extent_x: axis.scroll_x()
+                            && extent_may_be_stale
+                            && right + 0.5 >= content_size.width.0,
+                        pinned_to_content_extent_y: axis.scroll_y()
+                            && extent_may_be_stale
+                            && bottom + 0.5 >= content_size.height.0,
                     },
                 );
             }
