@@ -40,6 +40,7 @@ Examples:
 - `shadcn::Card::build(...)`
 - `shadcn::Alert::build(...)`
 - `shadcn::ScrollArea::build(...)`
+- `shadcn::FieldSet::build(...)`
 - `shadcn::Dialog::build(cx, trigger, content)`
 - `shadcn::AlertDialog::build(cx, trigger, content)`
 - `shadcn::Popover::build(cx, trigger, content)`
@@ -57,6 +58,7 @@ Examples:
 - `CardHeader::build(...)`, `CardContent::build(...)`, `CardFooter::build(...)`
 - `DialogContent::build(...)`, `DialogHeader::build(...)`, `DialogFooter::build(...)`
 - `AlertDialogContent::build(...)`, `DrawerContent::build(...)`
+- `FieldGroup::build(...)`, `Field::build(...)`
 - `TableHeader::build(...)`, `TableBody::build(...)`, `TableRow::build(...)`, `TableCell::build(...)`
 
 Rule: if content naturally comes from loops, conditionals, or `push_ui(...)`, prefer section builders.

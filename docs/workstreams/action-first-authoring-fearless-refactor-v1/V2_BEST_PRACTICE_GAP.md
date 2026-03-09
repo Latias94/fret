@@ -206,7 +206,9 @@ The first disciplined post-v1 answer is now in place:
 - cookbook `form_basics` / `assets_reload_epoch_basics` plus the main ui-gallery alert snippets now serve as the evidence slice,
 - `ScrollArea::build(...)` now closes the next repeated runtime-root seam while preserving the existing scroll config surface,
 - cookbook `markdown_and_code_basics`, `async_playground_demo`, and the main ui-gallery scroll-area demo now serve as the second evidence slice,
-- so the remaining medium-surface pressure has shifted away from alert/scroll-area composition and toward other still-repeated families only if they show the same cross-surface pattern.
+- `FieldSet::build(...)` / `FieldGroup::build(...)` / `Field::build(...)` now close the next dense form-layout seam without reopening broad helper expansion,
+- ui-gallery field `input`, field `fieldset`, and form `demo` now serve as the third evidence slice,
+- so the remaining medium-surface pressure has shifted away from alert/scroll-area/field composition and toward other still-repeated families only if they show the same cross-surface pattern.
 
 ---
 

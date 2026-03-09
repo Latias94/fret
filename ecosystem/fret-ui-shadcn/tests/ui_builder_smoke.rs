@@ -16,11 +16,12 @@ use fret_ui_shadcn::{
     CommandShortcut, ContextMenu, ContextMenuEntry, DataGridCanvas, DataGridCanvasAxis, DataTable,
     DataTableGlobalFilterInput, DataTableViewOptionItem, DataTableViewOptions, Dialog,
     DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
-    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, DropdownMenuEntry, Empty,
-    HoverCardContent, Kbd, Menubar, Popover, PopoverContent, PopoverDescription, PopoverHeader,
-    PopoverTitle, Progress, ScrollArea, Select, Sheet, SheetContent, SheetDescription, SheetFooter,
-    SheetHeader, SheetTitle, Slider, Switch, TableBody, TableCaption, TableFooter, TableHead,
-    TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
+    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, DropdownMenuEntry, Empty, Field,
+    FieldGroup, FieldLabel, FieldSet, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
+    PopoverDescription, PopoverHeader, PopoverTitle, Progress, ScrollArea, Select, Sheet,
+    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
+    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
+    TooltipContent,
 };
 use time::{Date, OffsetDateTime};
 
@@ -285,6 +286,23 @@ fn ui_builder_smoke_applies_supported_patches() {
     .build();
     let _ = ScrollArea::build::<fret_ui_app::App, _>(|cx, out: &mut Vec<AnyElement>| {
         out.push_ui(cx, ui::text("row"));
+    })
+    .ui()
+    .w_full()
+    .build();
+    let _ = FieldSet::build::<fret_ui_app::App, _>(|cx, out: &mut Vec<AnyElement>| {
+        out.push_ui(
+            cx,
+            FieldGroup::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    Field::build(|cx, out| {
+                        out.push_ui(cx, FieldLabel::new("Email"));
+                        out.push_ui(cx, ui::text("value"));
+                    }),
+                );
+            }),
+        );
     })
     .ui()
     .w_full()

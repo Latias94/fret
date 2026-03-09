@@ -730,6 +730,16 @@ Current sequencing note (as of 2026-03-09):
     - `apps/fret-examples/src/async_playground_demo.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs`
 
+- [x] AFA-postv1-028 Close one medium-surface builder seam in the `Field` family.
+  - Goal: reduce repeated form/field composition landings (`FieldSet` / `FieldGroup` / `Field`) without widening the helper surface beyond one already-dense family.
+  - Status (as of 2026-03-09): `FieldSet::build(...)`, `FieldGroup::build(...)`, and `Field::build(...)` now keep field-family children on the builder path, and the first real surfaces (`ui-gallery` field `input`, field `fieldset`, and form `demo`) have migrated without changing runtime ownership boundaries.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/field.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/field/input.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/field/fieldset.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/form/demo.rs`
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.
