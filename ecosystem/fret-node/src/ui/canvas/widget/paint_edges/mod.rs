@@ -5,6 +5,7 @@ mod labels;
 mod main;
 mod markers;
 mod overlays;
+mod pass;
 mod prepare;
 mod preview;
 mod support;

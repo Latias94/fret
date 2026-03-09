@@ -1,6 +1,7 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
+use super::pass::EdgePaintBudgets;
 use super::prepare::PreparedEdgePaintBatches;
 use super::preview::push_drop_marker;
 
@@ -33,105 +34,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             insert_node_drag_marker,
         } = self.prepare_edge_paint_batches(snapshot, render, &custom_paths, zoom);
 
-        let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let mut marker_budget = WorkBudget::new(marker_budget_limit);
-        let mut marker_budget_skipped: u32 = 0;
-        let mut wire_budget = WorkBudget::new(u32::MAX / 2);
-        let outline_budget_limit =
-            Self::EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let mut outline_budget = WorkBudget::new(outline_budget_limit);
-        let mut outline_budget_skipped: u32 = 0;
-        let highlight_budget_limit =
-            Self::EDGE_WIRE_HIGHLIGHT_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-        let mut highlight_budget = WorkBudget::new(highlight_budget_limit);
-        let mut highlight_budget_skipped: u32 = 0;
-
-        for edge in edges_normal
-            .into_iter()
-            .chain(edges_selected)
-            .chain(edges_hovered)
-        {
-            let custom = custom_paths.get(&edge.id);
-            let chrome = self.prepare_edge_chrome(
-                cx,
-                custom,
-                interaction_hint,
-                edge.selected,
-                edge.hovered,
-                edge.id,
-                edge.from,
-                edge.to,
-                edge.route,
-                edge.color,
-                edge.width,
-                edge.dash,
-                zoom,
-                &mut outline_budget,
-                &mut outline_budget_skipped,
-                &mut highlight_budget,
-                &mut highlight_budget_skipped,
-            );
-
-            let (_stop, skipped) = if let Some(custom) = custom {
-                let fallback = Point::new(
-                    Px(edge.to.x.0 - edge.from.x.0),
-                    Px(edge.to.y.0 - edge.from.y.0),
-                );
-                let (t0, t1) =
-                    path_start_end_tangents(&custom.commands).unwrap_or((fallback, fallback));
-                self.push_edge_custom_wire_and_markers_budgeted(
-                    cx.scene,
-                    cx.services,
-                    custom.cache_key,
-                    &custom.commands,
-                    t0,
-                    t1,
-                    zoom,
-                    cx.scale_factor,
-                    edge.from,
-                    edge.to,
-                    edge.paint,
-                    edge.color,
-                    edge.width,
-                    edge.dash,
-                    chrome.highlight,
-                    edge.start_marker.as_ref(),
-                    edge.end_marker.as_ref(),
-                    &mut wire_budget,
-                    &mut marker_budget,
-                    false,
-                )
-            } else {
-                self.push_edge_wire_and_markers_budgeted(
-                    cx.scene,
-                    cx.services,
-                    zoom,
-                    cx.scale_factor,
-                    edge.route,
-                    edge.from,
-                    edge.to,
-                    edge.paint,
-                    edge.color,
-                    edge.width,
-                    edge.dash,
-                    chrome.highlight,
-                    edge.start_marker.as_ref(),
-                    edge.end_marker.as_ref(),
-                    &mut wire_budget,
-                    &mut marker_budget,
-                    false,
-                )
-            };
-            marker_budget_skipped = marker_budget_skipped.saturating_add(skipped);
-
-            if chrome.glow_pushed {
-                cx.scene.push(SceneOp::PopEffect);
-            }
-        }
-
-        super::super::redraw_request::request_paint_redraw_if(cx, marker_budget_skipped > 0);
-        super::super::redraw_request::request_paint_redraw_if(cx, outline_budget_skipped > 0);
-        super::super::redraw_request::request_paint_redraw_if(cx, highlight_budget_skipped > 0);
+        let mut budgets = EdgePaintBudgets::new(self, view_interacting);
+        self.paint_edge_batches(
+            cx,
+            edges_normal
+                .into_iter()
+                .chain(edges_selected)
+                .chain(edges_hovered),
+            &custom_paths,
+            interaction_hint,
+            zoom,
+            &mut budgets,
+        );
+        Self::request_edge_budget_redraws(cx, &budgets);
 
         if let Some((pos, color)) = edge_insert_marker {
             push_drop_marker(cx.scene, pos, color, zoom);
@@ -150,9 +65,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
         Self::record_edge_marker_budget_stat(
             cx,
-            marker_budget_limit,
-            marker_budget.used(),
-            marker_budget_skipped,
+            budgets.marker_budget_limit,
+            budgets.marker_budget.used(),
+            budgets.marker_budget_skipped,
         );
 
         self.paint_wire_drag_preview(
@@ -161,8 +76,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             geom,
             zoom,
             interaction_hint,
-            &mut outline_budget,
-            &mut outline_budget_skipped,
+            &mut budgets.outline_budget,
+            &mut budgets.outline_budget_skipped,
         );
     }
 }

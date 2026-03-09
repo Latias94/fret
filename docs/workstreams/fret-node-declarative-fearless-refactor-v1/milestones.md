@@ -595,6 +595,10 @@ real editors.
   publication through the private `canvas/widget/paint_edges/labels.rs` seam, so the root
   edge-paint surface stops re-embedding label tail orchestration and budget registry publication
   inline.
+- `paint_edges/main.rs` now also routes the main edge wire/marker paint pass plus paint-budget
+  bookkeeping through the private `canvas/widget/paint_edges/pass.rs` seam, so the root
+  edge-paint surface stops re-embedding the full edge iteration loop and redraw-budget
+  bookkeeping inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

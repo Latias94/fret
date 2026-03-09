@@ -1003,6 +1003,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     budget stats publication through the private `canvas/widget/paint_edges/labels.rs` seam, so
     the root edge-paint surface no longer re-embeds label tail orchestration and budget registry
     publication inline.
+  - Progress: `paint_edges/main.rs` now also routes the main edge wire/marker paint pass plus
+    paint-budget bookkeeping through the private `canvas/widget/paint_edges/pass.rs` seam, so the
+    root edge-paint surface no longer re-embeds the full edge iteration loop and redraw-budget
+    bookkeeping inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
