@@ -159,9 +159,10 @@ The next post-v1 pass should stay disciplined:
    - keep `hello` → `simple-todo` → `todo` as the obvious onboarding ladder,
    - make default/comparison/advanced surfaces explicit in docs and templates,
    - avoid promoting more helpers until that teaching surface is boring and consistent.
-2. **Re-evaluate keyed-list / payload-row handler ergonomics second**
-   - only if keyed-list evidence still looks materially noisier than the root-handler path after the product pass,
-   - keep action identity and root handler table semantics visible.
+2. **Keep keyed-list / payload-row ergonomics in maintenance mode second**
+   - the current narrow helper is enough for the existing todo-like evidence slice,
+   - only reopen this track if another medium surface still looks materially noisier than the
+     root-handler path after the product pass.
 3. **Keep macros third and optional**
    - no new macro work is required for v2 success,
    - only revisit narrow composition macros if builder-first cleanup still leaves repeated structural noise.
@@ -171,7 +172,8 @@ The next post-v1 pass should stay disciplined:
 These remain valid, but they are not the default golden path:
 
 - raw `cx.on_action(...)`
-- keyed-list / payload-row-specific handler sugar
+- broader keyed-list / payload-row-specific handler sugar beyond
+  `on_payload_action_notify_local_update_if::<...>(...)`
 - another default transaction helper beyond `on_action_notify_models::<A>(...)`
 - macros beyond existing minimal helpers
 - `DataTable` as a default first-contact teaching surface; until a curated recipe exists, treat it as

@@ -66,7 +66,7 @@ Builder-seam inventory update (as of 2026-03-09):
 | P1 | Invalidation ergonomics (`AFA-postv1-004`) | This remains important because it defines the default rerender rule, even though the next move now looks more like policy/productization than API expansion. | Keep the policy explicit: tracked writes rerender by default, `notify()` stays an escape hatch, and only reopen API work if a new real medium surface contradicts that rule. | Keep `notify()` as a low-level escape hatch; avoid adding another generic helper unless evidence changes. |
 | P1 | Local-state ergonomics (`AFA-postv1-001`) | `LocalState<T>` is viable, but still model-backed and still visibly different from the north-star plain-Rust feel. | Evidence must come from real medium surfaces, not from synthetic micro helpers. | Improve the local-state boundary only if it reduces real coordination noise without weakening runtime semantics. |
 | P2 | Builder-first last-mile seams (`AFA-postv1-002`) | Broad cleanup already landed; the remaining value is only in cross-cutting host/root seams that still force eager landing. | The seam must affect multiple real surfaces or block the default path directly. | Finish a small number of high-leverage root/container seams; stop leaf-by-leaf churn. |
-| P3 | Keyed-list / payload-row handler ergonomics (`AFA-postv1-003`) | This may reduce keyed-list root-handler noise, but only after the default path is already stable. | Keyed-list evidence still looks materially too noisy after productization + invalidation cleanup; command/query/form surfaces do not count. | Add only a narrow keyed-list/payload-row placement aid; keep action identity and root handler semantics visible. |
+| P3 | Keyed-list / payload-row handler ergonomics (`AFA-postv1-003`, maintenance mode) | A deliberately narrow helper already landed and current todo-like surfaces adopted it, so this is no longer an active expansion track. | Reopen only if a new medium surface shows the same row-local pressure beyond the existing todo-like evidence; command/query/form surfaces still do not count. | Keep the current helper as-is; do not widen keyed-list sugar without new evidence. |
 | P4 | Hard-delete/quarantine follow-through | Important for facade hygiene, but not the next authoring-density win. | Deprecation windows and product-policy decisions must mature first. | Continue policy/gate work; do not let cleanup displace the higher-value authoring surfaces above. |
 
 ---
@@ -77,6 +77,7 @@ Builder-seam inventory update (as of 2026-03-09):
 | --- | --- | --- |
 | `DataTable` helper/macro expansion | The audit already shows the main pressure is business-table recipe assembly, not primitive table builders. The repo now has a curated default recipe plus a gallery slice and smoke gate. | Revisit only if the curated recipe still looks materially too noisy in multiple app-grade examples. |
 | Broad macro design (`AFA-postv1-005`) | Macros would freeze a still-settling mental model too early. They are optional polish, not a v2 prerequisite. | Revisit only after productization + invalidation + keyed-list / payload-row ergonomics still leave repeated structural boilerplate. |
+| Broader keyed-list / payload-row sugar beyond `on_payload_action_notify_local_update_if::<...>(...)` | The current evidence slice is already covered by the narrow helper, and the remaining visible root handler tables are intentional for action identity / ownership clarity. | Revisit only if a second non-todo medium surface shows the same row-local handler-placement noise. |
 | Compat-runner removal | The current policy already says it is an intentional advanced interop seam for now. | Revisit only if the caller families shrink or a clear quarantine boundary exists. |
 | `use_state` hard delete | Current policy keeps it as an explicit raw-model seam rather than a default local-state story. | Revisit only after the repo decides whether that explicit seam should remain permanent. |
 | More `DataTable`-specific surface tweaks in this workstream | That would blur the line between business-table productization and the main action-first/view-runtime surface. | Track separately if a future business-table workstream is needed. |
@@ -126,12 +127,13 @@ Recommended deliverables:
 - treat families with existing builders but low migration (for example `Card`) as adoption work,
   not as automatic new-surface candidates.
 
-### 4. Re-evaluate keyed-list / payload-row handler ergonomics
+### 4. Re-open keyed-list / payload-row handler ergonomics only with new evidence
 
 Recommended deliverables:
 
-- only after steps 1-3,
-- only if keyed-list / payload-row surfaces still look materially worse than the root-handler story.
+- none by default,
+- reopen only after steps 1-3 and only if a new medium surface still looks materially worse than
+  the current root-handler story even with the existing narrow helper.
 
 ### 5. Leave macros and `DataTable` expansion out of the critical path
 

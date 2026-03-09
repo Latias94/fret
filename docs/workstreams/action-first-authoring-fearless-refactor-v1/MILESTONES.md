@@ -58,8 +58,9 @@ Adoption note (as of 2026-03-07):
   not a Bevy-style single-package root `examples/` rewrite and not an expansion of `ecosystem/fret`
   into the repo?s canonical example host.
 - Active post-v1 order: productize the current default path first (onboarding ladder +
-  default/comparison/advanced taxonomy), then revisit keyed-list / payload-row handler ergonomics,
-  and only then a decision on macros.
+  default/comparison/advanced taxonomy), then continue invalidation/local-state guidance and only
+  the highest-leverage builder-first seams, while keeping keyed-list / payload-row handler
+  ergonomics in maintenance mode unless new evidence appears; macros stay last.
 - Active shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now narrows the next truly worthwhile
   surfaces to default-path productization first, invalidation/local-state ergonomics second,
   builder-first last-mile seams third, and keyed-list / payload-row handler ergonomics only after
@@ -81,6 +82,11 @@ Adoption note (as of 2026-03-07):
   deliberately narrow `ViewCx::on_payload_action_notify_local_update_if::<A, T>(...)` helper, and
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`,
   plus the generated simple-todo scaffold now use it for payload-row local collection mutations.
+- Keyed-list follow-up decision (as of 2026-03-09): with the helper adopted on cookbook/app/scaffold
+  todo-like surfaces and `INVALIDATION_LOCAL_STATE_REVIEW.md` ruling out command/query/form
+  ownership boundaries as valid evidence for broader sugar, `AFA-postv1-003` is now treated as
+  closed for this pass. Reopen only if another medium surface shows the same row-local
+  handler-placement pressure.
 - Business-table note: `DataTable` is now explicitly treated as a separate post-v1 audit/problem
   space. It should not keep the primitive `Table` builder-first cleanup milestone artificially
   open.
