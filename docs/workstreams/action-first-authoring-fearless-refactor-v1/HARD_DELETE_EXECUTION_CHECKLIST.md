@@ -51,7 +51,7 @@ Non-scope:
 | `App::ui*` closure-root entry | Deprecated in code; no in-tree example/demo callers remain; minimum deprecation window is now defined | Low once docs/tests stay locked | Medium |
 | `run_native_with_compat_driver(...)` | Still public; now explicitly classified as advanced low-level interop | Low for default path, medium for facade size | Deferred |
 | `use_state::<T>()` alias | Still user-visible; now classified as explicit raw-model hook, not default local state | Low for default path, medium for facade clarity | Deferred |
-| `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, but command-shaped usage still remains in some surfaces | Medium | Low |
+| `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, and the curated internal/app-facing menu residue now also prefers `action(...)`; remaining command-shaped usage is mostly intentional advanced/internal surface area | Medium | Low |
 
 Interpretation:
 

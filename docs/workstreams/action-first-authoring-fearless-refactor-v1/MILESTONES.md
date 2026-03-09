@@ -209,6 +209,7 @@ Post-v1 direction (recommended):
   - Menu-helper follow-up (as of 2026-03-09): `text_edit_context_menu.rs`, workspace tab-strip context menus, and the focused menubar/context-menu keyboard-dismiss tests now also prefer `action(...)`, reducing the remaining command-shaped residue to narrower advanced/internal surfaces plus future gating work.
   - Dropdown-menu follow-up (as of 2026-03-09): `DropdownMenu*` now also exposes action-first aliases in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, the primary dropdown-menu snippets (`basic`, `demo`) plus overlay preview menu surfaces now prefer `action(...)`, and the remaining command-shaped dropdown residue is narrower and mostly internal/advanced.
   - Menu gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now protects the primary ui-gallery dropdown-menu / context-menu / menubar snippets plus overlay preview menu surfaces from drifting back to `.on_select(...)`, and `tools/pre_release.py` runs that gate with the rest of the teaching-surface policy suite.
+  - Curated internal menu follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` now uses `DropdownMenuItem::action(...)` / `trailing_action(...)`, `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now lowers stable unit action ids through `DropdownMenuItem::action(...)`, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit post-v1 residue slice from drifting back to `.on_select(...)`.
 
 ---
 

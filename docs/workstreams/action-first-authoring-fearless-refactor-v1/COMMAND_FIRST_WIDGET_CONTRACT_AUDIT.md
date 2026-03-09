@@ -280,6 +280,13 @@ Progress update (as of 2026-03-09, follow-up):
   - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`
 - `tools/gate_menu_action_default_surfaces.py` now covers dropdown-menu snippets in addition to
   context-menu / menubar snippets, plus the two overlay preview teaching surfaces above.
+- A final curated-internal follow-up also moved the remaining obvious app/internal dropdown menu
+  residue onto the same spelling:
+  - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+  - `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs`
+- `tools/gate_menu_action_curated_internal_surfaces.py` now protects those two intentionally
+  chosen internal/app-facing surfaces from drifting back to `.on_select(...)` /
+  `trailing_on_select(...)`.
 
 Previous phase-2 progress:
 

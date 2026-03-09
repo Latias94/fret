@@ -53,9 +53,11 @@ Current prioritization (2026-03-09):
   deprecation window and final delete-vs-quarantine timing.
 - `run_native_with_compat_driver(...)` and `use_state::<T>()` are both currently better framed as
   intentional advanced/non-default seams than as near-term hard-delete targets.
-- The main remaining **implementation-scoped** cleanup pressure is now the command-first widget
-  family, especially the remaining menu/public-builder surfaces audited in
-  `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`.
+- The main remaining **implementation-scoped** cleanup pressure is still the command-first widget
+  family, but the obvious app-facing/internal residue is now much smaller: the curated post-v1
+  follow-up aligned workspace tab-strip overflow and GenUI shadcn overlay menu rows to
+  `action(...)`, leaving mostly intentional advanced/internal surfaces after the public builder pass
+  audited in `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`.
 
 ## 1) App-entry closure surface still exists as a supported public path
 

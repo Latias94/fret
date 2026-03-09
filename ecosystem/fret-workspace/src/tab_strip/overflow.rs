@@ -95,12 +95,12 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
                         });
                     })
                 })
-                .on_select(tab.command.clone());
+                .action(tab.command.clone());
             if let Some(id) = test_id {
                 item = item.test_id(id);
             }
             if let Some(close_cmd) = tab.close_command.clone() {
-                item = item.trailing_on_select(close_cmd);
+                item = item.trailing_action(close_cmd);
             }
             if let Some(close_slot) = close_slot {
                 item = item.trailing(close_slot);
