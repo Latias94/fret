@@ -937,6 +937,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/context_menu/ui.rs` seam, so `command_ui.rs`, `searcher_ui.rs`,
     `context_menu/activate.rs`, and conversion-picker handoff in `wire_drag/commit/new_wire.rs`
     no longer re-embed the same context-menu slot clearing inline.
+  - Progress: context-menu slot take/restore now also routes through the private
+    `canvas/widget/context_menu/ui.rs` seam, so `context_menu/opening.rs`,
+    `context_menu/selection_activation.rs`, and `context_menu/key_navigation.rs` no longer
+    re-embed the same menu-slot mutation inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

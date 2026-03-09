@@ -74,9 +74,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         candidates: Vec<InsertNodeCandidate>,
         clear_hover_edge: bool,
     ) -> bool {
-        self.interaction.context_menu = Some(build_context_menu_state(
+        let menu = build_context_menu_state(
             self, position, cx.bounds, snapshot, target, items, candidates,
-        ));
+        );
+        super::restore_context_menu(&mut self.interaction, menu);
         if clear_hover_edge {
             self.interaction.hover_edge = None;
         }

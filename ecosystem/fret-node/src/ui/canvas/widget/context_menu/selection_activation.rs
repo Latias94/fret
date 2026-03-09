@@ -55,7 +55,7 @@ pub(super) fn handle_context_menu_pointer_down_event<H: UiHost, M: NodeGraphCanv
     button: MouseButton,
     zoom: f32,
 ) -> bool {
-    let Some(menu) = canvas.interaction.context_menu.take() else {
+    let Some(menu) = super::take_context_menu(&mut canvas.interaction) else {
         return false;
     };
 

@@ -20,6 +20,19 @@ pub(super) fn clear_context_menu(
     ui::clear_context_menu(interaction)
 }
 
+pub(super) fn take_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> Option<ContextMenuState> {
+    ui::take_context_menu(interaction)
+}
+
+pub(super) fn restore_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+    menu: ContextMenuState,
+) {
+    ui::restore_context_menu(interaction, menu);
+}
+
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,

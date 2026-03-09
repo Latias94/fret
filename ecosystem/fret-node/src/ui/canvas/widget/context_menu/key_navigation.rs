@@ -95,7 +95,7 @@ pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMi
     cx: &mut EventCx<'_, H>,
     key: fret_core::KeyCode,
 ) -> bool {
-    let Some(mut menu) = canvas.interaction.context_menu.take() else {
+    let Some(mut menu) = super::take_context_menu(&mut canvas.interaction) else {
         return false;
     };
 
@@ -127,7 +127,7 @@ pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMi
         return ui::restore_context_menu_event(canvas, cx, menu);
     }
 
-    canvas.interaction.context_menu = Some(menu);
+    super::restore_context_menu(&mut canvas.interaction, menu);
     false
 }
 

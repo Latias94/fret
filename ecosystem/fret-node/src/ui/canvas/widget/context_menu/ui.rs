@@ -6,6 +6,12 @@ pub(super) fn clear_context_menu(
     interaction.context_menu.take().is_some()
 }
 
+pub(super) fn take_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> Option<ContextMenuState> {
+    interaction.context_menu.take()
+}
+
 pub(super) fn restore_context_menu(
     interaction: &mut crate::ui::canvas::state::InteractionState,
     menu: ContextMenuState,

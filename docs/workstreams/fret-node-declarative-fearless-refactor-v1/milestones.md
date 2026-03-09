@@ -529,6 +529,10 @@ real editors.
   `canvas/widget/context_menu/ui.rs` seam, so `command_ui.rs`, `searcher_ui.rs`,
   `context_menu/activate.rs`, and conversion-picker handoff in `wire_drag/commit/new_wire.rs`
   stop re-embedding the same context-menu slot clearing inline while keeping the same behavior.
+- context-menu slot take/restore now also routes through the private
+  `canvas/widget/context_menu/ui.rs` seam, so `context_menu/opening.rs`,
+  `context_menu/selection_activation.rs`, and `context_menu/key_navigation.rs` stop
+  re-embedding the same menu-slot mutation inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
