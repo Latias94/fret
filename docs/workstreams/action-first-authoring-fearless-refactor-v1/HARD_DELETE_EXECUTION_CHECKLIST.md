@@ -9,6 +9,7 @@ Related:
 - Status matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - App-entry policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
 - App-entry inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
+- App-entry release evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
@@ -113,6 +114,7 @@ Checklist:
 | Public methods deprecated | Done | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` |
 | Default docs/test gate added | Done | `authoring_surface_policy_tests` |
 | Downstream deprecation window defined | Done | start 2026-03-09; earliest removal 2026-06-09; require one published deprecated release; see `APP_ENTRY_POLICY_DECISION_DRAFT.md` |
+| Published-release evidence tracker exists | Done | `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` records what proof is still missing before removal/quarantine |
 | Final compat-vs-delete decision | Open | product-surface decision, not just cleanup |
 | Final removal/quarantine patch | Open | only after the two items above |
 
@@ -130,6 +132,8 @@ Recommended next action:
 
 - keep the docs/test gate stable and wait until the first published deprecated release has shipped
   before proposing the removal/quarantine patch.
+- use `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` to record the released version/date and
+  release-note anchor once that external publish event happens.
 - once the window and release preconditions are satisfied, use
   `APP_ENTRY_REMOVAL_PLAYBOOK.md` to execute the final delete-vs-quarantine patch.
 

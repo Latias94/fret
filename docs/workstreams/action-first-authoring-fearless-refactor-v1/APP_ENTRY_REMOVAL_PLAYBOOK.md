@@ -7,6 +7,7 @@ Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 
@@ -35,6 +36,9 @@ Do **not** execute this playbook until all of the following are true:
 4. default docs/tests still point only to `view::<V>()` / `view_with_hooks::<V>(...)`.
 
 If any precondition fails, stop.
+
+Use `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` as the release-proof checklist rather than
+reconstructing that evidence ad hoc during the final patch review.
 
 ---
 

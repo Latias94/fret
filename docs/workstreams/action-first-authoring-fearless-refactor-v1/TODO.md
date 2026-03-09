@@ -12,6 +12,7 @@ Related:
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
+- App-entry release evidence tracker: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -584,6 +585,11 @@ Current sequencing note (as of 2026-03-09):
   the repo's current best execution forecast: `App::ui*` is the only lane that presently looks
   truly headed toward removal, while compat runner, `use_state`, and command-first retained seams
   are all currently expected to stay unless a later explicit product decision reopens them.
+- app-entry release-evidence note (as of 2026-03-09):
+  `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` now records the remaining external blocker for
+  `App::ui*`: the repo has source-level deprecation and a fixed minimum window, but it still needs
+  one published deprecated `fret` release plus the calendar checkpoint before removal/quarantine is
+  executable.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -699,6 +705,11 @@ Current sequencing note (as of 2026-03-09):
   - Goal: stop treating app-entry removal timing as an abstract future decision and give downstream users a concrete minimum warning window.
   - Evidence target: the app-entry policy draft and hard-delete execution checklist both record the same deprecation start date, earliest removal date, and release condition.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now defines the window as 2026-03-09 → earliest removal 2026-06-09 plus one published deprecated release, and `HARD_DELETE_EXECUTION_CHECKLIST.md` / `HARD_DELETE_GAP_ANALYSIS.md` now consume that same rule.
+
+- [x] AFA-postv1-013d Track the release evidence needed before `App::ui*` removal/quarantine can actually execute.
+  - Goal: turn the remaining “wait for a published deprecated release” blocker into an explicit audit note instead of an implicit reminder hidden in other docs.
+  - Evidence target: one short tracker that records the fixed dates, the missing published-release proof, and what evidence must be captured when that release ships.
+  - Status (as of 2026-03-09): `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` now records that the repo has source-level deprecation plus a fixed earliest removal date, but still lacks the published-release artifact needed before `APP_ENTRY_REMOVAL_PLAYBOOK.md` can execute.
 
 - [x] AFA-postv1-014 Publish a caller inventory for `run_native_with_compat_driver(...)`.
   - Goal: replace vague “plot/interop demos still use it” language with a concrete in-tree family breakdown before deciding whether the compat runner should be kept, quarantined, or removed.

@@ -11,6 +11,7 @@ Related:
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
+- App-entry release evidence tracker: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
@@ -110,6 +111,11 @@ Adoption note (as of 2026-03-07):
   that currently looks truly headed toward removal, while compat runner, `use_state`, and
   command-first retained seams are all currently expected to stay unless a later explicit product
   decision reopens them.
+- App-entry release-evidence update (as of 2026-03-09):
+  `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` now turns the remaining app-entry release
+  blocker into an explicit checklist: source deprecation and the 2026-06-09 minimum window are
+  already recorded, but the repo still needs one published deprecated `fret` release before the
+  final delete-vs-quarantine patch is eligible.
 - Command-first retained-seam update (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
   pressure is split between permanent mechanism/catalog seams and intentionally retained
