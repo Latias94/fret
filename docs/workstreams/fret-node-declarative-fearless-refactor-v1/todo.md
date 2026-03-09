@@ -1037,6 +1037,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/cache_plan.rs` seam, so `paint_root/cached.rs` stops re-embedding
     hovered-edge resolution, derived geometry publication, static cache eligibility, tile sizing,
     cache-rect selection, and style/base-key planning inline.
+  - Progress: cached-path render tail orchestration now also routes through the private
+    `canvas/widget/paint_root/cached_pass.rs` seam, so `paint_root/cached.rs` stops re-embedding
+    the groups/edges/nodes cached pass ordering, anchor tail, overlay tail, prune tail, and clip
+    pop inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

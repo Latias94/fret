@@ -629,6 +629,10 @@ real editors.
   `canvas/widget/paint_root/cache_plan.rs` seam, so `paint_root/cached.rs` stops re-embedding
   hovered-edge resolution, derived geometry publication, static cache eligibility, tile sizing,
   cache-rect selection, and style/base-key planning inline.
+- cached-path render tail orchestration now also routes through the private
+  `canvas/widget/paint_root/cached_pass.rs` seam, so `paint_root/cached.rs` stops re-embedding the
+  groups/edges/nodes cached pass ordering, anchor tail, overlay tail, prune tail, and clip pop
+  inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
