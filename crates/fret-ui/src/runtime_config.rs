@@ -181,12 +181,13 @@ impl UiRuntimeEnvConfig {
                 .unwrap_or(2)
                 .min(60);
 
-        // Default-off: prototype flag for the scroll-extents DOM/GPUI parity workstream.
-        //
-        // When enabled, scroll layout attempts to avoid deep unbounded measurement probes by
-        // deriving extents from post-layout geometry (best-effort), with a fallback to unbounded
-        // probing when correctness requires it (e.g. at the scroll extent edge).
-        let scroll_extents_post_layout = env_is_one("FRET_UI_SCROLL_EXTENTS_POST_LAYOUT");
+        // Default-on: the post-layout extents path is the authoritative scroll-range update
+        // strategy for DOM/GPUI parity. Set to "0" to fall back to the legacy probe-first path
+        // for comparison/debugging.
+        let scroll_extents_post_layout = std::env::var("FRET_UI_SCROLL_EXTENTS_POST_LAYOUT")
+            .ok()
+            .map(|v| v != "0")
+            .unwrap_or(true);
 
         let debug_pointer_region_move_hook = env_present("FRET_DEBUG_POINTER_REGION_MOVE_HOOK");
         let debug_pointer_region_move_backtrace =

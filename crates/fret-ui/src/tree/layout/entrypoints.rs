@@ -1270,6 +1270,8 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let candidate_set: std::collections::HashSet<NodeId> = candidates.iter().copied().collect();
+        let mut scheduled_followups: std::collections::HashSet<NodeId> =
+            std::collections::HashSet::new();
 
         let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(candidates.len());
         for id in candidates {
@@ -1371,6 +1373,40 @@ impl<H: UiHost> UiTree<H> {
                 );
                 self.update_invalidation_counters(prev, next);
             }
+
+            // Contained view-cache relayouts run after the main root layout pass, so any scroll
+            // ancestor that inferred its content extent earlier in the frame can be left with a
+            // stale range. Re-run the nearest scrollable ancestor in the same frame so scroll
+            // extents track the reconciled cache-root bounds immediately.
+            let mut current = self.nodes.get(root).and_then(|n| n.parent);
+            while let Some(id) = current {
+                let can_scroll = self
+                    .nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.can_scroll_descendant_into_view());
+                if can_scroll {
+                    if scheduled_followups.insert(id) {
+                        self.schedule_barrier_relayout_with_source_and_detail(
+                            id,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::Unknown,
+                        );
+                    }
+                    break;
+                }
+                current = self.nodes.get(id).and_then(|n| n.parent);
+            }
+        }
+
+        if !scheduled_followups.is_empty() {
+            self.layout_pending_barrier_relayouts_if_needed(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                viewport_cursor,
+            );
         }
     }
 
