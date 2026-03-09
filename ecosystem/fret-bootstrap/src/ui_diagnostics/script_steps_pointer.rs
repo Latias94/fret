@@ -1192,7 +1192,11 @@ pub(super) fn handle_click_stable_step(
                 },
             };
 
-            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+            let center = if let Some(ui) = ui.as_deref() {
+                pointer_position_prefer_intended_hit(snapshot, ui, node, window_bounds)
+            } else {
+                center_of_rect_clamped_to_rect(node.bounds, window_bounds)
+            };
             if state.remaining_frames == 0 {
                 if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
