@@ -13,22 +13,24 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     let invalid = snippets::invalid::render(cx);
     let four_digits = snippets::four_digits::render(cx);
     let alphanumeric = snippets::alphanumeric::render(cx);
+    let form = snippets::form::render(cx);
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
-            "Input OTP already supports the upstream composition model via `InputOTP`, `InputOTPGroup`, `InputOTPSlot`, `InputOTPSeparator`, and `InputOtp::into_element_parts(...)`, so the main parity gap here was usage clarity rather than missing mechanism work.",
+            "Default root gap and slot chrome ownership already match upstream source; the meaningful parity work here was form association (`control_id`) and separator semantics.",
             "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
             "Pattern parity: `InputOtpPattern::DigitsAndChars` mirrors shadcn `REGEXP_ONLY_DIGITS_AND_CHARS` outcomes.",
+            "`InputOTPSeparator` now maps to separator semantics, and `FieldLabel::for_control(...)` can focus the hidden text input via `InputOtp::control_id(...)`.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input OTP docs order: Demo, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, RTL.",
+            "Preview follows shadcn Input OTP docs order: Demo, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -63,6 +65,11 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             DocSection::new("Alphanumeric", alphanumeric)
                 .description("Two groups separated by a minus icon, accepting letters and digits.")
                 .code_rust_from_file_region(snippets::alphanumeric::SOURCE, "example"),
+            DocSection::new("Form", form)
+                .description(
+                    "Card + field composition aligned with the upstream verification form example.",
+                )
+                .code_rust_from_file_region(snippets::form::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Same OTP surface under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),

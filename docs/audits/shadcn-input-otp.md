@@ -1,70 +1,52 @@
-# shadcn/ui v4 Audit - Input OTP
+# shadcn Input OTP audit (Fret)
 
-## Upstream references (non-normative)
-
-This document references optional local checkouts under `repo-ref/` for convenience.
-Upstream sources:
-
-- shadcn/ui: https://github.com/shadcn-ui/ui
-- input-otp (upstream engine): https://github.com/guilhermerodz/input-otp
-
-See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+This audit compares Fret's `ecosystem/fret-ui-shadcn/src/input_otp.rs` and the UI Gallery page
+against shadcn/ui v4 `input-otp` composition and docs in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/radix/input-otp.mdx`
-- shadcn examples (New York v4):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-otp-demo.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-otp-pattern.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-otp-separator.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-otp-controlled.tsx`
+- Base docs: `repo-ref/ui/apps/v4/content/docs/components/base/input-otp.mdx`
+- Radix docs: `repo-ref/ui/apps/v4/content/docs/components/radix/input-otp.mdx`
+- Registry implementation (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-otp.tsx`
+- Base form example: `repo-ref/ui/apps/v4/examples/base/input-otp-form.tsx`
 
-## Fret implementation anchors
+## Fret implementation
 
-- Component code: `ecosystem/fret-ui-shadcn/src/input_otp.rs`
+- Component: `ecosystem/fret-ui-shadcn/src/input_otp.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/input_otp.rs`
-- Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/input_otp/usage.rs`
+- Gallery snippets: `apps/fret-ui-gallery/src/ui/snippets/input_otp/`
 
-## Audit checklist
+## Findings
 
-### Authoring surface
-
-- Pass: `InputOtp::new(model)` covers the compact recipe path for the common OTP use case.
-- Pass: `InputOtp::into_element_parts(...)` plus `InputOTPGroup`, `InputOTPSlot`, and
-  `InputOTPSeparator` already expose the upstream composition model for copy/paste parity with shadcn docs.
-- Pass: `length`, `pattern`, `group_size`, `aria_invalid`, `disabled`, and slot/container tuning APIs cover
-  the important shadcn recipe outcomes.
-- Note: Because the recipe API and parts API are both present, Fret does not need a separate generic
-  `compose()` builder here.
-
-### Composition model (single hidden input + visual slots)
-
-- Pass: Visual slots are authored as a layout-only facade over a single input model.
-- Pass: Active slot is reflected via semantics `selected=true` on the active slot for diagnostics gating.
-- Pass: Separators are rendered between groups with a shadcn-aligned minus icon, including explicit
-  group/separator authoring via `into_element_parts(...)`.
-
-### Invalid state (shadcn: `aria-invalid`)
-
-The shadcn docs describe using `aria-invalid` on slots to show an error state.
-In Fret, the equivalent outcome is modeled as a recipe-level toggle:
-
-- Pass: `InputOtp::aria_invalid(true)` applies destructive border chrome to all slots.
-- Pass: Focus ring uses destructive-tinted ring colors when invalid.
-
-### Disabled state
-
-- Pass: `InputOtp::disabled(true)` disables focus/typing and matches the `opacity-50` disabled outcome.
-
-## Conclusion
-
-- Result: This component does not currently point to a missing mechanism-layer gap.
-- Result: The main missing piece was gallery/docs alignment with the upstream `Usage` composition example.
-- Result: Composable children/parts authoring is already supported; follow-up work should focus on
-  richer form examples or behavior gates only if a concrete parity regression appears.
+- Pass: Default-style ownership already matched upstream source.
+  - Root inline layout (`flex items-center gap-2`) remains recipe-owned in `InputOtp`.
+  - Slot size/chrome (`h-9 w-9`, border merge, `shadow-xs`, active ring) remains recipe-owned.
+  - Caller overrides still stay caller-owned through `refine_layout(...)`, `slot_size_px(...)`,
+    `slot_text_px(...)`, and related builder surfaces.
+- Pass: Upstream composition model is already available in Fret through `InputOTP`,
+  `InputOTPGroup`, `InputOTPSlot`, `InputOTPSeparator`, and `InputOtp::into_element_parts(...)`.
+- Fixed: `InputOTPSeparator` now emits `SemanticsRole::Separator`, matching upstream
+  `role="separator"` instead of remaining a purely visual icon.
+- Fixed: `InputOtp` now supports form association parity via `control_id(...)`,
+  `labelled_by_element(...)`, `a11y_label(...)`, and `aria_required(...)`.
+  - `FieldLabel::for_control(...)` / `FieldDescription::for_control(...)` can now attach
+    `labelled-by` / `described-by` semantics to the hidden text input.
+  - Label click forwarding uses the same control-registry contract as `Input` / `Textarea`.
+- Fixed: The UI Gallery page now includes the upstream `Form` example, so the example order matches
+  shadcn docs more closely: Demo, Usage, Pattern, Separator, Disabled, Controlled, Invalid,
+  Four Digits, Alphanumeric, Form, RTL.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-shadcn input_otp_aria_invalid_uses_destructive_border_color`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json --launch -- cargo run -p fret-ui-gallery`
-- `cargo check -p fret-ui-gallery --message-format short`
+- Focused component gates:
+  - `cargo nextest run -p fret-ui-shadcn --lib input_otp_aria_invalid_sets_semantics_invalid input_otp_control_id_uses_registry_labelled_by_and_described_by_elements input_otp_parts_infer_length_and_respect_explicit_separators --status-level fail`
+- Gallery compile gate:
+  - `cargo check -p fret-ui-gallery --message-format short`
+
+## Conclusion
+
+- Result: `InputOtp` did not need a default-style ownership rewrite.
+- Result: The real parity gaps were form association and separator semantics, not slot chrome.
+- Result: Gallery docs parity improves materially once the upstream verification-form example is
+  present, because it exercises the now-supported `control_id(...)` path instead of only isolated
+  OTP demos.
