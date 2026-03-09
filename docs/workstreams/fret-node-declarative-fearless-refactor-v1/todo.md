@@ -886,6 +886,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `controller_queries.rs`, `controller_viewport.rs`, and `controller_store_sync.rs` seams, so
     the app-facing `NodeGraphController` surface no longer keeps the full query + viewport +
     queue/store orchestration implementation embedded inline.
+  - Progress: `ui/canvas/widget.rs` now routes the retained canvas surface impl through the private
+    `canvas/widget/widget_surface.rs` seam, so the root widget module now mainly holds the module
+    map and shared type definitions while constructor/config/style-sync/cull helper orchestration
+    lives beside the rest of the retained widget internals.
 
 ## M5 - Compatibility retained convergence
 
