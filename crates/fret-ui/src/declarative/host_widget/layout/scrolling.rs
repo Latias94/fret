@@ -1920,14 +1920,16 @@ impl ElementHostWidget {
             // If we cannot confidently observe overflow in post-layout geometry (budget hit), schedule a
             // measured unbounded probe on the next frame. This keeps the authoritative path robust
             // when bounded observation runs out of budget on wrapper-heavy trees.
-            if maybe_schedule_extent_probe_after_observation_budget_hit(
-                &mut *cx.app,
-                cx.tree,
-                window,
-                cx.node,
-                self.element,
-                observation,
-            ) {
+            if !probe_unbounded_for_measure
+                && maybe_schedule_extent_probe_after_observation_budget_hit(
+                    &mut *cx.app,
+                    cx.tree,
+                    window,
+                    cx.node,
+                    self.element,
+                    observation,
+                )
+            {
                 cx.request_redraw();
             }
 
