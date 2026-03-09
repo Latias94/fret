@@ -492,6 +492,10 @@ real editors.
   through the private `canvas/widget/press_session.rs` seam, so retained widget hit handlers stop
   re-embedding the same pending-drag / marquee / edge-insert reset blocks inline while keeping the
   same behavior.
+- pending pointer-up release finish helpers and node-drag release residual cleanup now also route
+  through the private `canvas/widget/pointer_up_session.rs` seam, so pointer-up handlers stop
+  re-embedding the same pending-slot finish and snap-guide cleanup blocks inline while keeping the
+  same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
@@ -1213,6 +1217,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/focus_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/press_session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`

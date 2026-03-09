@@ -9,24 +9,20 @@ pub(super) fn handle_pending_group_drag_release<H: UiHost, M: NodeGraphCanvasMid
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    if canvas.interaction.pending_group_drag.take().is_none() {
-        return false;
-    }
-
-    super::pointer_up_finish::finish_pointer_up(cx);
-    true
+    super::pointer_up_session::finish_pending_release(
+        &mut canvas.interaction.pending_group_drag,
+        cx,
+    )
 }
 
 pub(super) fn handle_pending_group_resize_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    if canvas.interaction.pending_group_resize.take().is_none() {
-        return false;
-    }
-
-    super::pointer_up_finish::finish_pointer_up(cx);
-    true
+    super::pointer_up_session::finish_pending_release(
+        &mut canvas.interaction.pending_group_resize,
+        cx,
+    )
 }
 
 pub(super) fn handle_pending_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -40,8 +36,7 @@ pub(super) fn handle_pending_node_drag_release<H: UiHost, M: NodeGraphCanvasMidd
         return false;
     };
 
-    canvas.interaction.pending_node_resize = None;
-    canvas.interaction.snap_guides = None;
+    super::pointer_up_session::clear_node_drag_release_state(&mut canvas.interaction);
 
     if pending.select_action != PendingNodeSelectAction::None {
         let dx = position.x.0 - pending.start_pos.x.0;
@@ -79,12 +74,10 @@ pub(super) fn handle_pending_node_resize_release<H: UiHost, M: NodeGraphCanvasMi
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    if canvas.interaction.pending_node_resize.take().is_none() {
-        return false;
-    }
-
-    super::pointer_up_finish::finish_pointer_up(cx);
-    true
+    super::pointer_up_session::finish_pending_release(
+        &mut canvas.interaction.pending_node_resize,
+        cx,
+    )
 }
 
 pub(super) fn handle_pending_wire_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(

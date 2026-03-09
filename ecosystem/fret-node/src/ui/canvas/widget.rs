@@ -195,6 +195,7 @@ mod pointer_move_pointer_state;
 mod pointer_move_release;
 mod pointer_move_release_left;
 mod pointer_move_release_pan;
+mod pointer_up_session;
 mod pointer_wheel_motion;
 mod pointer_wheel_pan;
 mod pointer_wheel_viewport;

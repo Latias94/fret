@@ -46,6 +46,6 @@ fn finish_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) {
     canvas.emit_node_drag_end(drag.primary, &drag.node_ids, drag_outcome);
     canvas.interaction.pending_node_drag = None;
-    canvas.interaction.snap_guides = None;
+    super::pointer_up_session::clear_node_drag_release_state(&mut canvas.interaction);
     finish_pointer_up(cx);
 }
