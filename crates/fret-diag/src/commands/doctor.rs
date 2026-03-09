@@ -812,7 +812,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             })
         });
 
-    let capabilities_path = crate::resolve_filesystem_capabilities_path(bundle_dir);
+    let capabilities_source = crate::resolve_filesystem_capabilities_source(bundle_dir);
+    let capabilities_path = capabilities_source.source_path().map(Path::to_path_buf);
     let capabilities = capabilities_path
         .as_deref()
         .and_then(crate::read_filesystem_capabilities_payload)

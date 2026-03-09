@@ -3854,16 +3854,99 @@ fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
     normalize_filesystem_capabilities(&parsed)
 }
 
-pub(crate) fn read_filesystem_capabilities_with_source(
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum CapabilitySourceKind {
+    Filesystem,
+    TransportSession,
+    Inline,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct CapabilitySource {
+    kind: CapabilitySourceKind,
+    path: Option<PathBuf>,
+    label: Option<String>,
+    transport: Option<String>,
+    session_id: Option<String>,
+}
+
+impl CapabilitySource {
+    pub(crate) fn filesystem(path: Option<&Path>) -> Self {
+        Self {
+            kind: CapabilitySourceKind::Filesystem,
+            path: path.map(Path::to_path_buf),
+            label: None,
+            transport: Some("filesystem".to_string()),
+            session_id: None,
+        }
+    }
+
+    pub(crate) fn transport_session(transport: &str, session_id: &str) -> Self {
+        Self {
+            kind: CapabilitySourceKind::TransportSession,
+            path: None,
+            label: Some(format!("{transport}:{session_id}")),
+            transport: Some(transport.to_string()),
+            session_id: Some(session_id.to_string()),
+        }
+    }
+
+    pub(crate) fn transport_name(&self) -> &str {
+        self.transport.as_deref().unwrap_or(match self.kind {
+            CapabilitySourceKind::Filesystem => "filesystem",
+            CapabilitySourceKind::TransportSession => "transport_session",
+            CapabilitySourceKind::Inline => "inline",
+            CapabilitySourceKind::Unknown => "unknown",
+        })
+    }
+
+    pub(crate) fn source_path(&self) -> Option<&Path> {
+        self.path.as_deref()
+    }
+
+    pub(crate) fn legacy_check_source(&self) -> String {
+        self.transport_name().to_string()
+    }
+
+    pub(crate) fn legacy_label(&self) -> String {
+        if let Some(path) = self.path.as_deref() {
+            return format!("{}:{}", self.transport_name(), path.display());
+        }
+        if let Some(label) = self.label.as_deref() {
+            return label.to_string();
+        }
+        match self.kind {
+            CapabilitySourceKind::Filesystem => {
+                "filesystem:<missing capabilities.json>".to_string()
+            }
+            CapabilitySourceKind::TransportSession => self
+                .session_id
+                .as_deref()
+                .map(|session_id| format!("{}:{session_id}", self.transport_name()))
+                .unwrap_or_else(|| format!("{}:<missing session>", self.transport_name())),
+            CapabilitySourceKind::Inline => "inline".to_string(),
+            CapabilitySourceKind::Unknown => "unknown".to_string(),
+        }
+    }
+}
+
+pub(crate) fn resolve_filesystem_capabilities_source(base_dir: &Path) -> CapabilitySource {
+    let source_path = resolve_filesystem_capabilities_path(base_dir);
+    CapabilitySource::filesystem(source_path.as_deref())
+}
+
+pub(crate) fn read_filesystem_capabilities_with_provenance(
     base_dir: &Path,
-) -> (Option<PathBuf>, Vec<String>) {
-    let Some(path) = resolve_filesystem_capabilities_path(base_dir) else {
-        return (None, Vec::new());
-    };
-    let Some(parsed) = read_filesystem_capabilities_payload(&path) else {
-        return (Some(path), Vec::new());
-    };
-    (Some(path), normalize_filesystem_capabilities(&parsed))
+) -> (CapabilitySource, Vec<String>) {
+    let source = resolve_filesystem_capabilities_source(base_dir);
+    let available = source
+        .source_path()
+        .and_then(read_filesystem_capabilities_payload)
+        .map(|parsed| normalize_filesystem_capabilities(&parsed))
+        .unwrap_or_default();
+    (source, available)
 }
 
 fn capabilities_check_v1(
@@ -4055,7 +4138,7 @@ mod capability_tests {
     }
 
     #[test]
-    fn read_filesystem_capabilities_with_source_falls_back_to_parent_path() {
+    fn read_filesystem_capabilities_with_provenance_falls_back_to_parent_path() {
         let parent_dir = make_temp_dir("fret-diag-capabilities-parent");
         let run_dir = parent_dir.join("session").join("bundle");
         std::fs::create_dir_all(&run_dir).unwrap();
@@ -4074,9 +4157,9 @@ mod capability_tests {
         .unwrap();
         let expected_source_path = parent_dir.join("session").join("capabilities.json");
 
-        let (source_path, available) = read_filesystem_capabilities_with_source(&run_dir);
+        let (source, available) = read_filesystem_capabilities_with_provenance(&run_dir);
 
-        assert_eq!(source_path.as_deref(), Some(expected_source_path.as_path()));
+        assert_eq!(source.source_path(), Some(expected_source_path.as_path()));
         assert_eq!(
             available,
             vec![
@@ -4086,6 +4169,47 @@ mod capability_tests {
         );
 
         let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn resolve_filesystem_capabilities_source_formats_legacy_label() {
+        let parent_dir = make_temp_dir("fret-diag-capabilities-source-label");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
+        };
+        let capabilities_path = parent_dir.join("session").join("capabilities.json");
+        std::fs::write(
+            &capabilities_path,
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let source = resolve_filesystem_capabilities_source(&run_dir);
+
+        assert_eq!(source.source_path(), Some(capabilities_path.as_path()));
+        assert_eq!(
+            source.legacy_label(),
+            format!("filesystem:{}", capabilities_path.display())
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn transport_session_capability_source_keeps_transport_identity() {
+        let source = CapabilitySource::transport_session("devtools_ws", "session-123");
+
+        assert_eq!(source.transport_name(), "devtools_ws");
+        assert_eq!(source.source_path(), None);
+        assert_eq!(source.legacy_check_source(), "devtools_ws");
+        assert_eq!(source.legacy_label(), "devtools_ws:session-123");
     }
 
     #[test]
@@ -4582,7 +4706,7 @@ struct ConnectedToolingTransport {
     devtools: DevtoolsOps,
     selected_session_id: String,
     available_caps: Vec<String>,
-    source: &'static str,
+    capability_source: CapabilitySource,
 }
 
 fn connect_devtools_ws_tooling(
@@ -4642,9 +4766,9 @@ fn connect_devtools_ws_tooling(
 
     Ok(ConnectedToolingTransport {
         devtools,
+        capability_source: CapabilitySource::transport_session("devtools_ws", &selected_session_id),
         selected_session_id,
         available_caps,
-        source: "devtools_ws",
     })
 }
 
@@ -4694,9 +4818,9 @@ fn connect_filesystem_tooling(
 
     Ok(ConnectedToolingTransport {
         devtools,
+        capability_source: CapabilitySource::transport_session("filesystem", &selected_session_id),
         selected_session_id,
         available_caps,
-        source: "filesystem",
     })
 }
 
@@ -4722,12 +4846,13 @@ fn run_script_over_transport(
 
     let required_caps = script_required_capabilities_value(&script_json);
     if !required_caps.is_empty() {
+        let source = connected.capability_source.legacy_check_source();
         gate_required_capabilities_with_script_result(
             capabilities_check_path,
             script_result_path,
             &required_caps,
             &connected.available_caps,
-            connected.source,
+            &source,
         )?;
     }
 
@@ -4790,7 +4915,7 @@ fn run_script_over_transport(
             // and cause missed edge-detection updates (e.g. clobbering the final `passed` result
             // with a stale `running` snapshot). Tooling should only write to a distinct output
             // path in filesystem mode (for example `<out_dir>/tool.script.result.json`).
-            let runtime_owned_path = connected.source == "filesystem"
+            let runtime_owned_path = connected.capability_source.transport_name() == "filesystem"
                 && *script_result_path == out_dir.join("script.result.json");
             if !runtime_owned_path {
                 let _ = write_json_value(
@@ -4812,7 +4937,7 @@ fn run_script_over_transport(
             let ws_hint = seam.timeout_hint_for_waiting_script_result();
             let note = format!(
                 "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?} {}",
-                connected.source,
+                connected.capability_source.transport_name(),
                 prev_run_id,
                 target_run_id,
                 last_seen_stage.unwrap_or("none"),

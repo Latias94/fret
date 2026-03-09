@@ -1462,8 +1462,8 @@ fn maybe_execute_campaign_capability_preflight(
         return Ok(None);
     }
 
-    let (capabilities_source_path, available) =
-        crate::read_filesystem_capabilities_with_source(&ctx.resolved_out_dir);
+    let (capability_source, available) =
+        crate::read_filesystem_capabilities_with_provenance(&ctx.resolved_out_dir);
     let missing = missing_campaign_capabilities(&campaign.requires_capabilities, &available);
     if missing.is_empty() {
         return Ok(None);
@@ -1475,7 +1475,7 @@ fn maybe_execute_campaign_capability_preflight(
         .join("check.capabilities.json");
     write_campaign_capabilities_check(
         &check_path,
-        &campaign_capability_source_label(capabilities_source_path.as_deref()),
+        &capability_source.legacy_label(),
         &campaign.requires_capabilities,
         &available,
         &missing,
@@ -1488,7 +1488,7 @@ fn maybe_execute_campaign_capability_preflight(
         &start_plan.execution,
         &ctx.workspace_root,
         &check_path,
-        capabilities_source_path.as_deref(),
+        capability_source.source_path(),
         &available,
         &missing,
     )?;
@@ -1557,12 +1557,6 @@ fn write_campaign_capabilities_check(
             "missing": missing,
         }),
     )
-}
-
-fn campaign_capability_source_label(capabilities_source_path: Option<&Path>) -> String {
-    capabilities_source_path
-        .map(|path| format!("filesystem:{}", path.display()))
-        .unwrap_or_else(|| "filesystem:<missing capabilities.json>".to_string())
 }
 
 fn write_campaign_capability_preflight_summary(
