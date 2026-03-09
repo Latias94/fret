@@ -29,7 +29,7 @@ This note compresses the current hard-delete situation into one matrix:
 | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | No in-tree example/demo callers remain | Removed from default docs; deprecated in code | Policy mostly closed: deprecate now, remove/quarantine later after window | **Closest** | Wait for deprecation window + one published deprecated release, then decide delete vs compat quarantine |
 | `run_native_with_compat_driver(...)` | Still has 20 direct in-tree call sites across 3 real families | Explicitly non-default advanced interop seam | Policy draft says “keep for now” | **Deferred** | Do not force deletion; only revisit if a future quarantine boundary or replacement path appears |
 | `ViewCx::use_state::<T>()` | 0 direct runtime/teaching-surface callers outside runtime/API substrate | Removed from starter/reference/default teaching path | Policy draft says “keep as explicit raw-model seam, non-default” | **Deferred** | Keep default-path gate stable; revisit only if the repo wants to deprecate the raw-model seam itself |
-| Command-first widget builders (`DropdownMenu*`, `ContextMenu*`, `Menubar*`, remaining app-facing command APIs) | Public alias pass landed; curated internal/app-facing residue is now also aligned (`tab_strip` overflow, GenUI shadcn overlay) | Still partially visible only on intentional advanced/internal surfaces | Policy direction is clear; next work is narrow adoption follow-through + gate strategy | **Lowest delete readiness, narrow remaining code pressure** | Keep intentional advanced surfaces explicit, and gate curated default/app-facing cases where avoidable |
+| Command-first widget builders (`DropdownMenu*`, `ContextMenu*`, `Menubar*`, remaining app-facing command APIs) | Public alias pass landed; curated internal/app-facing residue is now also aligned (`tab_strip` overflow, GenUI shadcn overlay) | Still partially visible only on intentional advanced/internal surfaces | Policy direction is clear; remaining visible cases are now mostly intentional retained seams | **Lowest delete readiness, low remaining code pressure** | Keep intentional advanced surfaces explicit, and only reopen migration if a new default-facing leak appears |
 
 ---
 
@@ -68,16 +68,17 @@ The important shift is:
 So there is no strong reason to spend immediate implementation effort here unless the repo decides
 that explicit raw-model hooks must eventually leave the public facade.
 
-### 4. Command-first widget contracts are still the main remaining code-facing cleanup track
+### 4. Command-first widget contracts are no longer a broad migration track
 
-Unlike the other three items, this one still has:
+After the public alias pass and curated internal follow-up, this item now mostly has:
 
-- visible default-surface inconsistency,
-- a narrow implementation-scoped follow-up,
-- and a plausible gate/adoption landing plan.
+- intentional advanced/internal retained surfaces,
+- targeted default-surface gates,
+- and a smaller policy/deprecation question than before.
 
-So if the repo wants one more **real code cleanup** step rather than another policy note, this is
-the best candidate.
+So the repo should not plan another wide implementation sweep here by default.
+It should only reopen this track when a new default-facing leak appears or when compat APIs
+actually enter deprecation/removal.
 
 ---
 
@@ -86,11 +87,12 @@ the best candidate.
 1. Keep `App::ui*` in deprecation mode until the documented window expires.
 2. Keep compat runner documented as advanced interop; do not spend near-term cleanup budget on it.
 3. Keep `use_state` as non-default/raw-model and preserve the default-path gate.
-4. Put the next real implementation pass on the remaining command-first adoption/gate work,
-   especially around:
-   - `ContextMenu*` / `Menubar*` helper surfaces and internal app-facing callers,
-   - default-surface docs/examples gates after the alias path is consistently preferred.
-   - any remaining default-facing menu/item builders that still force command-shaped naming.
+4. Keep the command-first widget track in maintenance mode:
+   - preserve the default-surface/docs gates,
+   - treat the remaining advanced/internal surfaces as intentional unless product evidence says
+     otherwise,
+   - and only do more migration work when a new default-facing menu/item surface forces
+     command-shaped naming.
 
 ---
 
@@ -101,5 +103,5 @@ much narrower endgame:
 
 - one blocker (`App::ui*`) is mostly waiting on time/release policy,
 - two blockers (`compat driver`, `use_state`) are currently intentional retained seams,
-- and one blocker (**command-first widget contracts**) is the only remaining cleanup track that
-  still looks like obvious near-term implementation work.
+- and one blocker (**command-first widget contracts**) is now mostly an intentional-retention and
+  future-deprecation-management track rather than obvious near-term implementation work.

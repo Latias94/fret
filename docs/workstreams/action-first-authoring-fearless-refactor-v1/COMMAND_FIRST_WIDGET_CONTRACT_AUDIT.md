@@ -8,6 +8,7 @@ Related:
 - Hard-delete gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- Intentional retained surfaces: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_INTENTIONAL_SURFACES.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 
@@ -348,3 +349,11 @@ The remaining `CommandId` blocker is now well-scoped:
 
 This means the next work is mostly surface cleanup and naming convergence, not another deep
 architecture change.
+
+Post-inventory update (as of 2026-03-09):
+
+- `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now records the remaining command-shaped surfaces that
+  the repo should intentionally keep for now (command palette/catalog, `DataTable`
+  business-table wiring, compat/conformance tests, and out-of-scope callback widgets).
+- Practical consequence: do not schedule another broad `.on_select(...)` cleanup pass unless a new
+  default-facing leak appears.

@@ -51,16 +51,16 @@ Non-scope:
 | `App::ui*` closure-root entry | Deprecated in code; no in-tree example/demo callers remain; minimum deprecation window is now defined | Low once docs/tests stay locked | Medium |
 | `run_native_with_compat_driver(...)` | Still public; now explicitly classified as advanced low-level interop | Low for default path, medium for facade size | Deferred |
 | `use_state::<T>()` alias | Still user-visible; now classified as explicit raw-model hook, not default local state | Low for default path, medium for facade clarity | Deferred |
-| `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, and the curated internal/app-facing menu residue now also prefers `action(...)`; remaining command-shaped usage is mostly intentional advanced/internal surface area | Medium | Low |
+| `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, and the curated internal/app-facing menu residue now also prefers `action(...)`; remaining command-shaped usage is now mostly intentional advanced/internal surface area recorded in `COMMAND_FIRST_INTENTIONAL_SURFACES.md` | Medium | Low |
 
 Interpretation:
 
 - The app-entry surface is the closest to final cleanup.
 - The other three items still need explicit product-surface decisions before deletion would be
   defensible.
-- Of those three, the only one that still looks like immediate implementation work is the
-  remaining command-first widget **adoption/gate** pass; compat runner and `use_state` are
-  currently policy-held seams.
+- Of those three, command-first widgets are no longer a broad implementation pass by default; they
+  are now mostly a retained-surface/deprecation-management question, while compat runner and
+  `use_state` remain policy-held seams.
 
 ---
 
