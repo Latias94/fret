@@ -44,6 +44,18 @@ The highest-value post-v1 work is now:
 In practical terms, the next phase should optimize for **surface clarity and evidence-backed density
 improvements**, not for adding more API names.
 
+Builder-seam inventory update (as of 2026-03-09):
+
+- `Alert` seam is now closed via `Alert::build(...)` / `AlertAction::build(...)`.
+- `ScrollArea` seam is now closed via `ScrollArea::build(...)`.
+- `Field` seam is now closed via `FieldSet::build(...)` / `FieldGroup::build(...)` /
+  `Field::build(...)`.
+- The heaviest remaining raw counts in app/snippet code are now mostly **adoption** of already
+  existing builders (`Card` / `CardHeader` / `CardContent`) rather than missing API seams.
+- Therefore the next worthwhile move is **not** another new family by default; it is to keep the
+  default path/product story stable and only reopen a new seam if repeated cross-surface evidence
+  still shows one missing runtime-owned boundary.
+
 ---
 
 ## Priority matrix
@@ -68,6 +80,7 @@ improvements**, not for adding more API names.
 | Compat-runner removal | The current policy already says it is an intentional advanced interop seam for now. | Revisit only if the caller families shrink or a clear quarantine boundary exists. |
 | `use_state` hard delete | Current policy keeps it as an explicit raw-model seam rather than a default local-state story. | Revisit only after the repo decides whether that explicit seam should remain permanent. |
 | More `DataTable`-specific surface tweaks in this workstream | That would blur the line between business-table productization and the main action-first/view-runtime surface. | Track separately if a future business-table workstream is needed. |
+| Broad `Card`/`CardHeader`/`CardContent` rewrite as a new API task | Those builders already exist; the remaining volume is mostly migration/adoption churn, not proof that another authoring surface is missing. | Revisit only if a narrow default-facing sub-seam appears that the current card builders still cannot express cleanly. |
 
 ---
 
@@ -109,7 +122,9 @@ Recommended deliverables:
 Recommended deliverables:
 
 - target only seams that still force eager `AnyElement` landing across multiple surfaces,
-- avoid more local demo-by-demo cleanup unless it closes a reusable root/container seam.
+- avoid more local demo-by-demo cleanup unless it closes a reusable root/container seam,
+- treat families with existing builders but low migration (for example `Card`) as adoption work,
+  not as automatic new-surface candidates.
 
 ### 4. Re-evaluate keyed-list / payload-row handler ergonomics
 
