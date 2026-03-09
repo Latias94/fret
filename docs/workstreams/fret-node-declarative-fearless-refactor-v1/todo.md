@@ -1083,6 +1083,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/widget_surface/sync.rs` seam, so `widget_surface.rs` stops
     re-embedding the same geometry-reset and scene-cache/build-state invalidation tails inline
     while keeping construction and builder-style surface composition explicit at the root.
+  - Progress: widget-surface fit-view-on-mount builder/runtime now also routes through the private
+    `ui/canvas/widget/widget_surface/fit_view.rs` seam, so `widget_surface.rs` stops re-embedding
+    the same fit-on-mount option setup, node-id collection, and one-shot framing tail inline while
+    keeping the public builder surface unchanged.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

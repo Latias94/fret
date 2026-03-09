@@ -1,5 +1,7 @@
 use super::*;
 
+#[path = "widget_surface/fit_view.rs"]
+mod fit_view;
 #[path = "widget_surface/sync.rs"]
 mod sync;
 
@@ -401,16 +403,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
-    pub fn with_fit_view_on_mount(self) -> Self {
-        self.with_fit_view_on_mount_options(NodeGraphFitViewOptions::default())
-    }
-
-    pub fn with_fit_view_on_mount_options(mut self, options: NodeGraphFitViewOptions) -> Self {
-        self.fit_view_on_mount = Some(options);
-        self.did_fit_view_on_mount = false;
-        self
-    }
-
     pub fn with_overlay_state(mut self, overlays: Model<NodeGraphOverlayState>) -> Self {
         self.overlays = Some(overlays);
         self
@@ -420,51 +412,5 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.store = Some(store);
         self.store_rev = None;
         self
-    }
-
-    pub(super) fn maybe_fit_view_on_mount<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        bounds: Rect,
-        did_drain_view_queue: bool,
-    ) -> bool {
-        if did_drain_view_queue || self.did_fit_view_on_mount {
-            return false;
-        }
-
-        let Some(options) = self.fit_view_on_mount.clone() else {
-            return false;
-        };
-
-        let include_hidden_nodes = options.include_hidden_nodes;
-        let node_ids: Vec<GraphNodeId> = self
-            .graph
-            .read_ref(host, |graph| {
-                graph
-                    .nodes
-                    .iter()
-                    .filter_map(|(id, node)| {
-                        if node.hidden && !include_hidden_nodes {
-                            None
-                        } else {
-                            Some(*id)
-                        }
-                    })
-                    .collect()
-            })
-            .ok()
-            .unwrap_or_default();
-
-        if node_ids.is_empty() {
-            return false;
-        }
-
-        let did =
-            self.frame_nodes_in_view_with_options(host, window, bounds, &node_ids, Some(&options));
-        if did {
-            self.did_fit_view_on_mount = true;
-        }
-        did
     }
 }
