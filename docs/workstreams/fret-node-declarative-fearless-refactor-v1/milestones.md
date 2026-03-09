@@ -717,6 +717,10 @@ real editors.
   `ui/canvas/widget/paint_nodes/static_node_chrome.rs` and
   `ui/canvas/widget/paint_nodes/static_ports.rs` seams, so `paint_nodes/static_nodes.rs` now
   mainly keeps shared paint setup plus top-level node/port pass ordering explicit.
+- context-menu connection insert/conversion execution now also routes through the private
+  `ui/canvas/widget/context_menu/connection_execution_insert.rs` and
+  `ui/canvas/widget/context_menu/connection_execution_conversion.rs` seams, so
+  `context_menu/connection_execution.rs` now mainly keeps the plan enums and focused tests.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

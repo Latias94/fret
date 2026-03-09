@@ -1127,6 +1127,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/paint_nodes/static_node_chrome.rs` and
     `ui/canvas/widget/paint_nodes/static_ports.rs` seams, so `paint_nodes/static_nodes.rs` now
     mainly keeps shared paint setup plus top-level node/port pass ordering explicit.
+  - Progress: context-menu connection insert/conversion execution now also routes through the
+    private `ui/canvas/widget/context_menu/connection_execution_insert.rs` and
+    `ui/canvas/widget/context_menu/connection_execution_conversion.rs` seams, so
+    `context_menu/connection_execution.rs` now mainly keeps the plan enums and focused tests.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

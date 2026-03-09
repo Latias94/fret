@@ -3,6 +3,8 @@ use super::*;
 mod activate;
 mod background_execution;
 mod connection_execution;
+mod connection_execution_conversion;
+mod connection_execution_insert;
 mod edge_execution;
 mod input;
 pub(in crate::ui::canvas::widget) mod item_builders;
