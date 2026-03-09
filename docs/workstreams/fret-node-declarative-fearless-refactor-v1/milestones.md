@@ -510,6 +510,14 @@ real editors.
   `canvas/widget/pending_connection_session.rs` seams, so insert/connection pending helpers stop
   re-embedding the same capture-release and pending-to-active construction blocks inline while
   keeping the same behavior.
+- insert-node drag internal enter/leave/drop handling now also routes preview invalidation and
+  drag-event finish through the private `canvas/widget/insert_node_drag/session.rs` seam, so
+  `internal_move.rs`, `internal_drop.rs`, and `insert_node_drag/mod.rs` stop re-embedding the same
+  preview repaint and propagation-stop tail blocks inline while keeping the same behavior.
+- searcher overlay dismissal and row-drag release now also route through the private
+  `canvas/widget/searcher_activation_state.rs` seam, so `searcher_activation.rs` and
+  `searcher_ui.rs` stop re-embedding the same pending insert-drag clearing and capture-release
+  state transitions inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

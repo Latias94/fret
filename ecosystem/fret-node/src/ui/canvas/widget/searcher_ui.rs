@@ -29,9 +29,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     pub(super) fn dismiss_searcher_overlay<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
-        self.interaction.searcher = None;
-        self.interaction.pending_insert_node_drag = None;
-        cx.release_pointer_capture();
+        super::searcher_activation_state::dismiss_searcher_overlay(self, cx);
     }
 }
 

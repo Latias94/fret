@@ -919,6 +919,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     also route through the private `canvas/widget/insert_node_drag/session.rs` and
     `canvas/widget/pending_connection_session.rs` seams, so insert/connection pending helpers no
     longer re-embed the same capture-release and pending-to-active construction blocks inline.
+  - Progress: insert-node drag internal enter/leave/drop handling now also routes preview
+    invalidation and drag-event finish through the private `canvas/widget/insert_node_drag/session.rs`
+    seam, so `internal_move.rs`, `internal_drop.rs`, and `insert_node_drag/mod.rs` no longer
+    re-embed the same preview repaint and propagation-stop tail blocks inline.
+  - Progress: searcher overlay dismissal and row-drag release now also route through the private
+    `canvas/widget/searcher_activation_state.rs` seam, so `searcher_activation.rs` and
+    `searcher_ui.rs` no longer re-embed the same pending insert-drag clearing and capture-release
+    state transitions inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

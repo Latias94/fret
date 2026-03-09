@@ -5,6 +5,21 @@ use super::searcher_activation::SearcherPointerHit;
 use super::*;
 use crate::ui::canvas::state::PendingInsertNodeDrag;
 
+pub(super) fn clear_pending_searcher_row_drag(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    interaction.pending_insert_node_drag.take().is_some()
+}
+
+pub(super) fn dismiss_searcher_overlay<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut EventCx<'_, H>,
+) {
+    canvas.interaction.searcher = None;
+    clear_pending_searcher_row_drag(&mut canvas.interaction);
+    cx.release_pointer_capture();
+}
+
 pub(super) fn sync_searcher_active_row_if_selectable<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     row_ix: usize,
@@ -61,4 +76,18 @@ pub(super) fn activate_searcher_hit_or_dismiss<H: UiHost, M: NodeGraphCanvasMidd
     } else if !hit.inside {
         canvas.interaction.searcher = None;
     }
+}
+
+pub(super) fn finish_searcher_row_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut EventCx<'_, H>,
+    hit: SearcherPointerHit,
+) -> bool {
+    if !clear_pending_searcher_row_drag(&mut canvas.interaction) {
+        return false;
+    }
+
+    cx.release_pointer_capture();
+    canvas.activate_searcher_hit_or_dismiss(cx, hit);
+    super::searcher_ui::finish_searcher_event(cx)
 }

@@ -27,14 +27,14 @@ pub(super) fn handle_enter_over<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .and_then(|accepted| accepted.then_some(edge_id))
     });
 
-    canvas.interaction.insert_node_drag_preview = Some(InsertNodeDragPreview {
-        label: payload.candidate.label.clone(),
-        pos,
-        edge: can_split_edge,
-    });
-
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
-    cx.stop_propagation();
-    true
+    super::session::set_insert_node_drag_preview(
+        &mut canvas.interaction,
+        cx,
+        InsertNodeDragPreview {
+            label: payload.candidate.label.clone(),
+            pos,
+            edge: can_split_edge,
+        },
+    );
+    super::session::finish_insert_node_drag_event(cx)
 }

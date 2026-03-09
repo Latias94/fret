@@ -66,9 +66,6 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
         }
     }
 
-    canvas.interaction.insert_node_drag_preview = None;
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
-    cx.stop_propagation();
-    true
+    super::session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
+    super::session::finish_insert_node_drag_event(cx)
 }

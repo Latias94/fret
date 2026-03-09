@@ -50,10 +50,7 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
         .and_then(|d| d.payload::<InsertNodeDragPayload>())
         .cloned();
     let Some(payload) = payload else {
-        if canvas.interaction.insert_node_drag_preview.take().is_some() {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
+        session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
         return false;
     };
 
@@ -62,12 +59,8 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
             internal_move::handle_enter_over(canvas, cx, snapshot, event, &payload, zoom)
         }
         InternalDragKind::Leave | InternalDragKind::Cancel => {
-            if canvas.interaction.insert_node_drag_preview.take().is_some() {
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
-            }
-            cx.stop_propagation();
-            true
+            session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
+            session::finish_insert_node_drag_event(cx)
         }
         InternalDragKind::Drop => {
             internal_drop::handle_drop(canvas, cx, snapshot, event, payload, zoom)

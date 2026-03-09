@@ -46,18 +46,12 @@ pub(super) fn handle_searcher_pointer_up_event<H: UiHost, M: NodeGraphCanvasMidd
         return false;
     }
     if canvas.interaction.searcher.is_none() {
-        canvas.interaction.pending_insert_node_drag = None;
+        super::searcher_activation_state::clear_pending_searcher_row_drag(&mut canvas.interaction);
         return false;
     }
 
     let hit = super::searcher_activation_hit::searcher_pointer_hit(canvas, position, zoom);
-    if canvas.interaction.pending_insert_node_drag.take().is_some() {
-        cx.release_pointer_capture();
-        canvas.activate_searcher_hit_or_dismiss(cx, hit);
-        return finish_searcher_event(cx);
-    }
-
-    false
+    super::searcher_activation_state::finish_searcher_row_drag_release(canvas, cx, hit)
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
