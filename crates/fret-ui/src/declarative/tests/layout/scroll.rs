@@ -2937,6 +2937,126 @@ fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_for_multi_child_ro
     );
 }
 
+
+#[test]
+fn scroll_post_layout_grows_extent_when_only_descendant_dirty_off_edge() {
+    let mut app = TestHost::new();
+    let show_more = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let mut scene = Scene::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        show_more: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        cx.observe_model(&show_more, Invalidation::Layout);
+                        let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
+                        let rows = if expanded { 24 } else { 6 };
+
+                        vec![cx.column(
+                            crate::element::ColumnProps {
+                                gap: Px(0.0).into(),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                (0..rows)
+                                    .map(|i| cx.text(format!("row {i}")))
+                                    .collect::<Vec<_>>()
+                            },
+                        )]
+                    })]
+                })]
+            },
+        )]
+    }
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-off-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().y;
+    assert!(max0.0 > 0.0, "expected initial non-zero scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(12.0)));
+    let _ = show_more.update(&mut app, |v, _cx| *v = true);
+    app.advance_frame();
+
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-off-edge-descendant-invalidation",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+
+    let scroll_node = ui.children(root1)[0];
+    let child_root = ui.children(scroll_node)[0];
+    let observed_container = ui.children(child_root)[0];
+
+    assert!(
+        ui.node_needs_layout(observed_container),
+        "expected descendant container to be layout-invalidated after the model update"
+    );
+    ui.test_set_layout_invalidation(child_root, false);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().y;
+    assert!(
+        content1.height.0 > content0.height.0 + 0.5,
+        "expected post-layout extent to grow even when only a descendant remains dirty off-edge: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected max offset to grow when descendant-only invalidation expands content off-edge: before={max0:?} after={max1:?}"
+    );
+    assert!(
+        scroll_handle.offset().y.0 < max0.0 - 0.5,
+        "expected test to stay off the previous max edge before relayout: offset={:?} max0={max0:?}",
+        scroll_handle.offset().y,
+    );
+
+    let _ = root0;
+}
+
 #[test]
 fn scroll_extent_updates_when_descendant_invalidated_but_child_root_cleared() {
     let mut app = TestHost::new();
