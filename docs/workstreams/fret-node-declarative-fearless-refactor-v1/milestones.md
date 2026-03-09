@@ -692,6 +692,10 @@ real editors.
 - widget-surface output/diagnostics builders now also route through the same private
   `ui/canvas/widget/widget_surface/builders.rs` seam, so `widget_surface.rs` no longer keeps the
   measured-output, internals, and diagnostics-anchor builder tails inline.
+- paint-render-data node visibility and payload assembly now also route through the private
+  `ui/canvas/widget/paint_render_data/nodes.rs` seam, so `collect.rs` and `selected_nodes.rs`
+  stop re-embedding the same node chrome/ports payload build tail and visible-node ordering logic
+  inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

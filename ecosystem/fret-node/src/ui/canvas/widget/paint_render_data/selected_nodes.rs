@@ -1,7 +1,4 @@
 use super::*;
-use crate::ui::NodeChromeHint;
-use crate::ui::PortChromeHint;
-
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn collect_selected_nodes_render_data<H: UiHost>(
         &self,
@@ -24,10 +21,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .read_ref(host, |graph| {
                 let mut out = RenderData::default();
 
-                let node_pad = this.style.geometry.node_padding;
-                let pin_gap = 8.0;
-                let pin_r = this.style.geometry.pin_radius;
-                let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
+                let label_overhead = this.node_render_label_overhead();
 
                 for node in selected_nodes.iter().copied() {
                     let Some(node_geom) = geom.nodes.get(&node) else {
@@ -37,53 +31,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         continue;
                     }
 
-                    let hint = if let Some(skin) = this.skin.as_ref() {
-                        skin.node_chrome_hint(graph, node, &this.style, true)
-                    } else {
-                        NodeChromeHint::default()
-                    };
-                    let title = presenter.node_title(graph, node);
-                    let (inputs, outputs) = node_ports(graph, node);
-                    let pin_rows = inputs.len().max(outputs.len());
-                    let body = presenter.node_body_label(graph, node);
-                    let resize_handles = presenter.node_resize_handles(graph, node, &this.style);
-                    out.nodes.push((
+                    this.append_node_render_data(
+                        graph,
+                        geom,
+                        presenter,
+                        &mut out,
                         node,
-                        node_geom.rect,
                         true,
-                        title,
-                        body,
-                        pin_rows,
-                        resize_handles,
-                        hint,
-                    ));
-
-                    let screen_w = node_geom.rect.size.width.0 * zoom;
-                    let screen_max = (screen_w - label_overhead).max(0.0);
-                    let max_w = Px(screen_max / zoom);
-
-                    for port_id in inputs.iter().chain(outputs.iter()).copied() {
-                        let Some(handle) = geom.ports.get(&port_id) else {
-                            continue;
-                        };
-                        out.port_centers.insert(port_id, handle.center);
-                        out.port_labels.insert(
-                            port_id,
-                            PortLabelRender {
-                                label: presenter.port_label(graph, port_id),
-                                dir: handle.dir,
-                                max_width: max_w,
-                            },
-                        );
-                        let color = presenter.port_color(graph, port_id, &this.style);
-                        let hint = if let Some(skin) = this.skin.as_ref() {
-                            skin.port_chrome_hint(graph, port_id, &this.style, color)
-                        } else {
-                            PortChromeHint::default()
-                        };
-                        let fill = hint.fill.unwrap_or(color);
-                        out.pins.push((port_id, handle.bounds, fill, hint));
-                    }
+                        zoom,
+                        label_overhead,
+                    );
                 }
 
                 out.nodes.sort_unstable_by(|a, b| {

@@ -1101,6 +1101,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: widget-surface output/diagnostics builders now also route through the same private
     `ui/canvas/widget/widget_surface/builders.rs` seam, so `widget_surface.rs` no longer keeps the
     measured-output, internals, and diagnostics-anchor builder tails inline.
+  - Progress: paint-render-data node visibility and payload assembly now also route through the
+    private `ui/canvas/widget/paint_render_data/nodes.rs` seam, so `collect.rs` and
+    `selected_nodes.rs` stop re-embedding the same node chrome/ports payload build tail and
+    visible-node ordering logic inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
