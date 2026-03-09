@@ -1,3 +1,4 @@
+mod cache_plan;
 mod cached;
 mod edge_anchor;
 mod frame;

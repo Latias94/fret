@@ -1033,6 +1033,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/frame.rs` seam, so `paint_root/cached.rs` stops re-embedding cache
     begin-frame bookkeeping, path-cache diagnostics publication, viewport/cull setup, canvas
     background fill, and grid paint bootstrap inline.
+  - Progress: root cache-plan orchestration now also routes through the private
+    `canvas/widget/paint_root/cache_plan.rs` seam, so `paint_root/cached.rs` stops re-embedding
+    hovered-edge resolution, derived geometry publication, static cache eligibility, tile sizing,
+    cache-rect selection, and style/base-key planning inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

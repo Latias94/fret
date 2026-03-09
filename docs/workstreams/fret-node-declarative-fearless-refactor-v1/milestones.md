@@ -625,6 +625,10 @@ real editors.
   `canvas/widget/paint_root/frame.rs` seam, so `paint_root/cached.rs` stops re-embedding cache
   begin-frame bookkeeping, path-cache diagnostics publication, viewport/cull setup, canvas
   background fill, and grid paint bootstrap inline.
+- root cache-plan orchestration now also routes through the private
+  `canvas/widget/paint_root/cache_plan.rs` seam, so `paint_root/cached.rs` stops re-embedding
+  hovered-edge resolution, derived geometry publication, static cache eligibility, tile sizing,
+  cache-rect selection, and style/base-key planning inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
