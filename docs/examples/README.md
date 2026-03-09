@@ -81,7 +81,7 @@ auto-enable required cookbook features for known Lab examples and print what it 
 
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
-- `simple_todo_v2_target` — comparison target for post-v1 `LocalState<Vec<Row>>` authoring; it is intentionally evidence-oriented, not the default tutorial surface.
+- `simple_todo_v2_target` — comparison target for denser payload-row / root-handler keyed-list authoring on the same `LocalState<Vec<Row>>` baseline; it is intentionally evidence-oriented, not the default tutorial surface.
 - [apps/fret-cookbook/EXAMPLES.md](../../apps/fret-cookbook/EXAMPLES.md)
 
 Historical MVU removal inventory (applies to maintainer demos, not cookbook):

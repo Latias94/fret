@@ -52,7 +52,7 @@ Then pick a topic:
 Comparison target (reference-only; not part of the boring ladder):
 
 - `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
-  - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + payload-action path now used by `todo_demo` and the simple-todo scaffold, so its role is to stay as an explicit comparison surface rather than a missing-default-path preview
+  - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + payload-action path now used by `simple_todo`, `todo_demo`, and the simple-todo scaffold, so its role is to stay as a denser comparison surface for row-handler placement rather than a missing-default-path preview
 
 - Default follow-up topics: `hello_counter`, `form_basics`, `virtual_list_basics`
 - State + derived state: `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)

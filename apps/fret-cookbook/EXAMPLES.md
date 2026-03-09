@@ -86,7 +86,7 @@ Example | Status | Run | Diag suite
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
-[`simple_todo_v2_target.rs`](./examples/simple_todo_v2_target.rs) | Comparison | `cargo run -p fretboard -- dev native --example simple_todo_v2_target` | -
+[`simple_todo_v2_target.rs`](./examples/simple_todo_v2_target.rs) | Comparison (payload-row / handler-placement) | `cargo run -p fretboard -- dev native --example simple_todo_v2_target` | -
 
 ## Advanced — Routing (feature-gated)
 
