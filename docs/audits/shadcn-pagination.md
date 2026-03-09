@@ -24,6 +24,7 @@ these sources instead:
 - Component code: `ecosystem/fret-ui-shadcn/src/pagination.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/pagination.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/pagination/usage.rs`
+- Gallery examples: `apps/fret-ui-gallery/src/ui/snippets/pagination/simple.rs`, `apps/fret-ui-gallery/src/ui/snippets/pagination/icons_only.rs`
 
 ## Audit checklist
 
