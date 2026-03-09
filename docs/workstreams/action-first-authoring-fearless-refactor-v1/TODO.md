@@ -623,6 +623,7 @@ Current sequencing note (as of 2026-03-08):
   - Goal: prove that public builder naming can converge on the action-first story without rewriting command-centric internals.
   - Evidence target: at least one low-risk family (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) gains an action-first alias and docs/examples prefer it.
   - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `Snackbar::action_command(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) plus the Material3 snackbar gallery snippet now prefer the action-first spelling, and the first navigation-menu/material3 coverage uses the aliases as the default public path.
+  - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and both `tools/pre_release.ps1` plus `tools/pre_release.py` run that narrow policy check.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.

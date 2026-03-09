@@ -67,6 +67,14 @@ def main(argv: list[str]) -> int:
         "Stringly command parsing policy",
         [py, str(repo_root / "tools/check_stringly_command_parsing.py")],
     )
+    _run_checked(
+        "Teaching surfaces policy (default local-state path stays on use_local*)",
+        [py, str(repo_root / "tools/gate_no_use_state_in_default_teaching_surfaces.py")],
+    )
+    _run_checked(
+        "Material3 snackbar default surface policy (prefer action_id)",
+        [py, str(repo_root / "tools/gate_material3_snackbar_default_surface.py")],
+    )
 
     if not args.skip_portable_time:
         _run_checked(

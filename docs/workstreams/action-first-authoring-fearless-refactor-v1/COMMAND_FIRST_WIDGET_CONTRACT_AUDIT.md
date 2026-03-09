@@ -248,6 +248,8 @@ Progress update (as of 2026-03-09):
   `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs`.
 - Material3 regression coverage also uses the alias in
   `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
+- A narrow default-surface gate now protects that choice:
+  `tools/gate_material3_snackbar_default_surface.py`.
 
 ### Phase 2 — Menu-family public alias pass
 

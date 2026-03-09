@@ -137,6 +137,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Material3 snackbar default surface policy (prefer action_id)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_material3_snackbar_default_surface.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no legacy stack helpers)" `
   "python" `
   @(
