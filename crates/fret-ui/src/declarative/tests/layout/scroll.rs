@@ -3188,6 +3188,208 @@ fn scroll_extent_updates_when_descendant_invalidated_but_child_root_cleared() {
 }
 
 #[test]
+fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_for_multi_child_roots_at_edge() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureLayoutNode {
+        measured: Size,
+        layout_size: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-shrink-revalidation-multi-child-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node0 = ui.children(root0)[0];
+    let leaf_a0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(120.0)),
+    });
+    let root_a0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf_a0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(120.0)),
+        ),
+    });
+    let leaf_b0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(100.0)),
+    });
+    let root_b0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf_b0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(700.0)),
+            Size::new(Px(120.0), Px(100.0)),
+        ),
+    });
+    ui.set_children(root_a0, vec![leaf_a0]);
+    ui.set_children(root_b0, vec![leaf_b0]);
+    ui.set_children(scroll_node0, vec![root_a0, root_b0]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().y;
+    assert!(
+        (content0.height.0 - 800.0).abs() <= 0.5,
+        "expected initial multi-child edge test to capture the deepest descendant extent: content={content0:?}"
+    );
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    let wheel_pos = fret_core::Point::new(Px(8.0), Px(8.0));
+
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-shrink-revalidation-multi-child-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node1 = ui.children(root1)[0];
+    let leaf_a1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(120.0)),
+    });
+    let root_a1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf_a1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(120.0)),
+        ),
+    });
+    let leaf_b1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(100.0)),
+    });
+    let root_b1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf_b1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(100.0)),
+        ),
+    });
+    ui.set_children(root_a1, vec![leaf_a1]);
+    ui.set_children(root_b1, vec![leaf_b1]);
+    ui.set_children(scroll_node1, vec![root_a1, root_b1]);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: wheel_pos,
+            delta: fret_core::Point::new(Px(0.0), Px(-48.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().y;
+    let off1 = scroll_handle.offset().y;
+    assert!(
+        (content1.height.0 - 200.0).abs() <= 0.5,
+        "expected direct-invalidated multi-child roots to shrink immediately at edge: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        max1.0 <= 0.5,
+        "expected max offset to clamp to zero after at-edge multi-child shrink: before={max0:?} after={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected offset to clamp within the shrunken multi-child extent at edge: offset={off1:?} max={max1:?} content={content1:?}"
+    );
+}
+
+#[test]
 fn scroll_post_layout_shrink_revalidation_clamps_multi_child_descendant_only_off_edge() {
     struct FixedLeaf {
         size: Size,
