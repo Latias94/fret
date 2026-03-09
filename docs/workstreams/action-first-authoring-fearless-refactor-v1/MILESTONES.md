@@ -78,6 +78,10 @@ Adoption note (as of 2026-03-07):
   `on_action_notify_models::<A>(...)`, transient runtime effects use
   `on_action_notify_transient::<A>(...)`, and explicit `notify()` / render-time invalidation stay
   reserved for imperative/runtime/cache escape hatches.
+- Invalidation ownership update (as of 2026-03-09): the remaining default-path
+  `on_action_notify_models::<A>(...)` surfaces are now explicitly grouped as coordinated-write
+  ownership, command/keymap ownership, and cross-field form ownership, which keeps them from being
+  misread as a single generic invalidation-helper gap.
 - Invalidation review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`,
   `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`

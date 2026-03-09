@@ -133,6 +133,16 @@ Use this rule in docs/examples/templates:
 - transient/runtime triggers: `on_action_notify_transient::<A>(...)`
 - tracked reads: `value_*` / `value_in*`
 
+In practice, the remaining default-path `on_action_notify_models::<A>(...)` surfaces now cluster
+into three ownership classes:
+
+1. coordinated writes,
+2. command/keymap ownership,
+3. cross-field form ownership.
+
+That split is captured in
+`docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_DEFAULT_RULES.md`.
+
 ### Escape hatch
 
 Use explicit redraw / `notify()` only when:

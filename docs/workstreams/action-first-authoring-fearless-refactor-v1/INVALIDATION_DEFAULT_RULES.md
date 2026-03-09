@@ -49,6 +49,22 @@ For normal teaching-surface authoring:
 
 ---
 
+## The three root-owned `on_action_notify_models::<A>(...)` categories
+
+When a default teaching surface still stays on `on_action_notify_models::<A>(...)`, treat it as one
+of these categories first:
+
+| Category | Typical shape | Why it stays root-owned |
+| --- | --- | --- |
+| Coordinated writes | one action mutates multiple local/model values, or the write must see several values together | The real boundary is the transaction across state, not a single leaf write. |
+| Command ownership | command availability, key-context-driven behavior, menu/palette gating, command metadata alignment | The root handler is part of the runtime contract, not merely syntax overhead. |
+| Form ownership | submit/reset/availability logic spans multiple fields and shared validation | The root owns validation and action readiness, so the handler should stay there. |
+
+If a surface fits one of these categories, do not treat it as proof that another invalidation helper
+is missing.
+
+---
+
 ## What counts as an escape hatch
 
 Keep explicit `notify()` or render-time invalidation only when at least one of these is true:
@@ -79,8 +95,10 @@ Use the current medium-surface evidence this way:
 
 - `simple_todo_v2_target` -> keyed-list / payload-row handler-placement pressure,
 - `query_basics` -> explicit render-time invalidation remains correct,
-- `commands_keymap_basics` -> root-scoped command ownership is intentional,
-- `form_basics` -> root-scoped validation/reset ownership is intentional.
+- `commands_keymap_basics` -> command ownership,
+- `form_basics` -> form ownership,
+- multi-value coordinated write surfaces such as `hello_counter` / `virtual_list_basics` ->
+  coordinated-write ownership.
 
 This is why `AFA-postv1-004` stays on “no new helper yet”.
 

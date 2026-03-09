@@ -534,6 +534,10 @@ Current sequencing note (as of 2026-03-09):
   transient App/runtime effects stay on `on_action_notify_transient::<A>(...)`, and explicit
   `notify()` / render-time invalidation remain escape hatches only for imperative/runtime/cache
   boundaries.
+  - Classification update (as of 2026-03-09): the remaining default-path
+    `on_action_notify_models::<A>(...)` surfaces are now explicitly grouped as
+    coordinated-write ownership, command/keymap ownership, and cross-field form ownership so they
+    do not keep being mistaken for generic invalidation-helper gaps.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -586,6 +590,11 @@ Current sequencing note (as of 2026-03-09):
   - Review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now records a focused review of `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`, `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`. Conclusion: on real medium surfaces, tracked writes already rerender without explicit `notify()`, query-trigger invalidation still belongs to the explicit render-time path, and command/keymap plus cross-field form handlers are often the runtime contract; the next plausible ergonomics move is therefore still **not** another invalidation helper, and `AFA-postv1-003` now looks like a much narrower keyed-list/payload-row question rather than a general medium-surface need.
   - Policy draft update (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now makes the recommendation explicit: keep `notify()` as a public low-level escape hatch, keep tracked writes as the boring default rerender path, and do not spend near-term API budget on another generic invalidation helper unless a new medium-surface contradiction appears.
   - Short-rule update (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now records the execution-facing split directly: use `on_action_notify_local_*` for straightforward single-local tracked writes, keep `on_action_notify_models::<A>(...)` for coordinated/root-owned writes, keep `on_action_notify_transient::<A>(...)` for transient runtime effects, and treat explicit `notify()` / render-time invalidation as escape hatches only when the real effect boundary lives outside the tracked write.
+  - Ownership-class update (as of 2026-03-09): the remaining default-path
+    `on_action_notify_models::<A>(...)` usage is now classified into three explicit buckets:
+    coordinated writes, command/keymap ownership, and cross-field form ownership. This narrows the
+    remaining policy question from “do we need another invalidation helper?” to “does a surface
+    really fall outside those three ownership classes?”.
   - Gate update (as of 2026-03-09): `tools/gate_no_notify_in_default_teaching_surfaces.py` now locks the default ladder surfaces plus scaffold templates against explicit `cx.notify(...)` / `host.notify(...)`, and `tools/pre_release.py` runs that gate with the other teaching-surface policy checks.
 - [x] AFA-postv1-006 Audit model-centered widget contracts that still leak into gallery/reference surfaces.
   - Goal: separate true widget contract pressure from snippet-level authoring choices before designing new helper APIs.
