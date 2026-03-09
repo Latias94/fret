@@ -48,9 +48,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             }
         }
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 
     pub(super) fn cmd_align_or_distribute_selection<H: UiHost>(
@@ -60,8 +58,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         mode: AlignDistributeMode,
     ) -> bool {
         self.align_or_distribute_selection(cx.app, cx.window, snapshot, mode);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 }

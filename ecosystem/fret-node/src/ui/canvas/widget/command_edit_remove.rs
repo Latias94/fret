@@ -78,6 +78,5 @@ fn apply_remove_ops<H: UiHost, M: NodeGraphCanvasMiddleware>(
         s.selected_nodes.retain(|id| !removed_nodes.contains(id));
         s.selected_groups.retain(|id| !removed_groups.contains(id));
     });
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::command_ui::finish_command_paint(cx);
 }

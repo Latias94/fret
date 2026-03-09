@@ -46,9 +46,5 @@ pub(super) fn cmd_activate<H: UiHost, M: NodeGraphCanvasMiddleware>(
 }
 
 fn finish_focus_command<H: UiHost>(cx: &mut CommandCx<'_, H>, did: bool) -> bool {
-    if did {
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-    }
-    true
+    super::command_ui::finish_command_paint_if(cx, did)
 }

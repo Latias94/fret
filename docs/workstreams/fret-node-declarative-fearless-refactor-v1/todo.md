@@ -941,6 +941,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/context_menu/ui.rs` seam, so `context_menu/opening.rs`,
     `context_menu/selection_activation.rs`, and `context_menu/key_navigation.rs` no longer
     re-embed the same menu-slot mutation inline.
+  - Progress: command redraw tails now also route through the private `canvas/widget/command_ui.rs`
+    seam, so `command_history.rs`, `command_mode.rs`, `command_selection.rs`,
+    `command_view.rs`, `command_move.rs`, `command_edit.rs`, `command_edit_remove.rs`,
+    `command_focus_cycle.rs`, and `command_focus_port.rs` no longer re-embed the same
+    redraw-plus-paint-invalidation tail blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

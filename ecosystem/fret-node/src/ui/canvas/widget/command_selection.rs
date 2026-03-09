@@ -44,8 +44,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             s.selected_groups = groups;
             s.selected_edges = edges;
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 }

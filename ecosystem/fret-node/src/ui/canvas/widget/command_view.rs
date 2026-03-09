@@ -8,11 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let did = self.frame_nodes_in_view(cx.app, cx.window, bounds, &snapshot.selected_nodes);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_ui::finish_command_paint_if(cx, did)
     }
 
     pub(super) fn cmd_frame_all<H: UiHost>(
@@ -29,11 +25,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .ok()
             .unwrap_or_default();
         let did = self.frame_nodes_in_view(cx.app, cx.window, bounds, &nodes);
-        if did {
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-        }
-        true
+        super::command_ui::finish_command_paint_if(cx, did)
     }
 
     pub(super) fn cmd_reset_view<H: UiHost>(&mut self, cx: &mut CommandCx<'_, H>) -> bool {
@@ -41,9 +33,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 
     pub(super) fn cmd_zoom_in<H: UiHost>(
@@ -59,9 +49,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             s.pan = pan;
             s.zoom = zoom;
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 
     pub(super) fn cmd_zoom_out<H: UiHost>(
@@ -77,8 +65,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             s.pan = pan;
             s.zoom = zoom;
         });
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 }

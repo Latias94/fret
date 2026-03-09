@@ -22,3 +22,10 @@ pub(super) fn finish_command_paint<H: UiHost>(cx: &mut CommandCx<'_, H>) -> bool
     cx.invalidate_self(Invalidation::Paint);
     true
 }
+
+pub(super) fn finish_command_paint_if<H: UiHost>(cx: &mut CommandCx<'_, H>, did: bool) -> bool {
+    if did {
+        return finish_command_paint(cx);
+    }
+    true
+}

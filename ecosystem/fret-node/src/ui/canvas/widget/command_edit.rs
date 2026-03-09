@@ -44,9 +44,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             &snapshot.selected_nodes,
             &snapshot.selected_groups,
         );
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-        true
+        super::command_ui::finish_command_paint(cx)
     }
 
     pub(super) fn cmd_delete_selection<H: UiHost>(
