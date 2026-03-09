@@ -696,6 +696,13 @@ real editors.
   `ui/canvas/widget/paint_render_data/nodes.rs` seam, so `collect.rs` and `selected_nodes.rs`
   stop re-embedding the same node chrome/ports payload build tail and visible-node ordering logic
   inline.
+- paint-render-data group collection now also routes through the private
+  `ui/canvas/widget/paint_render_data/groups.rs` seam, so `collect.rs` stops re-embedding the same
+  group ordering, preview-rect projection, cull filtering, and metrics bookkeeping inline.
+- paint-render-data edge candidate selection, hint resolution, cull filtering, and render payload
+  assembly now also route through the private `ui/canvas/widget/paint_render_data/edges.rs` seam,
+  so `collect.rs` stops re-embedding the same edge iteration, override application, bounds
+  rejection, rank calculation, and stable sort tail inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
