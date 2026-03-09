@@ -1057,6 +1057,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: cached edge-label replay and finished-store tails now also route through smaller
     helpers in `canvas/widget/paint_root/cached_edges/labels.rs`, so the label cache paths stop
     re-embedding the same translated replay and empty-vs-populated finished-store bookkeeping.
+  - Progress: cached edge replay and finished-store tails now also route through smaller helpers in
+    `canvas/widget/paint_root/cached_edges/edges.rs`, so the edge cache paths stop re-embedding the
+    same translated replay and finished-store bookkeeping when single-rect and tiled passes share
+    the same partially built state.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

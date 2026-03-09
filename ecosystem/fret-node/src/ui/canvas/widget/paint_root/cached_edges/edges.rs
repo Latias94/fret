@@ -4,6 +4,20 @@ use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    fn replay_cached_edge_build_state<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        state: &EdgesBuildState,
+        replay_delta: Point,
+    ) {
+        cx.scene.replay_ops_translated(&state.ops, replay_delta);
+        self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+    }
+
+    fn store_finished_edge_build_state(&mut self, key: u64, state: EdgesBuildState) {
+        self.edges_scene_cache.store_ops(key, state.ops);
+    }
+
     pub(super) fn paint_root_edges_uncached<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -97,10 +111,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         if state.edges.is_empty() {
             self.edges_scene_cache.store_ops(edges_key, Vec::new());
         } else if state.ops.len() > 2 {
-            cx.scene.replay_ops_translated(&state.ops, replay_delta);
-            self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+            self.replay_cached_edge_build_state(cx, &state, replay_delta);
             if state.next_edge >= state.edges.len() {
-                self.edges_scene_cache.store_ops(edges_key, state.ops);
+                self.store_finished_edge_build_state(edges_key, state);
             } else {
                 self.edges_build_states.insert(edges_key, state);
             }
@@ -189,12 +202,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
 
             if state.ops.len() > 2 {
-                cx.scene.replay_ops_translated(&state.ops, replay_delta);
-                self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+                self.replay_cached_edge_build_state(cx, &state, replay_delta);
             }
 
             if state.next_edge >= state.edges.len() {
-                self.edges_scene_cache.store_ops(tile_key, state.ops);
+                self.store_finished_edge_build_state(tile_key, state);
             } else {
                 self.edges_build_states.insert(tile_key, state);
             }

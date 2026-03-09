@@ -648,6 +648,10 @@ real editors.
 - cached-edge label replay and finished-store tails now also route through smaller helpers in
   `canvas/widget/paint_root/cached_edges/labels.rs`, so the label cache paths stop re-embedding
   the same translated replay and empty-vs-populated finished-store bookkeeping.
+- cached-edge replay and finished-store tails now also route through smaller helpers in
+  `canvas/widget/paint_root/cached_edges/edges.rs`, so the edge cache paths stop re-embedding the
+  same translated replay and finished-store bookkeeping when single-rect and tiled passes share the
+  same partially built state.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
