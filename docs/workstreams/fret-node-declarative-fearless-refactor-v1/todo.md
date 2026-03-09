@@ -868,6 +868,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     overlay flush through the private `paint_only/surface_content.rs` seam, so declarative
     paint-only surface assembly no longer keeps the full post-handler render/output block embedded
     inline.
+  - Progress: `paint_only.rs` now also routes bounds sync, keyboard/pointer gesture handler
+    wiring, and pointer-region shell assembly through the private `paint_only/surface_shell.rs`
+    seam, so declarative paint-only surface assembly no longer keeps the full
+    `semantics_with_id(..., move |cx, element| { ... })` shell block embedded inline.
 
 ## M5 - Compatibility retained convergence
 

@@ -63,6 +63,8 @@ mod surface_content;
 mod surface_frame;
 #[path = "paint_only/surface_models.rs"]
 mod surface_models;
+#[path = "paint_only/surface_shell.rs"]
+mod surface_shell;
 #[path = "paint_only/transactions.rs"]
 mod transactions;
 
@@ -123,8 +125,11 @@ use self::semantics::{
     collect_portal_diagnostics,
 };
 use self::surface_content::{SurfaceRegionChildrenParams, build_surface_region_children};
-use self::surface_frame::{PrepareSurfaceFrameParams, prepare_surface_frame};
+use self::surface_frame::{
+    PrepareSurfaceFrameParams, PreparedPaintOnlySurfaceFrame, prepare_surface_frame,
+};
 use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
+use self::surface_shell::{SurfaceShellParams, build_surface_shell};
 use self::transactions::{
     build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
     update_view_state_action_host, update_view_state_ui_host,
@@ -800,156 +805,74 @@ pub fn node_graph_surface<H: UiHost + 'static>(
 
     cx.semantics_with_id(
         SemanticsProps {
-            test_id: Some(test_id),
-            value: Some(semantics_value),
+            test_id: Some(test_id.clone()),
+            value: Some(semantics_value.clone()),
             // Make the surface focusable so keyboard actions can route here after pointer-down.
             focusable: true,
             ..Default::default()
         },
         move |cx, element| {
-            // Opportunistically learn bounds from the last recorded geometry. This is best-effort:
-            // pointer hooks also stamp bounds (more immediate), but this helps keep resize behavior
-            // roughly correct during the paint-only milestone.
-            if let Some(bounds) = cx.last_bounds_for_element(element) {
-                let _ = cx.app.models_mut().update(&grid_cache, |st| {
-                    if st.bounds != bounds {
-                        st.bounds = bounds;
-                    }
-                });
-            }
-
-            let on_key_down_capture = build_key_down_capture_handler(KeyHandlerParams {
-                drag: drag.clone(),
-                marquee_drag: marquee_drag.clone(),
-                node_drag: node_drag.clone(),
-                pending_selection: pending_selection.clone(),
-                graph: graph.clone(),
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-                portal_bounds_store: portal_bounds_store.clone(),
-                portal_debug_flags: portal_debug_flags.clone(),
-                diag_keys_enabled,
-                diag_paint_overrides_value: diag_paint_overrides_value.clone(),
-                diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
-                min_zoom,
-                max_zoom,
-            });
-            cx.key_on_key_down_capture_for(element, on_key_down_capture);
-
-            let on_pointer_down = build_pointer_down_handler(PointerDownHandlerParams {
-                focus_target: element,
-                pan_button,
-                drag: drag.clone(),
-                marquee_drag: marquee_drag.clone(),
-                node_drag: node_drag.clone(),
-                pending_selection: pending_selection.clone(),
-                view_state: view_state.clone(),
-                grid_cache: grid_cache.clone(),
-                derived_cache: derived_cache.clone(),
-                hovered_node: hovered_node.clone(),
-                hit_scratch: hit_scratch.clone(),
-            });
-
-            let on_pointer_move = build_pointer_move_handler(PointerMoveHandlerParams {
-                drag: drag.clone(),
-                marquee_drag: marquee_drag.clone(),
-                node_drag: node_drag.clone(),
-                pending_selection: pending_selection.clone(),
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-                grid_cache: grid_cache.clone(),
-                derived_cache: derived_cache.clone(),
-                hovered_node: hovered_node.clone(),
-                hit_scratch: hit_scratch.clone(),
-            });
-
-            let on_pointer_up = build_pointer_up_handler(PointerFinishHandlerParams {
-                pan_button,
-                drag: drag.clone(),
-                marquee_drag: marquee_drag.clone(),
-                node_drag: node_drag.clone(),
-                pending_selection: pending_selection.clone(),
-                graph: graph.clone(),
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-            });
-
-            let on_pointer_cancel = build_pointer_cancel_handler(PointerFinishHandlerParams {
-                pan_button,
-                drag: drag.clone(),
-                marquee_drag: marquee_drag.clone(),
-                node_drag: node_drag.clone(),
-                pending_selection: pending_selection.clone(),
-                graph: graph.clone(),
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-            });
-
-            let on_wheel = build_wheel_handler(WheelHandlerParams {
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-                grid_cache: grid_cache.clone(),
-                wheel_zoom,
-                min_zoom,
-                max_zoom,
-            });
-
-            let on_pinch = build_pinch_handler(PinchHandlerParams {
-                view_state: view_state.clone(),
-                controller: controller.clone(),
-                grid_cache: grid_cache.clone(),
-                pinch_zoom_speed,
-                min_zoom,
-                max_zoom,
-            });
-
-            vec![cx.pointer_region(pointer_region, move |cx| {
-                cx.pointer_region_on_pointer_down(on_pointer_down);
-                cx.pointer_region_on_pointer_move(on_pointer_move);
-                cx.pointer_region_on_pointer_up(on_pointer_up);
-                cx.pointer_region_on_pointer_cancel(on_pointer_cancel);
-                cx.pointer_region_on_wheel(on_wheel);
-                cx.pointer_region_on_pinch_gesture(on_pinch);
-                build_surface_region_children(
-                    cx,
-                    SurfaceRegionChildrenParams {
-                        canvas,
-                        graph: graph.clone(),
-                        view_state: view_state.clone(),
-                        controller: controller.clone(),
-                        hovered_node_model: hovered_node.clone(),
-                        node_drag_model: node_drag.clone(),
-                        marquee_drag_model: marquee_drag.clone(),
-                        hover_anchor_store: hover_anchor_store.clone(),
+            build_surface_shell(
+                cx,
+                element,
+                SurfaceShellParams {
+                    graph: graph.clone(),
+                    view_state: view_state.clone(),
+                    controller: controller.clone(),
+                    pointer_region,
+                    canvas,
+                    measured_geometry_present: measured_geometry.is_some(),
+                    portals_enabled,
+                    portal_max_nodes,
+                    cull_margin_screen_px,
+                    pan_button,
+                    min_zoom,
+                    max_zoom,
+                    wheel_zoom,
+                    pinch_zoom_speed,
+                    surface_models: PaintOnlySurfaceModels {
+                        drag: drag.clone(),
+                        marquee_drag: marquee_drag.clone(),
+                        node_drag: node_drag.clone(),
+                        pending_selection: pending_selection.clone(),
+                        hovered_node: hovered_node.clone(),
+                        hit_scratch: hit_scratch.clone(),
+                        diag_paint_overrides: diag_paint_overrides.clone(),
+                        diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+                        grid_cache: grid_cache.clone(),
+                        derived_cache: derived_cache.clone(),
+                        edges_cache: edges_cache.clone(),
+                        nodes_cache: nodes_cache.clone(),
                         portal_bounds_store: portal_bounds_store.clone(),
                         portal_measured_geometry_state: portal_measured_geometry_state.clone(),
-                        measured_geometry_present: measured_geometry.is_some(),
-                        portals_enabled,
-                        portals_disabled,
-                        portal_max_nodes,
-                        cull_margin_screen_px,
-                        min_zoom,
-                        max_zoom,
-                        diag_keys_enabled,
-                        panning,
-                        marquee_active,
-                        node_dragging,
-                        view_for_paint,
-                        grid_bounds: grid_cache_value.bounds,
-                        grid_ops: grid_cache_value.ops.clone(),
-                        node_draws: nodes_cache_value.draws.clone(),
-                        edge_draws: edges_cache_value.draws.clone(),
-                        geom_for_paint: derived_cache_value.geom.clone(),
-                        style_tokens: style_tokens.clone(),
-                        theme: theme.clone(),
-                        hovered_node_value,
-                        selected_nodes: effective_selected_nodes.clone(),
-                        marquee_value: marquee_value.clone(),
-                        node_drag_value: node_drag_value.clone(),
-                        paint_overrides_ref: paint_overrides_ref.clone(),
+                        portal_debug_flags: portal_debug_flags.clone(),
+                        hover_anchor_store: hover_anchor_store.clone(),
+                        authoritative_surface_boundary: authoritative_surface_boundary.clone(),
                     },
-                )
-            })]
+                    prepared_frame: PreparedPaintOnlySurfaceFrame {
+                        view_for_paint,
+                        theme: theme.clone(),
+                        style_tokens: style_tokens.clone(),
+                        diag_keys_enabled,
+                        diag_paint_overrides_value: diag_paint_overrides_value.clone(),
+                        paint_overrides_ref: paint_overrides_ref.clone(),
+                        panning,
+                        marquee_value: marquee_value.clone(),
+                        marquee_active,
+                        node_drag_value: node_drag_value.clone(),
+                        node_dragging,
+                        grid_cache_value: grid_cache_value.clone(),
+                        derived_cache_value: derived_cache_value.clone(),
+                        nodes_cache_value: nodes_cache_value.clone(),
+                        edges_cache_value: edges_cache_value.clone(),
+                        hovered_node_value,
+                        effective_selected_nodes: effective_selected_nodes.clone(),
+                        portals_disabled,
+                        semantics_value: semantics_value.clone(),
+                        test_id: test_id.clone(),
+                    },
+                },
+            )
         },
     )
 }
