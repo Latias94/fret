@@ -145,6 +145,7 @@ struct State {
     regression_selected_summary_path: Model<Option<Arc<str>>>,
     regression_selected_summary_json: Model<String>,
     regression_selected_bundle_dirs: Model<Vec<Arc<str>>>,
+    regression_selected_capability_sources: Model<Vec<Arc<str>>>,
     regression_selected_capabilities_checks: Model<Vec<Arc<str>>>,
     regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
@@ -313,6 +314,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_selected_summary_path = app.models_mut().insert(None::<Arc<str>>);
     let regression_selected_summary_json = app.models_mut().insert(String::new());
     let regression_selected_bundle_dirs = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_capability_sources = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_capabilities_checks = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
@@ -440,6 +442,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_selected_summary_path,
         regression_selected_summary_json,
         regression_selected_bundle_dirs,
+        regression_selected_capability_sources,
         regression_selected_capabilities_checks,
         regression_selected_error,
         log_lines,
@@ -576,6 +579,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.regression_selected_summary_path, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_summary_json, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_bundle_dirs, Invalidation::Paint);
+    cx.observe_model(
+        &st.regression_selected_capability_sources,
+        Invalidation::Paint,
+    );
     cx.observe_model(
         &st.regression_selected_capabilities_checks,
         Invalidation::Paint,
@@ -2325,6 +2332,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_selected_bundle_dirs, |v| v.clone())
         .unwrap_or_default();
+    let selected_capability_sources = cx
+        .app
+        .models()
+        .read(&st.regression_selected_capability_sources, |v| v.clone())
+        .unwrap_or_default();
     let selected_capabilities_checks = cx
         .app
         .models()
@@ -2362,6 +2374,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
+    let selected_capability_source_count = selected_capability_sources.len();
     let selected_capabilities_check_count = selected_capabilities_checks.len();
     let summarize_status_line = {
         let err = summarize_last_error
@@ -2442,6 +2455,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             let selected_summary_path_model = st.regression_selected_summary_path.clone();
             let selected_summary_json_model = st.regression_selected_summary_json.clone();
             let selected_bundle_dirs_model = st.regression_selected_bundle_dirs.clone();
+            let selected_capability_sources_model =
+                st.regression_selected_capability_sources.clone();
             let selected_capabilities_checks_model =
                 st.regression_selected_capabilities_checks.clone();
             let selected_error_model = st.regression_selected_error.clone();
@@ -2462,6 +2477,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| {
                                 *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
                             });
+                            let _ = host.models_mut().update(
+                                &selected_capability_sources_model,
+                                |v| {
+                                    *v = data
+                                        .capability_sources
+                                        .into_iter()
+                                        .map(Arc::<str>::from)
+                                        .collect();
+                                },
+                            );
                             let _ = host.models_mut().update(
                                 &selected_capabilities_checks_model,
                                 |v| {
@@ -2486,6 +2511,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                             let _ = host
                                 .models_mut()
                                 .update(&selected_bundle_dirs_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_capability_sources_model, |v| v.clear());
                             let _ = host
                                 .models_mut()
                                 .update(&selected_capabilities_checks_model, |v| v.clear());
@@ -2596,18 +2624,17 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .iter()
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
-        .join(
-            "
-",
-        );
+        .join("\r\n");
+    let selected_capability_sources_text = selected_capability_sources
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
     let selected_capabilities_checks_text = selected_capabilities_checks
         .iter()
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
-        .join(
-            "
-",
-        );
+        .join("\r\n");
     let selected_summary_overview = {
         let mut parts: Vec<String> = Vec::new();
         match selected_summary_path.as_deref() {
@@ -2617,6 +2644,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         parts.push(format!("Selected bundle dirs: {selected_bundle_count}"));
         if let Some(first) = selected_bundle_dirs.first() {
             parts.push(format!("First bundle dir: {}", first.as_ref()));
+        }
+        parts.push(format!(
+            "Selected capability sources: {selected_capability_source_count}"
+        ));
+        if let Some(first) = selected_capability_sources.first() {
+            parts.push(format!("First capability source: {}", first.as_ref()));
         }
         parts.push(format!(
             "Selected capability checks: {selected_capabilities_check_count}"
@@ -2637,6 +2670,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if !selected_bundle_dirs_text.trim().is_empty() {
             parts.push("bundle_dirs:".to_string());
             parts.push(selected_bundle_dirs_text.clone());
+        }
+        if !selected_capability_sources_text.trim().is_empty() {
+            parts.push("capability_sources:".to_string());
+            parts.push(selected_capability_sources_text.clone());
         }
         if !selected_capabilities_checks_text.trim().is_empty() {
             parts.push("capabilities_check_paths:".to_string());
@@ -2709,6 +2746,24 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if let Some(first_capability_source) =
+            selected_capability_sources.first().map(|v| v.to_string())
+        {
+            let on_copy_first: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    host.push_effect(Effect::ClipboardSetText {
+                        text: first_capability_source.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            out.push(
+                shadcn::Button::new("Copy first capability source")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy_first)
+                    .into_element(cx),
+            );
+        }
         out.push(
             shadcn::Button::new("Pack selected evidence")
                 .variant(shadcn::ButtonVariant::Outline)
@@ -2749,6 +2804,22 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if !selected_capability_sources_text.trim().is_empty() {
+            let capability_sources = selected_capability_sources_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: capability_sources.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy capability sources")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
         out
     })
     .gap(fret_ui_kit::Space::N2)
@@ -2774,6 +2845,15 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     shadcn::BadgeVariant::Outline
                 })
                 .into_element(cx),
+            shadcn::Badge::new(format!(
+                "capability sources {selected_capability_source_count}"
+            ))
+            .variant(if selected_capability_source_count > 0 {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
             shadcn::Badge::new(format!(
                 "capability checks {selected_capabilities_check_count}"
             ))
@@ -2822,6 +2902,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             shadcn::Badge::new(format!("selected bundles {selected_bundle_count}"))
                 .variant(shadcn::BadgeVariant::Outline)
                 .into_element(cx),
+            shadcn::Badge::new(format!(
+                "selected capability sources {selected_capability_source_count}"
+            ))
+            .variant(shadcn::BadgeVariant::Outline)
+            .into_element(cx),
             shadcn::Badge::new(format!(
                 "selected capability checks {selected_capabilities_check_count}"
             ))
@@ -2906,6 +2991,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
     let selected_bundle_dirs_blob =
         text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
+    let selected_capability_sources_blob =
+        text_blob_sized(cx, selected_capability_sources_text.clone(), Px(96.0));
     let selected_capabilities_blob =
         text_blob_sized(cx, selected_capabilities_checks_text.clone(), Px(96.0));
     let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
@@ -2926,6 +3013,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         "Bundle Directories",
         "These are the concrete artifact roots attached to the selected non-passing summary.",
         vec![selected_bundle_dirs_blob],
+    );
+    let selected_capability_sources_section = diag_section(
+        cx,
+        "Capability Sources",
+        "Capability provenance is shown separately from campaign-local check artifacts and prefers the additive source object when present.",
+        vec![selected_capability_sources_blob],
     );
     let selected_capabilities_section = diag_section(
         cx,
@@ -2948,6 +3041,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_overview_section,
             selected_actions_section,
             selected_bundle_dirs_section,
+            selected_capability_sources_section,
             selected_capabilities_section,
             selected_raw_summary_section,
         ],
@@ -4628,6 +4722,9 @@ pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
         .update(&st.regression_selected_bundle_dirs, |v| v.clear());
     let _ = app
         .models_mut()
+        .update(&st.regression_selected_capability_sources, |v| v.clear());
+    let _ = app
+        .models_mut()
         .update(&st.regression_selected_capabilities_checks, |v| v.clear());
     let _ = app
         .models_mut()
@@ -4716,7 +4813,56 @@ struct RegressionFailingSummaryRow {
 struct RegressionSummaryDrilldownData {
     summary_json: String,
     bundle_dirs: Vec<String>,
+    capability_sources: Vec<String>,
     capabilities_check_paths: Vec<String>,
+}
+
+fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(path) = value.get("path").and_then(|value| value.as_str())
+        && !path.trim().is_empty()
+    {
+        return Some(path.to_string());
+    }
+    if let Some(label) = value.get("label").and_then(|value| value.as_str())
+        && !label.trim().is_empty()
+    {
+        return Some(label.to_string());
+    }
+    let transport = value.get("transport").and_then(|value| value.as_str());
+    let session_id = value.get("session_id").and_then(|value| value.as_str());
+    match (transport, session_id) {
+        (Some(transport), Some(session_id))
+            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
+        {
+            Some(format!("{transport}:{session_id}"))
+        }
+        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
+        _ => None,
+    }
+}
+
+fn regression_item_capability_source_display(item: &fret_diag::regression_summary::RegressionItemSummaryV1) -> Option<String> {
+    item.evidence
+        .as_ref()
+        .and_then(|evidence| evidence.extra.as_ref())
+        .and_then(|extra| extra.get("capability_source"))
+        .and_then(capability_source_display_from_value)
+        .or_else(|| {
+            item.source
+                .as_ref()
+                .and_then(|source| source.metadata.as_ref())
+                .and_then(|metadata| metadata.get("capability_source"))
+                .and_then(capability_source_display_from_value)
+        })
+        .or_else(|| {
+            item.evidence
+                .as_ref()
+                .and_then(|evidence| evidence.extra.as_ref())
+                .and_then(|extra| extra.get("capabilities_source_path"))
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .map(ToString::to_string)
+        })
 }
 
 fn regression_failing_summary_rows(
@@ -4745,10 +4891,16 @@ fn load_regression_summary_drilldown(
     let summary: RegressionSummaryV1 =
         serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
     let mut bundle_dirs: Vec<String> = Vec::new();
+    let mut capability_sources: Vec<String> = Vec::new();
     let mut capabilities_check_paths: Vec<String> = Vec::new();
     for item in summary.items {
         if item.status == RegressionStatusV1::Passed {
             continue;
+        }
+        if let Some(source) = regression_item_capability_source_display(&item)
+            && !capability_sources.iter().any(|existing| existing == &source)
+        {
+            capability_sources.push(source);
         }
         if let Some(evidence) = item.evidence {
             if let Some(dir) = evidence.bundle_dir
@@ -4774,6 +4926,7 @@ fn load_regression_summary_drilldown(
     Ok(RegressionSummaryDrilldownData {
         summary_json,
         bundle_dirs,
+        capability_sources,
         capabilities_check_paths,
     })
 }
@@ -4801,6 +4954,15 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
                 });
             let _ = app
                 .models_mut()
+                .update(&st.regression_selected_capability_sources, |v| {
+                    *v = data
+                        .capability_sources
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
                 .update(&st.regression_selected_capabilities_checks, |v| {
                     *v = data
                         .capabilities_check_paths
@@ -4819,6 +4981,9 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
             let _ = app
                 .models_mut()
                 .update(&st.regression_selected_bundle_dirs, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_capability_sources, |v| v.clear());
             let _ = app
                 .models_mut()
                 .update(&st.regression_selected_capabilities_checks, |v| v.clear());
@@ -5010,6 +5175,7 @@ mod tests {
             data.bundle_dirs,
             vec!["target/fret-diag/runs/bundle-a".to_string()]
         );
+        assert!(data.capability_sources.is_empty());
         assert!(data.capabilities_check_paths.is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -5041,6 +5207,13 @@ mod tests {
                     "reason_code": "capability.missing",
                     "evidence": {
                         "extra": {
+                            "capability_source": {
+                                "kind": "filesystem",
+                                "path": "target/fret-diag/capabilities.json",
+                                "label": "filesystem:target/fret-diag/capabilities.json",
+                                "transport": "filesystem",
+                                "session_id": null
+                            },
                             "capabilities_check_path": "target/fret-diag/campaigns/ui-gallery/check.capabilities.json"
                         }
                     }
@@ -5052,9 +5225,64 @@ mod tests {
         let data = load_regression_summary_drilldown(&path).expect("load drilldown");
         assert!(data.bundle_dirs.is_empty());
         assert_eq!(
+            data.capability_sources,
+            vec!["target/fret-diag/capabilities.json".to_string()]
+        );
+        assert_eq!(
             data.capabilities_check_paths,
             vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_falls_back_to_capability_source_label() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-source-label-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "source": {
+                        "metadata": {
+                            "capability_source": {
+                                "kind": "transport_session",
+                                "path": null,
+                                "label": "devtools_ws:session-123",
+                                "transport": "devtools_ws",
+                                "session_id": "session-123"
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert!(data.bundle_dirs.is_empty());
+        assert_eq!(
+            data.capability_sources,
+            vec!["devtools_ws:session-123".to_string()]
+        );
+        assert!(data.capabilities_check_paths.is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);
     }
