@@ -2576,6 +2576,177 @@ fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_after_content_cont
     );
 }
 
+
+#[test]
+fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_when_only_descendant_dirty_off_edge() {
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureLayoutNode {
+        measured: Size,
+        layout_size: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-shrink-descendant-off-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node0 = ui.children(root0)[0];
+    let leaf0 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(800.0)),
+    });
+    let child_root0 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf0,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(800.0)),
+        ),
+    });
+    ui.set_children(child_root0, vec![leaf0]);
+    ui.set_children(scroll_node0, vec![child_root0]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().y;
+    assert!(
+        (content0.height.0 - 800.0).abs() <= 0.5,
+        "expected initial post-layout observation to capture the tall leaf extent: content={content0:?} max={max0:?}"
+    );
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(120.0)));
+    app.advance_frame();
+
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-shrink-descendant-off-edge",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node1 = ui.children(root1)[0];
+    let leaf1 = ui.create_node(FixedLeaf {
+        size: Size::new(Px(120.0), Px(100.0)),
+    });
+    let child_root1 = ui.create_node(MeasureLayoutNode {
+        measured: Size::new(Px(120.0), Px(200.0)),
+        layout_size: Size::new(Px(120.0), Px(200.0)),
+        child: leaf1,
+        child_rect: Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(100.0)),
+        ),
+    });
+    ui.set_children(child_root1, vec![leaf1]);
+    ui.set_children(scroll_node1, vec![child_root1]);
+
+    assert!(
+        ui.node_needs_layout(leaf1),
+        "expected descendant leaf to be layout-invalidated on the contracted frame"
+    );
+    ui.test_set_layout_invalidation(child_root1, false);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().y;
+    let off1 = scroll_handle.offset().y;
+    assert!(
+        (content1.height.0 - 200.0).abs() <= 0.5,
+        "expected post-layout shrink to clamp stale extent even when only a descendant remains layout-dirty off-edge: before={content0:?} after={content1:?}"
+    );
+    assert!(
+        max1.0 <= 0.5,
+        "expected max offset to collapse after the contracted descendant is revalidated off-edge: content={content1:?} max={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected offset to clamp after off-edge descendant-only shrink revalidation: offset={off1:?} max={max1:?} content={content1:?}"
+    );
+}
+
 #[test]
 fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_for_multi_child_roots() {
     struct FixedLeaf {

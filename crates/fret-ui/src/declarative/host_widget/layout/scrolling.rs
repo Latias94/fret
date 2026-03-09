@@ -1229,7 +1229,7 @@ impl ElementHostWidget {
         // page and being unable to scroll further).
         //
         // The subtree dirty aggregation makes it cheap to detect this condition without scanning.
-        let descendant_subtree_layout_dirty = at_scroll_extent_edge
+        let descendant_subtree_layout_dirty = (at_scroll_extent_edge || post_layout_extents_mode)
             && cx
                 .children
                 .iter()
