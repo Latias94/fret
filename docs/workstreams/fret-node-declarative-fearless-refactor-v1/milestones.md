@@ -353,6 +353,9 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/runtime/changes.rs`
 - `ecosystem/fret-node/src/runtime/lookups.rs`
 - `ecosystem/fret-node/src/ui/controller.rs`
+- `ecosystem/fret-node/src/ui/controller_queries.rs`
+- `ecosystem/fret-node/src/ui/controller_viewport.rs`
+- `ecosystem/fret-node/src/ui/controller_store_sync.rs`
 - `ecosystem/fret-node/src/ui/binding.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
@@ -462,6 +465,11 @@ real editors.
   diagnostic policy in `paint_only/diag.rs`, so the main paint-only surface stops re-embedding
   these support and diagnostic helper blocks inline while keeping the same model-bootstrap,
   invalidation, and diag contracts.
+- `ui/controller.rs` now also routes controller queries, viewport/fit-view helpers, and
+  store-sync/replace/selection transport through the private `controller_queries.rs`,
+  `controller_viewport.rs`, and `controller_store_sync.rs` seams, so the app-facing
+  `NodeGraphController` surface stops re-embedding the full query + viewport + queue/store
+  orchestration implementation inline while keeping the same binding/controller contract.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in

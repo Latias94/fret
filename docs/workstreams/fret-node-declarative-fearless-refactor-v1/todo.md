@@ -881,6 +881,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `paint_only/surface_support.rs` seam, while diagnostic visible-node transaction builders now
     live beside the rest of the diagnostic policy in `paint_only/diag.rs`, so the main paint-only
     surface no longer keeps these support and diagnostic helper blocks embedded inline.
+  - Progress: `ui/controller.rs` now also routes controller queries, viewport/fit-view helpers,
+    and store-sync/replace/selection transport through the private
+    `controller_queries.rs`, `controller_viewport.rs`, and `controller_store_sync.rs` seams, so
+    the app-facing `NodeGraphController` surface no longer keeps the full query + viewport +
+    queue/store orchestration implementation embedded inline.
 
 ## M5 - Compatibility retained convergence
 
