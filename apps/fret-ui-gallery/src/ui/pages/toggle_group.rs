@@ -78,7 +78,8 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("Item ordering and pressed visuals under RTL.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes."),
+                .description("API reference pointers and authoring notes.")
+                .test_id_prefix("ui-gallery-toggle-group-notes"),
         ],
     );
 

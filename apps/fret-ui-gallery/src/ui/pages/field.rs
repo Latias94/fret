@@ -106,7 +106,8 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("All Field compositions should render correctly under RTL direction.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and stability guidance."),
+                .description("API reference pointers and stability guidance.")
+                .test_id_prefix("ui-gallery-field-notes"),
         ],
     );
 

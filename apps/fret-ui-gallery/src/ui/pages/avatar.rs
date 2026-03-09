@@ -94,7 +94,9 @@ pub(super) fn preview_avatar(
                 .description("Fallback-only avatars at each size.")
                 .test_id_prefix("ui-gallery-avatar-fallback")
                 .code_rust_from_file_region(snippets::fallback_only::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Usage notes."),
+            DocSection::new("Notes", notes)
+                .description("Usage notes.")
+                .test_id_prefix("ui-gallery-avatar-notes"),
         ],
     );
 

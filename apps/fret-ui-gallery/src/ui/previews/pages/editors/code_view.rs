@@ -65,7 +65,7 @@ pub(in crate::ui) fn preview_code_view_torture(
 }
 
 pub(in crate::ui) fn code_editor_mvp_source() -> String {
-    [
+    let mut out = [
         "// Code Editor MVP\n",
         "// Goals:\n",
         "// - Validate TextInputRegion focus + TextInput/Ime events\n",
@@ -89,8 +89,20 @@ pub(in crate::ui) fn code_editor_mvp_source() -> String {
         "}\n",
         "\n",
         "// Try: mouse drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, IME.\n",
+        "\n",
     ]
-    .concat()
+    .concat();
+
+    for i in 0..240usize {
+        let _ = std::fmt::Write::write_fmt(
+            &mut out,
+            format_args!(
+                "fn helper_{i:03}() {{ let value = {i}; println!(\"helper={i} value={{}}\", value); }}\n"
+            ),
+        );
+    }
+
+    out
 }
 
 pub(in crate::ui) fn code_editor_torture_source() -> String {

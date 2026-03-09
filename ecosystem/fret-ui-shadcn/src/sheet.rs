@@ -1247,6 +1247,16 @@ impl SheetContent {
             let close = crate::dialog::DialogClose::new(open).into_element(cx);
             children.push(close);
         }
+        let stack_layout = match side {
+            SheetSide::Left | SheetSide::Right => LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .min_w_0()
+                .min_h_0(),
+            SheetSide::Top | SheetSide::Bottom => {
+                LayoutRefinement::default().w_full().min_w_0().min_h_0()
+            }
+        };
         let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
@@ -1255,7 +1265,7 @@ impl SheetContent {
             },
             shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
+                .layout(stack_layout),
             children,
         );
 

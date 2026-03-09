@@ -85,9 +85,10 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("RTL layout keeps spacing and submenu direction parity-auditable.")
                 .test_id_prefix("ui-gallery-context-menu-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-context-menu-notes"),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-context-menu")]
 }

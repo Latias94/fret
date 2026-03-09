@@ -60,7 +60,9 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and caveats.")
+                .test_id_prefix("ui-gallery-alert-notes"),
         ],
     );
 

@@ -19,6 +19,9 @@ mathjax-svg = ["fret-examples/mathjax-svg"]
 devtools-ws = ["fret-examples/devtools-ws"]
 macos-hit-test-regions = ["fret-examples/macos-hit-test-regions"]
 ui-gallery = ["dep:fret-ui-gallery"]
+ui-gallery-dev = ["ui-gallery", "fret-ui-gallery/gallery-dev"]
+ui-gallery-material3 = ["ui-gallery", "fret-ui-gallery/gallery-material3"]
+ui-gallery-full = ["ui-gallery", "fret-ui-gallery/gallery-full"]
 hotpatch = [
     "fret-examples/hotpatch",
     "dep:fret-app",

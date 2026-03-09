@@ -56,9 +56,10 @@ pub(super) fn preview_hover_card(
                 .description("Hover card should respect right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("Implementation notes and regression guidelines."),
+                .description("Implementation notes and regression guidelines.")
+                .test_id_prefix("ui-gallery-hover-card-notes"),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-hover-card")]
 }

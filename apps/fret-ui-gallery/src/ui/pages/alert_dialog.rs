@@ -87,6 +87,7 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
+                .test_id_prefix("ui-gallery-alert-dialog-notes")
                 .description("Guidelines and best practices for alert dialogs."),
         ],
     );

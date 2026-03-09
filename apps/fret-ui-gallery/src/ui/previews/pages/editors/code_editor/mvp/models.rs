@@ -81,8 +81,13 @@ pub(super) fn applied_flags(
 
 fn code_editor_wrap_gate_fixture() -> String {
     let mut s = String::new();
-    for _ in 0..20 {
-        s.push_str("0123456789");
+    for i in 0..120usize {
+        let _ = std::fmt::Write::write_fmt(
+            &mut s,
+            format_args!(
+                "{i:03}: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_wrap_gate_fixture_line\n"
+            ),
+        );
     }
     s
 }

@@ -39,7 +39,8 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                     "Navigation Menu should preserve placement and viewport alignment under RTL.",
                 )
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-navigation-menu-notes"),
         ],
     );
 
