@@ -474,6 +474,12 @@ real editors.
   `canvas/widget/widget_surface.rs` seam, so the root widget module stops re-embedding constructor,
   config/style-sync, fit-on-mount, and shared cull/render helper orchestration inline while
   keeping the same retained canvas contract and module map.
+- `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
+  factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
+  `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
+  `canvas/paint/paint_text.rs` seams, so the root paint module stops re-embedding path-factory and
+  text-cache implementation blocks inline while keeping the same cache contract and lifecycle
+  surface.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1145,6 +1151,11 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
+- `ecosystem/fret-node/src/ui/canvas/paint.rs`
+- `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
+- `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`
+- `ecosystem/fret-node/src/ui/canvas/paint/paint_markers.rs`
+- `ecosystem/fret-node/src/ui/canvas/paint/paint_text.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

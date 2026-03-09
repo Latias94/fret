@@ -890,6 +890,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/widget_surface.rs` seam, so the root widget module now mainly holds the module
     map and shared type definitions while constructor/config/style-sync/cull helper orchestration
     lives beside the rest of the retained widget internals.
+  - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
+    factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
+    `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
+    `canvas/paint/paint_text.rs` seams, so the root paint module now mainly holds cache state,
+    shared key types, and lifecycle/prune orchestration.
 
 ## M5 - Compatibility retained convergence
 
