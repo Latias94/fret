@@ -130,9 +130,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.edges_build_states
                 .retain(|k, _| self.edges_tile_keys_scratch.contains(k));
 
-            if skipped {
-                cx.request_redraw();
-            }
+            super::super::redraw_request::request_paint_redraw_if(cx, skipped);
 
             self.paint_edge_overlays_selected_hovered(cx, snapshot, geom, zoom);
         } else {
@@ -260,8 +258,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.edge_labels_build_states
             .retain(|k, _| self.edge_labels_tile_keys_scratch.contains(k));
 
-        if skipped_labels {
-            cx.request_redraw();
-        }
+        super::super::redraw_request::request_paint_redraw_if(cx, skipped_labels);
     }
 }

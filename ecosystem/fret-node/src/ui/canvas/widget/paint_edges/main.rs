@@ -494,15 +494,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        if marker_budget_skipped > 0 {
-            cx.request_redraw();
-        }
-        if outline_budget_skipped > 0 {
-            cx.request_redraw();
-        }
-        if highlight_budget_skipped > 0 {
-            cx.request_redraw();
-        }
+        super::super::redraw_request::request_paint_redraw_if(cx, marker_budget_skipped > 0);
+        super::super::redraw_request::request_paint_redraw_if(cx, outline_budget_skipped > 0);
+        super::super::redraw_request::request_paint_redraw_if(cx, highlight_budget_skipped > 0);
 
         let mut draw_drop_marker = |pos: Point, color: Color| {
             let z = zoom.max(1.0e-6);
@@ -584,7 +578,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let mut label_budget_skipped: u32 = 0;
             if skipped_by_budget && next_edge < render.edges.len() {
                 label_budget_skipped = 1;
-                cx.request_redraw();
+                super::super::redraw_request::request_paint_redraw(cx);
             }
 
             if let Some(window) = cx.window {

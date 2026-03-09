@@ -8,8 +8,6 @@ pub(super) fn drain_post_layout_queues<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let did_view_queue = canvas.drain_view_queue(cx.app, cx.window);
     let did_fit_on_mount =
         canvas.maybe_fit_view_on_mount(cx.app, cx.window, cx.bounds, did_view_queue);
-    if did_view_queue || did_fit_on_mount {
-        cx.request_redraw();
-    }
+    super::redraw_request::request_layout_redraw_if(cx, did_view_queue || did_fit_on_mount);
     cx.available
 }

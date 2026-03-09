@@ -570,6 +570,15 @@ real editors.
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
   redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
+- paint/layout redraw requests now also route through the private
+  `canvas/widget/redraw_request.rs` seam, so `paint_grid_cache.rs`, `paint_edges/main.rs`,
+  `paint_root/cached_edges/single_rect.rs`, `paint_root/cached_edges/tile_path.rs`,
+  `retained_widget_layout_drain.rs`, and `wire_drag/commit_cx.rs` stop re-embedding the same
+  next-frame redraw request blocks inline while keeping the same behavior.
+- command / retained-runtime / wire-commit paint tails now also route through small private helper
+  seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
+  `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
+  redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

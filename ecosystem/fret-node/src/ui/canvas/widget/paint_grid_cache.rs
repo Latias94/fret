@@ -30,7 +30,7 @@ pub(super) fn warm_grid_tiles<H: UiHost, M: NodeGraphCanvasMiddleware>(
         |tile| grid_tile_ops_for_plan(plan, tile),
     );
     if warmup.skipped_tiles > 0 {
-        cx.request_redraw();
+        super::redraw_request::request_paint_redraw(cx);
     }
     GridTileWarmupStats {
         tile_budget_limit,

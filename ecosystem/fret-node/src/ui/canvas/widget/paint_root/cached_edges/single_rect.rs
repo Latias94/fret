@@ -95,7 +95,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     &mut wire_budget,
                     &mut marker_budget,
                 ) {
-                    cx.request_redraw();
+                    super::super::redraw_request::request_paint_redraw(cx);
                 }
 
                 if state.edges.is_empty() {
@@ -153,7 +153,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 &mut state,
                 &mut budget,
             ) {
-                cx.request_redraw();
+                super::super::redraw_request::request_paint_redraw(cx);
             }
 
             if state.next_edge >= state.edges.len() {

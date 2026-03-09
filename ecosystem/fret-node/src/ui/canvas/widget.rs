@@ -187,6 +187,7 @@ mod group_resize_apply;
 mod group_resize_hit;
 mod hit_test;
 mod paint_invalidation;
+mod redraw_request;
 mod pointer_down_double_click;
 mod pointer_down_double_click_background;
 mod pointer_down_double_click_edge;
