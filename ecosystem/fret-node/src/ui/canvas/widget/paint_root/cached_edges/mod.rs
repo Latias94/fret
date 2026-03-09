@@ -2,6 +2,7 @@ use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 mod build_state;
+mod edges;
 mod keys;
 mod labels;
 mod single_rect;

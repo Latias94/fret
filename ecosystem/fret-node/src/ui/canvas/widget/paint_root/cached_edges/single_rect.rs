@@ -54,66 +54,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
 
         if snapshot.interaction.elevate_edges_on_select {
-            let edges_hit =
-                self.edges_scene_cache
-                    .try_replay_with(edges_key, cx.scene, replay_delta, |ops| {
-                        self.paint_cache.touch_paths_in_scene_ops(ops);
-                    });
-            if edges_hit {
-                self.edges_build_states.remove(&edges_key);
-            } else {
-                let mut state = self
-                    .edges_build_states
-                    .remove(&edges_key)
-                    .unwrap_or_else(|| {
-                        self.init_edges_build_state(
-                            &*cx.app,
-                            snapshot,
-                            geom,
-                            index,
-                            edges_cache_rect,
-                            edges_cache_rect,
-                            zoom,
-                        )
-                    });
-
-                let wire_budget_limit =
-                    Self::EDGE_WIRE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-                let marker_budget_limit =
-                    Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-                let mut wire_budget = WorkBudget::new(wire_budget_limit);
-                let mut marker_budget = WorkBudget::new(marker_budget_limit);
-
-                let mut tmp = fret_core::Scene::default();
-                if self.paint_edges_build_state_step(
-                    &mut tmp,
-                    &*cx.app,
-                    cx.services,
-                    zoom,
-                    cx.scale_factor,
-                    &mut state,
-                    &mut wire_budget,
-                    &mut marker_budget,
-                ) {
-                    super::super::redraw_request::request_paint_redraw(cx);
-                }
-
-                if state.edges.is_empty() {
-                    self.edges_scene_cache.store_ops(edges_key, Vec::new());
-                } else if state.ops.len() > 2 {
-                    cx.scene.replay_ops_translated(&state.ops, replay_delta);
-                    if state.next_edge >= state.edges.len() {
-                        self.paint_cache.touch_paths_in_scene_ops(&state.ops);
-                        self.edges_scene_cache.store_ops(edges_key, state.ops);
-                    } else {
-                        self.paint_cache.touch_paths_in_scene_ops(&state.ops);
-                        self.edges_build_states.insert(edges_key, state);
-                    }
-                } else {
-                    self.paint_cache.touch_paths_in_scene_ops(&state.ops);
-                    self.edges_build_states.insert(edges_key, state);
-                }
-            }
+            self.build_single_rect_edges_cache(
+                cx,
+                snapshot,
+                geom,
+                index,
+                edges_key,
+                edges_cache_rect,
+                zoom,
+                view_interacting,
+                replay_delta,
+            );
         } else {
             self.edges_build_states.remove(&edges_key);
         }

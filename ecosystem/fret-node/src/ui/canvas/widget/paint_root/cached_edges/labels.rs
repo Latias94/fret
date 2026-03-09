@@ -1,4 +1,13 @@
+use super::keys;
 use crate::ui::canvas::widget::*;
+
+fn tile_rect(tile: TileCoord, tile_size_canvas: f32) -> Rect {
+    let tile_origin = tile.origin(tile_size_canvas);
+    Rect::new(
+        tile_origin,
+        Size::new(Px(tile_size_canvas), Px(tile_size_canvas)),
+    )
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn try_replay_cached_edge_labels<H: UiHost>(
@@ -90,5 +99,113 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.replay_ops_translated(&state.ops, replay_delta);
             self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
         }
+    }
+
+    pub(super) fn paint_tiled_edge_labels_cache<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        snapshot: &ViewSnapshot,
+        geom: &Arc<CanvasGeometry>,
+        index: &Arc<CanvasSpatialDerived>,
+        tiles: &[TileCoord],
+        base_key: DerivedBaseKey,
+        style_key: u64,
+        edges_cache_tile_size_canvas: f32,
+        zoom: f32,
+        view_interacting: bool,
+        replay_delta: Point,
+    ) {
+        self.edge_labels_tile_keys_scratch.clear();
+
+        let labels_base_key =
+            keys::edge_labels_tiles_base_key(base_key, style_key, edges_cache_tile_size_canvas);
+        let tile_budget_limit =
+            Self::EDGE_LABEL_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
+        let label_budget_limit = Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut tile_budget = WorkBudget::new(tile_budget_limit);
+        let mut label_budget = WorkBudget::new(label_budget_limit);
+
+        let mut skipped_labels = false;
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
+
+        for tile in tiles.iter().copied() {
+            let tile_key = tile_cache_key(labels_base_key, tile);
+            self.edge_labels_tile_keys_scratch.push(tile_key);
+
+            if self.try_replay_cached_edge_labels(cx, tile_key, replay_delta) {
+                self.edge_labels_build_states.remove(&tile_key);
+                continue;
+            }
+
+            if !tile_budget.try_consume(1) {
+                skipped_labels = true;
+                continue;
+            }
+
+            let tile_rect = tile_rect(tile, edges_cache_tile_size_canvas);
+            let tile_cull_rect = {
+                let margin_screen = self.style.paint.render_cull_margin_px;
+                if margin_screen.is_finite() && margin_screen > 0.0 {
+                    inflate_rect(tile_rect, margin_screen / zoom)
+                } else {
+                    tile_rect
+                }
+            };
+
+            let mut state = self
+                .edge_labels_build_states
+                .remove(&tile_key)
+                .unwrap_or_else(|| {
+                    self.init_edge_labels_build_state(
+                        &*cx.app,
+                        snapshot,
+                        geom,
+                        index,
+                        tile_key,
+                        tile_rect,
+                        tile_cull_rect,
+                        zoom,
+                    )
+                });
+
+            if state.edges.is_empty() {
+                self.edge_labels_scene_cache.store_ops(tile_key, Vec::new());
+                continue;
+            }
+
+            let mut tmp = fret_core::Scene::default();
+            if self.paint_edge_labels_build_state_step(
+                &mut tmp,
+                &*cx.app,
+                cx.services,
+                cx.scale_factor,
+                zoom,
+                bezier_steps,
+                &mut state,
+                &mut label_budget,
+            ) {
+                skipped_labels = true;
+            }
+
+            if state.ops.len() > 2 {
+                cx.scene.replay_ops_translated(&state.ops, replay_delta);
+                self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
+            }
+
+            if state.next_edge >= state.edges.len() {
+                if state.ops.len() == 2 {
+                    self.edge_labels_scene_cache.store_ops(tile_key, Vec::new());
+                } else {
+                    self.edge_labels_scene_cache.store_ops(tile_key, state.ops);
+                }
+            } else {
+                self.edge_labels_build_states.insert(tile_key, state);
+            }
+        }
+
+        self.edge_labels_build_states
+            .retain(|key, _| self.edge_labels_tile_keys_scratch.contains(key));
+
+        super::super::redraw_request::request_paint_redraw_if(cx, skipped_labels);
     }
 }

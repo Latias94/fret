@@ -1011,6 +1011,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     now also route through the private `canvas/widget/paint_root/cached_edges/labels.rs` seam, so
     `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` no longer
     re-embed the same label-cache replay closure or the single-rect label build tail inline.
+  - Progress: cached-edge single-rect edge replay/build plus tiled edge-cache and tiled label-cache
+    orchestration now also route through the private
+    `canvas/widget/paint_root/cached_edges/edges.rs` and
+    `canvas/widget/paint_root/cached_edges/labels.rs` seams, so
+    `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` now mainly
+    choose cache mode, fall back to uncached paint when needed, and keep overlay ordering explicit.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
