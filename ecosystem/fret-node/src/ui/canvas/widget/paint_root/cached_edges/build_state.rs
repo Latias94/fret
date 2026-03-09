@@ -28,6 +28,19 @@ fn initial_clip_ops(clip_rect: Rect) -> Vec<SceneOp> {
     vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip]
 }
 
+fn finish_build_state_step(
+    ops: &mut Vec<SceneOp>,
+    edge_count: usize,
+    next_edge_slot: &mut usize,
+    tmp: &fret_core::Scene,
+    next_edge: usize,
+    skipped: bool,
+) -> bool {
+    *next_edge_slot = next_edge;
+    extend_clip_stack_ops(ops, tmp.ops());
+    skipped || *next_edge_slot < edge_count
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn collect_cached_edge_renders<H: UiHost>(
         &mut self,
@@ -63,9 +76,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cull_rect: Rect,
         zoom: f32,
     ) -> EdgesBuildState {
+        let (ops, edges) = self
+            .init_cached_edge_build_parts(host, snapshot, geom, index, clip_rect, cull_rect, zoom);
         EdgesBuildState {
-            ops: initial_clip_ops(clip_rect),
-            edges: self.collect_cached_edge_renders(host, snapshot, geom, index, cull_rect, zoom),
+            ops,
+            edges,
             next_edge: 0,
         }
     }
@@ -81,12 +96,30 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cull_rect: Rect,
         zoom: f32,
     ) -> EdgeLabelsBuildState {
+        let (ops, edges) = self
+            .init_cached_edge_build_parts(host, snapshot, geom, index, clip_rect, cull_rect, zoom);
         EdgeLabelsBuildState {
             key,
-            ops: initial_clip_ops(clip_rect),
-            edges: self.collect_cached_edge_renders(host, snapshot, geom, index, cull_rect, zoom),
+            ops,
+            edges,
             next_edge: 0,
         }
+    }
+
+    fn init_cached_edge_build_parts<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        geom: &Arc<CanvasGeometry>,
+        index: &Arc<CanvasSpatialDerived>,
+        clip_rect: Rect,
+        cull_rect: Rect,
+        zoom: f32,
+    ) -> (Vec<SceneOp>, Vec<paint_render_data::EdgeRender>) {
+        (
+            initial_clip_ops(clip_rect),
+            self.collect_cached_edge_renders(host, snapshot, geom, index, cull_rect, zoom),
+        )
     }
 
     pub(super) fn paint_edges_build_state_step<H: UiHost>(
@@ -111,10 +144,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             wire_budget,
             marker_budget,
         );
-        state.next_edge = next_edge;
-
-        extend_clip_stack_ops(&mut state.ops, tmp.ops());
-        skipped || state.next_edge < state.edges.len()
+        finish_build_state_step(
+            &mut state.ops,
+            state.edges.len(),
+            &mut state.next_edge,
+            tmp,
+            next_edge,
+            skipped,
+        )
     }
 
     pub(super) fn paint_edge_labels_build_state_step<H: UiHost>(
@@ -139,9 +176,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             state.next_edge,
             budget,
         );
-        state.next_edge = next_edge;
-
-        extend_clip_stack_ops(&mut state.ops, tmp.ops());
-        skipped || state.next_edge < state.edges.len()
+        finish_build_state_step(
+            &mut state.ops,
+            state.edges.len(),
+            &mut state.next_edge,
+            tmp,
+            next_edge,
+            skipped,
+        )
     }
 }

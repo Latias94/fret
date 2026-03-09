@@ -1046,6 +1046,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/tail.rs` seams, so `paint_root/immediate.rs` and
     `paint_root/cached_pass.rs` stop re-embedding the immediate draw ordering plus the shared
     anchors/overlays/prune/pop-clip tail inline.
+  - Progress: cached edge build-state initialization and budget-step tails now route through
+    smaller private helpers in `canvas/widget/paint_root/cached_edges/build_state.rs`, so the
+    edge-vs-label cached build path keeps only the budget function choice and state-specific fields
+    at the root instead of re-embedding the same clip-op setup and next-edge replay tail inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

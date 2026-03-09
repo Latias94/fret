@@ -637,6 +637,10 @@ real editors.
   `canvas/widget/paint_root/immediate_pass.rs` and `canvas/widget/paint_root/tail.rs` seams, so
   `paint_root/immediate.rs` and `paint_root/cached_pass.rs` stop re-embedding the immediate draw
   ordering plus the shared anchors/overlays/prune/pop-clip tail inline.
+- cached-edge build-state initialization and budget-step tails now also route through smaller
+  private helpers in `canvas/widget/paint_root/cached_edges/build_state.rs`, so the edge-vs-label
+  cached build path keeps only the budget function choice and state-specific fields at the root
+  instead of re-embedding the same clip-op setup and next-edge replay tail inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
