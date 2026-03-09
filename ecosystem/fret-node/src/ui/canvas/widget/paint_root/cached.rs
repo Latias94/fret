@@ -18,73 +18,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let snapshot = self.sync_view_state(cx.app);
 
         let view_interacting = self.view_interacting();
-
-        self.paint_cache.begin_frame();
-        self.groups_scene_cache.begin_frame();
-        self.nodes_scene_cache.begin_frame();
-        self.edges_scene_cache.begin_frame();
-        self.edge_labels_scene_cache.begin_frame();
-        if let Some(window) = cx.window {
-            let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
-            let frame_id = cx.app.frame_id().0;
-            let key = CanvasCacheKey {
-                window: window.data().as_ffi(),
-                node: cx.node.data().as_ffi(),
-                name: "fret-node.canvas.paths",
-            };
-            cx.app
-                .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-                    registry.record_path_cache(key, frame_id, entries, stats);
-                });
-        }
-
         let zoom = snapshot.zoom;
-        let pan = snapshot.pan;
-
-        let viewport = Self::viewport_from_pan_zoom(cx.bounds, pan, zoom);
-        let viewport_rect = viewport.visible_canvas_rect();
-        let viewport_w = viewport_rect.size.width.0;
-        let viewport_h = viewport_rect.size.height.0;
-        let viewport_origin_x = viewport_rect.origin.x.0;
-        let viewport_origin_y = viewport_rect.origin.y.0;
         let only_render_visible_elements = snapshot.interaction.only_render_visible_elements;
-        let render_cull_rect = self.compute_render_cull_rect(&snapshot, cx.bounds);
-
-        cx.scene.push(SceneOp::PushClipRect {
-            rect: viewport_rect,
-        });
-
-        let canvas_hint = if self.skin.is_some() {
-            self.graph
-                .read_ref(cx.app, |g| {
-                    self.skin
-                        .as_ref()
-                        .map(|skin| skin.canvas_chrome_hint(g, &self.style))
-                        .unwrap_or_default()
-                })
-                .ok()
-                .unwrap_or_default()
-        } else {
-            crate::ui::CanvasChromeHint::default()
-        };
-
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(0),
-            rect: viewport_rect,
-            background: fret_core::Paint::Solid(
-                canvas_hint
-                    .background
-                    .unwrap_or(self.style.paint.background),
-            )
-            .into(),
-
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-            corner_radii: Corners::all(Px(0.0)),
-        });
-
-        self.paint_grid(cx, viewport_rect, render_cull_rect, zoom, view_interacting);
+        let frame = self.prepare_paint_root_frame(cx, &snapshot, view_interacting);
+        let viewport_rect = frame.viewport_rect;
+        let viewport_w = frame.viewport_w;
+        let viewport_h = frame.viewport_h;
+        let viewport_origin_x = frame.viewport_origin_x;
+        let viewport_origin_y = frame.viewport_origin_y;
+        let render_cull_rect = frame.render_cull_rect;
 
         let edge_insert_target = self
             .interaction

@@ -621,6 +621,10 @@ real editors.
   `canvas/widget/static_scene_cache_plan.rs` seam, so `paint_root/cached.rs` and
   `retained_widget_cull_window_key.rs` stop re-embedding the same power-of-two tile sizing and
   centered single-tile window math inline.
+- root frame/bootstrap orchestration now also routes through the private
+  `canvas/widget/paint_root/frame.rs` seam, so `paint_root/cached.rs` stops re-embedding cache
+  begin-frame bookkeeping, path-cache diagnostics publication, viewport/cull setup, canvas
+  background fill, and grid paint bootstrap inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
