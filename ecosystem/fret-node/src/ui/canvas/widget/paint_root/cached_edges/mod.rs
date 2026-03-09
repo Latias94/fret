@@ -35,44 +35,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let edges_cache_allowed =
             crate::ui::canvas::widget::interaction_gate::allow_edges_cache(&self.interaction);
 
-        let edge_anchor_target_id = self
-            .interaction
-            .focused_edge
-            .or_else(|| (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0]))
-            .filter(|edge_id| {
-                self.graph
-                    .read_ref(cx.app, |g| {
-                        let edge = g.edges.get(edge_id)?;
-                        let (allow_source, allow_target) =
-                            Self::edge_reconnectable_flags(edge, &snapshot.interaction);
-                        Some(allow_source || allow_target)
-                    })
-                    .ok()
-                    .flatten()
-                    .unwrap_or(false)
-            });
-        let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
-            edge_anchor_target_id.and_then(|edge_id| {
-                self.graph
-                    .read_ref(cx.app, |g| {
-                        let edge = g.edges.get(&edge_id)?;
-                        let from = geom.port_center(edge.from)?;
-                        let to = geom.port_center(edge.to)?;
-                        let hint = EdgePathContext::new(
-                            &self.style,
-                            &*self.presenter,
-                            self.edge_types.as_ref(),
-                        )
-                        .edge_render_hint_normalized(g, edge_id);
-                        let mut color = self.presenter.edge_color(g, edge_id, &self.style);
-                        if let Some(override_color) = hint.color {
-                            color = override_color;
-                        }
-                        Some((hint.route, from, to, color))
-                    })
-                    .ok()
-                    .flatten()
-            });
+        let edge_anchor_target_id = self.resolve_edge_anchor_target_id(cx, snapshot);
+        let edge_anchor_target =
+            self.resolve_edge_anchor_target_from_geometry(cx, geom, edge_anchor_target_id);
 
         if edges_cache_allowed {
             if edges_cache_tile_size_canvas.is_finite()

@@ -32,30 +32,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             true,
         );
 
-        let edge_anchor_target_id = self
-            .interaction
-            .focused_edge
-            .or_else(|| (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0]))
-            .filter(|edge_id| {
-                self.graph
-                    .read_ref(cx.app, |g| {
-                        let edge = g.edges.get(edge_id)?;
-                        let (allow_source, allow_target) =
-                            Self::edge_reconnectable_flags(edge, &snapshot.interaction);
-                        Some(allow_source || allow_target)
-                    })
-                    .ok()
-                    .flatten()
-                    .unwrap_or(false)
-            });
-        let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
-            edge_anchor_target_id.and_then(|id| {
-                render
-                    .edges
-                    .iter()
-                    .find(|e| e.id == id)
-                    .map(|e| (e.hint.route, e.from, e.to, e.color))
-            });
+        let edge_anchor_target_id = self.resolve_edge_anchor_target_id(cx, snapshot);
+        let edge_anchor_target =
+            self.resolve_edge_anchor_target_from_render(&render, edge_anchor_target_id);
 
         self.paint_groups_static(cx.scene, cx.services, cx.scale_factor, &render.groups, zoom);
         self.paint_groups_selected_overlay(cx.scene, &render.groups, zoom);

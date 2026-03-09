@@ -613,6 +613,10 @@ real editors.
   through the private `canvas/widget/paint_root/cached_edges/geometry.rs` and
   `canvas/widget/paint_root/cached_edges/build_state.rs` helpers, so the edge/label cache seams
   stop re-embedding tile-rect math, cull inflation, and render-data collection boilerplate.
+- root edge-anchor target selection now also routes through the private
+  `canvas/widget/paint_root/edge_anchor.rs` seam, so `paint_root/immediate.rs` and
+  `paint_root/cached_edges/mod.rs` stop re-embedding the same reconnectability gate and anchor
+  target resolution logic while keeping cached-vs-immediate data sourcing explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

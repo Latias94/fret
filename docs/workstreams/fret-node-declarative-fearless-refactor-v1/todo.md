@@ -1021,6 +1021,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     route through the private `canvas/widget/paint_root/cached_edges/geometry.rs` and
     `canvas/widget/paint_root/cached_edges/build_state.rs` helpers, so the edge/label cache seams
     stop re-embedding tile-rect math, cull inflation, and render-data collection boilerplate.
+  - Progress: root edge-anchor target selection now also routes through the private
+    `canvas/widget/paint_root/edge_anchor.rs` seam, so `paint_root/immediate.rs` and
+    `paint_root/cached_edges/mod.rs` stop re-embedding the same reconnectability gate and anchor
+    target resolution logic while keeping cached-vs-immediate data sourcing explicit.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
