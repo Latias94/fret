@@ -7,16 +7,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         token: fret_core::ClipboardToken,
         text: &str,
     ) {
-        let Some(pending) = self.interaction.pending_paste.take() else {
+        let Some(pending) = super::event_clipboard_pending::take_matching_pending_paste(
+            &mut self.interaction.pending_paste,
+            token,
+        ) else {
             return;
         };
-        if pending.token != token {
-            self.interaction.pending_paste = Some(pending);
-            return;
-        }
+
         self.apply_paste_text(cx.app, cx.window, text, pending.at);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
+        super::event_clipboard_feedback::request_paste_feedback(cx);
     }
 
     pub(super) fn handle_clipboard_text_unavailable<H: UiHost>(
@@ -24,18 +23,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut EventCx<'_, H>,
         token: fret_core::ClipboardToken,
     ) {
-        if let Some(pending) = &self.interaction.pending_paste
-            && pending.token == token
-        {
-            self.interaction.pending_paste = None;
-            self.show_toast(
-                cx.app,
-                cx.window,
-                DiagnosticSeverity::Info,
-                "clipboard text unavailable",
-            );
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
+        if !super::event_clipboard_pending::clear_pending_if_matches(
+            &mut self.interaction.pending_paste,
+            token,
+        ) {
+            return;
         }
+
+        super::event_clipboard_feedback::show_clipboard_unavailable_toast(self, cx);
     }
 }

@@ -562,6 +562,12 @@ real editors.
   `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
   internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
   embedded in one retained event router surface.
+- `event_clipboard.rs` now routes pending-paste token resolution and clipboard
+  feedback side effects through the private
+  `canvas/widget/event_clipboard_pending.rs` and
+  `canvas/widget/event_clipboard_feedback.rs` seams, so retained clipboard event
+  handling no longer keeps token matching/requeue logic and toast/redraw feedback
+  embedded in one surface.
 - `event_keyboard.rs` now routes escape / overlay / modifier shortcut / tab /
   nudge / delete handling through the private `canvas/widget/keyboard_shortcuts.rs` seam,
   so key-driven command dispatch and overlay-aware keyboard exits no longer stay embedded in
@@ -595,18 +601,18 @@ real editors.
   `canvas/widget/retained_widget_command_availability.rs` seam, so clipboard capability
   gating and selection/content availability checks no longer stay embedded in the main
   retained widget trait router.
-- `node_drag.rs` now routes snapline arbitration and preview planning through
-  the private `canvas/widget/node_drag_snap.rs` and
-  `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
-  node/group projection no longer stay embedded in the retained drag router.
-- `node_drag.rs` now also routes anchor clamp / extent union / multi-drag
-  extent clamp math through the private `canvas/widget/node_drag_constraints.rs` seam,
 - `retained_widget_command_availability.rs` now routes focus/clipboard gating and
   graph/view-state availability queries through the private
   `canvas/widget/retained_widget_command_availability_gate.rs` and
   `canvas/widget/retained_widget_command_availability_query.rs` seams, so retained edit
   command availability no longer keeps capability checks and selection/content reads
   embedded in one surface.
+- `node_drag.rs` now routes snapline arbitration and preview planning through
+  the private `canvas/widget/node_drag_snap.rs` and
+  `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
+  node/group projection no longer stay embedded in the retained drag router.
+- `node_drag.rs` now also routes anchor clamp / extent union / multi-drag
+  extent clamp math through the private `canvas/widget/node_drag_constraints.rs` seam,
   so node/group constraint math no longer stays embedded in the retained drag router.
 - `paint_grid.rs` now routes tile scene-op generation through the private
   `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission and
@@ -996,6 +1002,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
@@ -1022,6 +1031,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_gate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_query.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_snap.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
@@ -1031,8 +1042,6 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_stats.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_gate.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_query.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_guides.rs`

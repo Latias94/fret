@@ -498,6 +498,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
     internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
     embedded in one retained event router surface.
+  - Progress: `event_clipboard.rs` now routes pending-paste token resolution and
+    clipboard feedback side effects through the private
+    `canvas/widget/event_clipboard_pending.rs` and
+    `canvas/widget/event_clipboard_feedback.rs` seams, so retained clipboard event
+    handling no longer keeps token matching/requeue logic and toast/redraw feedback
+    embedded in one surface.
   - Progress: `event_keyboard.rs` now routes escape / overlay / modifier shortcut /
     tab / nudge / delete handling through the private
     `canvas/widget/keyboard_shortcuts.rs` seam, so key-driven command dispatch and
@@ -523,18 +529,18 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `canvas/widget/retained_widget_command_availability.rs` seam, so clipboard
     capability gating and selection/content availability checks no longer stay embedded in
     the main retained widget trait router.
-  - Progress: `node_drag.rs` now routes snapline arbitration and preview planning
-    through the private `canvas/widget/node_drag_snap.rs` and
-    `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
-    node/group projection no longer stay embedded in the retained drag router.
-  - Progress: `node_drag.rs` now also routes anchor clamp / extent union /
-    multi-drag extent clamp math through the private
   - Progress: `retained_widget_command_availability.rs` now routes focus/clipboard gating
     and graph/view-state availability queries through the private
     `canvas/widget/retained_widget_command_availability_gate.rs` and
     `canvas/widget/retained_widget_command_availability_query.rs` seams, so retained edit
     command availability no longer keeps capability checks and selection/content reads
     embedded in one surface.
+  - Progress: `node_drag.rs` now routes snapline arbitration and preview planning
+    through the private `canvas/widget/node_drag_snap.rs` and
+    `canvas/widget/node_drag_preview.rs` seams, so snap-guides math and drag-preview
+    node/group projection no longer stay embedded in the retained drag router.
+  - Progress: `node_drag.rs` now also routes anchor clamp / extent union /
+    multi-drag extent clamp math through the private
     `canvas/widget/node_drag_constraints.rs` seam, so node/group constraint math no longer
     stays embedded in the retained drag router.
   - Progress: `paint_grid.rs` now routes tile scene-op generation through the
