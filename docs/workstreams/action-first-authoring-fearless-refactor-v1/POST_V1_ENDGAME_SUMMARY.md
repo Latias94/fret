@@ -14,6 +14,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 
 ---
 
@@ -164,6 +165,12 @@ The `use_state` lane is now also explicit:
 
 - `USE_STATE_SURFACE_PLAYBOOK.md` records the future keep-vs-deprecate sequence for the raw-model
   seam, while preserving the current stance that `use_local*` is the only default teaching path.
+
+The command-first lane now also has an explicit retained-seam rule:
+
+- `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` records that the remaining command-shaped
+  surfaces are now split between permanent mechanism/catalog seams and intentionally retained
+  advanced/internal residue, and should only be reopened on leak or deprecation.
 
 This is why the hard-delete sequence should stay explicit and staged rather than turning into one
 last grep-and-delete pass.

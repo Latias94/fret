@@ -27,6 +27,7 @@ Related:
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+- Command-first retained-seam decision: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 
 ADRs (decision gates for this workstream):
 
@@ -565,6 +566,10 @@ Current sequencing note (as of 2026-03-09):
   one-page entrypoint for `App::ui*`, compat runner, `use_state`, and command-first retained-seam
   cleanup, so future work can start from a single reviewer-facing summary before opening the
   deeper matrix/checklist/playbooks.
+- command-first retained-seam note (as of 2026-03-09):
+  `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records the boundary rule for the remaining
+  command-shaped surfaces, so future work only reopens this lane on default-path leak or explicit
+  deprecation rather than treating it as generic residue.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -751,6 +756,16 @@ Current sequencing note (as of 2026-03-09):
   - Gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now keeps the primary ui-gallery dropdown-menu / context-menu / menubar teaching snippets plus the overlay preview menu surfaces on `action(...)`, and `tools/pre_release.py` runs that narrow policy check alongside the other default-surface gates.
   - Curated internal follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` and `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now also prefer `action(...)` / `trailing_action(...)` for their stable action-bearing menu rows, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit internal/app-facing residue slice on the same spelling without broadening the policy to every advanced/internal menu surface.
   - Intentional-retention inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now records that the main remaining command-shaped surfaces are command palette/catalog (`ecosystem/fret-ui-shadcn/src/command.rs`), `DataTable` business-table wiring (`ecosystem/fret-ui-shadcn/src/data_table.rs` plus gallery demos), compat/conformance tests, and out-of-scope callback widgets; the practical rule is to stop broad residue chasing unless a new default-facing leak appears.
+
+- [x] AFA-postv1-021b Publish a retained-seam decision draft for the remaining command-first lane.
+  - Goal: stop treating the remaining command-shaped surfaces as one generic migration bucket and
+    record which ones are permanent mechanism/catalog seams versus intentionally retained
+    advanced/internal residue.
+  - Evidence target: one decision note that states the split classification, reopen triggers, and
+    the rule for keeping this lane in maintenance mode.
+  - Status (as of 2026-03-09): `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records that
+    split, and the hard-delete index/status/checklist/endgame summary docs all point to it as the
+    current boundary rule for the command-first retained-seam lane.
 
 - [x] AFA-postv1-022 Audit `DataTable` authoring as a separate post-v1 surface instead of treating it as more primitive `Table` builder cleanup.
   - Goal: determine whether the remaining density pressure is really another `build(...)` / `into_element(cx)` problem or a higher-level business-table recipe/productization problem.

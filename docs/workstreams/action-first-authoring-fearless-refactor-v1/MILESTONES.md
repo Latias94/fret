@@ -26,6 +26,7 @@ Related:
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+- Command-first retained-seam decision: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 
 ---
 
@@ -93,6 +94,11 @@ Adoption note (as of 2026-03-07):
   three lane-specific playbooks plus the command-first retained-seam track into one reviewer-facing
   entrypoint, so the repo has a single “start here” note before opening the deeper matrix/checklist
   docs.
+- Command-first retained-seam update (as of 2026-03-09):
+  `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
+  pressure is split between permanent mechanism/catalog seams and intentionally retained
+  advanced/internal residue, so the repo no longer needs to treat this lane as generic migration
+  debt.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,

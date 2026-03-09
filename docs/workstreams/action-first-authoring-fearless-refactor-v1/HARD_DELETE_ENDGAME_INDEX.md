@@ -11,6 +11,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 
 ---
 
@@ -36,7 +37,7 @@ checklist.
 | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | Deprecated bridge waiting on time + release window | No in-tree callers remain; default docs already converged | Wait for the window and one published deprecated release, then choose delete vs compat quarantine | `APP_ENTRY_REMOVAL_PLAYBOOK.md` |
 | `run_native_with_compat_driver(...)` | Intentionally retained advanced interop seam | Real caller families still exist; deletion would remove capability, not just debt | Keep wording stable; only move if the repo later chooses facade reduction | `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` |
 | `ViewCx::use_state::<T>()` | Intentionally retained explicit raw-model seam | Default teaching path is already on `use_local*`; remaining question is public-surface policy | Keep the default-path gate stable; only revisit if the repo wants to shrink the raw-model surface | `USE_STATE_SURFACE_PLAYBOOK.md` |
-| Command-first widget contracts | Mostly retained advanced/internal seams in maintenance mode | Broad alias pass is already done; remaining pressure is no longer default-surface migration | Reopen only if a new default-facing leak appears or a deprecation decision is made | `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` |
+| Command-first widget contracts | Mostly retained advanced/internal seams in maintenance mode | Broad alias pass is already done; remaining pressure is no longer default-surface migration | Reopen only if a new default-facing leak appears or a deprecation decision is made | `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` |
 
 ---
 

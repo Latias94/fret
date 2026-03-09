@@ -17,6 +17,7 @@ Related:
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+- Command-first retained-seam decision: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 
@@ -232,6 +233,9 @@ Recommended next action:
 
 - keep the alias surface stable and finish the remaining app/internal helper migration plus the
   default-surface gate strategy before discussing any command-shaped API deprecation.
+- treat `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` as the current boundary rule: retained
+  command-centric seams stay in maintenance mode unless a new default-facing leak or real
+  deprecation decision appears.
 
 ---
 
