@@ -63,24 +63,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             plan.nodes_cache_tile_size_canvas,
         );
 
-        self.paint_edge_focus_anchors(
+        self.finish_paint_root_pass(
             cx,
             snapshot,
             edge_anchor_target_id,
             edge_anchor_target,
-            zoom,
-        );
-        self.paint_overlays(
-            cx,
-            snapshot,
             zoom,
             viewport_origin_x,
             viewport_origin_y,
             viewport_w,
             viewport_h,
         );
-
-        self.prune_paint_caches(cx.services, snapshot);
-        cx.scene.push(SceneOp::PopClip);
     }
 }

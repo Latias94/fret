@@ -1041,6 +1041,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/cached_pass.rs` seam, so `paint_root/cached.rs` stops re-embedding
     the groups/edges/nodes cached pass ordering, anchor tail, overlay tail, prune tail, and clip
     pop inline.
+  - Progress: immediate-path render pass plus shared paint-root finish tail now also route through
+    the private `canvas/widget/paint_root/immediate_pass.rs` and
+    `canvas/widget/paint_root/tail.rs` seams, so `paint_root/immediate.rs` and
+    `paint_root/cached_pass.rs` stop re-embedding the immediate draw ordering plus the shared
+    anchors/overlays/prune/pop-clip tail inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

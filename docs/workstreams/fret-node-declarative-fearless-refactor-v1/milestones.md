@@ -633,6 +633,10 @@ real editors.
   `canvas/widget/paint_root/cached_pass.rs` seam, so `paint_root/cached.rs` stops re-embedding the
   groups/edges/nodes cached pass ordering, anchor tail, overlay tail, prune tail, and clip pop
   inline.
+- immediate-path render pass plus shared paint-root finish tail now also route through the private
+  `canvas/widget/paint_root/immediate_pass.rs` and `canvas/widget/paint_root/tail.rs` seams, so
+  `paint_root/immediate.rs` and `paint_root/cached_pass.rs` stop re-embedding the immediate draw
+  ordering plus the shared anchors/overlays/prune/pop-clip tail inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
