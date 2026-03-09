@@ -203,7 +203,7 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-Current status note (as of 2026-03-08): this document describes the **current practical baseline**
+Current status note (as of 2026-03-09): this document describes the **current practical baseline**
 for the full `todo` app and the richer `cargo run -p fretboard -- new todo` scaffold, not the
 smallest v2 default surface. The smaller `simple-todo` path is now the boring default for
 view-owned keyed lists: the cookbook comparison sample, `apps/fret-examples/src/todo_demo.rs`, and
@@ -211,10 +211,16 @@ the `fretboard` simple-todo scaffold all use `LocalState<Vec<TodoRow>>`, payload
 snapshot checkbox bindings. The remaining explicit collection examples are comparison-oriented or
 intentionally advanced rather than default-surface blockers.
 
+Why this richer baseline still stays explicit for now:
+
+- selector deps currently observe one explicit todo/filter graph, including nested row completion models,
+- query invalidation is intentionally shown through the same tracked graph (`tip_nonce` in the query key),
+- and the template is meant to teach multi-bucket coordination rather than the smallest keyed-list surface.
+
 The official baseline uses an explicit 3-layer model:
 
 1. Local mutable state (`Model<T>`):
-   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).
+   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`, `tip_nonce`) in this richer baseline.
 2. Derived state (`fret-selector`):
    - memoized projections/counters/filtered views derived from models.
 3. Async resource state (`fret-query`):
@@ -225,6 +231,7 @@ Boundary rule:
 - keep domain mutations in typed action handlers,
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
+- do not treat this explicit model graph as the first-contact default for view-owned keyed lists; that role now belongs to `simple-todo`.
 
 ## Actions (UI -> app logic)
 

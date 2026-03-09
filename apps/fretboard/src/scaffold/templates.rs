@@ -1128,6 +1128,7 @@ cargo run --release
 - Ladder position: third rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
+- Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership for the todo/filter/query graph so selector deps, query invalidation keys, and shared row state stay obvious; prefer `simple-todo` if you only need a view-owned keyed list.
 - Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
@@ -1398,6 +1399,7 @@ mod tests {
         assert!(todo.contains(
             "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
         ));
+        assert!(todo.contains("Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership"));
         assert!(todo.contains("third rung of the default onboarding path"));
     }
 }
