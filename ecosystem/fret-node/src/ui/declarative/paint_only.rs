@@ -67,6 +67,8 @@ mod surface_math;
 mod surface_models;
 #[path = "paint_only/surface_shell.rs"]
 mod surface_shell;
+#[path = "paint_only/surface_support.rs"]
+mod surface_support;
 #[path = "paint_only/transactions.rs"]
 mod transactions;
 
@@ -137,6 +139,10 @@ use self::surface_math::{
 };
 use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
 use self::surface_shell::{SurfaceShellParams, build_surface_shell};
+use self::surface_support::{
+    authoritative_surface_boundary_snapshot, mouse_buttons_contains, stable_hash_u64,
+    sync_authoritative_surface_boundary_in_models, use_uncontrolled_model,
+};
 use self::transactions::{
     build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
     update_view_state_action_host, update_view_state_ui_host,
@@ -144,6 +150,10 @@ use self::transactions::{
 
 #[cfg(test)]
 use self::diag::{DeclarativeDiagViewPreset, apply_declarative_diag_view_preset_action_host};
+#[cfg(test)]
+use self::diag::{
+    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+};
 #[cfg(test)]
 use self::pointer_down::{LeftPointerDownOutcome, LeftPointerDownSnapshot};
 
@@ -338,51 +348,6 @@ struct PendingSelectionState {
     clear_groups: bool,
 }
 
-#[track_caller]
-fn use_uncontrolled_model<T: Clone + 'static, H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    default_value: impl FnOnce() -> T,
-) -> Model<T> {
-    struct UncontrolledModelState<T> {
-        model: Option<Model<T>>,
-    }
-
-    impl<T> Default for UncontrolledModelState<T> {
-        fn default() -> Self {
-            Self { model: None }
-        }
-    }
-
-    let model = cx.with_state(UncontrolledModelState::<T>::default, |st| st.model.clone());
-    if let Some(model) = model {
-        return model;
-    }
-
-    let model = cx.app.models_mut().insert(default_value());
-    cx.with_state(UncontrolledModelState::<T>::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
-}
-
-fn mouse_buttons_contains(buttons: fret_core::MouseButtons, button: MouseButton) -> bool {
-    match button {
-        MouseButton::Left => buttons.left,
-        MouseButton::Right => buttons.right,
-        MouseButton::Middle => buttons.middle,
-        MouseButton::Back | MouseButton::Forward | MouseButton::Other(_) => false,
-    }
-}
-
-fn stable_hash_u64(seed: u64, value: &impl std::hash::Hash) -> u64 {
-    use std::hash::{Hash, Hasher};
-
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    seed.hash(&mut hasher);
-    value.hash(&mut hasher);
-    hasher.finish()
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct AuthoritativeSurfaceBoundarySnapshot {
     graph_id: crate::core::GraphId,
@@ -390,72 +355,6 @@ struct AuthoritativeSurfaceBoundarySnapshot {
     selected_nodes_hash: u64,
     selected_edges_hash: u64,
     selected_groups_hash: u64,
-}
-
-fn authoritative_surface_boundary_snapshot(
-    graph_id: crate::core::GraphId,
-    graph_rev: u64,
-    view_state: &NodeGraphViewState,
-) -> AuthoritativeSurfaceBoundarySnapshot {
-    AuthoritativeSurfaceBoundarySnapshot {
-        graph_id,
-        graph_rev,
-        selected_nodes_hash: stable_hash_u64(17, &view_state.selected_nodes),
-        selected_edges_hash: stable_hash_u64(19, &view_state.selected_edges),
-        selected_groups_hash: stable_hash_u64(23, &view_state.selected_groups),
-    }
-}
-
-fn sync_authoritative_surface_boundary_in_models(
-    models: &mut fret_runtime::ModelStore,
-    boundary: &Model<Option<AuthoritativeSurfaceBoundarySnapshot>>,
-    next: AuthoritativeSurfaceBoundarySnapshot,
-    drag: &Model<Option<DragState>>,
-    marquee: &Model<Option<MarqueeDragState>>,
-    node_drag: &Model<Option<NodeDragState>>,
-    pending_selection: &Model<Option<PendingSelectionState>>,
-    hovered_node: &Model<Option<crate::core::NodeId>>,
-    hover_anchor_store: &Model<HoverAnchorStore>,
-    portal_bounds_store: &Model<PortalBoundsStore>,
-) -> bool {
-    let previous = models.read(boundary, |state| *state).ok().flatten();
-    let _ = models.update(boundary, |state| *state = Some(next));
-
-    let Some(previous) = previous else {
-        return false;
-    };
-
-    let graph_changed = previous.graph_id != next.graph_id || previous.graph_rev != next.graph_rev;
-    let selection_changed = previous.selected_nodes_hash != next.selected_nodes_hash
-        || previous.selected_edges_hash != next.selected_edges_hash
-        || previous.selected_groups_hash != next.selected_groups_hash;
-
-    if !graph_changed && !selection_changed {
-        return false;
-    }
-
-    if graph_changed {
-        let _ = models.update(drag, |state| *state = None);
-    }
-
-    if graph_changed || selection_changed {
-        let _ = models.update(marquee, |state| *state = None);
-        let _ = models.update(node_drag, |state| *state = None);
-        let _ = models.update(pending_selection, |state| *state = None);
-    }
-
-    if graph_changed {
-        let _ = models.update(hovered_node, |state| *state = None);
-        let _ = models.update(hover_anchor_store, |state| {
-            *state = HoverAnchorStore::default()
-        });
-        let _ = models.update(portal_bounds_store, |state| {
-            state.nodes_canvas_bounds.clear();
-            state.pending_fit_to_portals = false;
-        });
-    }
-
-    true
 }
 
 #[derive(Debug, Clone)]
@@ -501,56 +400,6 @@ struct GridPaintCacheKeyV2 {
     grid_g_bits: u32,
     grid_b_bits: u32,
     grid_a_bits: u32,
-}
-
-fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphTransaction {
-    let mut next = graph.clone();
-    for node in next.nodes.values_mut() {
-        if node.hidden {
-            continue;
-        }
-        node.pos.x += 1.0;
-        break;
-    }
-
-    let tx = graph_diff(graph, &next);
-    if tx.is_empty() {
-        tx
-    } else {
-        tx.with_label("Diag Nudge Visible Node")
-    }
-}
-
-fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> GraphTransaction {
-    let mut next = graph.clone();
-    let first_visible = next
-        .nodes
-        .iter()
-        .find_map(|(id, node)| (!node.hidden).then_some(*id));
-    let Some(first_visible) = first_visible else {
-        return GraphTransaction::new();
-    };
-
-    for (id, node) in &mut next.nodes {
-        if *id == first_visible {
-            node.hidden = false;
-            node.pos.x = 0.0;
-            node.pos.y = 0.0;
-            node.size = Some(crate::core::CanvasSize {
-                width: 220.0,
-                height: 140.0,
-            });
-        } else {
-            node.hidden = true;
-        }
-    }
-
-    let tx = graph_diff(graph, &next);
-    if tx.is_empty() {
-        tx
-    } else {
-        tx.with_label("Diag Normalize Visible Node")
-    }
 }
 
 /// Paint-only declarative node-graph surface skeleton.

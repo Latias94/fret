@@ -74,6 +74,56 @@ pub(super) fn handle_declarative_escape_key_action_host(
     )
 }
 
+pub(super) fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphTransaction {
+    let mut next = graph.clone();
+    for node in next.nodes.values_mut() {
+        if node.hidden {
+            continue;
+        }
+        node.pos.x += 1.0;
+        break;
+    }
+
+    let tx = graph_diff(graph, &next);
+    if tx.is_empty() {
+        tx
+    } else {
+        tx.with_label("Diag Nudge Visible Node")
+    }
+}
+
+pub(super) fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> GraphTransaction {
+    let mut next = graph.clone();
+    let first_visible = next
+        .nodes
+        .iter()
+        .find_map(|(id, node)| (!node.hidden).then_some(*id));
+    let Some(first_visible) = first_visible else {
+        return GraphTransaction::new();
+    };
+
+    for (id, node) in &mut next.nodes {
+        if *id == first_visible {
+            node.hidden = false;
+            node.pos.x = 0.0;
+            node.pos.y = 0.0;
+            node.size = Some(crate::core::CanvasSize {
+                width: 220.0,
+                height: 140.0,
+            });
+        } else {
+            node.hidden = true;
+        }
+    }
+
+    let tx = graph_diff(graph, &next);
+    if tx.is_empty() {
+        tx
+    } else {
+        tx.with_label("Diag Normalize Visible Node")
+    }
+}
+
 fn commit_diag_graph_transaction_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,

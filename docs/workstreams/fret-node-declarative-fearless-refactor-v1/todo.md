@@ -876,6 +876,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     math, node-drag delta/commit helpers, and point hit-testing through the private
     `paint_only/surface_math.rs` seam, so declarative paint-only surface assembly no longer keeps
     the shared geometry and gesture math helper set embedded inline.
+  - Progress: `paint_only.rs` now also routes uncontrolled-model bootstrap, mouse-button/hash
+    helpers, and authoritative surface-boundary snapshot/sync through the private
+    `paint_only/surface_support.rs` seam, while diagnostic visible-node transaction builders now
+    live beside the rest of the diagnostic policy in `paint_only/diag.rs`, so the main paint-only
+    surface no longer keeps these support and diagnostic helper blocks embedded inline.
 
 ## M5 - Compatibility retained convergence
 
