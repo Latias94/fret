@@ -852,6 +852,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     value assembly through the private `paint_only/semantics.rs` seam, so declarative paint-only
     surface assembly no longer keeps observability counters and long semantics formatting embedded
     inline.
+  - Progress: `paint_only.rs` now also routes key/pointer/wheel/pinch handler construction through
+    the private `paint_only/input_handlers.rs` seam, so declarative paint-only surface assembly no
+    longer keeps the full event closure builder set embedded inline.
 
 ## M5 - Compatibility retained convergence
 

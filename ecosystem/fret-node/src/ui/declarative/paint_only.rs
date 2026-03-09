@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use fret_canvas::view::{
-    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, wheel_zoom_factor,
-};
+use fret_canvas::view::{DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D};
 use fret_canvas::wires as canvas_wires;
 use fret_core::scene::{
     ColorSpace, DashPatternV1, GradientStop, LinearGradient, MAX_STOPS, Paint, PaintBindingV1,
@@ -13,9 +11,6 @@ use fret_core::{
     StrokeJoinV1, StrokeStyleV2,
 };
 use fret_runtime::Model;
-use fret_ui::action::{
-    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel,
-};
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
 use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -42,6 +37,8 @@ mod cache;
 mod diag;
 #[path = "paint_only/hover_anchor.rs"]
 mod hover_anchor;
+#[path = "paint_only/input_handlers.rs"]
+mod input_handlers;
 #[path = "paint_only/overlay_elements.rs"]
 mod overlay_elements;
 #[path = "paint_only/overlays.rs"]
@@ -74,6 +71,12 @@ use self::diag::{
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;
 use self::hover_anchor::{HoverAnchorStore, sync_hover_anchor_store_in_models};
+use self::input_handlers::{
+    KeyHandlerParams, PinchHandlerParams, PointerDownHandlerParams, PointerFinishHandlerParams,
+    PointerMoveHandlerParams, WheelHandlerParams, build_key_down_capture_handler,
+    build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
+    build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
+};
 use self::overlays::{
     HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,
     push_marquee_overlay_if_active, push_overlay_layer_if_needed,
@@ -1811,424 +1814,90 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 });
             }
 
-            let drag_escape = drag.clone();
-            let marquee_escape = marquee_drag.clone();
-            let node_drag_escape = node_drag.clone();
-            let pending_selection_escape = pending_selection.clone();
-            let graph_debug = graph.clone();
-            let view_zoom_kb = view_state.clone();
-            let controller_zoom_kb = controller.clone();
-            let portal_bounds_for_fit = portal_bounds_store.clone();
-            let portal_debug_for_keys = portal_debug_flags.clone();
-            let diag_keys_enabled = diag_keys_enabled;
-            let diag_paint_overrides_for_keys = diag_paint_overrides_value.clone();
-            let diag_paint_overrides_enabled_for_keys = diag_paint_overrides_enabled.clone();
-            let on_key_down_capture: OnKeyDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      key: fret_ui::action::KeyDownCx| {
-                    if key.repeat || key.ime_composing {
-                        return false;
-                    }
-
-                    if key.key == fret_core::KeyCode::Escape {
-                        let handled = handle_declarative_escape_key_action_host(
-                            host,
-                            &drag_escape,
-                            &marquee_escape,
-                            &node_drag_escape,
-                            &pending_selection_escape,
-                        );
-                        if handled {
-                            host.request_redraw(action_cx.window);
-                        }
-                        return handled;
-                    }
-
-                    if !(key.modifiers.ctrl || key.modifiers.meta) {
-                        return false;
-                    }
-
-                    if let Some(action) =
-                        DeclarativeDiagKeyAction::from_key(diag_keys_enabled, key.key)
-                    {
-                        let handled = handle_declarative_diag_key_action_host(
-                            host,
-                            action,
-                            &graph_debug,
-                            &view_zoom_kb,
-                            &controller_zoom_kb,
-                            &portal_bounds_for_fit,
-                            &portal_debug_for_keys,
-                            &diag_paint_overrides_for_keys,
-                            &diag_paint_overrides_enabled_for_keys,
-                        );
-                        if handled {
-                            host.request_redraw(action_cx.window);
-                        }
-                        return handled;
-                    }
-
-                    let Some(action) = DeclarativeKeyboardZoomAction::from_key(key.key) else {
-                        return false;
-                    };
-                    let handled = handle_declarative_keyboard_zoom_action_host(
-                        host,
-                        action,
-                        &view_zoom_kb,
-                        &controller_zoom_kb,
-                        min_zoom,
-                        max_zoom,
-                    );
-                    if handled {
-                        host.request_redraw(action_cx.window);
-                    }
-                    handled
-                },
-            );
+            let on_key_down_capture = build_key_down_capture_handler(KeyHandlerParams {
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                graph: graph.clone(),
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+                portal_bounds_store: portal_bounds_store.clone(),
+                portal_debug_flags: portal_debug_flags.clone(),
+                diag_keys_enabled,
+                diag_paint_overrides_value: diag_paint_overrides_value.clone(),
+                diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+                min_zoom,
+                max_zoom,
+            });
             cx.key_on_key_down_capture_for(element, on_key_down_capture);
 
-            let view_pan_down = view_state.clone();
-            let drag_start = drag.clone();
-            let marquee_start = marquee_drag.clone();
-            let node_drag_start = node_drag.clone();
-            let pending_selection_start = pending_selection.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let focus_target = element;
-            let derived_cache_for_down = derived_cache.clone();
-            let hovered_for_down = hovered_node.clone();
-            let hit_scratch_for_down = hit_scratch.clone();
-            let on_pointer_down: OnPointerDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      down: fret_ui::action::PointerDownCx| {
-                    host.request_focus(focus_target);
+            let on_pointer_down = build_pointer_down_handler(PointerDownHandlerParams {
+                focus_target: element,
+                pan_button,
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                view_state: view_state.clone(),
+                grid_cache: grid_cache.clone(),
+                derived_cache: derived_cache.clone(),
+                hovered_node: hovered_node.clone(),
+                hit_scratch: hit_scratch.clone(),
+            });
 
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |state| {
-                        if state.bounds != bounds {
-                            state.bounds = bounds;
-                        }
-                    });
+            let on_pointer_move = build_pointer_move_handler(PointerMoveHandlerParams {
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+                grid_cache: grid_cache.clone(),
+                derived_cache: derived_cache.clone(),
+                hovered_node: hovered_node.clone(),
+                hit_scratch: hit_scratch.clone(),
+            });
 
-                    if down.button == pan_button {
-                        let handled = begin_pan_pointer_down_action_host(
-                            host,
-                            &drag_start,
-                            &marquee_start,
-                            &node_drag_start,
-                            down,
-                        );
-                        if handled {
-                            host.capture_pointer();
-                            notify_and_redraw_action_host(host, action_cx);
-                        }
-                        return handled;
-                    }
+            let on_pointer_up = build_pointer_up_handler(PointerFinishHandlerParams {
+                pan_button,
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                graph: graph.clone(),
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+            });
 
-                    if down.button != MouseButton::Left {
-                        return false;
-                    }
+            let on_pointer_cancel = build_pointer_cancel_handler(PointerFinishHandlerParams {
+                pan_button,
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                graph: graph.clone(),
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+            });
 
-                    let snapshot = read_left_pointer_down_snapshot_action_host(
-                        host,
-                        &view_pan_down,
-                        &derived_cache_for_down,
-                        &hit_scratch_for_down,
-                        down,
-                        bounds,
-                    );
-                    let outcome = begin_left_pointer_down_action_host(
-                        host,
-                        &marquee_start,
-                        &node_drag_start,
-                        &pending_selection_start,
-                        &hovered_for_down,
-                        down,
-                        &snapshot,
-                    );
-                    if outcome.capture_pointer() {
-                        host.capture_pointer();
-                    }
-                    notify_and_redraw_action_host(host, action_cx);
-                    true
-                },
-            );
+            let on_wheel = build_wheel_handler(WheelHandlerParams {
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+                grid_cache: grid_cache.clone(),
+                wheel_zoom,
+                min_zoom,
+                max_zoom,
+            });
 
-            let view_pan = view_state.clone();
-            let controller_pan = controller.clone();
-            let drag_move = drag.clone();
-            let marquee_move = marquee_drag.clone();
-            let node_drag_move = node_drag.clone();
-            let pending_selection_move = pending_selection.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let derived_cache_for_hover = derived_cache.clone();
-            let hovered_for_hover = hovered_node.clone();
-            let hit_scratch_for_hover = hit_scratch.clone();
-            let on_pointer_move: OnPointerMove = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      mv: fret_ui::action::PointerMoveCx| {
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-
-                    let drag = host.models_mut().read(&drag_move, |st| *st).ok().flatten();
-                    let Some(mut drag) = drag else {
-                        if let Some(outcome) = handle_node_drag_pointer_move_action_host(
-                            host,
-                            &node_drag_move,
-                            &pending_selection_move,
-                            &hovered_for_hover,
-                            &view_pan,
-                            &controller_pan,
-                            mv,
-                        ) {
-                            if outcome.capture_pointer {
-                                host.capture_pointer();
-                            }
-                            if outcome.needs_layout_redraw {
-                                // Node dragging moves portals (layout) and the canvas chrome (paint).
-                                invalidate_notify_and_redraw_pointer_action_host(
-                                    host,
-                                    action_cx,
-                                    Invalidation::Layout,
-                                );
-                            }
-                            return outcome.needs_layout_redraw;
-                        }
-
-                        if let Some(outcome) = handle_marquee_pointer_move_action_host(
-                            host,
-                            &marquee_move,
-                            &hovered_for_hover,
-                            &view_pan,
-                            &derived_cache_for_hover,
-                            mv,
-                            bounds,
-                        ) {
-                            match outcome {
-                                MarqueePointerMoveOutcome::ReleaseCaptureRedrawOnly => {
-                                    host.release_pointer_capture();
-                                    host.request_redraw(action_cx.window);
-                                }
-                                MarqueePointerMoveOutcome::NotifyRedraw => {
-                                    notify_and_redraw_action_host(host, action_cx);
-                                }
-                            }
-                            return true;
-                        }
-
-                        let changed = update_hovered_node_pointer_move_action_host(
-                            host,
-                            &hovered_for_hover,
-                            &view_pan,
-                            &derived_cache_for_hover,
-                            &hit_scratch_for_hover,
-                            mv,
-                            bounds,
-                        );
-                        if changed {
-                            invalidate_notify_and_redraw_pointer_action_host(
-                                host,
-                                action_cx,
-                                Invalidation::Paint,
-                            );
-                        }
-                        return changed;
-                    };
-                    if !mouse_buttons_contains(mv.buttons, drag.button) {
-                        return false;
-                    }
-
-                    let dx = mv.position.x.0 - drag.last_pos.x.0;
-                    let dy = mv.position.y.0 - drag.last_pos.y.0;
-                    if !dx.is_finite() || !dy.is_finite() {
-                        return false;
-                    }
-
-                    let updated =
-                        update_view_state_action_host(host, &view_pan, &controller_pan, |state| {
-                            apply_pan_by_screen_delta(state, dx, dy);
-                        });
-                    if !updated {
-                        return false;
-                    }
-
-                    drag.last_pos = mv.position;
-                    let _ = host.models_mut().update(&drag_move, |st| {
-                        if let Some(st) = st.as_mut() {
-                            *st = drag;
-                        }
-                    });
-
-                    // Panning repositions portals (layout) and changes world mapping (hit-test + paint).
-                    invalidate_notify_and_redraw_pointer_action_host(
-                        host,
-                        action_cx,
-                        Invalidation::Layout,
-                    );
-                    true
-                },
-            );
-
-            let drag_end = drag.clone();
-            let marquee_end = marquee_drag.clone();
-            let node_drag_end = node_drag.clone();
-            let pending_selection_end = pending_selection.clone();
-            let graph_commit = graph.clone();
-            let view_commit = view_state.clone();
-            let controller_commit = controller.clone();
-            let on_pointer_up: OnPointerUp = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      up: fret_ui::action::PointerUpCx| {
-                    handle_declarative_pointer_up_action_host(
-                        host,
-                        action_cx,
-                        up,
-                        pan_button,
-                        &drag_end,
-                        &marquee_end,
-                        &node_drag_end,
-                        &pending_selection_end,
-                        &graph_commit,
-                        &view_commit,
-                        &controller_commit,
-                    )
-                },
-            );
-
-            let drag_cancel = drag.clone();
-            let marquee_cancel = marquee_drag.clone();
-            let node_drag_cancel = node_drag.clone();
-            let pending_selection_cancel = pending_selection.clone();
-            let on_pointer_cancel: OnPointerCancel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      cancel: fret_ui::action::PointerCancelCx| {
-                    handle_declarative_pointer_cancel_action_host(
-                        host,
-                        action_cx,
-                        cancel,
-                        &drag_cancel,
-                        &marquee_cancel,
-                        &node_drag_cancel,
-                        &pending_selection_cancel,
-                    )
-                },
-            );
-
-            let view_zoom = view_state.clone();
-            let controller_wheel = controller.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let on_wheel: OnWheel = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      wheel: fret_ui::action::WheelCx| {
-                    if !(wheel.modifiers.ctrl || wheel.modifiers.meta) {
-                        return false;
-                    }
-
-                    let Some(factor) = wheel_zoom_factor(
-                        wheel.delta.y.0,
-                        wheel_zoom.base,
-                        wheel_zoom.step,
-                        wheel_zoom.speed,
-                    ) else {
-                        return false;
-                    };
-
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-                    let updated = update_view_state_action_host(
-                        host,
-                        &view_zoom,
-                        &controller_wheel,
-                        |state| {
-                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                            apply_zoom_about_screen_point(
-                                state,
-                                bounds,
-                                wheel.position,
-                                new_zoom,
-                                min_zoom,
-                                max_zoom,
-                            );
-                        },
-                    );
-                    if !updated {
-                        return false;
-                    }
-
-                    invalidate_notify_and_redraw_pointer_action_host(
-                        host,
-                        action_cx,
-                        Invalidation::Layout,
-                    );
-                    true
-                },
-            );
-
-            let view_pinch = view_state.clone();
-            let controller_pinch = controller.clone();
-            let grid_cache_bounds = grid_cache.clone();
-            let on_pinch: OnPinchGesture = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      pinch: fret_ui::action::PinchGestureCx| {
-                    if !pinch.delta.is_finite() {
-                        return false;
-                    }
-                    let delta = pinch.delta * pinch_zoom_speed;
-                    if delta.abs() <= 1.0e-9 {
-                        return false;
-                    }
-
-                    let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
-                        }
-                    });
-                    let updated = update_view_state_action_host(
-                        host,
-                        &view_pinch,
-                        &controller_pinch,
-                        |state| {
-                            let zoom = PanZoom2D::sanitize_zoom(state.zoom, 1.0);
-                            let factor = (1.0 + delta).max(1.0e-6);
-                            let new_zoom = (zoom * factor).clamp(min_zoom, max_zoom);
-                            apply_zoom_about_screen_point(
-                                state,
-                                bounds,
-                                pinch.position,
-                                new_zoom,
-                                min_zoom,
-                                max_zoom,
-                            );
-                        },
-                    );
-                    if !updated {
-                        return false;
-                    }
-
-                    invalidate_notify_and_redraw_pointer_action_host(
-                        host,
-                        action_cx,
-                        Invalidation::Layout,
-                    );
-                    true
-                },
-            );
+            let on_pinch = build_pinch_handler(PinchHandlerParams {
+                view_state: view_state.clone(),
+                controller: controller.clone(),
+                grid_cache: grid_cache.clone(),
+                pinch_zoom_speed,
+                min_zoom,
+                max_zoom,
+            });
 
             vec![cx.pointer_region(pointer_region, move |cx| {
                 cx.pointer_region_on_pointer_down(on_pointer_down);
