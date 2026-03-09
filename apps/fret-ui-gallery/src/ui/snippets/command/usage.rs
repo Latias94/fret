@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -70,7 +71,14 @@ pub fn render<H: UiHost>(
 
     shadcn::CommandPalette::new(query.clone(), Vec::new())
         .placeholder("Type a command or search...")
+        .empty_text("No results found.")
         .a11y_label("Command usage")
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(384.0))
+                .min_w_0(),
+        )
         .entries(entries)
         .test_id_input("ui-gallery-command-usage-input")
         .list_test_id("ui-gallery-command-usage-listbox")
