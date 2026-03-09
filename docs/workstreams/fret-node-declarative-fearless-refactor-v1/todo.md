@@ -831,6 +831,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `paint_only.rs` now also routes diagnostics hotkeys, preset application, and
     keyboard zoom reducers through the private `paint_only/diag.rs` seam, so declarative
     paint-only keyboard/diagnostics branching no longer stays embedded in the main surface file.
+  - Progress: `paint_only.rs` now routes grid/derived/nodes/edges cache rebuild helpers through the
+    private `paint_only/cache.rs` seam, so declarative paint-only surface assembly no longer keeps
+    cache warming and draw-cache rebuild sequencing embedded inline.
 
 ## M5 - Compatibility retained convergence
 
