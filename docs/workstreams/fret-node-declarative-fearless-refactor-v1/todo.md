@@ -492,6 +492,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     motion through the private `canvas/widget/timer_motion.rs` seam, so pan inertia,
     viewport animation, auto-pan replay, and move-end debounce no longer stay embedded
     in the retained timer router.
+  - Progress: `event_timer.rs` now also routes toast expiry cleanup and timer-motion
+    sequencing through the private `canvas/widget/event_timer_toast.rs` and
+    `canvas/widget/event_timer_route.rs` seams, so retained timer handling no longer
+    keeps toast dismissal and motion/debounce dispatch ordering embedded in one surface.
   - Progress: `event_router.rs` now routes non-pointer lifecycle dispatch and
     pointer-variant dispatch through the private
     `canvas/widget/event_router_system.rs` and

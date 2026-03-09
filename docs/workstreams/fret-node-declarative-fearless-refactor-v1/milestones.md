@@ -557,6 +557,10 @@ real editors.
   through the private `canvas/widget/timer_motion.rs` seam, so pan inertia, viewport
   animation, auto-pan replay, and move-end debounce no longer stay embedded in the
   retained timer router.
+- `event_timer.rs` now also routes toast expiry cleanup and timer-motion sequencing
+  through the private `canvas/widget/event_timer_toast.rs` and
+  `canvas/widget/event_timer_route.rs` seams, so retained timer handling no longer keeps
+  toast dismissal and motion/debounce dispatch ordering embedded in one surface.
 - `event_router.rs` now routes non-pointer lifecycle dispatch and pointer-variant
   dispatch through the private `canvas/widget/event_router_system.rs` and
   `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
@@ -1009,6 +1013,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs`

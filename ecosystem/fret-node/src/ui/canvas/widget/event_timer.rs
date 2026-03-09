@@ -7,30 +7,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
         token: fret_core::TimerToken,
     ) {
-        if self
-            .interaction
-            .toast
-            .as_ref()
-            .is_some_and(|t| t.timer == token)
-        {
-            self.interaction.toast = None;
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
+        if super::event_timer_toast::clear_expired_toast(self, cx, token) {
             return;
         }
 
-        if timer_motion::handle_pan_inertia_tick(self, cx, snapshot, token) {
-            return;
-        }
-
-        if timer_motion::handle_viewport_animation_tick(self, cx, token) {
-            return;
-        }
-
-        if timer_motion::handle_auto_pan_tick(self, cx, snapshot, token) {
-            return;
-        }
-
-        let _ = timer_motion::handle_viewport_move_debounce(self, cx, token);
+        super::event_timer_route::route_timer_tick(self, cx, snapshot, token);
     }
 }

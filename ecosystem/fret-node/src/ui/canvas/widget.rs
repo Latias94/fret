@@ -154,6 +154,8 @@ mod event_router;
 mod event_router_pointer;
 mod event_router_system;
 mod event_timer;
+mod event_timer_route;
+mod event_timer_toast;
 mod focus;
 mod focus_draw_order;
 mod focus_edge_repair;
