@@ -271,6 +271,7 @@ mod pending_drag;
 mod pending_group_drag;
 mod pending_group_resize;
 mod pending_resize;
+mod pending_resize_session;
 mod pending_wire_drag;
 mod pointer_up;
 mod pointer_up_commit;

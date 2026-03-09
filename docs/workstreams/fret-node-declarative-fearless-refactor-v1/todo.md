@@ -908,6 +908,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: pending pointer-up release finish helpers and node-drag release residual cleanup now
     route through the private `canvas/widget/pointer_up_session.rs` seam, so pointer-up handlers no
     longer re-embed the same pending-slot finish and snap-guide cleanup blocks inline.
+  - Progress: pointer-up commit releases, marquee finish cleanup, and pending resize activation now
+    also route through the private `canvas/widget/pointer_up_session.rs` and
+    `canvas/widget/pending_resize_session.rs` seams, so release/activation helpers no longer
+    re-embed the same companion-slot clearing and resize-activation blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

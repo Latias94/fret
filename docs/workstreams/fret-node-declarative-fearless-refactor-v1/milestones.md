@@ -496,6 +496,11 @@ real editors.
   through the private `canvas/widget/pointer_up_session.rs` seam, so pointer-up handlers stop
   re-embedding the same pending-slot finish and snap-guide cleanup blocks inline while keeping the
   same behavior.
+- pointer-up commit releases, marquee finish cleanup, and pending resize activation now also route
+  through the private `canvas/widget/pointer_up_session.rs` and
+  `canvas/widget/pending_resize_session.rs` seams, so release/activation helpers stop
+  re-embedding the same companion-slot clearing and resize-activation blocks inline while keeping
+  the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
@@ -1218,6 +1223,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/cancel_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/press_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`

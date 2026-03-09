@@ -7,11 +7,12 @@ pub(super) fn handle_node_resize_release<H: UiHost, M: NodeGraphCanvasMiddleware
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    let Some(resize) = canvas.interaction.node_resize.take() else {
+    let Some(resize) = super::pointer_up_session::take_active_release(
+        &mut canvas.interaction.node_resize,
+        &mut canvas.interaction.pending_node_resize,
+    ) else {
         return false;
     };
-
-    canvas.interaction.pending_node_resize = None;
 
     let ops = canvas
         .graph
@@ -32,11 +33,12 @@ pub(super) fn handle_group_resize_release<H: UiHost, M: NodeGraphCanvasMiddlewar
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    let Some(resize) = canvas.interaction.group_resize.take() else {
+    let Some(resize) = super::pointer_up_session::take_active_release(
+        &mut canvas.interaction.group_resize,
+        &mut canvas.interaction.pending_group_resize,
+    ) else {
         return false;
     };
-
-    canvas.interaction.pending_group_resize = None;
 
     let ops = super::pointer_up_commit_resize::build_group_resize_ops(&resize);
     if !ops.is_empty() {
@@ -51,11 +53,12 @@ pub(super) fn handle_group_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
-    let Some(drag) = canvas.interaction.group_drag.take() else {
+    let Some(drag) = super::pointer_up_session::take_active_release(
+        &mut canvas.interaction.group_drag,
+        &mut canvas.interaction.pending_group_drag,
+    ) else {
         return false;
     };
-
-    canvas.interaction.pending_group_drag = None;
 
     let ops = super::pointer_up_commit_group_drag::build_group_drag_ops(&drag);
     if !ops.is_empty() {

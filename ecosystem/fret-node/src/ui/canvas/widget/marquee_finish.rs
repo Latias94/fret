@@ -8,10 +8,10 @@ pub(super) fn handle_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> bool {
     if canvas.interaction.marquee.take().is_some() {
         canvas.interaction.pending_marquee = None;
-        canvas.interaction.snap_guides = None;
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::pointer_up_session::finish_pointer_up_with_snap_guide_cleanup(
+            &mut canvas.interaction,
+            cx,
+        );
         return true;
     }
 
@@ -23,10 +23,10 @@ pub(super) fn handle_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 state.selected_groups.clear();
             });
         }
-        canvas.interaction.snap_guides = None;
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        super::pointer_up_session::finish_pointer_up_with_snap_guide_cleanup(
+            &mut canvas.interaction,
+            cx,
+        );
         return true;
     }
 
