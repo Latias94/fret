@@ -44,8 +44,9 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 
 ### Gallery / docs parity
 
-- Pass: The gallery now mirrors the upstream docs path first (`Demo`, `Usage`, `Persian / Hijri / Jalali Calendar`, `Basic`, `Range Calendar`, `Month and Year Selector`, `Presets`, `Date and Time Picker`, `Booked dates`, `Custom Cell Size`, `Week Numbers`, `RTL`) before appending Fret-only extensions.
-- Pass: The `Demo` snippet now stays aligned with the upstream example styling (`rounded-lg border`) instead of adding a gallery-only full-width stretch and shadow.
+- Pass: The gallery now mirrors the upstream docs path more explicitly: `Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, then the upstream example sections through `RTL`, before appending Fret-only extensions.
+- Pass: The `Selected Date (With TimeZone)` section is intentionally explanatory in Fret: the base calendar works with `time::Date`, so the JS `Date` offset issue described upstream does not require a calendar-level `timeZone` prop for date-only selection.
+- Pass: The `Demo` and example snippets keep caller-owned styling (`rounded-lg border`, `p-0`, custom cell size, field/popover sizing) at the page/snippet layer instead of baking those constraints into `Calendar` defaults.
 - Pass: Fret-only additions (`Date of Birth Picker`, `Natural Language Picker`, locale experiments, responsive semantics) remain after the upstream-aligned path so the page stays source-comparable.
 
 ## Validation

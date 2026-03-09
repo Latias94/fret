@@ -27,11 +27,37 @@ pub(super) fn preview_calendar(
     let locale = snippets::locale::render(cx);
     let responsive_mixed_semantics = snippets::responsive_mixed_semantics::render(cx);
 
+    let about = doc_layout::notes(
+        cx,
+        [
+            "Fret's `Calendar` plays the same role that React DayPicker does upstream, but the month grid and selection logic live in `fret_ui_headless::calendar` instead of a DOM package.",
+            "The shadcn recipe layer in `ecosystem/fret-ui-shadcn/src/calendar.rs` owns the visual parity surface: caption layout, navigation buttons, day-cell chrome, and slot-aware backgrounds.",
+        ],
+    );
+
+    let date_picker = doc_layout::notes(
+        cx,
+        [
+            "Use the dedicated `Date Picker` page when the calendar should be composed with a trigger, field, and popover; that composition remains a separate recipe rather than being folded into `Calendar` itself.",
+            "This mirrors the upstream docs split between the base `Calendar` component and higher-level date-picker recipes.",
+        ],
+    );
+
+    let selected_date_timezone = doc_layout::notes(
+        cx,
+        [
+            "Upstream documents a `timeZone` prop because JS `Date` can shift the highlighted day across offsets when a calendar works with date-times.",
+            "Fret `Calendar` selections are `time::Date`, so date-only selection does not need a calendar-level timezone prop to keep the chosen day stable.",
+            "If an app needs time-of-day or instant semantics, keep timezone conversion at the surrounding form / date-picker boundary rather than inside the base calendar recipe.",
+        ],
+    );
+
     let notes = doc_layout::notes(
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
             "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
+            "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
             "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
             "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
@@ -43,7 +69,7 @@ pub(super) fn preview_calendar(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn docs path first (Demo -> Usage -> Persian/Hijri -> core examples -> RTL), then appends Fret-only regression surfaces.",
+            "Preview mirrors the shadcn docs order first (`Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, examples, `RTL`), then appends Fret-only regression surfaces.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -54,10 +80,19 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            DocSection::new("About", about)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-about"),
+            DocSection::new("Date Picker", date_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-date-picker"),
             DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-hijri")
                 .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+            DocSection::new("Selected Date (With TimeZone)", selected_date_timezone)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-selected-date-timezone"),
             DocSection::new("Basic", basic)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-basic")
