@@ -511,7 +511,7 @@ Gate tiers (suggested; tune to your machine/CI budgets):
 
 Canonical scripts (keep these stable so “fearless” stays repeatable):
 
-- Fast: `pwsh -NoProfile -File tools/gates_fast.ps1`
+- Fast: `python tools/gates_fast.py`
 - Full: `python tools/gates_full.py`
   - Note: the heaviest shadcn web-golden-backed conformance tests are gated behind
     `--features web-goldens` for `fret-ui-shadcn` to keep the default inner loop cheaper.

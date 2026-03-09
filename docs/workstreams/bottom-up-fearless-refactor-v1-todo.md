@@ -21,7 +21,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
   - Evidence:
-    - `tools/gates_fast.ps1`
+    - `tools/gates_fast.py`
     - `tools/gates_full.py`
     - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Always-run gates”)
 
