@@ -1227,7 +1227,7 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     eprintln!("Starting Trunk dev server in `{}`", display_path(&web_dir));
 
     let mut cmd = Command::new("trunk");
-    cmd.current_dir(web_dir).args(["serve"]);
+    cmd.current_dir(&web_dir).args(["serve"]);
     if let Some(port) = port {
         cmd.args(["--port", &port.to_string()]);
     }
@@ -1242,12 +1242,13 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
 
     std::thread::spawn({
         let url = url.clone();
+        let web_dir = web_dir.clone();
         move || {
             use std::net::{SocketAddr, TcpStream, ToSocketAddrs as _};
             use std::time::{Duration, Instant};
 
             let start = Instant::now();
-            let deadline = Duration::from_secs(30);
+            let deadline = Duration::from_secs(90);
 
             let Ok(mut addrs) = format!("127.0.0.1:{effective_port}").to_socket_addrs() else {
                 return;
@@ -1258,7 +1259,15 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
 
             while start.elapsed() < deadline {
                 if TcpStream::connect_timeout(&addr, Duration::from_millis(150)).is_ok() {
-                    eprintln!("\nFret web demo ready: {url}\n");
+                    let remaining = deadline.saturating_sub(start.elapsed());
+                    let assets_ready = wait_for_trunk_web_assets_ready(&web_dir, remaining);
+                    if assets_ready {
+                        eprintln!("\nFret web demo ready: {url}\n");
+                    } else {
+                        eprintln!(
+                            "\nFret web dev server is reachable but assets may still be building: {url}\n"
+                        );
+                    }
                     if open {
                         if let Err(err) = open_url(&url) {
                             eprintln!("warning: failed to open browser: {err}");
@@ -1285,15 +1294,122 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TrunkWebAssetSignature {
+    index_len: u64,
+    index_mtime_ms: u128,
+    js_len: u64,
+    js_mtime_ms: u128,
+    wasm_len: u64,
+    wasm_mtime_ms: u128,
+}
+
+fn wait_for_trunk_web_assets_ready(web_dir: &Path, timeout: Duration) -> bool {
+    let start = Instant::now();
+    let mut last_sig: Option<TrunkWebAssetSignature> = None;
+    let mut stable_since: Option<Instant> = None;
+
+    while start.elapsed() < timeout {
+        if let Some(sig) = trunk_web_asset_signature(web_dir) {
+            match last_sig {
+                Some(prev) if prev == sig => {
+                    let stable = stable_since.get_or_insert_with(Instant::now);
+                    if stable.elapsed() >= Duration::from_millis(1200) {
+                        return true;
+                    }
+                }
+                _ => {
+                    last_sig = Some(sig);
+                    stable_since = Some(Instant::now());
+                }
+            }
+        } else {
+            last_sig = None;
+            stable_since = None;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+
+    false
+}
+
+fn trunk_web_asset_signature(web_dir: &Path) -> Option<TrunkWebAssetSignature> {
+    let dist_dir = web_dir.join("dist");
+    let index = dist_dir.join("index.html");
+    let js = latest_dist_asset(&dist_dir, |name| {
+        name.starts_with("fret-demo-web-") && name.ends_with(".js")
+    })?;
+    let wasm = latest_dist_asset(&dist_dir, |name| {
+        name.starts_with("fret-demo-web-") && name.ends_with("_bg.wasm")
+    })?;
+
+    let (index_len, index_mtime_ms) = file_len_and_mtime_ms(&index)?;
+    let (js_len, js_mtime_ms) = file_len_and_mtime_ms(&js)?;
+    let (wasm_len, wasm_mtime_ms) = file_len_and_mtime_ms(&wasm)?;
+
+    if index_len == 0 || js_len == 0 || wasm_len == 0 {
+        return None;
+    }
+
+    Some(TrunkWebAssetSignature {
+        index_len,
+        index_mtime_ms,
+        js_len,
+        js_mtime_ms,
+        wasm_len,
+        wasm_mtime_ms,
+    })
+}
+
+fn latest_dist_asset(
+    dist_dir: &Path,
+    mut predicate: impl FnMut(&str) -> bool,
+) -> Option<std::path::PathBuf> {
+    let mut newest: Option<(SystemTime, std::path::PathBuf)> = None;
+    for entry in std::fs::read_dir(dist_dir).ok()? {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if !entry.file_type().ok()?.is_file() {
+            continue;
+        }
+        let name = path.file_name()?.to_str()?;
+        if !predicate(name) {
+            continue;
+        }
+        let modified = entry
+            .metadata()
+            .ok()?
+            .modified()
+            .ok()
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+        match &newest {
+            Some((best_modified, _)) if modified <= *best_modified => {}
+            _ => newest = Some((modified, path)),
+        }
+    }
+    newest.map(|(_, path)| path)
+}
+
+fn file_len_and_mtime_ms(path: &Path) -> Option<(u64, u128)> {
+    let meta = std::fs::metadata(path).ok()?;
+    let modified_ms = meta
+        .modified()
+        .ok()?
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .ok()?
+        .as_millis();
+    Some((meta.len(), modified_ms))
+}
+
 fn open_url(url: &str) -> Result<(), String> {
     #[cfg(windows)]
     {
-        let status = Command::new("cmd")
-            .args(["/C", "start", "", url])
+        let status = Command::new("rundll32.exe")
+            .args(["url.dll,FileProtocolHandler", url])
             .status()
             .map_err(|e| e.to_string())?;
         if !status.success() {
-            return Err(format!("cmd start exited with status: {status}"));
+            return Err(format!("rundll32 FileProtocolHandler exited with status: {status}"));
         }
         return Ok(());
     }

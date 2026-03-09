@@ -1,7 +1,9 @@
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use fret_core::{AppWindowId, FrameId};
+use fret_core::{
+    time::{SystemTime, UNIX_EPOCH},
+    AppWindowId, FrameId,
+};
 
 /// Diagnostics store for runner accessibility activation events.
 ///

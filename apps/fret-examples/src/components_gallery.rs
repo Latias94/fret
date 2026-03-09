@@ -2167,7 +2167,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<ComponentsGalleryDriver, ComponentsGalleryWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         ComponentsGalleryDriver::default(),
         create_window_state,
@@ -2191,6 +2191,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+    fret::run_native_with_compat_driver(config, app, build_fn_driver())
         .context("run components_gallery app")
 }

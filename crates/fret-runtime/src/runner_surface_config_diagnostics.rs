@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use fret_core::{AppWindowId, FrameId};
+use fret_core::{
+    time::{SystemTime, UNIX_EPOCH},
+    AppWindowId, FrameId,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RunnerSurfaceConfigWindowSnapshot {
