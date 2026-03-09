@@ -561,6 +561,11 @@ real editors.
   `node_drag.rs`, `node_resize/move_update.rs`, `sticky_wire_connect.rs`, and
   `sticky_wire_targets.rs` stop re-embedding the same event-scope redraw-plus-paint-invalidation
   tail blocks inline while keeping the same behavior.
+- cancel / context-menu / searcher / insert-node-drag event tails now also route through the same
+  private `canvas/widget/paint_invalidation.rs` seam, so `cancel_cleanup.rs`,
+  `context_menu/ui.rs`, `context_menu/opening.rs`, `searcher_ui.rs`, and
+  `insert_node_drag/session.rs` stop re-embedding the same event-scope
+  redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

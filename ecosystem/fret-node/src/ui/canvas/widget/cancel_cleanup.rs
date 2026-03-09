@@ -35,6 +35,5 @@ pub(super) fn finish_cancel<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if consume {
         cx.stop_propagation();
     }
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }

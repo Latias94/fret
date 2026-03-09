@@ -1,8 +1,7 @@
 use super::prelude::*;
 
 pub(super) fn invalidate_insert_node_drag_preview<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn set_insert_node_drag_preview<H: UiHost>(

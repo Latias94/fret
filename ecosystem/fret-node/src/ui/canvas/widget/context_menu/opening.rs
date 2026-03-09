@@ -82,10 +82,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.interaction.hover_edge = None;
         }
         cx.request_focus(cx.node);
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        true
+        super::ui::finish_context_menu_event(cx)
     }
 
     pub(in crate::ui::canvas::widget) fn build_edge_context_menu_items<H: UiHost>(

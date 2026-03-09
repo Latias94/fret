@@ -55,8 +55,7 @@ pub(super) fn handle_searcher_escape_event<H: UiHost, M: NodeGraphCanvasMiddlewa
 pub(super) fn invalidate_searcher_paint<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) {
-    cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn finish_searcher_event<H: UiHost>(
