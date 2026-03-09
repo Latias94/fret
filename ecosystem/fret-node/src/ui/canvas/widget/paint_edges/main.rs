@@ -1,8 +1,7 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
-use fret_core::scene::DashPatternV1;
-use fret_core::scene::PaintBindingV1;
 
+use super::prepare::PreparedEdgePaintBatches;
 use super::preview::push_drop_marker;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -15,22 +14,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         view_interacting: bool,
     ) {
-        #[derive(Debug, Clone)]
-        struct EdgePaint {
-            id: EdgeId,
-            from: Point,
-            to: Point,
-            color: Color,
-            paint: PaintBindingV1,
-            width: f32,
-            route: EdgeRouteKind,
-            dash: Option<DashPatternV1>,
-            start_marker: Option<crate::ui::presenter::EdgeMarker>,
-            end_marker: Option<crate::ui::presenter::EdgeMarker>,
-            selected: bool,
-            hovered: bool,
-        }
-
         let interaction_hint = if let Some(skin) = self.skin.as_ref() {
             self.graph
                 .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
@@ -40,106 +23,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             crate::ui::InteractionChromeHint::default()
         };
 
-        let edge_insert_marker_request = self
-            .interaction
-            .edge_insert_drag
-            .as_ref()
-            .map(|d| (d.edge, d.pos));
-        let insert_node_drag_preview = self.interaction.insert_node_drag_preview.as_ref();
-
-        let mut edges_normal: Vec<EdgePaint> = Vec::new();
-        let mut edges_selected: Vec<EdgePaint> = Vec::new();
-        let mut edges_hovered: Vec<EdgePaint> = Vec::new();
-        let elevate_edges_on_select = snapshot.interaction.elevate_edges_on_select;
-
-        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let custom_paths = self.collect_custom_edge_paths(&*cx.app, &render.edges, zoom);
-        let edge_insert_marker: Option<(Point, Color)> =
-            edge_insert_marker_request.and_then(|(edge_id, pos)| {
-                render.edges.iter().find(|e| e.id == edge_id).map(|e| {
-                    (
-                        custom_paths
-                            .get(&edge_id)
-                            .map(|custom| {
-                                closest_point_on_path(&custom.commands, bezier_steps, pos)
-                            })
-                            .unwrap_or_else(|| {
-                                closest_point_on_edge_route(
-                                    e.hint.route,
-                                    e.from,
-                                    e.to,
-                                    zoom,
-                                    bezier_steps,
-                                    pos,
-                                )
-                            }),
-                        e.color,
-                    )
-                })
-            });
-
-        let insert_node_drag_marker: Option<(Point, Color)> =
-            insert_node_drag_preview.as_ref().map(|p| {
-                if let Some(edge_id) = p.edge
-                    && let Some(edge) = render.edges.iter().find(|e| e.id == edge_id)
-                {
-                    (
-                        custom_paths
-                            .get(&edge_id)
-                            .map(|custom| {
-                                closest_point_on_path(&custom.commands, bezier_steps, p.pos)
-                            })
-                            .unwrap_or_else(|| {
-                                closest_point_on_edge_route(
-                                    edge.hint.route,
-                                    edge.from,
-                                    edge.to,
-                                    zoom,
-                                    bezier_steps,
-                                    p.pos,
-                                )
-                            }),
-                        edge.color,
-                    )
-                } else {
-                    (p.pos, self.style.paint.wire_color_preview)
-                }
-            });
-
-        for edge in &render.edges {
-            let mut width = self.style.geometry.wire_width * edge.hint.width_mul.max(0.0);
-            if edge.selected {
-                width *= self.style.paint.wire_width_selected_mul;
-            }
-            if edge.hovered {
-                width *= self.style.paint.wire_width_hover_mul;
-            }
-
-            let route = edge.hint.route;
-
-            let paint = EdgePaint {
-                id: edge.id,
-                from: edge.from,
-                to: edge.to,
-                color: edge.color,
-                paint: edge.paint,
-                width,
-                route,
-                dash: edge.hint.dash,
-                start_marker: edge.hint.start_marker.clone(),
-                end_marker: edge.hint.end_marker.clone(),
-                selected: edge.selected,
-                hovered: edge.hovered,
-            };
-
-            if edge.hovered {
-                edges_hovered.push(paint);
-            } else if edge.selected && elevate_edges_on_select {
-                edges_selected.push(paint);
-            } else {
-                edges_normal.push(paint);
-            }
-        }
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
+        let PreparedEdgePaintBatches {
+            edges_normal,
+            edges_selected,
+            edges_hovered,
+            edge_insert_marker,
+            insert_node_drag_marker,
+        } = self.prepare_edge_paint_batches(snapshot, render, &custom_paths, zoom);
 
         let marker_budget_limit = Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
         let mut marker_budget = WorkBudget::new(marker_budget_limit);

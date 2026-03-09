@@ -995,6 +995,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     effect setup, and selected/hovered highlight resolution through the private
     `canvas/widget/paint_edges/chrome.rs` seam, so the root edge-paint surface no longer
     re-embeds edge chrome orchestration inline while keeping the same wire/marker draw behavior.
+  - Progress: `paint_edges/main.rs` now also routes edge paint batch preparation plus
+    edge-insert/insert-node-drop marker projection through the private
+    `canvas/widget/paint_edges/prepare.rs` seam, so the root edge-paint surface no longer
+    re-embeds edge width classification and marker projection setup inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
