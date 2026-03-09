@@ -5,6 +5,7 @@ Last updated: 2026-03-09
 
 Related:
 
+- Short default-rule card: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_DEFAULT_RULES.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - Tracked-write inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TRACKED_WRITE_PATTERN_INVENTORY.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -29,6 +30,9 @@ Current recommendation:
 - and treat the remaining pressure as a productization / handler-placement question rather than an
   invalidation-mechanism problem.
 - lock the default teaching surfaces against accidental `notify()` reintroduction with a small gate.
+
+For the short, execution-oriented rule set, use
+`docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_DEFAULT_RULES.md`.
 
 ---
 

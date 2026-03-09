@@ -72,6 +72,12 @@ Adoption note (as of 2026-03-07):
   `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`,
   `apps/fret-ui-gallery/README.md`, the `data_table` gallery page framing, and generated scaffold
   READMEs now align on the same default/comparison/advanced framing.
+- Invalidation short-rule update (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now captures
+  the default execution split in one note: straightforward single-local tracked writes use
+  `on_action_notify_local_*`, coordinated/root-owned writes use
+  `on_action_notify_models::<A>(...)`, transient runtime effects use
+  `on_action_notify_transient::<A>(...)`, and explicit `notify()` / render-time invalidation stay
+  reserved for imperative/runtime/cache escape hatches.
 - Invalidation review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`,
   `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`
@@ -227,6 +233,7 @@ Post-v1 direction (recommended):
   - Intentional command-surface inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now marks command palette/catalog, `DataTable` business-table wiring, compat/conformance tests, and callback-style non-menu widgets as intentional retained surfaces rather than the next generic migration target, so this track is now in maintenance mode unless a new default-facing leak appears.
   - Current-vs-target v2 note (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now makes the next-stage framing explicit: v1 migration is effectively complete, action/menu residue is no longer the main work item, and the highest-value remaining gap is productization plus tracked-write/invalidation ergonomics.
   - `notify()` policy draft (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now fixes the near-term direction for `AFA-postv1-004`: keep `notify()` as a low-level escape hatch, keep tracked writes as the boring default rerender path, and do not reopen generic invalidation helper design unless a new medium-surface contradiction appears.
+  - Invalidation short-rule update (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now gives the corresponding short policy card so docs/examples/templates can point to a single default-vs-escape-hatch decision table instead of re-explaining the full draft each time.
   - `notify()` default-path gate update (as of 2026-03-09): `tools/gate_no_notify_in_default_teaching_surfaces.py` now keeps the default cookbook ladder plus scaffold templates off explicit `cx.notify(...)` / `host.notify(...)`, and `tools/pre_release.py` runs that policy alongside the other teaching-surface checks.
   - Richer `todo` template audit update (as of 2026-03-09): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit because the template is still teaching selector deps across nested row models plus query invalidation/filter coordination on one tracked graph; this is now documented in `docs/examples/todo-app-golden-path.md` and the generated template README so it does not look like an accidental lagging migration.
   - Productization ingress update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md`, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, `docs/examples/README.md`, `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `apps/fret-ui-gallery/README.md`, and `ecosystem/fret/README.md` now repeat the same default/comparison/advanced framing plus the same `hello` -> `simple-todo` -> `todo` ladder, reducing the remaining post-v1 work from taxonomy drift to keeping those ingress docs stable.

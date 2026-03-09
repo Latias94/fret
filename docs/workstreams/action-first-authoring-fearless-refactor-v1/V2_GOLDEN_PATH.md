@@ -8,6 +8,7 @@ Related:
 - Proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Current-vs-target gap note: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
 - `notify()` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/NOTIFY_POLICY_DECISION_DRAFT.md`
+- invalidation default rules: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_DEFAULT_RULES.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
