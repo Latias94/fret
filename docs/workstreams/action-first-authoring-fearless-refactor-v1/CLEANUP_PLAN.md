@@ -24,7 +24,7 @@ not complete yet:
 This plan exists to keep the refactor boring at the end: no drift, no split teaching surfaces, and a
 clear deprecation → deletion sequence.
 
-Current blocker inventory (2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md` now records the remaining non-MVU hard-delete blockers: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible compatibility alias, and still-public `CommandId`-first widget contracts. App-entry progress as of 2026-03-09: Batch A and Batch B callers have been migrated; remaining closure-root app-entry work is now concentrated in Batch C interop demos. As of 2026-03-09, the Windows MF video-import demo is also migrated; the remaining app-entry closure risk is the AVF/macOS video-import path.
+Current blocker inventory (2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md` now records the remaining non-MVU hard-delete blockers: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible compatibility alias, and still-public `CommandId`-first widget contracts. App-entry progress as of 2026-03-09: Batch A, Batch B, and Batch C callers have been migrated; the remaining work is deprecation/removal sequencing for the legacy app-entry surfaces rather than unresolved demo migration.
 
 ---
 

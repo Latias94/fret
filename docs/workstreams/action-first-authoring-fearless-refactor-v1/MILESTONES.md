@@ -149,7 +149,7 @@ Post-v1 direction (recommended):
   - The app-entry blocker now has a concrete recommended direction in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`: `view::<V>()` as the only default path, `.ui(...)` as a temporary advanced bridge on a staged path to deprecation/removal.
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now classifies the remaining `App::ui*` users and suggests a migration order (Batch A/B/C), so the next execution step can be migration work rather than another policy rewrite.
   - Progress update (as of 2026-03-09): Batch A is complete, Batch B is complete, and the remaining closure-root app-entry callers are now concentrated in Batch C interop demos.
-  - Batch C progress (as of 2026-03-09): `external_texture_imports_demo` and `external_video_imports_mf_demo` have moved to `view_with_hooks::<...>(...)`, leaving the AVF/macOS demo as the main remaining app-entry migration risk.
+  - Batch C progress (as of 2026-03-09): `external_texture_imports_demo`, `external_video_imports_mf_demo`, and `external_video_imports_avf_demo` have moved to `view_with_hooks::<...>(...)`, so app-entry migration risk has shifted from caller conversion to deprecation/cleanup sequencing.
 
 ---
 

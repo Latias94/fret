@@ -62,6 +62,7 @@ Required before hard delete:
 - Adopt one explicit policy: either keep `ui(...)` as advanced-only bridge surface, or begin a deprecation plan toward removal.
 - After that choice, migrate the remaining advanced demos and add the matching gate/deprecation window.
 - The current caller-by-caller migration table now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`.
+- Progress update (as of 2026-03-09): the in-tree Batch A/B/C callers tracked in that inventory have now moved to `view::<V>()` / `view_with_hooks::<V>(...)`; the blocker is now deprecation/removal sequencing, not unresolved demo migration.
 
 ---
 
