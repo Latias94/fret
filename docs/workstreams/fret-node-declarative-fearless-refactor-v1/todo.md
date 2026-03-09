@@ -1079,6 +1079,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/paint_groups.rs`, so `paint_root/cached_groups.rs` stops re-embedding the
     same selected-group rect collection and quad replay tail inline while keeping static group
     cache orchestration explicit at the root.
+  - Progress: widget-surface color-mode / skin / paint-override sync now also routes through the
+    private `ui/canvas/widget/widget_surface/sync.rs` seam, so `widget_surface.rs` stops
+    re-embedding the same geometry-reset and scene-cache/build-state invalidation tails inline
+    while keeping construction and builder-style surface composition explicit at the root.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

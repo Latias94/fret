@@ -670,6 +670,10 @@ real editors.
   `ui/canvas/widget/paint_groups.rs`, so `paint_root/cached_groups.rs` stops re-embedding the same
   selected-group rect collection and quad replay tail inline while keeping static group cache
   orchestration explicit at the root.
+- widget-surface color-mode / skin / paint-override sync now also routes through the private
+  `ui/canvas/widget/widget_surface/sync.rs` seam, so `widget_surface.rs` stops re-embedding the
+  same geometry-reset and scene-cache/build-state invalidation tails inline while keeping
+  construction and builder-style surface composition explicit at the root.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
