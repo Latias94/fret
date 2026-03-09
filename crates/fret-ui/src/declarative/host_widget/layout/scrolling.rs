@@ -70,6 +70,20 @@ fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
     crate::runtime_config::ui_runtime_config().scroll_defer_unbounded_probe_stable_frames
 }
 
+fn scroll_overflow_observation_is_authoritative(
+    observation: UiDebugScrollOverflowObservationTelemetry,
+) -> bool {
+    !observation.deep_scan_budget_hit
+        && (!observation.wrapper_peel_budget_hit || observation.deep_scan_enabled)
+}
+
+fn scroll_overflow_observation_needs_follow_up_probe(
+    observation: UiDebugScrollOverflowObservationTelemetry,
+) -> bool {
+    (observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
+        && !scroll_overflow_observation_is_authoritative(observation)
+}
+
 fn maybe_schedule_extent_probe_after_observation_budget_hit<H: UiHost>(
     app: &mut H,
     tree: &mut UiTree<H>,
@@ -79,9 +93,9 @@ fn maybe_schedule_extent_probe_after_observation_budget_hit<H: UiHost>(
     observation: UiDebugScrollOverflowObservationTelemetry,
 ) -> bool {
     // If we cannot confidently observe overflow in post-layout geometry (budget hit), schedule a
-    // measured unbounded probe on the next frame. This keeps the authoritative path robust even
-    // when wrapper peeling or deep-scan observation runs out of budget.
-    if !(observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit) {
+    // measured unbounded probe on the next frame. A wrapper-peel budget hit alone is not fatal if
+    // the subsequent deep scan completed and reconstructed an authoritative descendant frontier.
+    if !scroll_overflow_observation_needs_follow_up_probe(observation) {
         return false;
     }
 
@@ -1261,7 +1275,8 @@ impl ElementHostWidget {
                 .iter()
                 .copied()
                 .filter(|&child| {
-                    cx.tree.node_subtree_layout_dirty(child) && !cx.tree.node_layout_invalidated(child)
+                    cx.tree.node_subtree_layout_dirty(child)
+                        && !cx.tree.node_layout_invalidated(child)
                 })
                 .collect()
         } else {
@@ -1633,17 +1648,28 @@ impl ElementHostWidget {
         // whole pixel (tolerating tiny floating point noise).
         const ROUND_EPSILON: f32 = 0.001;
         let previous_content = handle.content_size();
+        let trust_live_edge_probe_shrink =
+            pending_extent_probe || (cx.children.len() == 1 && direct_children_layout_invalidated);
         let content_w = if props.axis.scroll_x() && probe_unbounded_for_measure {
             let measured = Px((max_child.width.0.max(0.0) - ROUND_EPSILON).ceil().max(0.0));
             if post_layout_extents_mode {
-                // Even when we fall back to an unbounded probe, keep the previously observed
-                // extent as a floor. Edge probes can temporarily under-report wrapper-heavy
-                // subtrees while contained/cache relayout catches up; shrinking from the probe
-                // result here would reintroduce the "bottom jumps upward" regression.
-                Px(previous_content
-                    .width
-                    .0
-                    .max(measured.0.max(desired.width.0.max(0.0))))
+                if trust_live_edge_probe_shrink {
+                    // Trust explicit probe shrink when we are in a deliberate follow-up probe, or
+                    // when the scroll hosts a single directly-invalidated child root. In that
+                    // single-child case the unbounded measure already reflects the authoritative
+                    // subtree frontier, while re-seeding layout from `previous_content` would pin
+                    // wrapper-heavy collapse flows to stale bounds for the whole frame.
+                    Px(measured.0.max(desired.width.0.max(0.0)))
+                } else {
+                    // Otherwise keep the previously observed extent as a floor. Edge probes can
+                    // temporarily under-report wrapper-heavy descendant-only invalidations while
+                    // contained/cache relayout catches up; shrinking from the probe result here
+                    // would reintroduce the "bottom jumps upward" regression.
+                    Px(previous_content
+                        .width
+                        .0
+                        .max(measured.0.max(desired.width.0.max(0.0))))
+                }
             } else {
                 measured
             }
@@ -1661,13 +1687,20 @@ impl ElementHostWidget {
                 .ceil()
                 .max(0.0));
             if post_layout_extents_mode {
-                // Same guard as above for the vertical axis: unbounded probe fallback may still
-                // observe an outdated outer shell during edge interaction, so only let it grow the
-                // extent immediately. Real shrink still goes through post-layout validation.
-                Px(previous_content
-                    .height
-                    .0
-                    .max(measured.0.max(desired.height.0.max(0.0))))
+                if trust_live_edge_probe_shrink {
+                    // Same as above for the vertical axis: deliberate follow-up probes and
+                    // single-child direct invalidations can trust the freshly measured frontier for
+                    // shrink immediately.
+                    Px(measured.0.max(desired.height.0.max(0.0)))
+                } else {
+                    // Same guard as above for the vertical axis: descendant-only edge probes may
+                    // still observe an outdated outer shell during relayout catch-up, so keep the
+                    // previous content extent as the temporary floor.
+                    Px(previous_content
+                        .height
+                        .0
+                        .max(measured.0.max(desired.height.0.max(0.0))))
+                }
             } else {
                 measured
             }
@@ -1888,6 +1921,10 @@ impl ElementHostWidget {
             let post_layout_authoritative_scan = post_layout_extents_mode
                 && children_layout_invalidated
                 && !must_probe_for_growing_extent;
+            let deep_scan_allowed =
+                (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
+                    || shrink_validation_enabled
+                    || post_layout_authoritative_scan;
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,
                 cx.children,
@@ -1895,13 +1932,11 @@ impl ElementHostWidget {
                 props.axis,
                 Size::new(content_w, content_h),
                 extent_may_be_stale,
-                (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
-                    || shrink_validation_enabled
-                    || post_layout_authoritative_scan,
+                deep_scan_allowed,
             );
 
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
-                && (observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
+                && scroll_overflow_observation_needs_follow_up_probe(observation)
             {
                 eprintln!(
                     "scroll extent observation budget hit element={:?} node={:?} axis={:?} peel={}/{} deep_scan={} visited={}/{} stale_hint={}",
@@ -1920,7 +1955,21 @@ impl ElementHostWidget {
             // If we cannot confidently observe overflow in post-layout geometry (budget hit), schedule a
             // measured unbounded probe on the next frame. This keeps the authoritative path robust
             // when bounded observation runs out of budget on wrapper-heavy trees.
-            if !probe_unbounded_for_measure
+            //
+            // Nuance for shrink-at-edge:
+            //
+            // A live edge probe keeps `previous_content` as a floor to avoid transient "bottom jumps
+            // upward" when wrappers under-report mid-interaction. If that frame also hits the
+            // observation budget, we still need one follow-up explicit probe so shrink can converge
+            // on the next frame. By contrast, once we're already in that follow-up
+            // `pending_extent_probe` frame, don't schedule another one or we'll loop forever.
+            let budget_hit_needs_follow_up_probe = probe_unbounded_for_measure
+                && !pending_extent_probe
+                && post_layout_extents_mode
+                && ((props.axis.scroll_x() && max_child.width.0 + 0.5 < previous_content.width.0)
+                    || (props.axis.scroll_y()
+                        && max_child.height.0 + 0.5 < previous_content.height.0));
+            if (!probe_unbounded_for_measure || budget_hit_needs_follow_up_probe)
                 && maybe_schedule_extent_probe_after_observation_budget_hit(
                     &mut *cx.app,
                     cx.tree,
@@ -1934,8 +1983,7 @@ impl ElementHostWidget {
             }
 
             let authoritative_post_layout_observation = post_layout_authoritative_scan
-                && !observation.wrapper_peel_budget_hit
-                && !observation.deep_scan_budget_hit;
+                && scroll_overflow_observation_is_authoritative(observation);
             if authoritative_post_layout_observation {
                 // Move the post-layout path closer to GPUI's authoritative child-bounds union:
                 // when descendants changed and the bounded observation completed within budget,
@@ -2131,8 +2179,7 @@ impl ElementHostWidget {
                 }
 
                 if shrink_validation_enabled
-                    && !observation.wrapper_peel_budget_hit
-                    && !observation.deep_scan_budget_hit
+                    && scroll_overflow_observation_is_authoritative(observation)
                 {
                     // Single-child scroll subtrees can over-measure under unbounded probe passes
                     // (including deferred/cached paths and clean probe/final flows). When a bounded
@@ -2387,6 +2434,7 @@ mod budget_probe_tests {
 
     fn make_observation(
         wrapper_budget_hit: bool,
+        deep_scan_enabled: bool,
         deep_scan_budget_hit: bool,
     ) -> UiDebugScrollOverflowObservationTelemetry {
         UiDebugScrollOverflowObservationTelemetry {
@@ -2397,9 +2445,13 @@ mod budget_probe_tests {
             wrapper_peel_budget_hit: wrapper_budget_hit,
             immediate_children_visited: 0,
             immediate_children_skipped_absolute: 0,
-            deep_scan_enabled: deep_scan_budget_hit,
+            deep_scan_enabled,
             deep_scan_budget_nodes: 4096,
-            deep_scan_visited: if deep_scan_budget_hit { 4096 } else { 0 },
+            deep_scan_visited: if deep_scan_enabled {
+                if deep_scan_budget_hit { 4096 } else { 128 }
+            } else {
+                0
+            },
             deep_scan_budget_hit,
             deep_scan_skipped_absolute: 0,
         }
@@ -2429,7 +2481,7 @@ mod budget_probe_tests {
                 window,
                 node_peel,
                 element_peel,
-                make_observation(true, false),
+                make_observation(true, false, false),
             ),
             "expected wrapper-peel budget hit to schedule a probe"
         );
@@ -2440,7 +2492,7 @@ mod budget_probe_tests {
                 window,
                 node_deep,
                 element_deep,
-                make_observation(false, true),
+                make_observation(false, true, true),
             ),
             "expected deep-scan budget hit to schedule a probe"
         );
@@ -2477,13 +2529,56 @@ mod budget_probe_tests {
                 window,
                 node_peel,
                 element_peel,
-                make_observation(true, false),
+                make_observation(true, false, false),
             ),
             "expected repeated scheduling to be a no-op once pending"
         );
         assert!(
             ui.take_pending_barrier_relayouts().is_empty(),
             "expected no additional pending barrier relayouts after a no-op schedule"
+        );
+    }
+
+    #[test]
+    fn scroll_post_layout_observation_deep_scan_can_resolve_wrapper_budget_hit() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let root = ui.create_node(TestWidget);
+        ui.set_root(root);
+
+        let element = GlobalElementId(404);
+        let node = ui.create_node_for_element(element, TestWidget);
+        ui.set_children(root, vec![node]);
+
+        assert!(
+            !maybe_schedule_extent_probe_after_observation_budget_hit(
+                &mut app,
+                &mut ui,
+                window,
+                node,
+                element,
+                make_observation(true, true, false),
+            ),
+            "expected completed deep scan to resolve wrapper-peel budget hit without scheduling another probe"
+        );
+        assert!(
+            ui.take_pending_barrier_relayouts().is_empty(),
+            "expected resolved wrapper budget hit to avoid scheduling a barrier relayout"
+        );
+
+        let pending_probe = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::ScrollState::default,
+            |state| state.pending_extent_probe,
+        );
+        assert!(
+            !pending_probe,
+            "expected resolved wrapper budget hit to leave pending_extent_probe cleared"
         );
     }
 
@@ -2507,7 +2602,7 @@ mod budget_probe_tests {
             window,
             node,
             element,
-            make_observation(false, true),
+            make_observation(false, true, true),
         ));
 
         let pending = ui.take_pending_barrier_relayouts();
@@ -2863,6 +2958,46 @@ mod tests {
         assert!(telemetry.deep_scan_budget_hit);
         assert_eq!(telemetry.deep_scan_budget_nodes, 4096);
         assert_eq!(telemetry.deep_scan_visited, 4096);
+    }
+
+    #[test]
+    fn scroll_observed_overflow_deep_scan_resolves_wrapper_chain_beyond_peel_budget() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+
+        let mut chain: Vec<NodeId> = (0..10).map(|_| ids.insert(())).collect();
+        let leaf = ids.insert(());
+        chain.push(leaf);
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![chain[0]]);
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+
+        for window in chain.windows(2) {
+            let parent = window[0];
+            let child = window[1];
+            tree.children.insert(parent, vec![child]);
+            tree.bounds
+                .insert(parent, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        }
+        tree.bounds.insert(leaf, rect_xywh(0.0, 0.0, 100.0, 320.0));
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
+            true,
+        );
+
+        assert!(telemetry.wrapper_peel_budget_hit);
+        assert!(telemetry.deep_scan_enabled);
+        assert!(!telemetry.deep_scan_budget_hit);
+        assert_eq!(observed.trusted.height, Px(320.0));
     }
 
     #[test]

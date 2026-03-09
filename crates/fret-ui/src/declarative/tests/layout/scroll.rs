@@ -2576,9 +2576,9 @@ fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_after_content_cont
     );
 }
 
-
 #[test]
-fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_when_only_descendant_dirty_off_edge() {
+fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_when_only_descendant_dirty_off_edge()
+{
     struct FixedLeaf {
         size: Size,
     }
@@ -2937,7 +2937,6 @@ fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_for_multi_child_ro
     );
 }
 
-
 #[test]
 fn scroll_post_layout_grows_extent_when_only_descendant_dirty_off_edge() {
     let mut app = TestHost::new();
@@ -2973,25 +2972,30 @@ fn scroll_post_layout_grows_extent_when_only_descendant_dirty_off_edge() {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        cx.observe_model(&show_more, Invalidation::Layout);
-                        let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
-                        let rows = if expanded { 24 } else { 6 };
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&show_more, Invalidation::Layout);
+                                let expanded =
+                                    cx.app.models().get_copied(&show_more).unwrap_or(false);
+                                let rows = if expanded { 24 } else { 6 };
 
-                        vec![cx.column(
-                            crate::element::ColumnProps {
-                                gap: Px(0.0).into(),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                (0..rows)
-                                    .map(|i| cx.text(format!("row {i}")))
-                                    .collect::<Vec<_>>()
-                            },
-                        )]
-                    })]
-                })]
+                                vec![cx.column(
+                                    crate::element::ColumnProps {
+                                        gap: Px(0.0).into(),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        (0..rows)
+                                            .map(|i| cx.text(format!("row {i}")))
+                                            .collect::<Vec<_>>()
+                                    },
+                                )]
+                            }),
+                        ]
+                    }),
+                ]
             },
         )]
     }
@@ -3182,7 +3186,6 @@ fn scroll_extent_updates_when_descendant_invalidated_but_child_root_cleared() {
     // Silence unused warning if the debug build retains the node id.
     let _ = root0;
 }
-
 
 #[test]
 fn scroll_post_layout_shrink_revalidation_clamps_multi_child_descendant_only_off_edge() {
@@ -3413,22 +3416,25 @@ fn scroll_post_layout_grows_multi_child_descendant_only_off_edge() {
             move |cx| {
                 vec![
                     cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                            cx.observe_model(&show_more, Invalidation::Layout);
-                            let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
-                            let rows = if expanded { 24 } else { 6 };
-                            vec![cx.column(
-                                crate::element::ColumnProps {
-                                    gap: Px(0.0).into(),
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    (0..rows)
-                                        .map(|i| cx.text(format!("row {i}")))
-                                        .collect::<Vec<_>>()
-                                },
-                            )]
-                        })]
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&show_more, Invalidation::Layout);
+                                let expanded =
+                                    cx.app.models().get_copied(&show_more).unwrap_or(false);
+                                let rows = if expanded { 24 } else { 6 };
+                                vec![cx.column(
+                                    crate::element::ColumnProps {
+                                        gap: Px(0.0).into(),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        (0..rows)
+                                            .map(|i| cx.text(format!("row {i}")))
+                                            .collect::<Vec<_>>()
+                                    },
+                                )]
+                            }),
+                        ]
                     }),
                     cx.container(crate::element::ContainerProps::default(), move |cx| {
                         vec![cx.column(
@@ -3436,7 +3442,11 @@ fn scroll_post_layout_grows_multi_child_descendant_only_off_edge() {
                                 gap: Px(0.0).into(),
                                 ..Default::default()
                             },
-                            move |cx| (0..12).map(|i| cx.text(format!("stable {i}"))).collect::<Vec<_>>(),
+                            move |cx| {
+                                (0..12)
+                                    .map(|i| cx.text(format!("stable {i}")))
+                                    .collect::<Vec<_>>()
+                            },
                         )]
                     }),
                 ]
@@ -3502,7 +3512,6 @@ fn scroll_post_layout_grows_multi_child_descendant_only_off_edge() {
     let _ = root0;
 }
 
-
 #[test]
 fn scroll_axis_both_grows_width_when_only_descendant_dirty_off_edge() {
     let mut app = TestHost::new();
@@ -3539,19 +3548,26 @@ fn scroll_axis_both_grows_width_when_only_descendant_dirty_off_edge() {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        cx.observe_model(&wide, Invalidation::Layout);
-                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&wide, Invalidation::Layout);
+                                let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
 
-                        let mut content = crate::element::ContainerProps::default();
-                        content.layout.size.width =
-                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
-                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+                                let mut content = crate::element::ContainerProps::default();
+                                content.layout.size.width = crate::element::Length::Px(if wide {
+                                    Px(260.0)
+                                } else {
+                                    Px(140.0)
+                                });
+                                content.layout.size.height = crate::element::Length::Px(Px(40.0));
 
-                        vec![cx.container(content, |_cx| Vec::new())]
-                    })]
-                })]
+                                vec![cx.container(content, |_cx| Vec::new())]
+                            }),
+                        ]
+                    }),
+                ]
             },
         )]
     }
@@ -3609,7 +3625,6 @@ fn scroll_axis_both_grows_width_when_only_descendant_dirty_off_edge() {
     );
 }
 
-
 #[test]
 fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_off_edge() {
     let mut app = TestHost::new();
@@ -3646,19 +3661,26 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_off_edge() {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        cx.observe_model(&wide, Invalidation::Layout);
-                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&wide, Invalidation::Layout);
+                                let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
 
-                        let mut content = crate::element::ContainerProps::default();
-                        content.layout.size.width =
-                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
-                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+                                let mut content = crate::element::ContainerProps::default();
+                                content.layout.size.width = crate::element::Length::Px(if wide {
+                                    Px(260.0)
+                                } else {
+                                    Px(140.0)
+                                });
+                                content.layout.size.height = crate::element::Length::Px(Px(40.0));
 
-                        vec![cx.container(content, |_cx| Vec::new())]
-                    })]
-                })]
+                                vec![cx.container(content, |_cx| Vec::new())]
+                            }),
+                        ]
+                    }),
+                ]
             },
         )]
     }
@@ -3721,7 +3743,6 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_off_edge() {
     );
 }
 
-
 #[test]
 fn scroll_axis_both_grows_width_when_only_descendant_dirty_at_edge() {
     let mut app = TestHost::new();
@@ -3758,19 +3779,26 @@ fn scroll_axis_both_grows_width_when_only_descendant_dirty_at_edge() {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        cx.observe_model(&wide, Invalidation::Layout);
-                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&wide, Invalidation::Layout);
+                                let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
 
-                        let mut content = crate::element::ContainerProps::default();
-                        content.layout.size.width =
-                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
-                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+                                let mut content = crate::element::ContainerProps::default();
+                                content.layout.size.width = crate::element::Length::Px(if wide {
+                                    Px(260.0)
+                                } else {
+                                    Px(140.0)
+                                });
+                                content.layout.size.height = crate::element::Length::Px(Px(40.0));
 
-                        vec![cx.container(content, |_cx| Vec::new())]
-                    })]
-                })]
+                                vec![cx.container(content, |_cx| Vec::new())]
+                            }),
+                        ]
+                    }),
+                ]
             },
         )]
     }
@@ -3864,19 +3892,26 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_at_edge() {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                    vec![cx.container(crate::element::ContainerProps::default(), move |cx| {
-                        cx.observe_model(&wide, Invalidation::Layout);
-                        let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), move |cx| {
+                        vec![
+                            cx.container(crate::element::ContainerProps::default(), move |cx| {
+                                cx.observe_model(&wide, Invalidation::Layout);
+                                let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
 
-                        let mut content = crate::element::ContainerProps::default();
-                        content.layout.size.width =
-                            crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
-                        content.layout.size.height = crate::element::Length::Px(Px(40.0));
+                                let mut content = crate::element::ContainerProps::default();
+                                content.layout.size.width = crate::element::Length::Px(if wide {
+                                    Px(260.0)
+                                } else {
+                                    Px(140.0)
+                                });
+                                content.layout.size.height = crate::element::Length::Px(Px(40.0));
 
-                        vec![cx.container(content, |_cx| Vec::new())]
-                    })]
-                })]
+                                vec![cx.container(content, |_cx| Vec::new())]
+                            }),
+                        ]
+                    }),
+                ]
             },
         )]
     }
@@ -3938,7 +3973,6 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_at_edge() {
         "expected x offset to clamp after descendant-only shrink at edge: offset={off1:?} max={max1:?} content={content1:?}"
     );
 }
-
 
 #[test]
 fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge() {
@@ -4317,7 +4351,6 @@ fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_shrink_author
     );
 }
 
-
 #[test]
 fn scroll_post_layout_budget_hit_growth_converges_via_pending_probe_next_frame() {
     const WRAPPER_CHAIN: usize = 8;
@@ -4399,10 +4432,7 @@ fn scroll_post_layout_budget_hit_growth_converges_via_pending_probe_next_frame()
 
     fn build_budget_tree(ui: &mut UiTree<TestHost>, overflowing_leaf_height: Px) -> NodeId {
         let viewport_size = Size::new(Px(120.0), Px(120.0));
-        let same_bounds_rect = Rect::new(
-            fret_core::Point::new(Px(0.0), Px(0.0)),
-            viewport_size,
-        );
+        let same_bounds_rect = Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), viewport_size);
 
         let mut wrappers: Vec<NodeId> = Vec::with_capacity(FANOUT_CHILDREN);
         for index in 0..FANOUT_CHILDREN {
@@ -4574,6 +4604,268 @@ fn scroll_post_layout_budget_hit_growth_converges_via_pending_probe_next_frame()
     );
 }
 
+#[test]
+fn scroll_post_layout_budget_hit_shrink_converges_via_pending_probe_next_frame() {
+    const WRAPPER_CHAIN: usize = 8;
+    const FANOUT_CHILDREN: usize = 2500;
+
+    struct FixedLeaf {
+        size: Size,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct PassThroughMeasureLayoutNode {
+        layout_size: Size,
+        child: NodeId,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for PassThroughMeasureLayoutNode {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            cx.measure_in(self.child, cx.constraints)
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_in(self.child, self.child_rect);
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, self.child_rect);
+        }
+    }
+
+    struct FanoutMeasureLayoutNode {
+        layout_size: Size,
+        children: Vec<NodeId>,
+        child_rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for FanoutMeasureLayoutNode {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            let mut size = Size::new(Px(0.0), Px(0.0));
+            for &child in &self.children {
+                let child_size = cx.measure_in(child, cx.constraints);
+                size.width = Px(size.width.0.max(child_size.width.0));
+                size.height = Px(size.height.0.max(child_size.height.0));
+            }
+            size
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in &self.children {
+                let _ = cx.layout_in(child, self.child_rect);
+            }
+            self.layout_size
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in &self.children {
+                cx.paint(child, self.child_rect);
+            }
+        }
+    }
+
+    fn build_small_tree(ui: &mut UiTree<TestHost>, leaf_height: Px) -> NodeId {
+        ui.create_node(FixedLeaf {
+            size: Size::new(Px(120.0), leaf_height),
+        })
+    }
+
+    fn build_budget_tree(ui: &mut UiTree<TestHost>, overflowing_leaf_height: Px) -> NodeId {
+        let viewport_size = Size::new(Px(120.0), Px(120.0));
+        let same_bounds_rect = Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), viewport_size);
+
+        let mut wrappers: Vec<NodeId> = Vec::with_capacity(FANOUT_CHILDREN);
+        for index in 0..FANOUT_CHILDREN {
+            let leaf_height = if index + 1 == FANOUT_CHILDREN {
+                overflowing_leaf_height
+            } else {
+                Px(120.0)
+            };
+            let leaf_size = Size::new(Px(120.0), leaf_height);
+            let leaf = ui.create_node(FixedLeaf { size: leaf_size });
+            let wrapper = ui.create_node(PassThroughMeasureLayoutNode {
+                layout_size: viewport_size,
+                child: leaf,
+                child_rect: Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), leaf_size),
+            });
+            ui.set_children(wrapper, vec![leaf]);
+            wrappers.push(wrapper);
+        }
+
+        let fanout = ui.create_node(FanoutMeasureLayoutNode {
+            layout_size: viewport_size,
+            children: wrappers.clone(),
+            child_rect: same_bounds_rect,
+        });
+        ui.set_children(fanout, wrappers);
+
+        let mut child = fanout;
+        for _ in 0..WRAPPER_CHAIN {
+            let parent = ui.create_node(PassThroughMeasureLayoutNode {
+                layout_size: viewport_size,
+                child,
+                child_rect: same_bounds_rect,
+            });
+            ui.set_children(parent, vec![child]);
+            child = parent;
+        }
+
+        child
+    }
+
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-budget-hit-shrink-converges-next-frame",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    probe_unbounded: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    let scroll_node0 = ui.children(root0)[0];
+    let tree0 = build_small_tree(&mut ui, Px(260.0));
+    ui.set_children(scroll_node0, vec![tree0]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().y;
+    assert!(
+        (content0.height.0 - 260.0).abs() <= 0.5,
+        "expected initial probe layout to establish the 260px content height: content={content0:?}"
+    );
+    assert!(max0.0 > 0.0, "expected initial non-zero scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(12.0)));
+
+    let scroll_element = ui
+        .node_element(scroll_node0)
+        .expect("expected scroll host node to carry an element id");
+    let pending_probe0 = crate::elements::with_element_state(
+        &mut app,
+        window,
+        scroll_element,
+        crate::element::ScrollState::default,
+        |state| state.pending_extent_probe,
+    );
+    assert!(
+        !pending_probe0,
+        "expected small initial tree to avoid pre-seeding a pending extent probe"
+    );
+
+    let tree1 = build_budget_tree(&mut ui, Px(140.0));
+    ui.set_children(scroll_node0, vec![tree1]);
+    ui.test_set_layout_invalidation(tree1, false);
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().y;
+    let off1 = scroll_handle.offset().y;
+    assert!(
+        (content1.height.0 - 260.0).abs() <= 0.5,
+        "expected first post-layout shrink frame to remain stale when wrapper/deep-scan budgets hit before shrink recovery: after={content1:?}"
+    );
+    assert!(
+        (max1.0 - 140.0).abs() <= 0.5,
+        "expected first post-layout shrink frame to preserve the previous max offset before pending probe runs: before={max0:?} after={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected offset to stay clamped within the stale range before shrink recovery: offset={off1:?} max={max1:?} content={content1:?}"
+    );
+
+    let pending_probe = crate::elements::with_element_state(
+        &mut app,
+        window,
+        scroll_element,
+        crate::element::ScrollState::default,
+        |state| state.pending_extent_probe,
+    );
+    assert!(
+        pending_probe,
+        "expected shrink-side observation budget hit to schedule a pending extent probe for the next frame"
+    );
+
+    let tree2 = build_budget_tree(&mut ui, Px(140.0));
+    ui.set_children(scroll_node0, vec![tree2]);
+
+    app.advance_frame();
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let content2 = scroll_handle.content_size();
+    let max2 = scroll_handle.max_offset().y;
+    let off2 = scroll_handle.offset().y;
+    assert!(
+        (content2.height.0 - 140.0).abs() <= 0.5,
+        "expected pending probe to converge to the 140px descendant frontier on the next frame: content={content2:?}"
+    );
+    assert!(
+        (max2.0 - 20.0).abs() <= 0.5,
+        "expected max offset to shrink after the pending probe frame: content={content2:?} max={max2:?}"
+    );
+    assert!(
+        off2.0 <= max2.0 + 0.5,
+        "expected offset to clamp after shrink recovery: offset={off2:?} max={max2:?} content={content2:?}"
+    );
+
+    let pending_probe_after = crate::elements::with_element_state(
+        &mut app,
+        window,
+        scroll_element,
+        crate::element::ScrollState::default,
+        |state| state.pending_extent_probe,
+    );
+    assert!(
+        !pending_probe_after,
+        "expected pending extent probe to clear after the shrink recovery frame"
+    );
+}
 
 #[test]
 fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_authoritative() {
@@ -4762,7 +5054,6 @@ fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_auth
         "expected max offset to reflect the 260px descendant-only growth root: content={content1:?} max={max1:?}"
     );
 }
-
 
 #[test]
 fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative() {
@@ -4957,9 +5248,9 @@ fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_auth
     );
 }
 
-
 #[test]
-fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge() {
+fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge()
+{
     struct FixedLeaf {
         size: Size,
     }
@@ -5155,7 +5446,8 @@ fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_growth_auth
 }
 
 #[test]
-fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge() {
+fn scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge()
+{
     struct FixedLeaf {
         size: Size,
     }
