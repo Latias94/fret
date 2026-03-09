@@ -907,6 +907,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     through the private `canvas/state/state_overlay_sessions.rs` seam, and derived geometry cache
     key / preview cache structs through the private `canvas/state/state_preview_cache.rs` seam, so
     the root state module keeps shrinking toward a pure state shell without changing state paths.
+  - Progress: `ui/canvas/state.rs` now also routes insert/node/group/marquee/wire/edge drag
+    session structs through the private `canvas/state/state_drag_sessions.rs` seam, so the root
+    state module no longer re-embeds the full drag-session data inventory inline.
   - Progress: `ui/canvas/workflow.rs` now routes wire-drop insert planning through the private
     `canvas/workflow/workflow_insert.rs` seam, so the root workflow module now mainly holds the
     shared plan type, root re-export, and tests.
