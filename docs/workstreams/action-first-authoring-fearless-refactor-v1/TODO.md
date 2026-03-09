@@ -21,6 +21,7 @@ Related:
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
@@ -550,6 +551,10 @@ Current sequencing note (as of 2026-03-09):
   concrete delete-vs-quarantine execution checklist for `App::ui*` once the deprecation window and
   published-release preconditions are satisfied, so the repo no longer has to reconstruct that
   patch plan ad hoc when the checkpoint arrives.
+- compat-runner quarantine note (as of 2026-03-09):
+  `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the quarantine-first execution checklist for
+  `run_native_with_compat_driver(...)`, so a future facade-reduction pass can move that advanced
+  seam behind an explicit compat boundary without reopening the same policy debate.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -680,6 +685,15 @@ Current sequencing note (as of 2026-03-09):
   - Goal: close the gap between the policy draft and the execution docs so Stage 3 is no longer blocked on basic wording drift.
   - Evidence target: the policy draft, hard-delete checklist, and gap analysis all describe `run_native_with_compat_driver(...)` as a retained advanced low-level interop seam and no longer leave README/rustdoc alignment as open work.
   - Status (as of 2026-03-09): `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`, `HARD_DELETE_EXECUTION_CHECKLIST.md`, and `HARD_DELETE_GAP_ANALYSIS.md` now all treat the remaining work as policy/quarantine follow-up rather than docs wording cleanup.
+
+- [x] AFA-postv1-015c Publish a quarantine playbook for future compat-runner surface reduction.
+  - Goal: record the exact quarantine-first patch shape for `run_native_with_compat_driver(...)` so
+    future facade reduction does not have to improvise its sequencing.
+  - Evidence target: one execution note that states preconditions, patch shape, validation, release
+    wording, and abort conditions for moving the compat runner behind an explicit advanced boundary.
+  - Status (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the
+    quarantine-first path, and the policy/checklist/status summary docs all point to it as the next
+    concrete action only if the repo later chooses surface reduction.
 
 - [x] AFA-postv1-016 Publish a caller inventory for `use_state::<T>()`.
   - Goal: replace vague “a few starter/reference snippets still use it” language with a concrete in-tree breakdown before deciding whether `use_state` should be kept, deprecated, or repointed later.

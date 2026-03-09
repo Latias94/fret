@@ -7,6 +7,7 @@ Related:
 - Caller inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
 - Execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- Quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 
 ## Decision summary
 
@@ -113,6 +114,9 @@ If the repo later wants to reduce the `fret` facade surface further, the preferr
 1. shrink or migrate the caller families,
 2. introduce a clearer quarantine boundary if needed,
 3. only then consider deprecation/removal.
+
+If that future reduction path is chosen, use `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` rather than
+reconstructing the patch plan ad hoc.
 
 Preferred future shape if reduction becomes desirable:
 

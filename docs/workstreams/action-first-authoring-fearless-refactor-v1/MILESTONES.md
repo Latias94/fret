@@ -20,6 +20,7 @@ Related:
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
@@ -79,6 +80,10 @@ Adoption note (as of 2026-03-07):
 - App-entry cleanup update (as of 2026-03-09): `APP_ENTRY_REMOVAL_PLAYBOOK.md` now records the
   concrete delete-vs-quarantine execution steps for `App::ui*`, so the hard-delete track has a
   ready-to-run patch plan once the deprecation window and published-release preconditions are met.
+- Compat-runner cleanup update (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now
+  records the quarantine-first execution steps for `run_native_with_compat_driver(...)`, so future
+  facade reduction no longer has to reconstruct how to move that advanced seam out of the default
+  top-level surface.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,
