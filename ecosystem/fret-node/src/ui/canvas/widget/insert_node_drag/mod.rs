@@ -16,6 +16,12 @@ pub(super) struct InsertNodeDragPayload {
 pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
 const DND_DROP_CANVAS: DndItemId = DndItemId(0x4E4F44455F43414E);
 
+pub(super) fn clear_insert_node_drag_state(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    session::clear_insert_node_drag_state(interaction)
+}
+
 pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,

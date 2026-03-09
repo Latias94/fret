@@ -3,7 +3,7 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn dismiss_command_transients(&mut self) {
         self.interaction.context_menu = None;
-        self.interaction.searcher = None;
+        super::searcher_activation_state::clear_searcher_overlay(&mut self.interaction);
     }
 
     pub(super) fn dismiss_command_context_menu(&mut self) {

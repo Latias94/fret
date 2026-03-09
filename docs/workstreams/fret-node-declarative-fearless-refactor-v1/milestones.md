@@ -518,6 +518,13 @@ real editors.
   `canvas/widget/searcher_activation_state.rs` seam, so `searcher_activation.rs` and
   `searcher_ui.rs` stop re-embedding the same pending insert-drag clearing and capture-release
   state transitions inline while keeping the same behavior.
+- command-driven transient dismissal now also routes searcher close through the private
+  `canvas/widget/searcher_activation_state.rs` seam, so `command_ui.rs` stops clearing the
+  searcher overlay without also clearing pending searcher row-drag state while keeping the same
+  behavior.
+- cancel gesture cleanup for insert-node drag now also routes through the private
+  `canvas/widget/insert_node_drag/session.rs` seam, so `cancel_gesture_state.rs` stops
+  re-embedding pending-insert and preview-slot clearing inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

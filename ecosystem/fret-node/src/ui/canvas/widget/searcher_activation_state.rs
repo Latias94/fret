@@ -5,6 +5,17 @@ use super::searcher_activation::SearcherPointerHit;
 use super::*;
 use crate::ui::canvas::state::PendingInsertNodeDrag;
 
+pub(super) fn clear_searcher_overlay(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    let mut cleared = false;
+    if interaction.searcher.take().is_some() {
+        cleared = true;
+    }
+    cleared |= clear_pending_searcher_row_drag(interaction);
+    cleared
+}
+
 pub(super) fn clear_pending_searcher_row_drag(
     interaction: &mut crate::ui::canvas::state::InteractionState,
 ) -> bool {
@@ -15,8 +26,7 @@ pub(super) fn dismiss_searcher_overlay<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,
 ) {
-    canvas.interaction.searcher = None;
-    clear_pending_searcher_row_drag(&mut canvas.interaction);
+    clear_searcher_overlay(&mut canvas.interaction);
     cx.release_pointer_capture();
 }
 
@@ -74,7 +84,7 @@ pub(super) fn activate_searcher_hit_or_dismiss<H: UiHost, M: NodeGraphCanvasMidd
     if let Some(row_ix) = hit.row_ix {
         let _ = canvas.try_activate_searcher_row(cx, row_ix);
     } else if !hit.inside {
-        canvas.interaction.searcher = None;
+        clear_searcher_overlay(&mut canvas.interaction);
     }
 }
 

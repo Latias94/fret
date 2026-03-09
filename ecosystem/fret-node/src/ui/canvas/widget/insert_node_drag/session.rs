@@ -26,6 +26,19 @@ pub(super) fn clear_insert_node_drag_preview<H: UiHost>(
     true
 }
 
+pub(super) fn clear_insert_node_drag_state(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    let mut cleared = false;
+    if interaction.pending_insert_node_drag.take().is_some() {
+        cleared = true;
+    }
+    if interaction.insert_node_drag_preview.take().is_some() {
+        cleared = true;
+    }
+    cleared
+}
+
 pub(super) fn finish_insert_node_drag_event<H: UiHost>(cx: &mut EventCx<'_, H>) -> bool {
     cx.stop_propagation();
     true

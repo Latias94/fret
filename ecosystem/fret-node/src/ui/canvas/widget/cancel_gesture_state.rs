@@ -13,12 +13,7 @@ pub(super) fn cancel_gesture_state<M: NodeGraphCanvasMiddleware>(
         canvas.emit_connect_end(mode, &wire_drag.kind, None, ConnectEndOutcome::Canceled);
         canceled = true;
     }
-    if canvas.interaction.pending_insert_node_drag.take().is_some() {
-        canceled = true;
-    }
-    if canvas.interaction.insert_node_drag_preview.take().is_some() {
-        canceled = true;
-    }
+    canceled |= super::insert_node_drag::clear_insert_node_drag_state(&mut canvas.interaction);
     if canvas.interaction.edge_insert_drag.take().is_some() {
         canceled = true;
     }
