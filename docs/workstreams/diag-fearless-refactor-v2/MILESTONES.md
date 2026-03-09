@@ -147,13 +147,39 @@ Progress update:
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.
+- `commands::artifacts` has now landed another materialization seam across repeated artifact emitters:
+  - canonical artifact output materialization now routes through a shared helper reused by `cmd_meta` and `cmd_test_ids`,
+  - helper-level regression coverage now locks same-path no-op, existing-out reuse, and nested custom-out copy behavior without invoking the full command.
+- `commands::artifacts` has now landed another emitter seam across generated index commands:
+  - ensured artifact output emission now routes through a shared helper reused by `cmd_test_ids_index` and `cmd_frames_index`,
+  - helper-level regression coverage now locks success, ensure-error, and emit-error behavior without invoking the full command.
+- `commands::artifacts` has now landed another preparation seam around `cmd_triage`:
+  - triage bundle resolution and default/custom out-path selection now route through a dedicated prepare helper,
+  - helper-level regression coverage now locks lite default-out and custom-out behavior without invoking the full command.
+- `commands::artifacts` has now landed another output-surface seam across artifact emitters:
+  - artifact text reads, JSON reads, and pretty JSON text shaping now route through dedicated helpers reused by `emit_path_or_json_output`, `emit_artifact_output`, and `write_json_artifact_output`,
+  - helper-level regression coverage now locks text-read, JSON-read, and pretty-format behavior without invoking the full command.
+- `commands::artifacts` has now landed another preparation seam around `cmd_test_ids`:
+  - test-ids bundle/out preparation now routes through a dedicated helper while cached-output short-circuit routes through a dedicated existing-file helper,
+  - helper-level regression coverage now locks default/custom out-path selection and existing-file shortcut behavior without invoking the full command.
+- `commands::artifacts` has now landed another preparation seam around `cmd_meta`:
+  - meta parse/resolve/out preparation now routes through a dedicated helper,
+  - helper-level regression coverage now locks default/custom out-path selection plus display-mode preparation without invoking the full command.
+- `commands::artifacts` has now landed another lint-output seam around `cmd_lint`:
+  - lint report write and exit-required decision now route through a dedicated helper,
+  - helper-level regression coverage now locks report-output and exit-required behavior without invoking the full command.
+- `commands::artifacts` has now landed another pack preflight seam around `cmd_pack`:
+  - ai.packet path resolution, best-effort ensure, and `--ai-only` directory validation now route through dedicated helpers,
+  - helper-level regression coverage now locks ai.packet path shaping and `--ai-only` success/error behavior without invoking the full command.
 - `commands::resolve` has now landed another normalization seam around `diag resolve latest` output assembly:
   - latest run projection now routes through a dedicated helper,
   - latest bundle projection now routes through a dedicated helper reused by `resolve_latest_for_out_dir` and `resolve_latest_bundle_dir_from_base_or_session_out_dir`,
-  - helper-level regression coverage now locks existing-run-dir projection, missing-artifact filtering, and base/session latest-bundle reuse without invoking the full command.
+  - `resolve_latest_bundle_dir_for_out_dir` now routes script-result hint parsing and latest-marker/scan fallback through dedicated helpers,
+  - `resolve_session_out_dir_for_base_dir` now routes session-root vs base-dir selection through a dedicated mode helper plus direct-resolution builder,
+  - helper-level regression coverage now locks existing-run-dir projection, missing-artifact filtering, base/session latest-bundle reuse, relative/absolute hint fallback behavior, and session-root marker preference without invoking the full command.
 - The next decision point in this area is no longer whether `diag_campaign` still needs another small share slice; the higher-ROI
   follow-up is now the remaining artifact resolution/materialization holdouts in `commands::artifacts`
-  plus the last `commands::resolve` session/latest normalization holdouts before presentation-surface follow-up work.
+  while `commands::resolve` is down to only small tail holdouts, so presentation-surface follow-up or the next artifact/materialization slice should usually win the priority call.
 
 Exit criteria:
 

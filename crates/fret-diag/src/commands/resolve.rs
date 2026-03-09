@@ -9,6 +9,12 @@ struct ResolvedSessionOutDir {
     session_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResolveSessionOutDirMode {
+    Direct,
+    SelectSession,
+}
+
 #[derive(Debug, Clone)]
 struct ResolveLatestOutput {
     base_out_dir: PathBuf,
@@ -347,17 +353,8 @@ fn resolve_session_out_dir_for_base_dir(
     base_out_dir: &Path,
     within_session: Option<&str>,
 ) -> Result<ResolvedSessionOutDir, String> {
-    let sessions_root = base_out_dir.join(crate::session::SESSIONS_DIRNAME);
-    let has_sessions_root = sessions_root.is_dir();
-
-    // If the directory already looks like a session root, treat it as such even if it contains
-    // `sessions/` (defensive against nested layouts).
-    if looks_like_diag_session_root(base_out_dir) || !has_sessions_root {
-        return Ok(ResolvedSessionOutDir {
-            base_out_dir: base_out_dir.to_path_buf(),
-            out_dir: base_out_dir.to_path_buf(),
-            session_id: None,
-        });
+    if resolve_session_out_dir_mode(base_out_dir) == ResolveSessionOutDirMode::Direct {
+        return Ok(build_direct_session_out_dir(base_out_dir));
     }
 
     let session_id = resolve_target_session_id(base_out_dir, within_session)?;
@@ -368,6 +365,27 @@ fn resolve_session_out_dir_for_base_dir(
         out_dir,
         session_id: Some(session_id),
     })
+}
+
+fn resolve_session_out_dir_mode(base_out_dir: &Path) -> ResolveSessionOutDirMode {
+    let sessions_root = base_out_dir.join(crate::session::SESSIONS_DIRNAME);
+    let has_sessions_root = sessions_root.is_dir();
+
+    // If the directory already looks like a session root, treat it as such even if it contains
+    // `sessions/` (defensive against nested layouts).
+    if looks_like_diag_session_root(base_out_dir) || !has_sessions_root {
+        ResolveSessionOutDirMode::Direct
+    } else {
+        ResolveSessionOutDirMode::SelectSession
+    }
+}
+
+fn build_direct_session_out_dir(base_out_dir: &Path) -> ResolvedSessionOutDir {
+    ResolvedSessionOutDir {
+        base_out_dir: base_out_dir.to_path_buf(),
+        out_dir: base_out_dir.to_path_buf(),
+        session_id: None,
+    }
 }
 
 fn resolve_target_session_id(
@@ -498,26 +516,43 @@ pub(crate) fn resolve_latest_bundle_dir_for_out_dir(
     out_dir: &Path,
     script_result: Option<&UiScriptResultV1>,
 ) -> (Option<PathBuf>, Option<&'static str>) {
-    if let Some(script) = script_result {
-        if let Some(dir) = script
-            .last_bundle_dir
-            .as_deref()
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-        {
-            let p = PathBuf::from(dir);
-            let candidate = if p.is_absolute() { p } else { out_dir.join(p) };
-            if candidate.is_dir() {
-                return (Some(candidate), Some("script.result.json:last_bundle_dir"));
-            }
-        }
+    if let Some(candidate) =
+        resolve_latest_bundle_dir_from_script_result_hint(out_dir, script_result)
+    {
+        return (Some(candidate), Some("script.result.json:last_bundle_dir"));
     }
 
-    if let Some(dir) = crate::latest::latest_bundle_dir_path_opt(out_dir) {
+    if let Some(dir) = resolve_latest_bundle_dir_from_latest_marker_or_scan(out_dir) {
         return (Some(dir), Some("latest.txt_or_scan"));
     }
 
     (None, None)
+}
+
+fn resolve_latest_bundle_dir_from_script_result_hint(
+    out_dir: &Path,
+    script_result: Option<&UiScriptResultV1>,
+) -> Option<PathBuf> {
+    let hint = script_result?
+        .last_bundle_dir
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())?;
+    let candidate = resolve_script_result_bundle_dir_hint(out_dir, hint);
+    candidate.is_dir().then_some(candidate)
+}
+
+fn resolve_script_result_bundle_dir_hint(out_dir: &Path, hint: &str) -> PathBuf {
+    let hint_path = PathBuf::from(hint);
+    if hint_path.is_absolute() {
+        hint_path
+    } else {
+        out_dir.join(hint_path)
+    }
+}
+
+fn resolve_latest_bundle_dir_from_latest_marker_or_scan(out_dir: &Path) -> Option<PathBuf> {
+    crate::latest::latest_bundle_dir_path_opt(out_dir)
 }
 
 pub(crate) fn resolve_latest_bundle_dir_from_base_or_session_out_dir(
@@ -589,6 +624,69 @@ mod tests {
         std::fs::write(root.join("latest.txt"), b"777-bundle").expect("write latest.txt");
 
         let (dir, source) = resolve_latest_bundle_dir_for_out_dir(&root, None);
+        assert_eq!(dir.as_deref(), Some(bundle_dir.as_path()));
+        assert_eq!(source, Some("latest.txt_or_scan"));
+    }
+
+    #[test]
+    fn resolve_latest_bundle_dir_from_script_result_hint_accepts_absolute_dir() {
+        let root = make_temp_dir("fret-diag-resolve-latest-absolute-hint");
+        let bundle_dir = root.join("888-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        let script_result = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 888,
+            updated_unix_ms: 1,
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: Some("ok".to_string()),
+            reason: None,
+            evidence: None,
+            last_bundle_dir: Some(bundle_dir.display().to_string()),
+            last_bundle_artifact: None,
+        };
+
+        let resolved =
+            resolve_latest_bundle_dir_from_script_result_hint(&root, Some(&script_result));
+
+        assert_eq!(resolved.as_deref(), Some(bundle_dir.as_path()));
+    }
+
+    #[test]
+    fn resolve_latest_bundle_dir_from_script_result_hint_rejects_blank_hint() {
+        let root = make_temp_dir("fret-diag-resolve-latest-blank-hint");
+        let script_result = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 0,
+            updated_unix_ms: 1,
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: Some("ok".to_string()),
+            reason: None,
+            evidence: None,
+            last_bundle_dir: Some("   ".to_string()),
+            last_bundle_artifact: None,
+        };
+
+        let resolved =
+            resolve_latest_bundle_dir_from_script_result_hint(&root, Some(&script_result));
+
+        assert!(resolved.is_none());
+    }
+
+    #[test]
+    fn resolve_latest_bundle_dir_for_out_dir_falls_back_when_hint_dir_missing() {
+        let root = make_temp_dir("fret-diag-resolve-latest-missing-hint-dir");
+        let bundle_dir = root.join("999-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(root.join("latest.txt"), b"999-bundle").expect("write latest.txt");
+        write_script_result(&root, 999, "missing-bundle");
+
+        let script = try_read_script_result_v1(&root.join("script.result.json"));
+        let (dir, source) = resolve_latest_bundle_dir_for_out_dir(&root, script.as_ref());
+
         assert_eq!(dir.as_deref(), Some(bundle_dir.as_path()));
         assert_eq!(source, Some("latest.txt_or_scan"));
     }
@@ -725,6 +823,41 @@ mod tests {
 
         assert!(err.contains("session directory does not exist"));
         assert!(err.contains("fretboard diag list sessions"));
+    }
+
+    #[test]
+    fn resolve_session_out_dir_mode_prefers_session_root_markers_over_sessions_dir() {
+        let base = make_temp_dir("fret-diag-resolve-session-mode-direct");
+        std::fs::create_dir_all(base.join(crate::session::SESSIONS_DIRNAME))
+            .expect("create sessions dir");
+        std::fs::write(base.join("latest.txt"), b"777-bundle").expect("write latest.txt");
+
+        let mode = resolve_session_out_dir_mode(&base);
+
+        assert_eq!(mode, ResolveSessionOutDirMode::Direct);
+    }
+
+    #[test]
+    fn resolve_session_out_dir_mode_selects_session_when_sessions_dir_exists_without_markers() {
+        let base = make_temp_dir("fret-diag-resolve-session-mode-select");
+        std::fs::create_dir_all(base.join(crate::session::SESSIONS_DIRNAME))
+            .expect("create sessions dir");
+
+        let mode = resolve_session_out_dir_mode(&base);
+
+        assert_eq!(mode, ResolveSessionOutDirMode::SelectSession);
+    }
+
+    #[test]
+    fn resolve_session_out_dir_for_base_dir_returns_direct_resolution_without_sessions_root() {
+        let base = make_temp_dir("fret-diag-resolve-session-out-dir-direct");
+
+        let resolved =
+            resolve_session_out_dir_for_base_dir(&base, None).expect("resolve direct session dir");
+
+        assert_eq!(resolved.base_out_dir, base);
+        assert_eq!(resolved.out_dir, base);
+        assert_eq!(resolved.session_id, None);
     }
 
     #[test]
