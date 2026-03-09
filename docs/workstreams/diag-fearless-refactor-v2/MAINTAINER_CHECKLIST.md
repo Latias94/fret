@@ -35,6 +35,7 @@ Treat these fields as one contract slice:
 - `status = skipped_policy`
 - `reason_code = capability.missing`
 - `campaigns_skipped_policy`
+- `capability_source`
 - `capabilities_check_path`
 
 Meaning:
@@ -45,8 +46,18 @@ Meaning:
   assertion failure inside the item itself.
 - `campaigns_skipped_policy` is the batch-level counter for that bucket; do not merge it back into
   generic failure counts when presenting status.
+- `capability_source` tells you where the capability decision came from; treat it as provenance,
+  not as a replacement for the campaign-local check artifact.
 - `capabilities_check_path` points at the campaign-local capability check artifact that explains
   why the item was skipped.
+
+Interpretation rule:
+
+- `capability_source` answers "where did the available/missing capability view come from?"
+- `capabilities_check_path` answers "where is the campaign-local explanation artifact written for
+  this skip decision?"
+
+Do not collapse those two concepts into one field when writing consumer text or maintainer guidance.
 
 Do not interpret this state as:
 
@@ -60,8 +71,16 @@ Do not interpret this state as:
 For a selected non-passing summary item, prefer evidence in this order:
 
 1. `bundle_dir` when the item actually executed and produced bundle artifacts,
-2. `capabilities_check_path` when the item is `skipped_policy`,
+2. `capability_source` when you need provenance for why a capability decision was made,
+3. `capabilities_check_path` when the item is `skipped_policy`,
 3. summary/index JSON when only aggregate context exists.
+
+Practical reading order for policy-skipped items:
+
+1. confirm `status = skipped_policy` and `reason_code = capability.missing`,
+2. read `capability_source` to see whether the decision came from filesystem or transport/session
+   provenance,
+3. open `capabilities_check_path` for the concrete missing/available capability lists.
 
 Consumer rule:
 
@@ -91,6 +110,7 @@ Before landing a new diagnostics-facing change, answer these questions:
 - What evidence is left behind for another maintainer?
   - repro command,
   - artifact path(s),
+  - capability provenance when policy skip or transport-specific capability behavior is involved,
   - exact test name or diag suite name,
   - and, when relevant, packed bundle or capability-check artifact.
 

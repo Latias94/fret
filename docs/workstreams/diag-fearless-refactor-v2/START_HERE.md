@@ -43,6 +43,10 @@ Open the matching note first:
   - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
 - Naming / orchestration vocabulary
   - `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
+- Policy-skip / capability provenance interpretation
+  - `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+  - `docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`
+  - `docs/workstreams/diag-fearless-refactor-v2/CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`
 - What maintainers must update when landing a change
   - `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
 - How old notes relate to v2
@@ -59,6 +63,9 @@ If your task is:
 - "I am changing diagnostics output or wording"
   - open `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
   - then open `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
+- "I need to understand `skipped_policy`, `capability_source`, or `capabilities_check_path`"
+  - open `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+  - then open `docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`
 - "I am changing aggregate artifacts or evidence paths"
   - open `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - "I am changing campaign or regression summary payloads"
