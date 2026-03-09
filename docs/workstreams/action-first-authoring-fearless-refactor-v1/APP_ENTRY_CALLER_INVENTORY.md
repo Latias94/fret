@@ -43,7 +43,7 @@ Current conclusion:
 |---|---|---|---|
 | `apps/fret-examples/src/assets_demo.rs` | advanced asset/event demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<AssetsDemoView>(...)`; proves driver event hooks do not by themselves require closure-root `ui_with_hooks(...)` |
 | `apps/fret-examples/src/embedded_viewport_demo.rs` | advanced viewport interop demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<EmbeddedViewportDemoView>(...)`; `EmbeddedViewportView` now lets retained viewport recording compose with `ViewWindowState<V>` |
-| `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `migrate-to-view` | still likely needs hooks, but not necessarily closure-root entry |
+| `apps/fret-examples/src/external_texture_imports_demo.rs` | advanced external texture interop | `done` | migrated on 2026-03-09 to `view_with_hooks::<ExternalTextureImportsView>(...)`; shows that one Batch C interop demo also fits the view runtime hook path without closure-root state |
 | `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
 | `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `migrate-to-view` | same reasoning as AVF demo |
 | `apps/fret-examples/src/image_heavy_memory_demo.rs` | memory/perf-oriented demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<ImageHeavyMemoryView>(...)`; confirms frame-recorder-only demos also fit the view runtime hook path |
@@ -115,13 +115,17 @@ Status update:
 
 These should be migrated only after the policy and hook path are already proven by B:
 
-- `apps/fret-examples/src/external_texture_imports_demo.rs`
+- `apps/fret-examples/src/external_texture_imports_demo.rs` _(done on 2026-03-09)_
 - `apps/fret-examples/src/external_video_imports_avf_demo.rs`
 - `apps/fret-examples/src/external_video_imports_mf_demo.rs`
 
 Decision gate:
 
 - if one of these truly needs a lower-level bootstrap/driver path, document that explicitly and stop treating it as evidence for keeping `App::ui_with_hooks(...)` in the default facade.
+
+Status update:
+
+- Batch C has started: `external_texture_imports_demo` now runs through `view_with_hooks::<ExternalTextureImportsView>(...)`, so the remaining risk is concentrated in the platform video-import demos.
 
 ---
 

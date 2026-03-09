@@ -485,7 +485,7 @@ impl DecodedPngSource {
     }
 }
 
-struct ExternalTextureImportsState {
+struct ExternalTextureImportsView {
     show: fret_runtime::Model<bool>,
     mode: ExternalTextureImportsMode,
     use_native_adapter: bool,
@@ -502,23 +502,29 @@ struct ExternalTextureImportsState {
     decoded: Option<DecodedPngSource>,
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportsState {
-    ExternalTextureImportsState {
-        show: app.models_mut().insert(true),
-        target: ImportedViewportRenderTarget::new(
-            wgpu::TextureFormat::Rgba8UnormSrgb,
-            RenderTargetColorSpace::Srgb,
-        ),
-        target_px_size: (1, 1),
-        desired_target_px_size: (1280, 720),
-        texture: None,
-        checker: None,
-        mode: ExternalTextureImportsMode::CheckerGpu,
-        decoded: None,
-        use_native_adapter: false,
-        dx12_probe_logged: false,
-        #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
-        dx12_clear: None,
+impl fret::view::View for ExternalTextureImportsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            show: app.models_mut().insert(true),
+            target: ImportedViewportRenderTarget::new(
+                wgpu::TextureFormat::Rgba8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+            ),
+            target_px_size: (1, 1),
+            desired_target_px_size: (1280, 720),
+            texture: None,
+            checker: None,
+            mode: ExternalTextureImportsMode::CheckerGpu,
+            decoded: None,
+            use_native_adapter: false,
+            dx12_probe_logged: false,
+            #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+            dx12_clear: None,
+        }
+    }
+
+    fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements {
+        render_view(cx.elements(), self)
     }
 }
 
@@ -527,20 +533,20 @@ fn on_event(
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut ExternalTextureImportsState,
+    st: &mut fret::view::ViewWindowState<ExternalTextureImportsView>,
     event: &Event,
 ) {
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = app.models_mut().update(&st.show, |v| *v = !*v);
+        let _ = app.models_mut().update(&st.view.show, |v| *v = !*v);
         app.request_redraw(window);
     }
 
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyI
     {
-        st.mode = match st.mode {
+        st.view.mode = match st.view.mode {
             ExternalTextureImportsMode::CheckerGpu => ExternalTextureImportsMode::DecodedPngCpuCopy,
             ExternalTextureImportsMode::DecodedPngCpuCopy => ExternalTextureImportsMode::CheckerGpu,
             #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
@@ -561,7 +567,7 @@ fn on_event(
             );
             return;
         }
-        st.mode = match st.mode {
+        st.view.mode = match st.view.mode {
             ExternalTextureImportsMode::Dx12ClearSharedAllocation => {
                 ExternalTextureImportsMode::CheckerGpu
             }
@@ -573,12 +579,12 @@ fn on_event(
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyN
     {
-        st.use_native_adapter = !st.use_native_adapter;
+        st.view.use_native_adapter = !st.view.use_native_adapter;
         app.request_redraw(window);
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsState) -> Elements {
+fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> Elements {
     cx.observe_model(&st.show, Invalidation::Layout);
 
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
@@ -668,26 +674,26 @@ fn record_engine_frame(
     app: &mut App,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut ExternalTextureImportsState,
+    st: &mut fret::view::ViewWindowState<ExternalTextureImportsView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _scale_factor: f32,
     _tick_id: fret_runtime::TickId,
     frame_id: fret_runtime::FrameId,
 ) -> EngineFrameUpdate {
-    let show = app.models().read(&st.show, |v| *v).unwrap_or(true);
+    let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);
 
     let mut update = EngineFrameUpdate::default();
 
     if !show {
-        st.target.push_unregister(&mut update);
-        st.texture = None;
-        st.target_px_size = (1, 1);
+        st.view.target.push_unregister(&mut update);
+        st.view.texture = None;
+        st.view.target_px_size = (1, 1);
         return update;
     }
 
-    let desired = st.desired_target_px_size;
-    let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
+    let desired = st.view.desired_target_px_size;
+    let needs_realloc = st.view.texture.is_none() || st.view.target_px_size != desired;
     if needs_realloc {
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("external texture imports contract-path texture"),
@@ -699,64 +705,71 @@ fn record_engine_frame(
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: st.target.format(),
+            format: st.view.target.format(),
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        if !st.dx12_probe_logged {
-            st.dx12_probe_logged = log_dx12_shared_texture_probe_once(&texture);
+        if !st.view.dx12_probe_logged {
+            st.view.dx12_probe_logged = log_dx12_shared_texture_probe_once(&texture);
         }
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        if !st.target.is_registered() {
-            let _ = st.target.ensure_registered(renderer, view.clone(), desired);
+        if !st.view.target.is_registered() {
+            let _ = st
+                .view
+                .target
+                .ensure_registered(renderer, view.clone(), desired);
         }
 
-        st.texture = Some(texture);
-        st.target_px_size = desired;
+        st.view.texture = Some(texture);
+        st.view.target_px_size = desired;
     }
 
     let texture = st
+        .view
         .texture
         .as_ref()
         .expect("texture must exist after allocation");
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
     let metadata = RenderTargetMetadata::default();
-    let effective_strategy = match st.mode {
+    let effective_strategy = match st.view.mode {
         ExternalTextureImportsMode::CheckerGpu => RenderTargetIngestStrategy::Owned,
         ExternalTextureImportsMode::DecodedPngCpuCopy => RenderTargetIngestStrategy::CpuUpload,
         #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
         ExternalTextureImportsMode::Dx12ClearSharedAllocation => RenderTargetIngestStrategy::Owned,
     };
 
-    if st.use_native_adapter {
+    if st.view.use_native_adapter {
         let renderer_caps = app
             .global::<fret_render::RendererCapabilities>()
             .expect("renderer capabilities must be set before record_engine_frame");
         let frame: Box<dyn NativeExternalTextureFrame> = Box::new(OwnedWgpuTextureFrame {
             texture: texture.clone(),
-            size: st.target_px_size,
+            size: st.view.target_px_size,
             ingest_strategy: effective_strategy,
         });
         let fallbacks = ImportedViewportFallbacks::single_view(
             effective_strategy,
             view.clone(),
-            st.target_px_size,
+            st.view.target_px_size,
             RenderTargetMetadata::default(),
             None,
         );
-        match st.target.push_native_external_import_update_with_fallbacks(
-            renderer,
-            &mut update,
-            context,
-            &renderer_caps,
-            RenderTargetIngestStrategy::ExternalZeroCopy,
-            frame,
-            fallbacks,
-        ) {
+        match st
+            .view
+            .target
+            .push_native_external_import_update_with_fallbacks(
+                renderer,
+                &mut update,
+                context,
+                &renderer_caps,
+                RenderTargetIngestStrategy::ExternalZeroCopy,
+                frame,
+                fallbacks,
+            ) {
             NativeExternalImportOutcome::Imported { .. } => {}
             NativeExternalImportOutcome::FellBack { err, .. } => {
                 tracing::warn!(
@@ -769,28 +782,34 @@ fn record_engine_frame(
         let fallbacks = ImportedViewportFallbacks::single_view(
             effective_strategy,
             view.clone(),
-            st.target_px_size,
+            st.view.target_px_size,
             metadata,
             None,
         );
 
-        st.target.push_update_with_fallbacks(
+        st.view.target.push_update_with_fallbacks(
             &mut update,
             RenderTargetIngestStrategy::ExternalZeroCopy,
             fallbacks,
         );
     }
 
-    match st.mode {
+    match st.view.mode {
         ExternalTextureImportsMode::CheckerGpu => {
-            if st.checker.is_none() {
-                st.checker = Some(CheckerPipeline::new(&context.device, st.target.format()));
+            if st.view.checker.is_none() {
+                st.view.checker = Some(CheckerPipeline::new(
+                    &context.device,
+                    st.view.target.format(),
+                ));
             }
 
-            if let Some(checker) = st.checker.as_ref() {
+            if let Some(checker) = st.view.checker.as_ref() {
                 let t = frame_id.0 as f32 * (1.0 / 60.0);
                 let uniforms = CheckerUniforms {
-                    resolution: [st.target_px_size.0 as f32, st.target_px_size.1 as f32],
+                    resolution: [
+                        st.view.target_px_size.0 as f32,
+                        st.view.target_px_size.1 as f32,
+                    ],
                     t,
                     _pad: 0.0,
                 };
@@ -829,26 +848,26 @@ fn record_engine_frame(
             }
         }
         ExternalTextureImportsMode::DecodedPngCpuCopy => {
-            if st.decoded.is_none() {
+            if st.view.decoded.is_none() {
                 match DecodedPngSource::new() {
-                    Ok(src) => st.decoded = Some(src),
+                    Ok(src) => st.view.decoded = Some(src),
                     Err(err) => {
                         tracing::warn!(
                             ?err,
                             "failed to decode embedded png; falling back to checker"
                         );
-                        st.mode = ExternalTextureImportsMode::CheckerGpu;
+                        st.view.mode = ExternalTextureImportsMode::CheckerGpu;
                     }
                 }
             }
 
-            if let Some(decoded) = st.decoded.as_mut() {
-                let (bytes, bytes_per_row) = decoded.cached_rgba8(st.target_px_size);
+            if let Some(decoded) = st.view.decoded.as_mut() {
+                let (bytes, bytes_per_row) = decoded.cached_rgba8(st.view.target_px_size);
                 write_rgba8_texture_region(
                     &context.queue,
                     texture,
                     (0, 0),
-                    st.target_px_size,
+                    st.view.target_px_size,
                     bytes_per_row,
                     bytes,
                 );
@@ -868,28 +887,29 @@ fn record_engine_frame(
                             ?err,
                             "dx12 clear mode: shared allocation export unavailable; falling back"
                         );
-                        st.mode = ExternalTextureImportsMode::CheckerGpu;
+                        st.view.mode = ExternalTextureImportsMode::CheckerGpu;
                         return update;
                     }
                 };
 
-            if st.dx12_clear.is_none() {
-                let Some(rtv_format) = dx12_clear::rtv_format_for_wgpu(st.target.format()) else {
+            if st.view.dx12_clear.is_none() {
+                let Some(rtv_format) = dx12_clear::rtv_format_for_wgpu(st.view.target.format())
+                else {
                     tracing::warn!(
-                        format = ?st.target.format(),
+                        format = ?st.view.target.format(),
                         "dx12 clear mode: unsupported target format; falling back"
                     );
-                    st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    st.view.mode = ExternalTextureImportsMode::CheckerGpu;
                     return update;
                 };
                 match dx12_clear::Dx12ClearState::new(guard.resource(), rtv_format)
                     .context("init Dx12ClearState")
                 {
-                    Ok(state) => st.dx12_clear = Some(state),
+                    Ok(state) => st.view.dx12_clear = Some(state),
                     Err(err) => {
                         tracing::warn!(?err, "dx12 clear mode: init failed; falling back");
-                        st.dx12_clear = None;
-                        st.mode = ExternalTextureImportsMode::CheckerGpu;
+                        st.view.dx12_clear = None;
+                        st.view.mode = ExternalTextureImportsMode::CheckerGpu;
                         return update;
                     }
                 }
@@ -904,17 +924,17 @@ fn record_engine_frame(
                 1.0,
             ];
 
-            if let Some(dx12) = st.dx12_clear.as_mut() {
+            if let Some(dx12) = st.view.dx12_clear.as_mut() {
                 if let Err(err) = dx12.clear_on_queue(guard.queue_raw(), guard.resource(), color) {
                     tracing::warn!(?err, "dx12 clear mode: native clear failed; falling back");
-                    st.dx12_clear = None;
-                    st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    st.view.dx12_clear = None;
+                    st.view.mode = ExternalTextureImportsMode::CheckerGpu;
                     return update;
                 }
                 guard.finish();
             } else {
                 tracing::warn!("dx12 clear mode: missing dx12 state; falling back");
-                st.mode = ExternalTextureImportsMode::CheckerGpu;
+                st.view.mode = ExternalTextureImportsMode::CheckerGpu;
             }
 
             // Keep the contract-path hot.
@@ -948,7 +968,7 @@ pub fn run() -> anyhow::Result<()> {
             "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
             (960.0, 640.0),
         )
-        .ui_with_hooks(init_window, view, |driver| {
+        .view_with_hooks::<ExternalTextureImportsView>(|driver| {
             driver
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)
