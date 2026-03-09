@@ -1839,8 +1839,7 @@ impl ElementHostWidget {
                 app: cx.app,
                 window,
             };
-            let post_layout_shrink_revalidation = cx.children.len() == 1
-                && post_layout_extents_mode
+            let post_layout_shrink_revalidation = post_layout_extents_mode
                 && ((props.axis.scroll_x() && content_w.0 > desired.width.0 + 0.5)
                     || (props.axis.scroll_y() && content_h.0 > desired.height.0 + 0.5))
                 && children_layout_invalidated;
