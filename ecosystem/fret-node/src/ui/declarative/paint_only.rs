@@ -13,7 +13,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
 use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
@@ -57,6 +57,8 @@ mod portals;
 mod selection;
 #[path = "paint_only/semantics.rs"]
 mod semantics;
+#[path = "paint_only/surface_frame.rs"]
+mod surface_frame;
 #[path = "paint_only/surface_models.rs"]
 mod surface_models;
 #[path = "paint_only/transactions.rs"]
@@ -118,6 +120,7 @@ use self::semantics::{
     SurfaceSemanticsParams, build_surface_semantics_value, collect_edge_paint_diagnostics,
     collect_portal_diagnostics,
 };
+use self::surface_frame::{PrepareSurfaceFrameParams, prepare_surface_frame};
 use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
 use self::transactions::{
     build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
@@ -739,218 +742,58 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         authoritative_surface_boundary,
     } = use_paint_only_surface_models(cx);
 
-    // Always observe the graph model so changes can invalidate the surface even when we don't need
-    // to clone it on steady-state frames.
-    cx.observe_model(&graph, Invalidation::Paint);
-
-    let view_value = cx
-        .get_model_cloned(&view_state, Invalidation::Layout)
-        .unwrap_or_default();
-    let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
-    let graph_id = cx
-        .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-            graph_value.graph_id
-        })
-        .ok()
-        .unwrap_or_else(|| crate::core::GraphId::from_u128(0));
-    let authoritative_boundary =
-        authoritative_surface_boundary_snapshot(graph_id, graph_rev, &view_value);
-    let _ = sync_authoritative_surface_boundary_in_models(
-        cx.app.models_mut(),
-        &authoritative_surface_boundary,
-        authoritative_boundary,
-        &drag,
-        &marquee_drag,
-        &node_drag,
-        &pending_selection,
-        &hovered_node,
-        &hover_anchor_store,
-        &portal_bounds_store,
-    );
-
-    // These models affect portal positioning, so treat them as layout-invalidating in a cached view.
-    let drag_value = cx
-        .get_model_copied(&drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let panning = drag_value.is_some();
-
-    let marquee_value = cx
-        .get_model_cloned(&marquee_drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let marquee_active = marquee_value.as_ref().is_some_and(|m| m.active);
-
-    let node_drag_value = cx
-        .get_model_cloned(&node_drag, Invalidation::Layout)
-        .unwrap_or(None);
-    let node_drag_armed = node_drag_value
-        .as_ref()
-        .is_some_and(NodeDragState::is_armed);
-    let node_dragging = node_drag_value
-        .as_ref()
-        .is_some_and(NodeDragState::is_active);
-    let pending_selection_value = cx
-        .get_model_cloned(&pending_selection, Invalidation::Layout)
-        .unwrap_or(None);
-
-    let view_for_paint = view_from_state(&view_value);
-    let theme = Theme::global(&*cx.app).snapshot();
-    let style_tokens = NodeGraphStyle::from_snapshot(theme.clone());
-    let diag_keys_enabled = std::env::var("FRET_DIAG")
-        .ok()
-        .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
-    let geometry_overrides = geometry_overrides.as_deref();
-    let geometry_overrides_rev = geometry_overrides.map(|o| o.revision()).unwrap_or(0);
-    let max_edge_interaction_width_override_px = geometry_overrides
-        .map(|o| o.max_edge_interaction_width_override_px())
-        .filter(|w| w.is_finite() && *w >= 0.0)
-        .unwrap_or(0.0);
-    let diag_paint_overrides_value = cx
-        .get_model_cloned(&diag_paint_overrides, Invalidation::Paint)
-        .unwrap_or_else(|| Arc::new(NodeGraphPaintOverridesMap::default()));
-    let diag_paint_overrides_ref: NodeGraphPaintOverridesRef = diag_paint_overrides_value.clone();
-    let paint_overrides_ref =
-        paint_overrides.or_else(|| diag_keys_enabled.then_some(diag_paint_overrides_ref));
-    let paint_overrides = paint_overrides_ref.as_deref();
-    let paint_overrides_rev = paint_overrides.map(|o| o.revision()).unwrap_or(0);
-
-    let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
-    let node_origin = view_value.interaction.node_origin;
-
-    let mut portal_measured_geometry_state_value = cx
-        .get_model_cloned(&portal_measured_geometry_state, Invalidation::Paint)
-        .unwrap_or_default();
-    let portal_measured_flush_outcome = if let Some(measured_geometry) = measured_geometry.as_ref()
-    {
-        cx.read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-            flush_portal_measured_geometry_state(
-                graph_value,
-                &style_tokens,
-                measured_geometry.as_ref(),
-                &mut portal_measured_geometry_state_value,
-            )
-        })
-        .unwrap_or_default()
-    } else {
-        PortalMeasuredGeometryFlushOutcome::default()
-    };
-    if portal_measured_flush_outcome.state_changed {
-        let next_state = portal_measured_geometry_state_value.clone();
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&portal_measured_geometry_state, |st| *st = next_state);
-    }
-    if portal_measured_flush_outcome.store_changed {
-        cx.request_frame();
-    }
-    let presenter_rev = declarative_presenter_revision(measured_geometry.as_ref());
-
-    // Attempt to rebuild the cached grid ops when the view/bounds key changes.
-    // Bounds are initially learned from pointer hooks (and optionally from `last_bounds_for_element`).
-    let grid_cache_value = sync_grid_cache(cx, &grid_cache, view_for_paint, &style_tokens);
-    let grid_cached = grid_cache_value.ops.is_some();
-
-    // Attempt to rebuild derived geometry + spatial index when their key changes.
-    let derived_cache_value = sync_derived_cache(
+    let prepared_frame = prepare_surface_frame(
         cx,
-        &graph,
-        &derived_cache,
-        graph_rev,
-        view_for_paint,
-        &view_value,
-        &style_tokens,
-        presenter_rev,
-        measured_geometry.as_ref(),
-        geometry_overrides,
-        geometry_overrides_rev,
-        max_edge_interaction_width_override_px,
+        PrepareSurfaceFrameParams {
+            graph: &graph,
+            view_state: &view_state,
+            surface_models: &PaintOnlySurfaceModels {
+                drag: drag.clone(),
+                marquee_drag: marquee_drag.clone(),
+                node_drag: node_drag.clone(),
+                pending_selection: pending_selection.clone(),
+                hovered_node: hovered_node.clone(),
+                hit_scratch: hit_scratch.clone(),
+                diag_paint_overrides: diag_paint_overrides.clone(),
+                diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+                grid_cache: grid_cache.clone(),
+                derived_cache: derived_cache.clone(),
+                edges_cache: edges_cache.clone(),
+                nodes_cache: nodes_cache.clone(),
+                portal_bounds_store: portal_bounds_store.clone(),
+                portal_measured_geometry_state: portal_measured_geometry_state.clone(),
+                portal_debug_flags: portal_debug_flags.clone(),
+                hover_anchor_store: hover_anchor_store.clone(),
+                authoritative_surface_boundary: authoritative_surface_boundary.clone(),
+            },
+            geometry_overrides: geometry_overrides.clone(),
+            paint_overrides: paint_overrides.clone(),
+            measured_geometry: measured_geometry.clone(),
+            cull_margin_screen_px,
+            test_id,
+        },
     );
-    let geom_cached = derived_cache_value.geom.is_some();
 
-    // Attempt to rebuild cached node chrome draw data when the graph/zoom key changes.
-    let nodes_cache_value = sync_nodes_cache(
-        cx,
-        &graph,
-        &nodes_cache,
-        &derived_cache_value,
-        graph_rev,
-        view_for_paint,
-        node_origin,
-        draw_order_hash,
-    );
-    let nodes_cached = nodes_cache_value.draws.is_some();
-
-    // Attempt to rebuild cached edges draw data when the graph/zoom key changes.
-    let edges_cache_value = sync_edges_cache(
-        cx,
-        &graph,
-        &edges_cache,
-        &derived_cache_value,
-        graph_rev,
-        view_for_paint,
-        node_origin,
-        draw_order_hash,
-        &style_tokens,
-    );
-    let edges_cached = edges_cache_value.draws.is_some();
-    let hovered_node_value = cx
-        .get_model_copied(&hovered_node, Invalidation::Paint)
-        .unwrap_or(None);
-    let hovered = hovered_node_value.is_some();
-    let effective_selected_nodes = effective_selected_nodes_for_paint(
-        &view_value,
-        marquee_value.as_ref(),
-        pending_selection_value.as_ref(),
-    );
-    let selected_nodes_len = effective_selected_nodes.len();
-    let portals_disabled = cx
-        .get_model_copied(&portal_debug_flags, Invalidation::Paint)
-        .unwrap_or_default()
-        .disable_portals;
-    let portal_diagnostics = cx
-        .app
-        .models()
-        .read(&portal_bounds_store, |state| {
-            collect_portal_diagnostics(state, portals_disabled)
-        })
-        .unwrap_or_else(|_| {
-            collect_portal_diagnostics(&PortalBoundsStore::default(), portals_disabled)
-        });
-
-    // Lightweight observability for “wires missing/truncated” reports:
-    // estimate how many edges are drawn vs culled in the paint-only surface.
-    //
-    // Note: This is an approximation based on cached edge draws + best-effort bounds tracking
-    // (grid cache bounds). It is intended for diagnostics gating, not as a correctness oracle.
-    let edge_paint_diagnostics = collect_edge_paint_diagnostics(
-        &edges_cache_value,
-        &grid_cache_value,
-        &derived_cache_value,
-        &view_value,
-        cull_margin_screen_px,
-        node_drag_value.as_ref(),
-    );
-    let semantics_value = build_surface_semantics_value(SurfaceSemanticsParams {
-        panning,
-        marquee_active,
-        node_drag_armed,
-        node_dragging,
-        hovered,
-        selected_nodes_len,
-        grid_cached,
-        geom_cached,
-        nodes_cached,
-        edges_cached,
-        grid_rebuilds: grid_cache_value.rebuilds,
-        geom_rebuilds: derived_cache_value.rebuilds,
-        nodes_rebuilds: nodes_cache_value.rebuilds,
-        edges_rebuilds: edges_cache_value.rebuilds,
-        edges: edge_paint_diagnostics,
-        paint_overrides_rev,
-        view_state: &view_value,
-        portal: portal_diagnostics,
-    });
-    let test_id = test_id.unwrap_or_else(|| Arc::<str>::from("node_graph.canvas"));
+    let view_for_paint = prepared_frame.view_for_paint;
+    let theme = prepared_frame.theme;
+    let style_tokens = prepared_frame.style_tokens;
+    let diag_keys_enabled = prepared_frame.diag_keys_enabled;
+    let diag_paint_overrides_value = prepared_frame.diag_paint_overrides_value;
+    let paint_overrides_ref = prepared_frame.paint_overrides_ref;
+    let panning = prepared_frame.panning;
+    let marquee_value = prepared_frame.marquee_value;
+    let marquee_active = prepared_frame.marquee_active;
+    let node_drag_value = prepared_frame.node_drag_value;
+    let node_dragging = prepared_frame.node_dragging;
+    let grid_cache_value = prepared_frame.grid_cache_value;
+    let derived_cache_value = prepared_frame.derived_cache_value;
+    let nodes_cache_value = prepared_frame.nodes_cache_value;
+    let edges_cache_value = prepared_frame.edges_cache_value;
+    let hovered_node_value = prepared_frame.hovered_node_value;
+    let effective_selected_nodes = prepared_frame.effective_selected_nodes;
+    let portals_disabled = prepared_frame.portals_disabled;
+    let semantics_value = prepared_frame.semantics_value;
+    let test_id = prepared_frame.test_id;
 
     cx.semantics_with_id(
         SemanticsProps {

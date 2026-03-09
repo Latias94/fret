@@ -859,6 +859,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     model construction, and canvas paint helpers through the private `paint_only/cache.rs` seam,
     so declarative paint-only surface assembly no longer keeps the retained-like cache/paint
     implementation blocks embedded inline.
+  - Progress: `paint_only.rs` now also routes surface state snapshots, authoritative-boundary
+    sync, portal measured-geometry flush, cache refresh, and semantics preparation through the
+    private `paint_only/surface_frame.rs` seam, so declarative paint-only surface assembly no
+    longer keeps the full pre-render context preparation block embedded inline.
 
 ## M5 - Compatibility retained convergence
 

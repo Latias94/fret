@@ -438,6 +438,11 @@ real editors.
   paint helpers now also live under the private `paint_only/cache.rs` seam, so the main
   paint-only surface stops re-embedding retained-like cache/paint implementation blocks inline
   while keeping the same invalidation and diagnostics contracts.
+- Declarative surface state snapshots, authoritative-boundary sync, portal measured-geometry
+  flush, cache refresh, and semantics preparation now also live under the private
+  `paint_only/surface_frame.rs` seam, so the main paint-only surface stops re-embedding the full
+  pre-render context preparation block inline while keeping the same invalidation and semantics
+  contracts.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1102,6 +1107,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
