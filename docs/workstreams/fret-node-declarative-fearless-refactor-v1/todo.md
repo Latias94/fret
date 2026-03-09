@@ -821,6 +821,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: hover anchor state/tooltip anchor helpers now live under the private
     `paint_only/hover_anchor.rs` seam, reducing how much motion-anchoring policy stays in the main
     surface file while keeping the same focused gates.
+  - Progress: `paint_only.rs` now routes controller-backed transaction/view-state helpers and
+    selection preview/commit reducers through the private `paint_only/transactions.rs` and
+    `paint_only/selection.rs` seams, so declarative paint-only orchestration no longer keeps
+    transaction plumbing and selection-state writes embedded in the main surface file.
 
 ## M5 - Compatibility retained convergence
 

@@ -27,7 +27,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, graph_diff, normalize_transaction};
+use crate::ops::{GraphTransaction, graph_diff};
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
@@ -52,6 +52,10 @@ mod pointer_move;
 mod pointer_session;
 #[path = "paint_only/portal_measurement.rs"]
 mod portal_measurement;
+#[path = "paint_only/selection.rs"]
+mod selection;
+#[path = "paint_only/transactions.rs"]
+mod transactions;
 
 use self::hover_anchor::{
     HoverAnchorStore, resolve_hover_tooltip_anchor, sync_hover_anchor_store_in_models,
@@ -72,6 +76,15 @@ use self::portal_measurement::{
     PortalBoundsStore, PortalMeasuredGeometryFlushOutcome, PortalMeasuredGeometryState,
     flush_portal_measured_geometry_state, record_portal_measured_node_size_in_state,
     sync_portal_canvas_bounds_in_models,
+};
+use self::selection::{
+    build_click_selection_preview_nodes, build_marquee_preview_selected_nodes,
+    commit_marquee_selection_action_host, commit_pending_selection_action_host,
+    effective_selected_nodes_for_paint,
+};
+use self::transactions::{
+    build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
+    update_view_state_action_host, update_view_state_ui_host,
 };
 
 #[cfg(test)]
@@ -1027,66 +1040,6 @@ fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
     drag.nodes_sorted.binary_search(&id).is_ok()
 }
 
-fn build_node_drag_transaction(
-    graph: &Graph,
-    nodes: &[crate::core::NodeId],
-    dx: f32,
-    dy: f32,
-) -> GraphTransaction {
-    let mut tx = GraphTransaction::new();
-    for id in nodes.iter().copied() {
-        let Some(node) = graph.nodes.get(&id) else {
-            continue;
-        };
-        let from = node.pos;
-        let to = crate::core::CanvasPoint {
-            x: from.x + dx,
-            y: from.y + dy,
-        };
-        if from != to {
-            tx.push(GraphOp::SetNodePos { id, from, to });
-        }
-    }
-
-    let tx = normalize_transaction(tx);
-    if tx.is_empty() {
-        return tx;
-    }
-
-    let label = if tx.ops.len() == 1 {
-        "Move Node"
-    } else {
-        "Move Nodes"
-    };
-    tx.with_label(label)
-}
-
-fn commit_graph_transaction(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    tx: &GraphTransaction,
-) -> bool {
-    if tx.is_empty() {
-        return true;
-    }
-
-    controller
-        .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
-        .is_ok()
-}
-
-fn commit_node_drag_transaction(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    tx: &GraphTransaction,
-) -> bool {
-    commit_graph_transaction(host, graph, view_state, controller, tx)
-}
-
 fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphTransaction {
     let mut next = graph.clone();
     for node in next.nodes.values_mut() {
@@ -1135,198 +1088,6 @@ fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> GraphTransact
     } else {
         tx.with_label("Diag Normalize Visible Node")
     }
-}
-
-fn update_view_state_action_host(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    f: impl FnOnce(&mut NodeGraphViewState),
-) -> bool {
-    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
-        return false;
-    };
-    f(&mut next_view_state);
-
-    controller
-        .replace_view_state_and_sync_model_action_host(host, view_state, next_view_state)
-        .is_ok()
-}
-
-fn update_view_state_ui_host<H: UiHost>(
-    host: &mut H,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    f: impl FnOnce(&mut NodeGraphViewState),
-) -> bool {
-    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
-        return false;
-    };
-    f(&mut next_view_state);
-
-    controller
-        .replace_view_state_and_sync_model(host, view_state, next_view_state)
-        .is_ok()
-}
-
-fn update_selection_action_host(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    f: impl FnOnce(
-        &mut Vec<crate::core::NodeId>,
-        &mut Vec<crate::core::EdgeId>,
-        &mut Vec<crate::core::GroupId>,
-    ),
-) -> bool {
-    let Ok(state) = host.models_mut().read(view_state, |state| state.clone()) else {
-        return false;
-    };
-    let mut selected_nodes = state.selected_nodes;
-    let mut selected_edges = state.selected_edges;
-    let mut selected_groups = state.selected_groups;
-    f(
-        &mut selected_nodes,
-        &mut selected_edges,
-        &mut selected_groups,
-    );
-
-    controller
-        .set_selection_and_sync_view_model_action_host(
-            host,
-            view_state,
-            selected_nodes,
-            selected_edges,
-            selected_groups,
-        )
-        .is_ok()
-}
-
-fn compute_marquee_candidate_nodes(
-    rect_canvas: Rect,
-    selection_mode: crate::io::NodeGraphSelectionMode,
-    geom: &CanvasGeometry,
-    index: &CanvasSpatialDerived,
-) -> Vec<crate::core::NodeId> {
-    let mut candidates = Vec::<crate::core::NodeId>::new();
-    index.query_nodes_in_rect(rect_canvas, &mut candidates);
-    candidates.retain(|id| {
-        let Some(node) = geom.nodes.get(id) else {
-            return false;
-        };
-        match selection_mode {
-            crate::io::NodeGraphSelectionMode::Full => rect_contains_rect(rect_canvas, node.rect),
-            crate::io::NodeGraphSelectionMode::Partial => rects_intersect(rect_canvas, node.rect),
-        }
-    });
-    candidates.sort();
-    candidates.dedup();
-    candidates
-}
-
-fn build_marquee_preview_selected_nodes(
-    marquee: &MarqueeDragState,
-    rect_canvas: Rect,
-    selection_mode: crate::io::NodeGraphSelectionMode,
-    geom: &CanvasGeometry,
-    index: &CanvasSpatialDerived,
-) -> Arc<[crate::core::NodeId]> {
-    let candidates = compute_marquee_candidate_nodes(rect_canvas, selection_mode, geom, index);
-    if !marquee.toggle {
-        return Arc::from(candidates.into_boxed_slice());
-    }
-
-    let mut selected_nodes = marquee.base_selected_nodes.to_vec();
-    for id in candidates {
-        if let Some(ix) = selected_nodes.iter().position(|value| *value == id) {
-            selected_nodes.remove(ix);
-        } else {
-            selected_nodes.push(id);
-        }
-    }
-    selected_nodes.sort();
-    selected_nodes.dedup();
-    Arc::from(selected_nodes.into_boxed_slice())
-}
-
-/// Resolves the effective node selection for paint/layout only.
-///
-/// Boundary contract:
-/// - committed selection lives in `NodeGraphViewState`,
-/// - local preview state may temporarily override it,
-/// - precedence is: active marquee preview > pending click-selection preview > committed selection.
-fn effective_selected_nodes_for_paint(
-    view_state: &NodeGraphViewState,
-    marquee: Option<&MarqueeDragState>,
-    pending_selection: Option<&PendingSelectionState>,
-) -> Vec<crate::core::NodeId> {
-    marquee
-        .filter(|marquee| marquee.active)
-        .map(|marquee| marquee.preview_selected_nodes.to_vec())
-        .or_else(|| pending_selection.map(|pending| pending.nodes.to_vec()))
-        .unwrap_or_else(|| view_state.selected_nodes.clone())
-}
-
-fn build_click_selection_preview_nodes(
-    base_selected_nodes: &[crate::core::NodeId],
-    hit: crate::core::NodeId,
-    multi: bool,
-) -> Arc<[crate::core::NodeId]> {
-    let mut selected_nodes = base_selected_nodes.to_vec();
-    let already_selected = selected_nodes.contains(&hit);
-    if multi {
-        if let Some(ix) = selected_nodes.iter().position(|id| *id == hit) {
-            selected_nodes.remove(ix);
-        } else {
-            selected_nodes.push(hit);
-        }
-    } else if !already_selected {
-        selected_nodes.clear();
-        selected_nodes.push(hit);
-    }
-    selected_nodes.sort();
-    selected_nodes.dedup();
-    Arc::from(selected_nodes.into_boxed_slice())
-}
-
-fn commit_pending_selection_action_host(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    pending: &PendingSelectionState,
-) -> bool {
-    let nodes = pending.nodes.clone();
-    let clear_edges = pending.clear_edges;
-    let clear_groups = pending.clear_groups;
-    update_selection_action_host(
-        host,
-        view_state,
-        controller,
-        move |selected_nodes, selected_edges, selected_groups| {
-            selected_nodes.clear();
-            selected_nodes.extend(nodes.iter().copied());
-            if clear_edges {
-                selected_edges.clear();
-            }
-            if clear_groups {
-                selected_groups.clear();
-            }
-        },
-    )
-}
-
-fn commit_marquee_selection_action_host(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    view_state: &Model<NodeGraphViewState>,
-    controller: &NodeGraphController,
-    marquee: &MarqueeDragState,
-) -> bool {
-    let pending = PendingSelectionState {
-        nodes: marquee.preview_selected_nodes.clone(),
-        clear_edges: !marquee.toggle,
-        clear_groups: !marquee.toggle,
-    };
-    commit_pending_selection_action_host(host, view_state, controller, &pending)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

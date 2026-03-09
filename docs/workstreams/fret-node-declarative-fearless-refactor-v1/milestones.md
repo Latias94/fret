@@ -400,6 +400,10 @@ real editors.
   `paint_only/overlay_elements.rs`, so paint-only overlay rendering keeps policy-shaped element
   assembly out of the main surface file while the next menu/toolbar boundary work can build on
   focused flip/clamp gates instead of large inline branches.
+- Declarative controller-backed transaction/view-state helpers and selection preview/commit
+  reducers now also live under the private `paint_only/transactions.rs` and
+  `paint_only/selection.rs` seams, so the main paint-only surface keeps orchestration
+  responsibility instead of re-embedding transaction plumbing and selection-state writes inline.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1053,6 +1057,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_input.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_lifecycle.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
