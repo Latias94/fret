@@ -71,7 +71,14 @@ Recent landing in this priority bucket:
 - DevTools `Regression` drill-down now surfaces `capabilities_check_path` for selected
   `skipped_policy` summaries instead of treating them as bundle-dir-only failures,
 - MCP dashboard coverage now locks `skipped_policy` status counters and shared
-  `non-passing summaries` wording.
+  `non-passing summaries` wording,
+- `fret-diag` now shares internal capability provenance helpers instead of keeping path/transport
+  provenance as separate ad-hoc strings,
+- additive `capability_source` payloads now exist in `diag doctor`, campaign preflight summary
+  evidence/metadata, and campaign aggregate/result payloads,
+- DevTools `Regression` drill-down now exposes `Capability Sources` as a separate evidence lane,
+- MCP regression dashboard output now also surfaces capability provenance plus capability-check
+  paths when the sibling `regression.summary.json` is available.
 
 Definition of done:
 
@@ -111,6 +118,15 @@ Definition of done:
 
 - the repo has one documented answer for how capability provenance is reported outside the
   filesystem case.
+
+Current status:
+
+- the contract direction is now documented,
+- the internal provenance helper is now landed,
+- additive payload emission is now landed,
+- first consumer adoption is now landed in DevTools and MCP,
+- so the remaining work in this priority is no longer "introduce provenance" but "finish any
+  additional consumer adoption and maintainer-facing guidance only where it adds real value".
 
 ### Priority 3 — Keep `flake_policy` deferred until there is a concrete consumer
 
@@ -190,8 +206,10 @@ These should not lead the roadmap right now:
 
 If work continues immediately, the most defensible order is:
 
-1. finish consumer adoption of the new policy-skip contract,
-2. document the non-filesystem capability-source direction,
+1. update maintainer-facing docs so the landed provenance and policy-skip behavior is described in
+   one place,
+2. only add more consumer adoption if another real consumer needs richer provenance than DevTools
+   and MCP already expose,
 3. keep `flake_policy` deferred unless a concrete consumer appears,
 4. only then decide whether campaign definitions should externalize.
 

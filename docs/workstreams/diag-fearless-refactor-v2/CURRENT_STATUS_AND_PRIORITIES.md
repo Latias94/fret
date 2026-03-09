@@ -231,7 +231,12 @@ The capability-source side of that behavior is now also aligned:
   replacement for filesystem paths,
 - the next bounded implementation sketch is now captured in
   `CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`, which keeps legacy path fields and stages
-  additive `capability_source` adoption separately from any real transport work.
+  additive `capability_source` adoption separately from any real transport work,
+- `fret-diag` now has a shared internal `CapabilitySource` helper so filesystem and transport-backed
+  code paths stop open-coding provenance labels and transport identity separately,
+- additive `capability_source` payloads are now emitted by `diag doctor`, campaign preflight
+  summary evidence/metadata, and campaign aggregate/result payloads while keeping
+  `capabilities_path`, `capabilities_source_path`, and `capabilities_check_path` readable.
 
 The DevTools/MCP defer audit makes another boundary explicit:
 
@@ -246,16 +251,20 @@ The first non-CLI policy-skip consumer-adoption slice is now also landed:
   that may include both bundle directories and campaign-local capability-check artifacts,
 - policy-skipped summaries no longer show up only as generic "failing" rows in the shared
   dashboard wording,
-- MCP dashboard tests now lock `skipped_policy` counters and the shared `non-passing summaries`
-  human-summary wording.
+- DevTools `Regression` drill-down now also surfaces capability provenance as a distinct
+  `Capability Sources` evidence lane instead of collapsing it into the check-artifact list,
+- MCP dashboard output now also surfaces capability provenance and capability-check paths from the
+  sibling `regression.summary.json` when present,
+- MCP dashboard tests now lock `skipped_policy` counters, capability provenance fallback, and the
+  shared `non-passing summaries` human-summary wording.
 
 That means the next concrete implementation targets are now:
 
 - keeping DevTools/MCP raw `*json` text-holder names deferred unless those modules are already
   being changed for another reason,
 - classifying any future optional evidence fields before a new shared consumer depends on them,
-- finishing the remaining maintainer-facing docs and any future consumer adoption for the new
-  campaign policy-skip breakdown and capability-source fields,
+- finishing the remaining maintainer-facing docs and any future non-DevTools/non-MCP consumer
+  adoption for the new campaign policy-skip breakdown and capability-source fields,
 - and only then reopening campaign metadata behavior such as `flake_policy` if CI or batch
   orchestration needs it.
 

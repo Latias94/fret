@@ -214,6 +214,12 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - [x] batch counters now expose `campaigns_skipped_policy`,
     - [x] capability-source resolution is now shared between campaign preflight and
       `diag doctor`,
+    - [x] additive `capability_source` payloads are now emitted by `diag doctor`,
+      campaign preflight summary evidence/metadata, and campaign aggregate/result payloads,
+    - [x] DevTools `Regression` drill-down now surfaces `Capability Sources` separately from
+      campaign-local capability check artifacts,
+    - [x] MCP regression dashboard output now surfaces capability provenance and
+      `capabilities_check_path` from the sibling `regression.summary.json` when available,
     - [ ] `flake_policy` still remains passive metadata.
 - [x] Record the DevTools/MCP raw-JSON defer boundary in
   `DEVTOOLS_MCP_RAW_JSON_DEFER_AUDIT.md`.
@@ -290,6 +296,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] selected summary path, first bundle dir, and bundle dir list can be copied for evidence follow-up.
   - [x] selected non-passing summaries can now also surface and copy `capabilities_check_path`
     evidence when the row is `skipped_policy`.
+  - [x] selected non-passing summaries now also surface and copy capability provenance through a
+    dedicated `Capability Sources` evidence lane.
   - [x] selected summary evidence can now be packed directly from the first failing bundle dir.
 - [x] Add a thin GUI summarize trigger over the shared aggregate artifacts:
   - [x] the `Regression` tab now includes a `Summarize` action next to `Refresh`,
@@ -301,6 +309,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] resources reuse the existing artifacts-root contract instead of defining a new store,
   - [x] the shared dashboard projection/human-summary path now also keeps `skipped_policy`
     counters and `non-passing summaries` wording aligned with CLI/GUI.
+  - [x] the MCP dashboard output now also surfaces capability provenance and
+    `capabilities_check_path` when the sibling summary artifact is present.
 - [x] Add one end-to-end “dogfood” workflow that proves alignment:
   - [x] pick selector,
   - [x] patch or choose script,
