@@ -257,6 +257,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
       explicitly defers Layer A chunk-index surfaces,
     - [x] `crates/fret-diag/src/lint.rs` now adopts the shared canonical-first helper policy, so
       the non-`stats/*` Layer B follow-up is closed unless a new payload family appears,
+    - [x] Layer A run-manifest `bundle_json` is now explicitly documented as a format-specific raw
+      bundle chunk index in `RUN_MANIFEST_BUNDLE_JSON_CHUNK_INDEX_CONTRACT_V1.md`, so Layer B
+      canonical `bundle_artifact` cleanup no longer implies a manifest rename,
     - [x] DevTools/MCP residual `*json` names are now explicitly classified in the audit as mostly
       raw JSON text holders rather than artifact-path contract drift, so they are deferred by
       default unless those modules are already being changed for another reason.
