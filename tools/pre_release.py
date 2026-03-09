@@ -107,6 +107,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_no_use_state_in_default_teaching_surfaces.py")],
     )
     _run_checked(
+        "Teaching surfaces policy (default path avoids explicit notify)",
+        [py, str(repo_root / "tools/gate_no_notify_in_default_teaching_surfaces.py")],
+    )
+    _run_checked(
         "Material3 snackbar default surface policy (prefer action_id)",
         [py, str(repo_root / "tools/gate_material3_snackbar_default_surface.py")],
     )

@@ -28,6 +28,7 @@ Current recommendation:
 - do **not** add another generic invalidation helper right now,
 - and treat the remaining pressure as a productization / handler-placement question rather than an
   invalidation-mechanism problem.
+- lock the default teaching surfaces against accidental `notify()` reintroduction with a small gate.
 
 ---
 
@@ -147,6 +148,8 @@ Use explicit redraw / `notify()` only when:
 3. Shift the next work toward:
    - default-path productization,
    - and only then re-evaluate keyed-list / payload-row handler placement.
+4. Keep a narrow source gate on the default ladder so `notify()` does not drift back into
+   first-contact examples/templates.
 
 ### What not to do
 
