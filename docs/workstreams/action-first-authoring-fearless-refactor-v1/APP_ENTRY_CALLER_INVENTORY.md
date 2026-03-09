@@ -47,7 +47,7 @@ Current conclusion:
 | `apps/fret-examples/src/external_video_imports_avf_demo.rs` | platform/media interop demo | `migrate-to-view` | likely `view_with_hooks`; reassess only if a lower-level runner seam proves necessary during migration |
 | `apps/fret-examples/src/external_video_imports_mf_demo.rs` | platform/media interop demo | `migrate-to-view` | same reasoning as AVF demo |
 | `apps/fret-examples/src/image_heavy_memory_demo.rs` | memory/perf-oriented demo | `done` | migrated on 2026-03-08 to `view_with_hooks::<ImageHeavyMemoryView>(...)`; confirms frame-recorder-only demos also fit the view runtime hook path |
-| `apps/fret-examples/src/imui_editor_proof_demo.rs` | IMUI/editor proof demo | `migrate-to-view` | should prove IMUI can live under the same default app-entry policy |
+| `apps/fret-examples/src/imui_editor_proof_demo.rs` | IMUI/editor proof demo | `done` | migrated on 2026-03-09 to `view_with_hooks::<ImUiEditorProofView>(...)`; confirms the editor-grade docking + embedded viewport proof also fits the view runtime hook path |
 
 ## Current in-tree `ui(...)` callers
 
@@ -100,7 +100,7 @@ These should move next to prove `view_with_hooks` is sufficient for advanced-but
 
 - `apps/fret-examples/src/assets_demo.rs` _(done on 2026-03-08)_
 - `apps/fret-examples/src/image_heavy_memory_demo.rs` _(done on 2026-03-08)_
-- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` _(done on 2026-03-09)_
 - `apps/fret-examples/src/embedded_viewport_demo.rs` _(done on 2026-03-08)_
 
 Success criterion:
@@ -109,7 +109,7 @@ Success criterion:
 
 Status update:
 
-- Batch B is nearing completion: `assets_demo`, `embedded_viewport_demo`, and `image_heavy_memory_demo` now run through `view_with_hooks::<...>(...)`, and only `imui_editor_proof_demo` remains in this batch.
+- Batch B is now complete: `assets_demo`, `embedded_viewport_demo`, `image_heavy_memory_demo`, and `imui_editor_proof_demo` all run through `view_with_hooks::<...>(...)`.
 
 ## Batch C — highest-risk interop demos
 

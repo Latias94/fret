@@ -6,8 +6,8 @@ use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::{Color, Px};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
-    runtime as dock_runtime,
+    runtime as dock_runtime, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
+    ViewportPanel,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -34,11 +34,11 @@ fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-struct ImUiEditorProofState {
+struct ImUiEditorProofView {
     embedded: embedded::EmbeddedViewportSurface,
 }
 
-impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
+impl embedded::EmbeddedViewportView for ImUiEditorProofView {
     fn embedded_viewport_surface(&mut self) -> &mut embedded::EmbeddedViewportSurface {
         &mut self.embedded
     }
@@ -73,7 +73,7 @@ impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
-        .ui_with_hooks(init_window, view, |d| {
+        .view_with_hooks::<ImUiEditorProofView>(|d| {
             d.drive_embedded_viewport()
                 .dock_op(on_dock_op)
                 .window_create_spec(window_create_spec)
@@ -114,22 +114,28 @@ fn configure_single_window_caps_if_requested(app: &mut App) {
     });
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> ImUiEditorProofState {
-    embedded::ensure_models(app, window);
-    if !single_window_mode_enabled() {
-        ensure_aux_window_requested(app, window);
+impl View for ImUiEditorProofView {
+    fn init(app: &mut App, window: AppWindowId) -> Self {
+        embedded::ensure_models(app, window);
+        if !single_window_mode_enabled() {
+            ensure_aux_window_requested(app, window);
+        }
+
+        Self {
+            embedded: embedded::EmbeddedViewportSurface::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+                VIEWPORT_PX_SIZE,
+            ),
+        }
     }
 
-    ImUiEditorProofState {
-        embedded: embedded::EmbeddedViewportSurface::new(
-            wgpu::TextureFormat::Bgra8UnormSrgb,
-            RenderTargetColorSpace::Srgb,
-            VIEWPORT_PX_SIZE,
-        ),
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        render_view(cx.elements())
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> ViewElements {
+fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
     let window = cx.window;
     let last_input: Arc<str> = embedded::models(&*cx.app, window)
         .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())
