@@ -424,7 +424,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | spinner | `spinner` | Present | Unreviewed |  |
 | switch | `switch` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`switch-demo`) |
 | table | `table` | Present | In review | Width/overflow ownership aligns with upstream wrapper; audit: `docs/audits/shadcn-table.md`; gates: `ecosystem/fret-ui-shadcn/src/table.rs` |
-| tabs | `tabs` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`tabs-demo`) |
+| tabs | `tabs` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`tabs-demo`); root width constraints stay caller-owned while list/trigger chrome remains recipe-owned; gallery order now matches shadcn docs before Fret-specific sections |
 | textarea | `textarea` | Present | In review | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`) |
 | toggle | `toggle` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`) |
 | toggle-group | `toggle_group` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-group-demo`) |
