@@ -987,6 +987,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `paint_edges/main.rs` now routes hash/glow-bounds helper logic through the private
     `canvas/widget/paint_edges/support.rs` seam, so the root edge-paint surface no longer keeps
     the full helper set for stable cache keys and glow bounds math embedded inline.
+  - Progress: `paint_edges/main.rs` now also routes drop-marker drawing and wire-drag preview
+    style/path emission through the private `canvas/widget/paint_edges/preview.rs` seam, so the
+    root edge-paint surface no longer re-embeds preview marker geometry and preview wire paint
+    orchestration inline while keeping the same preview behavior.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
