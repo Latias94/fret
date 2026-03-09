@@ -34,6 +34,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "Field page follows upstream docs section order to keep parity checks deterministic.",
             "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
             "RTL and Responsive samples are included to exercise orientation and direction contracts.",
+            "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules or wrapped card-style labels.",
         ],
     );
 

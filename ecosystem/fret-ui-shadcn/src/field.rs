@@ -186,6 +186,51 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
     element.children.iter().any(subtree_has_flex_grow)
 }
 
+fn kind_layout(kind: &ElementKind) -> Option<&LayoutStyle> {
+    match kind {
+        ElementKind::Container(props) => Some(&props.layout),
+        ElementKind::Semantics(props) => Some(&props.layout),
+        ElementKind::SemanticFlex(props) => Some(&props.flex.layout),
+        ElementKind::Pressable(props) => Some(&props.layout),
+        ElementKind::PointerRegion(props) => Some(&props.layout),
+        ElementKind::TextInputRegion(props) => Some(&props.layout),
+        ElementKind::InternalDragRegion(props) => Some(&props.layout),
+        ElementKind::Opacity(props) => Some(&props.layout),
+        ElementKind::InteractivityGate(props) => Some(&props.layout),
+        ElementKind::VisualTransform(props) => Some(&props.layout),
+        ElementKind::RenderTransform(props) => Some(&props.layout),
+        ElementKind::FractionalRenderTransform(props) => Some(&props.layout),
+        ElementKind::Anchored(props) => Some(&props.layout),
+        ElementKind::Column(props) => Some(&props.layout),
+        ElementKind::Row(props) => Some(&props.layout),
+        ElementKind::Stack(props) => Some(&props.layout),
+        ElementKind::Flex(props) => Some(&props.layout),
+        ElementKind::Grid(props) => Some(&props.layout),
+        ElementKind::Text(props) => Some(&props.layout),
+        ElementKind::StyledText(props) => Some(&props.layout),
+        ElementKind::SelectableText(props) => Some(&props.layout),
+        ElementKind::TextInput(props) => Some(&props.layout),
+        ElementKind::TextArea(props) => Some(&props.layout),
+        ElementKind::Image(props) => Some(&props.layout),
+        ElementKind::Canvas(props) => Some(&props.layout),
+        ElementKind::SvgIcon(props) => Some(&props.layout),
+        ElementKind::Spinner(props) => Some(&props.layout),
+        ElementKind::Scroll(props) => Some(&props.layout),
+        ElementKind::Scrollbar(props) => Some(&props.layout),
+        ElementKind::Spacer(props) => Some(&props.layout),
+        ElementKind::HoverRegion(props) => Some(&props.layout),
+        ElementKind::WheelRegion(props) => Some(&props.layout),
+        ElementKind::EffectLayer(props) => Some(&props.layout),
+        ElementKind::FocusScope(props) => Some(&props.layout),
+        ElementKind::RovingFlex(props) => Some(&props.flex.layout),
+        ElementKind::VirtualList(props) => Some(&props.layout),
+        ElementKind::ResizablePanelGroup(props) => Some(&props.layout),
+        ElementKind::ViewportSurface(props) => Some(&props.layout),
+        ElementKind::ViewCache(props) => Some(&props.layout),
+        _ => None,
+    }
+}
+
 fn kind_layout_mut(kind: &mut ElementKind) -> Option<&mut LayoutStyle> {
     match kind {
         ElementKind::Container(props) => Some(&mut props.layout),
@@ -240,6 +285,20 @@ fn responsive_md_content_flex_1_min_w_0(mut element: AnyElement) -> AnyElement {
     layout.flex.shrink = 1.0;
     layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
     layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
+
+    element
+}
+
+fn approx_w_fit_under_stretch(mut element: AnyElement) -> AnyElement {
+    let Some(layout) = kind_layout_mut(&mut element.kind) else {
+        return element;
+    };
+
+    if matches!(layout.size.width, fret_ui::element::Length::Auto)
+        && layout.flex.align_self.is_none()
+    {
+        layout.flex.align_self = Some(CrossAlign::Start);
+    }
 
     element
 }
@@ -785,15 +844,16 @@ impl FieldTitle {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
-        let el = ui::label(self.text)
-            .w_full()
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .text_align(align)
-            .into_element(cx);
+        let el = approx_w_fit_under_stretch(
+            ui::label(self.text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .text_align(align)
+                .into_element(cx),
+        );
 
         let field_state = field_state_prim::use_field_state_in_scope(cx, None);
         if field_state.disabled {
@@ -923,16 +983,17 @@ impl FieldLabel {
                 );
                 cx.container(wrapper, move |_cx| children)
             } else {
-                ui::label(self.text)
-                    .layout(self.layout)
-                    .w_full()
-                    .text_size_px(px)
-                    .line_height_px(line_height)
-                    .font_medium()
-                    .text_color(fg)
-                    .wrap(TextWrap::Word)
-                    .text_align(align)
-                    .into_element(cx)
+                approx_w_fit_under_stretch(
+                    ui::label(self.text)
+                        .layout(self.layout)
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_medium()
+                        .text_color(fg)
+                        .wrap(TextWrap::Word)
+                        .text_align(align)
+                        .into_element(cx),
+                )
             };
 
             if let Some(test_id) = self.test_id {
@@ -1869,6 +1930,31 @@ mod tests {
             expected.0,
             gap.0
         );
+    }
+
+    #[test]
+    fn field_title_and_plain_label_approximate_upstream_w_fit_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let title = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldTitle::new("Price range").into_element(cx)
+        });
+        let title_layout = kind_layout(&title.kind).expect("expected FieldTitle layout");
+        assert_eq!(title_layout.size.width, fret_ui::element::Length::Auto);
+        assert_eq!(title_layout.flex.align_self, Some(CrossAlign::Start));
+
+        let label = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldLabel::new("Email").into_element(cx)
+        });
+        let label_layout = kind_layout(&label.kind).expect("expected FieldLabel layout");
+        assert_eq!(label_layout.size.width, fret_ui::element::Length::Auto);
+        assert_eq!(label_layout.flex.align_self, Some(CrossAlign::Start));
     }
 
     #[test]

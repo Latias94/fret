@@ -46,6 +46,7 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 - `Field` horizontal alignment matches shadcn's `has-[>[data-slot=field-content]]:items-start` rule
   (content-driven rows align to the top instead of centering).
 - `FieldLabel` matches `leading-snug` via `component.field.label_line_height`.
+- Plain `FieldLabel` and `FieldTitle` approximate upstream `w-fit` defaults by keeping width `Auto` and opting out of cross-axis stretch unless callers explicitly request width.
 - `FieldDescription` matches `leading-normal` via `component.field.description_line_height`.
 - `FieldDescription` expands to full width by default to match upstream wrapping behavior (`w-full`).
 - `FieldDescription` negative-margin detail for “description before final sibling” is supported
