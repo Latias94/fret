@@ -1344,7 +1344,9 @@ mod tests {
         assert!(prepared.wants_post_run_bundle);
         assert!(prepared.wants_bundle_artifact);
         assert_eq!(
-            prepared.checks_for_post_run.check_wheel_events_max_per_frame,
+            prepared
+                .checks_for_post_run
+                .check_wheel_events_max_per_frame,
             Some(1)
         );
     }

@@ -20,6 +20,26 @@ struct PreparedPackCommand {
     out: PathBuf,
 }
 
+enum PackExecutionMode {
+    AiOnly,
+    Bundle {
+        include_root_artifacts: bool,
+        include_triage: bool,
+        include_screenshots: bool,
+        schema2_only: bool,
+        stats_top: usize,
+        sort: BundleStatsSort,
+        warmup_frames: u64,
+    },
+}
+
+struct PackExecutionPlan {
+    bundle_dir: PathBuf,
+    artifacts_root: PathBuf,
+    out: PathBuf,
+    mode: PackExecutionMode,
+}
+
 struct PackAiPacketEnsureRequest<'a> {
     bundle_dir: &'a Path,
     pack_include_triage: bool,
@@ -34,6 +54,33 @@ struct RequiredBundleArtifactRequest<'a> {
     missing_hint: &'a str,
 }
 
+struct EnsuredBundleArtifactCommandRequest<'a> {
+    rest: &'a [String],
+    workspace_root: &'a Path,
+    missing_hint: &'a str,
+    warmup_frames: u64,
+    stats_json: bool,
+}
+
+struct RequiredBundleArtifactOutputRequest<'a> {
+    rest: &'a [String],
+    workspace_root: &'a Path,
+    missing_hint: &'a str,
+    custom_out: Option<PathBuf>,
+    default_out: fn(&Path) -> PathBuf,
+}
+
+struct PreparedBundleArtifactOutput {
+    bundle_path: PathBuf,
+    out: PathBuf,
+}
+
+struct EnsuredBundleArtifactPlan {
+    bundle_path: PathBuf,
+    warmup_frames: u64,
+    display_mode: ArtifactDisplayMode,
+}
+
 struct LintCommandRequest<'a> {
     rest: &'a [String],
     workspace_root: &'a Path,
@@ -43,6 +90,11 @@ struct LintCommandRequest<'a> {
 struct PreparedLintCommand {
     bundle_path: PathBuf,
     out: PathBuf,
+}
+
+struct LintReportOutput {
+    presentation: ArtifactOutputPresentation,
+    exit_required: bool,
 }
 
 struct TriageCommandRequest<'a> {
@@ -58,6 +110,67 @@ struct PreparedTriageCommand {
     metric: crate::frames_index::TriageLiteMetric,
 }
 
+struct TriageCommandOutput {
+    presentation: ArtifactOutputPresentation,
+}
+
+struct TriageExecutionOptions {
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+    stats_json: bool,
+}
+
+struct TriageExecutionPlan {
+    payload: TriagePayloadPlan,
+    out: PathBuf,
+    stats_json: bool,
+}
+
+#[derive(Debug)]
+struct PackCommandOutput {
+    presentation: ArtifactOutputPresentation,
+}
+
+#[derive(Debug)]
+struct EnsuredBundleArtifactOutput {
+    presentation: ArtifactOutputPresentation,
+}
+
+#[derive(Debug)]
+struct GeneratedArtifactOutput {
+    presentation: ArtifactOutputPresentation,
+}
+
+struct ArtifactMaterializationPlan {
+    out: PathBuf,
+    display_mode: ArtifactDisplayMode,
+    mode: ArtifactMaterializationMode,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ArtifactMaterializationMode {
+    ReuseExistingOut,
+    ReuseCanonicalOut,
+    CopyCanonical { canonical_path: PathBuf },
+}
+
+enum TriagePayloadMode {
+    Lite {
+        metric: crate::frames_index::TriageLiteMetric,
+    },
+    Full {
+        sort: BundleStatsSort,
+    },
+}
+
+struct TriagePayloadPlan {
+    bundle_path: PathBuf,
+    stats_top: usize,
+    warmup_frames: u64,
+    mode: TriagePayloadMode,
+}
+
 struct TestIdsCommandRequest<'a> {
     rest: &'a [String],
     workspace_root: &'a Path,
@@ -69,6 +182,14 @@ struct PreparedTestIdsCommand {
     out: PathBuf,
 }
 
+struct TestIdsExecutionPlan {
+    bundle_path: PathBuf,
+    out: PathBuf,
+    warmup_frames: u64,
+    max_test_ids: usize,
+    display_mode: ArtifactDisplayMode,
+}
+
 struct MetaCommandRequest<'a> {
     rest: &'a [String],
     workspace_root: &'a Path,
@@ -78,6 +199,12 @@ struct MetaCommandRequest<'a> {
 }
 
 struct PreparedMetaCommand {
+    canonical_path: PathBuf,
+    out: PathBuf,
+    display_mode: ArtifactDisplayMode,
+}
+
+struct MetaExecutionPlan {
     canonical_path: PathBuf,
     out: PathBuf,
     display_mode: ArtifactDisplayMode,
@@ -99,11 +226,7 @@ pub(crate) fn cmd_pack(
     sort_override: Option<BundleStatsSort>,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let PreparedPackCommand {
-        bundle_dir,
-        artifacts_root,
-        out,
-    } = prepare_cmd_pack(PackCommandRequest {
+    let prepared = prepare_cmd_pack(PackCommandRequest {
         rest,
         workspace_root,
         out_dir,
@@ -113,36 +236,28 @@ pub(crate) fn cmd_pack(
 
     if ensure_ai_packet || pack_ai_only {
         ensure_ai_packet_dir_for_pack(PackAiPacketEnsureRequest {
-            bundle_dir: &bundle_dir,
+            bundle_dir: &prepared.bundle_dir,
             pack_include_triage,
             stats_top,
             sort_override,
             warmup_frames,
         });
     }
-
-    if pack_ai_only {
-        require_ai_packet_dir_for_pack_ai_only(&bundle_dir)?;
-        crate::pack_ai_packet_dir_to_zip(&bundle_dir, &out, &artifacts_root)?;
-        println!("{}", out.display());
-        return Ok(());
-    }
-
-    crate::pack_bundle_dir_to_zip(
-        &bundle_dir,
-        &out,
-        pack_include_root_artifacts,
-        pack_include_triage,
-        pack_include_screenshots,
-        pack_schema2_only,
-        false,
-        false,
-        &artifacts_root,
-        stats_top,
-        sort_override.unwrap_or(BundleStatsSort::Invalidation),
-        warmup_frames,
-    )?;
-    println!("{}", out.display());
+    let plan = build_pack_execution_plan(
+        prepared,
+        PackExecutionOptions {
+            pack_ai_only,
+            pack_include_root_artifacts,
+            pack_include_triage,
+            pack_include_screenshots,
+            pack_schema2_only,
+            stats_top,
+            sort_override,
+            warmup_frames,
+        },
+    );
+    let output = build_pack_command_output(&plan)?;
+    emit_artifact_output_presentation(output.presentation);
     Ok(())
 }
 
@@ -181,6 +296,82 @@ fn prepare_cmd_pack(request: PackCommandRequest<'_>) -> Result<PreparedPackComma
         bundle_dir: resolved.bundle_dir,
         artifacts_root: resolved.artifacts_root,
         out,
+    })
+}
+
+struct PackExecutionOptions {
+    pack_ai_only: bool,
+    pack_include_root_artifacts: bool,
+    pack_include_triage: bool,
+    pack_include_screenshots: bool,
+    pack_schema2_only: bool,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+}
+
+fn build_pack_execution_plan(
+    prepared: PreparedPackCommand,
+    options: PackExecutionOptions,
+) -> PackExecutionPlan {
+    let mode = if options.pack_ai_only {
+        PackExecutionMode::AiOnly
+    } else {
+        PackExecutionMode::Bundle {
+            include_root_artifacts: options.pack_include_root_artifacts,
+            include_triage: options.pack_include_triage,
+            include_screenshots: options.pack_include_screenshots,
+            schema2_only: options.pack_schema2_only,
+            stats_top: options.stats_top,
+            sort: options
+                .sort_override
+                .unwrap_or(BundleStatsSort::Invalidation),
+            warmup_frames: options.warmup_frames,
+        }
+    };
+    PackExecutionPlan {
+        bundle_dir: prepared.bundle_dir,
+        artifacts_root: prepared.artifacts_root,
+        out: prepared.out,
+        mode,
+    }
+}
+
+fn execute_pack_execution_plan(plan: &PackExecutionPlan) -> Result<(), String> {
+    match &plan.mode {
+        PackExecutionMode::AiOnly => {
+            require_ai_packet_dir_for_pack_ai_only(&plan.bundle_dir)?;
+            crate::pack_ai_packet_dir_to_zip(&plan.bundle_dir, &plan.out, &plan.artifacts_root)
+        }
+        PackExecutionMode::Bundle {
+            include_root_artifacts,
+            include_triage,
+            include_screenshots,
+            schema2_only,
+            stats_top,
+            sort,
+            warmup_frames,
+        } => crate::pack_bundle_dir_to_zip(
+            &plan.bundle_dir,
+            &plan.out,
+            *include_root_artifacts,
+            *include_triage,
+            *include_screenshots,
+            *schema2_only,
+            false,
+            false,
+            &plan.artifacts_root,
+            *stats_top,
+            *sort,
+            *warmup_frames,
+        ),
+    }
+}
+
+fn build_pack_command_output(plan: &PackExecutionPlan) -> Result<PackCommandOutput, String> {
+    execute_pack_execution_plan(plan)?;
+    Ok(PackCommandOutput {
+        presentation: ArtifactOutputPresentation::Path(plan.out.clone()),
     })
 }
 
@@ -255,26 +446,81 @@ fn resolve_required_bundle_artifact(
     Ok(resolved.bundle_artifact)
 }
 
-fn emit_path_or_json_output(out: &Path, stats_json: bool) -> Result<(), String> {
-    if stats_json {
-        println!("{}", read_artifact_output_text(out)?);
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+fn resolve_command_out_path<F>(
+    workspace_root: &Path,
+    custom_out: Option<PathBuf>,
+    default_out: F,
+) -> PathBuf
+where
+    F: FnOnce() -> PathBuf,
+{
+    custom_out
+        .map(|path| crate::resolve_path(workspace_root, path))
+        .unwrap_or_else(default_out)
 }
 
-fn ensure_and_emit_bundle_artifact_output<F>(
+fn prepare_required_bundle_artifact_output(
+    request: RequiredBundleArtifactOutputRequest<'_>,
+) -> Result<PreparedBundleArtifactOutput, String> {
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest: request.rest,
+        workspace_root: request.workspace_root,
+        missing_hint: request.missing_hint,
+    })?;
+    let out = resolve_command_out_path(request.workspace_root, request.custom_out, || {
+        (request.default_out)(&bundle_path)
+    });
+    Ok(PreparedBundleArtifactOutput { bundle_path, out })
+}
+
+fn build_ensured_bundle_artifact_plan(
     bundle_path: &Path,
     warmup_frames: u64,
     stats_json: bool,
+) -> EnsuredBundleArtifactPlan {
+    EnsuredBundleArtifactPlan {
+        bundle_path: bundle_path.to_path_buf(),
+        warmup_frames,
+        display_mode: artifact_display_mode_for_stats_json(stats_json),
+    }
+}
+
+fn build_required_bundle_artifact_plan(
+    request: EnsuredBundleArtifactCommandRequest<'_>,
+) -> Result<EnsuredBundleArtifactPlan, String> {
+    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
+        rest: request.rest,
+        workspace_root: request.workspace_root,
+        missing_hint: request.missing_hint,
+    })?;
+    Ok(build_ensured_bundle_artifact_plan(
+        &bundle_path,
+        request.warmup_frames,
+        request.stats_json,
+    ))
+}
+
+fn build_ensured_bundle_artifact_output<F>(
+    plan: EnsuredBundleArtifactPlan,
     ensure_artifact_output: F,
-) -> Result<(), String>
+) -> Result<EnsuredBundleArtifactOutput, String>
 where
     F: FnOnce(&Path, u64) -> Result<PathBuf, String>,
 {
-    let out = ensure_artifact_output(bundle_path, warmup_frames)?;
-    emit_path_or_json_output(&out, stats_json)
+    let out = ensure_artifact_output(&plan.bundle_path, plan.warmup_frames)?;
+    let presentation = build_artifact_output_presentation(&out, plan.display_mode)?;
+    Ok(EnsuredBundleArtifactOutput { presentation })
+}
+
+fn build_required_bundle_artifact_output<F>(
+    request: EnsuredBundleArtifactCommandRequest<'_>,
+    ensure_artifact_output: F,
+) -> Result<EnsuredBundleArtifactOutput, String>
+where
+    F: FnOnce(&Path, u64) -> Result<PathBuf, String>,
+{
+    let plan = build_required_bundle_artifact_plan(request)?;
+    build_ensured_bundle_artifact_output(plan, ensure_artifact_output)
 }
 
 fn read_artifact_output_text(out: &Path) -> Result<String, String> {
@@ -286,17 +532,36 @@ fn read_artifact_output_json(out: &Path) -> Result<serde_json::Value, String> {
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
 }
 
+fn artifact_display_mode_for_stats_json(stats_json: bool) -> ArtifactDisplayMode {
+    if stats_json {
+        ArtifactDisplayMode::Json
+    } else {
+        ArtifactDisplayMode::Path
+    }
+}
+
 fn json_artifact_payload_to_pretty_text(payload: &serde_json::Value) -> String {
     serde_json::to_string_pretty(payload).unwrap_or_else(|_| "{}".to_string())
 }
 
-fn emit_existing_artifact_output_if_present(out: &Path, stats_json: bool) -> Result<bool, String> {
-    if out.is_file() {
-        emit_path_or_json_output(out, stats_json)?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
+fn build_generated_artifact_output<F>(
+    out: &Path,
+    display_mode: ArtifactDisplayMode,
+    reuse_existing_out: bool,
+    resolve_canonical_path: F,
+) -> Result<GeneratedArtifactOutput, String>
+where
+    F: FnOnce() -> Result<PathBuf, String>,
+{
+    let plan = build_artifact_materialization_plan(
+        out,
+        display_mode,
+        reuse_existing_out,
+        resolve_canonical_path,
+    )?;
+    execute_artifact_materialization_plan(&plan)?;
+    let presentation = build_artifact_output_presentation(&plan.out, plan.display_mode)?;
+    Ok(GeneratedArtifactOutput { presentation })
 }
 
 #[cfg(test)]
@@ -459,6 +724,102 @@ mod tests {
     }
 
     #[test]
+    fn build_pack_execution_plan_uses_ai_only_mode_when_requested() {
+        let plan = build_pack_execution_plan(
+            PreparedPackCommand {
+                bundle_dir: PathBuf::from("captures/demo"),
+                artifacts_root: PathBuf::from("target/fret-diag"),
+                out: PathBuf::from("target/fret-diag/share/demo.ai.zip"),
+            },
+            PackExecutionOptions {
+                pack_ai_only: true,
+                pack_include_root_artifacts: true,
+                pack_include_triage: true,
+                pack_include_screenshots: true,
+                pack_schema2_only: true,
+                stats_top: 99,
+                sort_override: Some(BundleStatsSort::Time),
+                warmup_frames: 7,
+            },
+        );
+
+        assert!(matches!(plan.mode, PackExecutionMode::AiOnly));
+    }
+
+    #[test]
+    fn build_pack_execution_plan_defaults_bundle_sort_to_invalidation() {
+        let plan = build_pack_execution_plan(
+            PreparedPackCommand {
+                bundle_dir: PathBuf::from("captures/demo"),
+                artifacts_root: PathBuf::from("target/fret-diag"),
+                out: PathBuf::from("target/fret-diag/share/demo.zip"),
+            },
+            PackExecutionOptions {
+                pack_ai_only: false,
+                pack_include_root_artifacts: true,
+                pack_include_triage: false,
+                pack_include_screenshots: true,
+                pack_schema2_only: false,
+                stats_top: 12,
+                sort_override: None,
+                warmup_frames: 5,
+            },
+        );
+
+        match plan.mode {
+            PackExecutionMode::AiOnly => panic!("expected bundle mode"),
+            PackExecutionMode::Bundle {
+                include_root_artifacts,
+                include_triage,
+                include_screenshots,
+                schema2_only,
+                stats_top,
+                sort,
+                warmup_frames,
+            } => {
+                assert!(include_root_artifacts);
+                assert!(!include_triage);
+                assert!(include_screenshots);
+                assert!(!schema2_only);
+                assert_eq!(stats_top, 12);
+                assert_eq!(sort, BundleStatsSort::Invalidation);
+                assert_eq!(warmup_frames, 5);
+            }
+        }
+    }
+
+    #[test]
+    fn build_pack_command_output_uses_path_presentation() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pack-output-presentation-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("bundle");
+        let packet_dir = bundle_dir.join("ai.packet");
+        std::fs::create_dir_all(&packet_dir).expect("create ai.packet dir");
+        std::fs::write(packet_dir.join("bundle.meta.json"), b"{}").expect("write bundle meta");
+
+        let out = root.join("share").join("bundle.ai.zip");
+        let plan = PackExecutionPlan {
+            bundle_dir,
+            artifacts_root: root.clone(),
+            out: out.clone(),
+            mode: PackExecutionMode::AiOnly,
+        };
+
+        let output = build_pack_command_output(&plan).expect("build pack output");
+
+        match output.presentation {
+            ArtifactOutputPresentation::Path(path) => assert_eq!(path, out),
+            other => panic!("expected path presentation, got {other:?}"),
+        }
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn resolve_required_bundle_artifact_rejects_missing_input() {
         let err = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
             rest: &[],
@@ -480,6 +841,83 @@ mod tests {
         .expect_err("extra args");
 
         assert!(err.contains("unexpected arguments: b"));
+    }
+
+    #[test]
+    fn resolve_command_out_path_prefers_custom_out_under_workspace_root() {
+        let out = resolve_command_out_path(
+            Path::new("workspace-root"),
+            Some(PathBuf::from("exports/triage.json")),
+            || PathBuf::from("default/triage.json"),
+        );
+
+        assert_eq!(out, PathBuf::from("workspace-root/exports/triage.json"));
+    }
+
+    #[test]
+    fn resolve_command_out_path_uses_default_when_custom_out_missing() {
+        let out = resolve_command_out_path(Path::new("workspace-root"), None, || {
+            PathBuf::from("captures/demo/triage.json")
+        });
+
+        assert_eq!(out, PathBuf::from("captures/demo/triage.json"));
+    }
+
+    #[test]
+    fn prepare_required_bundle_artifact_output_uses_default_out_builder() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-prepare-required-bundle-output-default-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        let bundle_path = bundle_dir.join("bundle.json");
+        std::fs::write(&bundle_path, b"{}" as &[u8]).expect("write bundle");
+
+        let prepared =
+            prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
+                rest: &["captures/demo/bundle.json".to_string()],
+                workspace_root: &root,
+                missing_hint: "missing bundle",
+                custom_out: None,
+                default_out: crate::default_test_ids_out_path,
+            })
+            .expect("prepare required bundle output");
+
+        assert_eq!(prepared.bundle_path, bundle_path);
+        assert_eq!(
+            prepared.out,
+            crate::default_test_ids_out_path(&prepared.bundle_path)
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn prepare_required_bundle_artifact_output_uses_custom_out_when_provided() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-prepare-required-bundle-output-custom-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle");
+
+        let prepared =
+            prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
+                rest: &["captures/demo/bundle.json".to_string()],
+                workspace_root: &root,
+                missing_hint: "missing bundle",
+                custom_out: Some(PathBuf::from("exports/test-ids.json")),
+                default_out: crate::default_test_ids_out_path,
+            })
+            .expect("prepare required bundle output");
+
+        assert_eq!(prepared.out, root.join("exports").join("test-ids.json"));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -650,6 +1088,166 @@ mod tests {
     }
 
     #[test]
+    fn prepare_cmd_lint_defaults_to_default_out_path() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-prepare-lint-default-out-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle json");
+
+        let prepared = prepare_cmd_lint(LintCommandRequest {
+            rest: &["captures/demo/bundle.json".to_string()],
+            workspace_root: &root,
+            lint_out: None,
+        })
+        .expect("prepare lint command");
+
+        assert_eq!(prepared.bundle_path, bundle_dir.join("bundle.json"));
+        assert_eq!(
+            prepared.out,
+            crate::default_lint_out_path(&bundle_dir.join("bundle.json"))
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn prepare_cmd_lint_uses_custom_out_when_provided() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-prepare-lint-custom-out-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle json");
+
+        let prepared = prepare_cmd_lint(LintCommandRequest {
+            rest: &["captures/demo/bundle.json".to_string()],
+            workspace_root: &root,
+            lint_out: Some(PathBuf::from("exports/lint.json")),
+        })
+        .expect("prepare lint command");
+
+        assert_eq!(prepared.out, root.join("exports").join("lint.json"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_triage_command_output_uses_path_presentation_when_not_printing_json() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-triage-command-output-path-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle json");
+        std::fs::write(
+            bundle_dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "frames_total": 0,
+                "windows": []
+            }))
+            .expect("serialize frames index"),
+        )
+        .expect("write frames index");
+
+        let output = build_triage_command_output(build_triage_execution_plan(
+            PreparedTriageCommand {
+                bundle_path: bundle_dir.join("bundle.json"),
+                out: bundle_dir.join("triage.lite.json"),
+                lite: true,
+                metric: crate::frames_index::TriageLiteMetric::TotalTimeUs,
+            },
+            TriageExecutionOptions {
+                stats_top: 5,
+                sort_override: None,
+                warmup_frames: 0,
+                stats_json: false,
+            },
+        ))
+        .expect("build triage output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(bundle_dir.join("triage.lite.json"))
+        );
+        assert!(bundle_dir.join("triage.lite.json").is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_triage_command_output_uses_text_presentation_when_printing_json() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-triage-command-output-text-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(bundle_dir.join("bundle.json"), b"{}" as &[u8]).expect("write bundle json");
+        std::fs::write(
+            bundle_dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "frames_total": 0,
+                "windows": []
+            }))
+            .expect("serialize frames index"),
+        )
+        .expect("write frames index");
+
+        let output = build_triage_command_output(build_triage_execution_plan(
+            PreparedTriageCommand {
+                bundle_path: bundle_dir.join("bundle.json"),
+                out: bundle_dir.join("triage.lite.json"),
+                lite: true,
+                metric: crate::frames_index::TriageLiteMetric::TotalTimeUs,
+            },
+            TriageExecutionOptions {
+                stats_top: 5,
+                sort_override: None,
+                warmup_frames: 0,
+                stats_json: true,
+            },
+        ))
+        .expect("build triage output");
+
+        match output.presentation {
+            ArtifactOutputPresentation::Text(text) => {
+                assert!(text.contains("\"kind\": \"triage_lite\""));
+            }
+            ArtifactOutputPresentation::Path(_) => panic!("expected text presentation"),
+            ArtifactOutputPresentation::Lines(_) => panic!("expected text presentation"),
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn prepare_cmd_test_ids_defaults_to_default_out_path() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-prepare-test-ids-default-out-{}-{}",
@@ -700,6 +1298,65 @@ mod tests {
     }
 
     #[test]
+    fn build_test_ids_execution_plan_keeps_prepared_fields() {
+        let plan = build_test_ids_execution_plan(
+            PreparedTestIdsCommand {
+                bundle_path: PathBuf::from("captures/demo/bundle.json"),
+                out: PathBuf::from("exports/test-ids.json"),
+            },
+            7,
+            42,
+            true,
+        );
+
+        assert_eq!(plan.bundle_path, PathBuf::from("captures/demo/bundle.json"));
+        assert_eq!(plan.out, PathBuf::from("exports/test-ids.json"));
+        assert_eq!(plan.warmup_frames, 7);
+        assert_eq!(plan.max_test_ids, 42);
+        assert!(matches!(plan.display_mode, ArtifactDisplayMode::Json));
+    }
+
+    #[test]
+    fn build_test_ids_command_output_uses_path_presentation() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-test-ids-command-output-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        std::fs::write(
+            bundle_dir.join("bundle.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": 2,
+                "run_id": "run-1",
+                "windows": [],
+                "warmup_frames": 0,
+            }))
+            .expect("serialize bundle json"),
+        )
+        .expect("write bundle json");
+
+        let out = bundle_dir.join("test-ids.json");
+        let output = build_test_ids_command_output(TestIdsExecutionPlan {
+            bundle_path: bundle_dir.join("bundle.json"),
+            out: out.clone(),
+            warmup_frames: 0,
+            max_test_ids: 8,
+            display_mode: ArtifactDisplayMode::Path,
+        })
+        .expect("build test ids command output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(out.clone())
+        );
+        assert!(out.is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn append_triage_tooling_warnings_inserts_warning_array_for_bundle_dir() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-triage-tooling-warnings-{}-{}",
@@ -740,9 +1397,9 @@ mod tests {
     }
 
     #[test]
-    fn write_lint_report_output_returns_false_when_no_error_issues() {
+    fn build_lint_report_output_returns_false_when_no_error_issues() {
         let root = std::env::temp_dir().join(format!(
-            "fret-diag-write-lint-report-ok-{}-{}",
+            "fret-diag-build-lint-report-ok-{}-{}",
             crate::util::now_unix_ms(),
             std::process::id()
         ));
@@ -755,18 +1412,18 @@ mod tests {
             payload: serde_json::json!({ "kind": "lint", "error_issues": 0 }),
         };
 
-        let should_exit =
-            write_lint_report_output(&out, &report, false).expect("write lint report output");
+        let output =
+            build_lint_report_output(&out, &report, false).expect("build lint report output");
 
-        assert!(!should_exit);
+        assert!(!output.exit_required);
         assert!(out.is_file());
         let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn write_lint_report_output_returns_true_when_error_issues_exist() {
+    fn build_lint_report_output_returns_true_when_error_issues_exist() {
         let root = std::env::temp_dir().join(format!(
-            "fret-diag-write-lint-report-exit-{}-{}",
+            "fret-diag-build-lint-report-exit-{}-{}",
             crate::util::now_unix_ms(),
             std::process::id()
         ));
@@ -779,27 +1436,37 @@ mod tests {
             payload: serde_json::json!({ "kind": "lint", "error_issues": 2 }),
         };
 
-        let should_exit =
-            write_lint_report_output(&out, &report, false).expect("write lint report output");
+        let output =
+            build_lint_report_output(&out, &report, false).expect("build lint report output");
 
-        assert!(should_exit);
+        assert!(output.exit_required);
         assert!(out.is_file());
         let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn artifact_output_materialization_is_noop_when_out_matches_canonical() {
+    fn build_artifact_materialization_plan_reuses_canonical_out_when_paths_match() {
         let canonical = Path::new("captures/demo/test-ids.json");
 
-        assert!(artifact_output_materialization_is_noop(
-            canonical, canonical
+        let plan = build_artifact_materialization_plan(
+            canonical,
+            ArtifactDisplayMode::Path,
+            false,
+            || Ok(canonical.to_path_buf()),
+        )
+        .expect("build materialization plan");
+
+        assert_eq!(plan.out, canonical);
+        assert!(matches!(
+            plan.mode,
+            ArtifactMaterializationMode::ReuseCanonicalOut
         ));
     }
 
     #[test]
-    fn materialize_canonical_artifact_output_keeps_existing_out_file() {
+    fn build_artifact_materialization_plan_reuses_existing_out_when_allowed() {
         let root = std::env::temp_dir().join(format!(
-            "fret-diag-materialize-artifact-existing-{}-{}",
+            "fret-diag-build-materialization-plan-existing-{}-{}",
             crate::util::now_unix_ms(),
             std::process::id()
         ));
@@ -811,8 +1478,39 @@ mod tests {
         std::fs::write(&canonical, b"canonical").expect("write canonical");
         std::fs::write(&out, b"existing").expect("write existing out");
 
-        materialize_canonical_artifact_output(&canonical, &out)
-            .expect("materialize canonical output");
+        let plan =
+            build_artifact_materialization_plan(&out, ArtifactDisplayMode::Path, true, || {
+                Err("should not resolve canonical".to_string())
+            })
+            .expect("build materialization plan");
+
+        assert_eq!(plan.out, out);
+        assert!(matches!(
+            plan.mode,
+            ArtifactMaterializationMode::ReuseExistingOut
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn execute_artifact_materialization_plan_keeps_existing_out_file() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-execute-materialization-existing-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let out = root.join("existing.json");
+        std::fs::write(&out, b"existing").expect("write existing out");
+
+        execute_artifact_materialization_plan(&ArtifactMaterializationPlan {
+            out: out.clone(),
+            display_mode: ArtifactDisplayMode::Path,
+            mode: ArtifactMaterializationMode::ReuseExistingOut,
+        })
+        .expect("execute materialization plan");
 
         assert_eq!(
             std::fs::read_to_string(&out).expect("read existing out"),
@@ -822,9 +1520,9 @@ mod tests {
     }
 
     #[test]
-    fn materialize_canonical_artifact_output_copies_to_nested_out_path() {
+    fn execute_artifact_materialization_plan_copies_to_nested_out_path() {
         let root = std::env::temp_dir().join(format!(
-            "fret-diag-materialize-artifact-copy-{}-{}",
+            "fret-diag-execute-materialization-copy-{}-{}",
             crate::util::now_unix_ms(),
             std::process::id()
         ));
@@ -835,8 +1533,14 @@ mod tests {
         let out = root.join("nested").join("copy.json");
         std::fs::write(&canonical, b"canonical").expect("write canonical");
 
-        materialize_canonical_artifact_output(&canonical, &out)
-            .expect("materialize canonical output");
+        execute_artifact_materialization_plan(&ArtifactMaterializationPlan {
+            out: out.clone(),
+            display_mode: ArtifactDisplayMode::Path,
+            mode: ArtifactMaterializationMode::CopyCanonical {
+                canonical_path: canonical,
+            },
+        })
+        .expect("execute materialization plan");
 
         assert_eq!(
             std::fs::read_to_string(&out).expect("read copied out"),
@@ -858,10 +1562,10 @@ mod tests {
         let out = root.join("artifact.json");
         std::fs::write(&out, b"{}" as &[u8]).expect("write artifact out");
 
-        let result =
-            ensure_and_emit_bundle_artifact_output(Path::new("bundle.json"), 0, false, |_, _| {
-                Ok(out.clone())
-            });
+        let result = build_ensured_bundle_artifact_output(
+            build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 0, false),
+            |_, _| Ok(out.clone()),
+        );
 
         assert!(result.is_ok());
         let _ = std::fs::remove_dir_all(&root);
@@ -869,10 +1573,10 @@ mod tests {
 
     #[test]
     fn ensure_and_emit_bundle_artifact_output_propagates_ensure_error() {
-        let result =
-            ensure_and_emit_bundle_artifact_output(Path::new("bundle.json"), 0, false, |_, _| {
-                Err("boom".to_string())
-            });
+        let result = build_ensured_bundle_artifact_output(
+            build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 0, false),
+            |_, _| Err("boom".to_string()),
+        );
 
         assert_eq!(result.expect_err("expected ensure error"), "boom");
     }
@@ -881,10 +1585,8 @@ mod tests {
     fn ensure_and_emit_bundle_artifact_output_propagates_emit_error() {
         let missing = PathBuf::from("missing-artifact.json");
 
-        let result = ensure_and_emit_bundle_artifact_output(
-            Path::new("bundle.json"),
-            0,
-            true,
+        let result = build_ensured_bundle_artifact_output(
+            build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 0, true),
             move |_, _| Ok(missing.clone()),
         );
 
@@ -892,22 +1594,149 @@ mod tests {
     }
 
     #[test]
-    fn emit_existing_artifact_output_if_present_returns_true_for_existing_file() {
+    fn build_ensured_bundle_artifact_output_uses_path_presentation_by_default() {
         let root = std::env::temp_dir().join(format!(
-            "fret-diag-emit-existing-artifact-{}-{}",
+            "fret-diag-build-ensured-bundle-artifact-output-path-{}-{}",
             crate::util::now_unix_ms(),
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).expect("create temp root");
 
-        let artifact = root.join("artifact.json");
+        let artifact = root.join("frames.index.json");
         std::fs::write(&artifact, b"{}" as &[u8]).expect("write artifact");
 
-        let emitted =
-            emit_existing_artifact_output_if_present(&artifact, false).expect("emit existing file");
+        let output = build_ensured_bundle_artifact_output(
+            build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 0, false),
+            |_, _| Ok(artifact.clone()),
+        )
+        .expect("build ensured bundle artifact output");
 
-        assert!(emitted);
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(artifact.clone())
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_ensured_bundle_artifact_output_uses_text_presentation_when_json_requested() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-ensured-bundle-artifact-output-text-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let artifact = root.join("frames.index.json");
+        std::fs::write(&artifact, b"{\n  \"kind\": \"frames_index\"\n}" as &[u8])
+            .expect("write artifact");
+
+        let output = build_ensured_bundle_artifact_output(
+            build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 0, true),
+            |_, _| Ok(artifact.clone()),
+        )
+        .expect("build ensured bundle artifact output");
+
+        match output.presentation {
+            ArtifactOutputPresentation::Text(text) => {
+                assert!(text.contains("\"kind\": \"frames_index\""));
+            }
+            ArtifactOutputPresentation::Path(_) => panic!("expected text presentation"),
+            ArtifactOutputPresentation::Lines(_) => panic!("expected text presentation"),
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_required_bundle_artifact_output_propagates_missing_hint() {
+        let err = build_required_bundle_artifact_output(
+            EnsuredBundleArtifactCommandRequest {
+                rest: &[],
+                workspace_root: Path::new("workspace-root"),
+                missing_hint: "missing bundle",
+                warmup_frames: 0,
+                stats_json: false,
+            },
+            |_, _| Ok(PathBuf::from("artifact.json")),
+        )
+        .expect_err("expected missing input error");
+
+        assert_eq!(err, "missing bundle");
+    }
+
+    #[test]
+    fn build_ensured_bundle_artifact_plan_maps_stats_json_to_display_mode() {
+        let plan = build_ensured_bundle_artifact_plan(Path::new("bundle.json"), 7, true);
+
+        assert_eq!(plan.bundle_path, PathBuf::from("bundle.json"));
+        assert_eq!(plan.warmup_frames, 7);
+        assert!(matches!(plan.display_mode, ArtifactDisplayMode::Json));
+    }
+
+    #[test]
+    fn build_required_bundle_artifact_plan_resolves_input_before_building_plan() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-required-bundle-artifact-plan-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        let bundle_path = bundle_dir.join("bundle.json");
+        std::fs::write(&bundle_path, b"{}" as &[u8]).expect("write bundle");
+
+        let plan = build_required_bundle_artifact_plan(EnsuredBundleArtifactCommandRequest {
+            rest: &["captures/demo/bundle.json".to_string()],
+            workspace_root: &root,
+            missing_hint: "missing bundle",
+            warmup_frames: 3,
+            stats_json: false,
+        })
+        .expect("build required bundle artifact plan");
+
+        assert_eq!(plan.bundle_path, bundle_path);
+        assert_eq!(plan.warmup_frames, 3);
+        assert!(matches!(plan.display_mode, ArtifactDisplayMode::Path));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_required_bundle_artifact_output_resolves_input_before_building_output() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-required-bundle-artifact-output-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let bundle_dir = root.join("captures").join("demo");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        let bundle_path = bundle_dir.join("bundle.json");
+        let artifact = bundle_dir.join("frames.index.json");
+        std::fs::write(&bundle_path, b"{}" as &[u8]).expect("write bundle");
+        std::fs::write(&artifact, b"{}" as &[u8]).expect("write artifact");
+
+        let output = build_required_bundle_artifact_output(
+            EnsuredBundleArtifactCommandRequest {
+                rest: &["captures/demo/bundle.json".to_string()],
+                workspace_root: &root,
+                missing_hint: "missing bundle",
+                warmup_frames: 0,
+                stats_json: false,
+            },
+            |resolved_bundle_path, _| {
+                assert_eq!(resolved_bundle_path, bundle_path.as_path());
+                Ok(artifact.clone())
+            },
+        )
+        .expect("build required bundle artifact output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(artifact.clone())
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -953,6 +1782,18 @@ mod tests {
     }
 
     #[test]
+    fn artifact_display_mode_for_stats_json_maps_to_path_or_json() {
+        assert!(matches!(
+            artifact_display_mode_for_stats_json(false),
+            ArtifactDisplayMode::Path
+        ));
+        assert!(matches!(
+            artifact_display_mode_for_stats_json(true),
+            ArtifactDisplayMode::Json
+        ));
+    }
+
+    #[test]
     fn json_artifact_payload_to_pretty_text_formats_pretty_json() {
         let text = json_artifact_payload_to_pretty_text(&serde_json::json!({
             "kind": "lint",
@@ -964,12 +1805,189 @@ mod tests {
     }
 
     #[test]
+    fn build_json_write_output_presentation_uses_text_when_printing_json() {
+        let presentation = build_json_write_output_presentation(
+            Path::new("out/triage.json"),
+            "{\n  \"kind\": \"triage\"\n}".to_string(),
+            true,
+        );
+
+        assert_eq!(
+            presentation,
+            ArtifactOutputPresentation::Text("{\n  \"kind\": \"triage\"\n}".to_string())
+        );
+    }
+
+    #[test]
+    fn build_json_write_output_presentation_uses_path_when_not_printing_json() {
+        let presentation = build_json_write_output_presentation(
+            Path::new("out/triage.json"),
+            "{\n  \"kind\": \"triage\"\n}".to_string(),
+            false,
+        );
+
+        assert_eq!(
+            presentation,
+            ArtifactOutputPresentation::Path(PathBuf::from("out/triage.json"))
+        );
+    }
+
+    #[test]
+    fn write_json_artifact_file_returns_text_presentation_when_requested() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-write-json-artifact-file-text-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let out = root.join("triage.json");
+
+        let presentation =
+            write_json_artifact_file(&out, &serde_json::json!({ "kind": "triage" }), true)
+                .expect("write json artifact file");
+
+        assert!(matches!(presentation, ArtifactOutputPresentation::Text(_)));
+        assert!(out.is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn resolve_artifact_display_mode_rejects_meta_report_with_json() {
         let err = resolve_artifact_display_mode(true, true).expect_err("expected invalid mode");
         assert!(
             err.contains("--meta-report cannot be combined with --json"),
             "unexpected error: {err}"
         );
+    }
+
+    #[test]
+    fn build_artifact_output_presentation_returns_meta_report_lines() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-artifact-output-presentation-meta-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let meta_path = root.join("bundle.meta.json");
+        std::fs::write(
+            &meta_path,
+            serde_json::to_vec(&serde_json::json!({
+                "bundle": "bundle.json",
+                "warmup_frames": 0,
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "snapshots_with_semantics_total": 0,
+                "snapshots_with_inline_semantics_total": 0,
+                "snapshots_with_table_semantics_total": 0,
+                "semantics_table_entries_total": 0,
+                "semantics_table_unique_keys_total": 0,
+                "windows": [],
+            }))
+            .expect("serialize meta"),
+        )
+        .expect("write meta json");
+
+        let presentation =
+            build_artifact_output_presentation(&meta_path, ArtifactDisplayMode::MetaReport)
+                .expect("build meta report presentation");
+
+        match presentation {
+            ArtifactOutputPresentation::Lines(lines) => {
+                assert_eq!(lines.first().map(String::as_str), Some("bundle_meta:"));
+            }
+            other => panic!("expected lines presentation, got {other:?}"),
+        }
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_lint_report_output_returns_path_and_exit_flag() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-lint-report-output-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let out = root.join("lint.json");
+        let report = LintReport {
+            error_issues: 2,
+            payload: serde_json::json!({ "kind": "lint", "error_issues": 2 }),
+        };
+
+        let output =
+            build_lint_report_output(&out, &report, false).expect("build lint report output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(out.clone())
+        );
+        assert!(output.exit_required);
+        assert!(out.is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_generated_artifact_output_reuses_existing_out_when_allowed() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-generated-artifact-output-reuse-existing-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let out = root.join("existing.json");
+        std::fs::write(&out, b"{\"kind\":\"existing\"}").expect("write existing out");
+
+        let output = build_generated_artifact_output(&out, ArtifactDisplayMode::Path, true, || {
+            Err("should not resolve canonical".to_string())
+        })
+        .expect("build generated artifact output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(out.clone())
+        );
+        assert_eq!(
+            std::fs::read_to_string(&out).expect("read existing out"),
+            "{\"kind\":\"existing\"}"
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_generated_artifact_output_copies_missing_out() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-generated-artifact-output-copy-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let canonical = root.join("canonical.json");
+        let out = root.join("nested").join("copy.json");
+        std::fs::write(&canonical, b"{\"kind\":\"canonical\"}").expect("write canonical");
+
+        let output =
+            build_generated_artifact_output(&out, ArtifactDisplayMode::Path, false, || {
+                Ok(canonical.clone())
+            })
+            .expect("build generated artifact output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(out.clone())
+        );
+        assert_eq!(
+            std::fs::read_to_string(&out).expect("read copied out"),
+            "{\"kind\":\"canonical\"}"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -1074,6 +2092,47 @@ mod tests {
     }
 
     #[test]
+    fn find_bundle_dir_meta_sidecar_path_prefers_direct_over_root() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-meta-bundle-dir-direct-over-root-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let bundle_dir = root.join("bundle-dir");
+        let direct_meta = bundle_dir.join("bundle.meta.json");
+        let root_meta = bundle_dir.join("_root").join("bundle.meta.json");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root_meta.parent().expect("root meta parent"))
+            .expect("create root meta dir");
+        std::fs::write(
+            &direct_meta,
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+            }))
+            .unwrap(),
+        )
+        .expect("write direct meta sidecar");
+        std::fs::write(
+            &root_meta,
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+            }))
+            .unwrap(),
+        )
+        .expect("write root meta sidecar");
+
+        let path =
+            find_bundle_dir_meta_sidecar_path(&bundle_dir, 0).expect("find preferred sidecar");
+
+        assert_eq!(path, direct_meta);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn prepare_cmd_meta_defaults_to_resolved_default_out() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-prepare-meta-default-out-{}-{}",
@@ -1154,6 +2213,248 @@ mod tests {
         ));
         let _ = std::fs::remove_dir_all(&root);
     }
+
+    #[test]
+    fn build_meta_execution_plan_keeps_prepared_fields() {
+        let plan = build_meta_execution_plan(PreparedMetaCommand {
+            canonical_path: PathBuf::from("captures/demo/bundle.meta.json"),
+            out: PathBuf::from("exports/meta.json"),
+            display_mode: ArtifactDisplayMode::MetaReport,
+        });
+
+        assert_eq!(
+            plan.canonical_path,
+            PathBuf::from("captures/demo/bundle.meta.json")
+        );
+        assert_eq!(plan.out, PathBuf::from("exports/meta.json"));
+        assert!(matches!(plan.display_mode, ArtifactDisplayMode::MetaReport));
+    }
+
+    #[test]
+    fn build_meta_command_output_uses_path_presentation() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-build-meta-command-output-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let canonical = root.join("bundle.meta.json");
+        let out = root.join("exports").join("meta.json");
+        std::fs::write(
+            &canonical,
+            serde_json::to_vec(&serde_json::json!({
+                "bundle": "bundle.json",
+                "warmup_frames": 0,
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "snapshots_with_semantics_total": 0,
+                "snapshots_with_inline_semantics_total": 0,
+                "snapshots_with_table_semantics_total": 0,
+                "semantics_table_entries_total": 0,
+                "semantics_table_unique_keys_total": 0,
+                "windows": [],
+            }))
+            .expect("serialize meta"),
+        )
+        .expect("write canonical meta");
+
+        let output = build_meta_command_output(MetaExecutionPlan {
+            canonical_path: canonical,
+            out: out.clone(),
+            display_mode: ArtifactDisplayMode::Path,
+        })
+        .expect("build meta command output");
+
+        assert_eq!(
+            output.presentation,
+            ArtifactOutputPresentation::Path(out.clone())
+        );
+        assert!(out.is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn meta_report_summary_lines_include_semantics_summary() {
+        let meta = serde_json::json!({
+            "bundle": "bundle.json",
+            "warmup_frames": 1,
+            "windows_total": 2,
+            "snapshots_total": 5,
+            "snapshots_with_semantics_total": 4,
+            "snapshots_with_inline_semantics_total": 1,
+            "snapshots_with_table_semantics_total": 3,
+            "semantics_table_entries_total": 8,
+            "semantics_table_unique_keys_total": 6,
+        });
+
+        let lines = meta_report_summary_lines(&meta, Path::new("captures/bundle.meta.json"));
+
+        assert_eq!(lines[0], "bundle_meta:");
+        assert!(lines.iter().any(|line| line == "  bundle: bundle.json"));
+        assert!(lines.iter().any(|line| {
+            line == "  semantics: resolved=4 inline=1 table=3 table_entries=8 table_unique_keys=6"
+        }));
+    }
+
+    #[test]
+    fn meta_report_window_line_uses_null_when_considered_frame_missing() {
+        let line = meta_report_window_line(&serde_json::json!({
+            "window": 3,
+            "snapshots_total": 9,
+            "snapshots_with_semantics_total": 7,
+            "snapshots_with_inline_semantics_total": 2,
+            "snapshots_with_table_semantics_total": 5,
+            "semantics_table_entries_total": 11,
+            "semantics_table_unique_keys_total": 4,
+        }));
+
+        assert!(line.contains("window=3"));
+        assert!(line.contains("considered_frame=null"));
+    }
+
+    #[test]
+    fn append_meta_report_window_lines_truncates_after_six_entries() {
+        let windows = (0..8)
+            .map(|index| {
+                serde_json::json!({
+                    "window": index,
+                    "snapshots_total": index + 1,
+                    "considered_frame_id": index + 100,
+                    "snapshots_with_semantics_total": index + 2,
+                    "snapshots_with_inline_semantics_total": index + 3,
+                    "snapshots_with_table_semantics_total": index + 4,
+                    "semantics_table_entries_total": index + 5,
+                    "semantics_table_unique_keys_total": index + 6,
+                })
+            })
+            .collect::<Vec<_>>();
+        let mut lines = Vec::new();
+
+        append_meta_report_window_lines(&mut lines, &windows);
+
+        assert_eq!(lines.first().map(String::as_str), Some("  windows:"));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("window=0 snapshots=1"))
+        );
+        assert!(lines.iter().any(|line| line == "    - ... (2 more)"));
+    }
+
+    #[test]
+    fn build_triage_payload_mode_prefers_lite_metric_when_lite_requested() {
+        let mode = build_triage_payload_mode(
+            true,
+            crate::frames_index::TriageLiteMetric::PaintTimeUs,
+            Some(BundleStatsSort::Time),
+        );
+
+        match mode {
+            TriagePayloadMode::Lite { metric } => {
+                assert!(matches!(
+                    metric,
+                    crate::frames_index::TriageLiteMetric::PaintTimeUs
+                ));
+            }
+            TriagePayloadMode::Full { .. } => panic!("expected lite mode"),
+        }
+    }
+
+    #[test]
+    fn build_triage_payload_mode_defaults_full_sort_to_invalidation() {
+        let mode = build_triage_payload_mode(
+            false,
+            crate::frames_index::TriageLiteMetric::TotalTimeUs,
+            None,
+        );
+
+        match mode {
+            TriagePayloadMode::Lite { .. } => panic!("expected full mode"),
+            TriagePayloadMode::Full { sort } => {
+                assert_eq!(sort, BundleStatsSort::Invalidation);
+            }
+        }
+    }
+
+    #[test]
+    fn build_triage_execution_plan_keeps_lite_metric_and_output_mode() {
+        let plan = build_triage_execution_plan(
+            PreparedTriageCommand {
+                bundle_path: PathBuf::from("captures/demo/bundle.json"),
+                out: PathBuf::from("captures/demo/triage.lite.json"),
+                lite: true,
+                metric: crate::frames_index::TriageLiteMetric::LayoutTimeUs,
+            },
+            TriageExecutionOptions {
+                stats_top: 17,
+                sort_override: Some(BundleStatsSort::Time),
+                warmup_frames: 9,
+                stats_json: true,
+            },
+        );
+
+        assert_eq!(plan.out, PathBuf::from("captures/demo/triage.lite.json"));
+        assert!(plan.stats_json);
+        assert_eq!(
+            plan.payload.bundle_path,
+            PathBuf::from("captures/demo/bundle.json")
+        );
+        assert_eq!(plan.payload.stats_top, 17);
+        assert_eq!(plan.payload.warmup_frames, 9);
+        match plan.payload.mode {
+            TriagePayloadMode::Lite { metric } => {
+                assert!(matches!(
+                    metric,
+                    crate::frames_index::TriageLiteMetric::LayoutTimeUs
+                ));
+            }
+            TriagePayloadMode::Full { .. } => panic!("expected lite mode"),
+        }
+    }
+
+    #[test]
+    fn build_triage_execution_plan_defaults_full_sort_to_invalidation() {
+        let plan = build_triage_execution_plan(
+            PreparedTriageCommand {
+                bundle_path: PathBuf::from("captures/demo/bundle.json"),
+                out: PathBuf::from("captures/demo/triage.json"),
+                lite: false,
+                metric: crate::frames_index::TriageLiteMetric::PaintTimeUs,
+            },
+            TriageExecutionOptions {
+                stats_top: 8,
+                sort_override: None,
+                warmup_frames: 3,
+                stats_json: false,
+            },
+        );
+
+        match plan.payload.mode {
+            TriagePayloadMode::Lite { .. } => panic!("expected full mode"),
+            TriagePayloadMode::Full { sort } => {
+                assert_eq!(sort, BundleStatsSort::Invalidation);
+            }
+        }
+    }
+
+    #[test]
+    fn finalize_triage_payload_keeps_payload_without_bundle_dir() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-finalize-triage-payload-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        let bundle_path = root.join("bundle.json");
+        let payload = serde_json::json!({ "kind": "triage" });
+
+        let finalized = finalize_triage_payload(payload.clone(), &bundle_path);
+
+        assert_eq!(finalized, payload);
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
 
 #[derive(Debug)]
@@ -1168,6 +2469,13 @@ enum ArtifactDisplayMode {
     Path,
     Json,
     MetaReport,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ArtifactOutputPresentation {
+    Path(PathBuf),
+    Text(String),
+    Lines(Vec<String>),
 }
 
 #[derive(Debug)]
@@ -1249,22 +2557,40 @@ fn parse_triage_request(
     })
 }
 
-fn build_triage_payload(
-    bundle_path: &Path,
+fn build_triage_payload_mode(
     lite: bool,
     metric: crate::frames_index::TriageLiteMetric,
-    stats_top: usize,
     sort_override: Option<BundleStatsSort>,
-    warmup_frames: u64,
-) -> Result<serde_json::Value, String> {
-    let mut payload = if lite {
-        build_triage_lite_payload(bundle_path, metric, stats_top, warmup_frames)?
+) -> TriagePayloadMode {
+    if lite {
+        TriagePayloadMode::Lite { metric }
     } else {
-        build_triage_full_payload(bundle_path, stats_top, sort_override, warmup_frames)?
-    };
+        TriagePayloadMode::Full {
+            sort: sort_override.unwrap_or(BundleStatsSort::Invalidation),
+        }
+    }
+}
 
+fn build_triage_payload_with_plan(plan: TriagePayloadPlan) -> Result<serde_json::Value, String> {
+    match plan.mode {
+        TriagePayloadMode::Lite { metric } => build_triage_lite_payload(
+            &plan.bundle_path,
+            metric,
+            plan.stats_top,
+            plan.warmup_frames,
+        ),
+        TriagePayloadMode::Full { sort } => {
+            build_triage_full_payload(&plan.bundle_path, plan.stats_top, sort, plan.warmup_frames)
+        }
+    }
+}
+
+fn finalize_triage_payload(
+    mut payload: serde_json::Value,
+    bundle_path: &Path,
+) -> serde_json::Value {
     append_triage_tooling_warnings(&mut payload, bundle_path);
-    Ok(payload)
+    payload
 }
 
 fn build_triage_lite_payload(
@@ -1309,10 +2635,9 @@ fn resolve_triage_frames_index(
 fn build_triage_full_payload(
     bundle_path: &Path,
     stats_top: usize,
-    sort_override: Option<BundleStatsSort>,
+    sort: BundleStatsSort,
     warmup_frames: u64,
 ) -> Result<serde_json::Value, String> {
-    let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
     let report = bundle_stats_from_path(
         bundle_path,
         stats_top,
@@ -1352,23 +2677,19 @@ fn default_triage_out_path(bundle_path: &Path, lite: bool) -> PathBuf {
     }
 }
 
-fn write_json_artifact_output(
+fn write_json_artifact_file(
     out: &Path,
     payload: &serde_json::Value,
     print_json: bool,
-) -> Result<(), String> {
+) -> Result<ArtifactOutputPresentation, String> {
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let pretty = json_artifact_payload_to_pretty_text(payload);
     std::fs::write(out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-    if print_json {
-        println!("{pretty}");
-    } else {
-        println!("{}", out.display());
-    }
-    Ok(())
+    Ok(build_json_write_output_presentation(
+        out, pretty, print_json,
+    ))
 }
 
 fn resolve_artifact_display_mode(
@@ -1430,6 +2751,19 @@ fn resolve_meta_artifact_paths(
     }
 }
 
+fn valid_bundle_meta_sidecar_path(path: &Path, warmup_frames: u64) -> Option<PathBuf> {
+    (path.is_file()
+        && sidecars::try_read_sidecar_json_v1(path, "bundle_meta", warmup_frames).is_some())
+    .then(|| path.to_path_buf())
+}
+
+fn build_meta_artifact_paths_for_existing_sidecar(path: PathBuf) -> MetaArtifactPaths {
+    MetaArtifactPaths {
+        canonical_path: path.clone(),
+        default_out: path,
+    }
+}
+
 fn meta_sidecar_source_is_direct(src: &Path) -> bool {
     src.is_file()
         && src
@@ -1454,11 +2788,8 @@ fn resolve_meta_artifact_paths_from_meta_sidecar(
     src: &Path,
     warmup_frames: u64,
 ) -> Result<MetaArtifactPaths, String> {
-    if sidecars::try_read_sidecar_json_v1(src, "bundle_meta", warmup_frames).is_some() {
-        return Ok(MetaArtifactPaths {
-            canonical_path: src.to_path_buf(),
-            default_out: src.to_path_buf(),
-        });
+    if let Some(path) = valid_bundle_meta_sidecar_path(src, warmup_frames) {
+        return Ok(build_meta_artifact_paths_for_existing_sidecar(path));
     }
 
     let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(src) else {
@@ -1470,28 +2801,18 @@ fn resolve_meta_artifact_paths_from_meta_sidecar(
     build_meta_artifact_paths_from_bundle_path(&bundle_path, warmup_frames)
 }
 
+fn find_bundle_dir_meta_sidecar_path(src: &Path, warmup_frames: u64) -> Option<PathBuf> {
+    valid_bundle_meta_sidecar_path(&src.join("bundle.meta.json"), warmup_frames).or_else(|| {
+        valid_bundle_meta_sidecar_path(&src.join("_root").join("bundle.meta.json"), warmup_frames)
+    })
+}
+
 fn resolve_meta_artifact_paths_from_bundle_dir(
     src: &Path,
     warmup_frames: u64,
 ) -> Result<MetaArtifactPaths, String> {
-    let direct = src.join("bundle.meta.json");
-    if direct.is_file()
-        && sidecars::try_read_sidecar_json_v1(&direct, "bundle_meta", warmup_frames).is_some()
-    {
-        return Ok(MetaArtifactPaths {
-            canonical_path: direct.clone(),
-            default_out: direct,
-        });
-    }
-
-    let root = src.join("_root").join("bundle.meta.json");
-    if root.is_file()
-        && sidecars::try_read_sidecar_json_v1(&root, "bundle_meta", warmup_frames).is_some()
-    {
-        return Ok(MetaArtifactPaths {
-            canonical_path: root.clone(),
-            default_out: root,
-        });
+    if let Some(path) = find_bundle_dir_meta_sidecar_path(src, warmup_frames) {
+        return Ok(build_meta_artifact_paths_for_existing_sidecar(path));
     }
 
     build_meta_artifact_paths_from_bundle_path(
@@ -1500,50 +2821,98 @@ fn resolve_meta_artifact_paths_from_bundle_dir(
     )
 }
 
-fn materialize_canonical_artifact_output(canonical_path: &Path, out: &Path) -> Result<(), String> {
-    if artifact_output_materialization_is_noop(canonical_path, out) {
-        return Ok(());
-    }
+fn build_artifact_materialization_plan<F>(
+    out: &Path,
+    display_mode: ArtifactDisplayMode,
+    reuse_existing_out: bool,
+    resolve_canonical_path: F,
+) -> Result<ArtifactMaterializationPlan, String>
+where
+    F: FnOnce() -> Result<PathBuf, String>,
+{
+    let mode = if reuse_existing_out && out.is_file() {
+        ArtifactMaterializationMode::ReuseExistingOut
+    } else {
+        let canonical_path = resolve_canonical_path()?;
+        if out == canonical_path {
+            ArtifactMaterializationMode::ReuseCanonicalOut
+        } else {
+            ArtifactMaterializationMode::CopyCanonical { canonical_path }
+        }
+    };
 
-    if let Some(parent) = out.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    std::fs::copy(canonical_path, out).map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(ArtifactMaterializationPlan {
+        out: out.to_path_buf(),
+        display_mode,
+        mode,
+    })
 }
 
-fn artifact_output_materialization_is_noop(canonical_path: &Path, out: &Path) -> bool {
-    out.is_file() || out == canonical_path
+fn execute_artifact_materialization_plan(plan: &ArtifactMaterializationPlan) -> Result<(), String> {
+    match &plan.mode {
+        ArtifactMaterializationMode::ReuseExistingOut
+        | ArtifactMaterializationMode::ReuseCanonicalOut => Ok(()),
+        ArtifactMaterializationMode::CopyCanonical { canonical_path } => {
+            if let Some(parent) = plan.out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            std::fs::copy(canonical_path, &plan.out).map_err(|e| e.to_string())?;
+            Ok(())
+        }
+    }
 }
 
-fn emit_artifact_output(out: &Path, display_mode: ArtifactDisplayMode) -> Result<(), String> {
+fn build_json_write_output_presentation(
+    out: &Path,
+    pretty: String,
+    print_json: bool,
+) -> ArtifactOutputPresentation {
+    if print_json {
+        ArtifactOutputPresentation::Text(pretty)
+    } else {
+        ArtifactOutputPresentation::Path(out.to_path_buf())
+    }
+}
+
+fn build_artifact_output_presentation(
+    out: &Path,
+    display_mode: ArtifactDisplayMode,
+) -> Result<ArtifactOutputPresentation, String> {
     match display_mode {
-        ArtifactDisplayMode::Path => {
-            println!("{}", out.display());
-            Ok(())
-        }
-        ArtifactDisplayMode::Json => {
-            println!("{}", read_artifact_output_text(out)?);
-            Ok(())
-        }
+        ArtifactDisplayMode::Path => Ok(ArtifactOutputPresentation::Path(out.to_path_buf())),
+        ArtifactDisplayMode::Json => Ok(ArtifactOutputPresentation::Text(
+            read_artifact_output_text(out)?,
+        )),
         ArtifactDisplayMode::MetaReport => {
             let meta = read_artifact_output_json(out)?;
-            print_meta_report(&meta, out);
-            Ok(())
+            Ok(ArtifactOutputPresentation::Lines(meta_report_lines(
+                &meta, out,
+            )))
+        }
+    }
+}
+
+fn emit_artifact_output_presentation(presentation: ArtifactOutputPresentation) {
+    match presentation {
+        ArtifactOutputPresentation::Path(path) => println!("{}", path.display()),
+        ArtifactOutputPresentation::Text(text) => println!("{text}"),
+        ArtifactOutputPresentation::Lines(lines) => {
+            for line in lines {
+                println!("{line}");
+            }
         }
     }
 }
 
 fn prepare_cmd_lint(request: LintCommandRequest<'_>) -> Result<PreparedLintCommand, String> {
-    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
-        rest: request.rest,
-        workspace_root: request.workspace_root,
-        missing_hint: "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
-    })?;
-    let out = request
-        .lint_out
-        .map(|path| crate::resolve_path(request.workspace_root, path))
-        .unwrap_or_else(|| crate::default_lint_out_path(&bundle_path));
+    let PreparedBundleArtifactOutput { bundle_path, out } =
+        prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
+            rest: request.rest,
+            workspace_root: request.workspace_root,
+            missing_hint: "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            custom_out: request.lint_out,
+            default_out: crate::default_lint_out_path,
+        })?;
 
     Ok(PreparedLintCommand { bundle_path, out })
 }
@@ -1552,10 +2921,9 @@ fn prepare_cmd_triage(request: TriageCommandRequest<'_>) -> Result<PreparedTriag
     let parsed = parse_triage_request(request.rest, request.workspace_root)?;
     let resolved = resolve::resolve_bundle_ref(&parsed.source)?;
     let bundle_path = resolved.bundle_artifact;
-    let out = request
-        .triage_out
-        .map(|path| crate::resolve_path(request.workspace_root, path))
-        .unwrap_or_else(|| default_triage_out_path(&bundle_path, parsed.lite));
+    let out = resolve_command_out_path(request.workspace_root, request.triage_out, || {
+        default_triage_out_path(&bundle_path, parsed.lite)
+    });
 
     Ok(PreparedTriageCommand {
         bundle_path,
@@ -1568,15 +2936,14 @@ fn prepare_cmd_triage(request: TriageCommandRequest<'_>) -> Result<PreparedTriag
 fn prepare_cmd_test_ids(
     request: TestIdsCommandRequest<'_>,
 ) -> Result<PreparedTestIdsCommand, String> {
-    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
-        rest: request.rest,
-        workspace_root: request.workspace_root,
-        missing_hint: "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
-    })?;
-    let out = request
-        .test_ids_out
-        .map(|path| crate::resolve_path(request.workspace_root, path))
-        .unwrap_or_else(|| crate::default_test_ids_out_path(&bundle_path));
+    let PreparedBundleArtifactOutput { bundle_path, out } =
+        prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
+            rest: request.rest,
+            workspace_root: request.workspace_root,
+            missing_hint: "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            custom_out: request.test_ids_out,
+            default_out: crate::default_test_ids_out_path,
+        })?;
 
     Ok(PreparedTestIdsCommand { bundle_path, out })
 }
@@ -1592,10 +2959,9 @@ fn prepare_cmd_meta(
         request.meta_report,
     )?;
     let paths = resolve_meta_artifact_paths(&parsed.source, warmup_frames)?;
-    let out = request
-        .meta_out
-        .map(|path| crate::resolve_path(request.workspace_root, path))
-        .unwrap_or(paths.default_out);
+    let out = resolve_command_out_path(request.workspace_root, request.meta_out, || {
+        paths.default_out.clone()
+    });
 
     Ok(PreparedMetaCommand {
         canonical_path: paths.canonical_path,
@@ -1608,13 +2974,87 @@ fn lint_exit_required(error_issues: u64) -> bool {
     error_issues > 0
 }
 
-fn write_lint_report_output(
+fn build_lint_report_output(
     out: &Path,
     report: &LintReport,
     stats_json: bool,
-) -> Result<bool, String> {
-    write_json_artifact_output(out, &report.payload, stats_json)?;
-    Ok(lint_exit_required(report.error_issues))
+) -> Result<LintReportOutput, String> {
+    let presentation = write_json_artifact_file(out, &report.payload, stats_json)?;
+    Ok(LintReportOutput {
+        presentation,
+        exit_required: lint_exit_required(report.error_issues),
+    })
+}
+
+fn build_triage_execution_plan(
+    prepared: PreparedTriageCommand,
+    options: TriageExecutionOptions,
+) -> TriageExecutionPlan {
+    TriageExecutionPlan {
+        payload: TriagePayloadPlan {
+            bundle_path: prepared.bundle_path,
+            stats_top: options.stats_top,
+            warmup_frames: options.warmup_frames,
+            mode: build_triage_payload_mode(prepared.lite, prepared.metric, options.sort_override),
+        },
+        out: prepared.out,
+        stats_json: options.stats_json,
+    }
+}
+
+fn build_triage_command_output(plan: TriageExecutionPlan) -> Result<TriageCommandOutput, String> {
+    let bundle_path = plan.payload.bundle_path.clone();
+    let payload = build_triage_payload_with_plan(plan.payload)?;
+    let payload = finalize_triage_payload(payload, &bundle_path);
+    let presentation = write_json_artifact_file(&plan.out, &payload, plan.stats_json)?;
+    Ok(TriageCommandOutput { presentation })
+}
+
+fn build_meta_execution_plan(prepared: PreparedMetaCommand) -> MetaExecutionPlan {
+    MetaExecutionPlan {
+        canonical_path: prepared.canonical_path,
+        out: prepared.out,
+        display_mode: prepared.display_mode,
+    }
+}
+
+fn build_test_ids_execution_plan(
+    prepared: PreparedTestIdsCommand,
+    warmup_frames: u64,
+    max_test_ids: usize,
+    stats_json: bool,
+) -> TestIdsExecutionPlan {
+    TestIdsExecutionPlan {
+        bundle_path: prepared.bundle_path,
+        out: prepared.out,
+        warmup_frames,
+        max_test_ids,
+        display_mode: artifact_display_mode_for_stats_json(stats_json),
+    }
+}
+
+fn build_test_ids_command_output(
+    plan: TestIdsExecutionPlan,
+) -> Result<GeneratedArtifactOutput, String> {
+    let TestIdsExecutionPlan {
+        bundle_path,
+        out,
+        warmup_frames,
+        max_test_ids,
+        display_mode,
+    } = plan;
+    build_generated_artifact_output(&out, display_mode, true, || {
+        crate::bundle_index::ensure_test_ids_json(&bundle_path, warmup_frames, max_test_ids)
+    })
+}
+
+fn build_meta_command_output(plan: MetaExecutionPlan) -> Result<GeneratedArtifactOutput, String> {
+    let MetaExecutionPlan {
+        canonical_path,
+        out,
+        display_mode,
+    } = plan;
+    build_generated_artifact_output(&out, display_mode, false, || Ok(canonical_path))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1632,25 +3072,23 @@ pub(crate) fn cmd_triage(
         return Err("--pack is only supported with `diag run`".to_string());
     }
 
-    let PreparedTriageCommand {
-        bundle_path,
-        out,
-        lite,
-        metric,
-    } = prepare_cmd_triage(TriageCommandRequest {
+    let prepared = prepare_cmd_triage(TriageCommandRequest {
         rest,
         workspace_root,
         triage_out,
     })?;
-    let payload = build_triage_payload(
-        &bundle_path,
-        lite,
-        metric,
-        stats_top,
-        sort_override,
-        warmup_frames,
-    )?;
-    write_json_artifact_output(&out, &payload, stats_json)
+    let plan = build_triage_execution_plan(
+        prepared,
+        TriageExecutionOptions {
+            stats_top,
+            sort_override,
+            warmup_frames,
+            stats_json,
+        },
+    );
+    let output = build_triage_command_output(plan)?;
+    emit_artifact_output_presentation(output.presentation);
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1682,7 +3120,9 @@ pub(crate) fn cmd_lint(
         },
     )?;
 
-    if write_lint_report_output(&out, &report, stats_json)? {
+    let output = build_lint_report_output(&out, &report, stats_json)?;
+    emit_artifact_output_presentation(output.presentation);
+    if output.exit_required {
         std::process::exit(1);
     }
     Ok(())
@@ -1701,22 +3141,14 @@ pub(crate) fn cmd_test_ids(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let PreparedTestIdsCommand { bundle_path, out } =
-        prepare_cmd_test_ids(TestIdsCommandRequest {
-            rest,
-            workspace_root,
-            test_ids_out,
-        })?;
-
-    if emit_existing_artifact_output_if_present(&out, stats_json)? {
-        return Ok(());
-    }
-
-    let canonical =
-        crate::bundle_index::ensure_test_ids_json(&bundle_path, warmup_frames, max_test_ids)?;
-    materialize_canonical_artifact_output(&canonical, &out)?;
-
-    emit_path_or_json_output(&out, stats_json)?;
+    let prepared = prepare_cmd_test_ids(TestIdsCommandRequest {
+        rest,
+        workspace_root,
+        test_ids_out,
+    })?;
+    let plan = build_test_ids_execution_plan(prepared, warmup_frames, max_test_ids, stats_json);
+    let output = build_test_ids_command_output(plan)?;
+    emit_artifact_output_presentation(output.presentation);
     Ok(())
 }
 
@@ -1731,17 +3163,18 @@ pub(crate) fn cmd_test_ids_index(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
-        rest,
-        workspace_root,
-        missing_hint: "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
-    })?;
-    ensure_and_emit_bundle_artifact_output(
-        &bundle_path,
-        warmup_frames,
-        stats_json,
+    let output = build_required_bundle_artifact_output(
+        EnsuredBundleArtifactCommandRequest {
+            rest,
+            workspace_root,
+            missing_hint: "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            warmup_frames,
+            stats_json,
+        },
         crate::bundle_index::ensure_test_ids_index_json,
-    )
+    )?;
+    emit_artifact_output_presentation(output.presentation);
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1755,17 +3188,18 @@ pub(crate) fn cmd_frames_index(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let bundle_path = resolve_required_bundle_artifact(RequiredBundleArtifactRequest {
-        rest,
-        workspace_root,
-        missing_hint: "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
-    })?;
-    ensure_and_emit_bundle_artifact_output(
-        &bundle_path,
-        warmup_frames,
-        stats_json,
+    let output = build_required_bundle_artifact_output(
+        EnsuredBundleArtifactCommandRequest {
+            rest,
+            workspace_root,
+            missing_hint: "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            warmup_frames,
+            stats_json,
+        },
         crate::frames_index::ensure_frames_index_json,
-    )
+    )?;
+    emit_artifact_output_presentation(output.presentation);
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1782,11 +3216,7 @@ pub(crate) fn cmd_meta(
         return Err("--pack is only supported with `diag run`".to_string());
     }
 
-    let PreparedMetaCommand {
-        canonical_path,
-        out,
-        display_mode,
-    } = prepare_cmd_meta(
+    let prepared = prepare_cmd_meta(
         MetaCommandRequest {
             rest,
             workspace_root,
@@ -1796,14 +3226,10 @@ pub(crate) fn cmd_meta(
         },
         warmup_frames,
     )?;
-    materialize_canonical_artifact_output(&canonical_path, &out)?;
-    emit_artifact_output(&out, display_mode)
-}
-
-fn print_meta_report(meta: &serde_json::Value, meta_path: &Path) {
-    for line in meta_report_lines(meta, meta_path) {
-        println!("{line}");
-    }
+    let plan = build_meta_execution_plan(prepared);
+    let output = build_meta_command_output(plan)?;
+    emit_artifact_output_presentation(output.presentation);
+    Ok(())
 }
 
 fn meta_report_u64_field(value: &serde_json::Value, key: &str) -> u64 {
@@ -1817,8 +3243,8 @@ fn meta_report_str_field<'a>(value: &'a serde_json::Value, key: &str) -> &'a str
         .unwrap_or("")
 }
 
-fn meta_report_lines(meta: &serde_json::Value, meta_path: &Path) -> Vec<String> {
-    let mut lines = vec![
+fn meta_report_summary_lines(meta: &serde_json::Value, meta_path: &Path) -> Vec<String> {
+    vec![
         "bundle_meta:".to_string(),
         format!("  meta_json: {}", meta_path.display()),
         format!("  bundle: {}", meta_report_str_field(meta, "bundle")),
@@ -1842,37 +3268,52 @@ fn meta_report_lines(meta: &serde_json::Value, meta_path: &Path) -> Vec<String> 
             meta_report_u64_field(meta, "semantics_table_entries_total"),
             meta_report_u64_field(meta, "semantics_table_unique_keys_total"),
         ),
-    ];
+    ]
+}
 
-    let Some(windows) = meta.get("windows").and_then(|value| value.as_array()) else {
-        return lines;
-    };
+fn meta_report_window_considered_frame_id(window: &serde_json::Value) -> String {
+    window
+        .get("considered_frame_id")
+        .and_then(|value| value.as_u64())
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "null".to_string())
+}
+
+fn meta_report_window_line(window: &serde_json::Value) -> String {
+    format!(
+        "    - window={} snapshots={} considered_frame={} semantics(resolved/inline/table)={}/{}/{} table(entries/keys)={}/{}",
+        meta_report_u64_field(window, "window"),
+        meta_report_u64_field(window, "snapshots_total"),
+        meta_report_window_considered_frame_id(window),
+        meta_report_u64_field(window, "snapshots_with_semantics_total"),
+        meta_report_u64_field(window, "snapshots_with_inline_semantics_total"),
+        meta_report_u64_field(window, "snapshots_with_table_semantics_total"),
+        meta_report_u64_field(window, "semantics_table_entries_total"),
+        meta_report_u64_field(window, "semantics_table_unique_keys_total"),
+    )
+}
+
+fn append_meta_report_window_lines(lines: &mut Vec<String>, windows: &[serde_json::Value]) {
     if windows.is_empty() {
-        return lines;
+        return;
     }
 
     lines.push("  windows:".to_string());
     let max = 6usize;
     for window in windows.iter().take(max) {
-        let considered_frame_id = window
-            .get("considered_frame_id")
-            .and_then(|value| value.as_u64())
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "null".to_string());
-        lines.push(format!(
-            "    - window={} snapshots={} considered_frame={} semantics(resolved/inline/table)={}/{}/{} table(entries/keys)={}/{}",
-            meta_report_u64_field(window, "window"),
-            meta_report_u64_field(window, "snapshots_total"),
-            considered_frame_id,
-            meta_report_u64_field(window, "snapshots_with_semantics_total"),
-            meta_report_u64_field(window, "snapshots_with_inline_semantics_total"),
-            meta_report_u64_field(window, "snapshots_with_table_semantics_total"),
-            meta_report_u64_field(window, "semantics_table_entries_total"),
-            meta_report_u64_field(window, "semantics_table_unique_keys_total"),
-        ));
+        lines.push(meta_report_window_line(window));
     }
     if windows.len() > max {
         lines.push(format!("    - ... ({} more)", windows.len() - max));
     }
+}
+
+fn meta_report_lines(meta: &serde_json::Value, meta_path: &Path) -> Vec<String> {
+    let mut lines = meta_report_summary_lines(meta, meta_path);
+
+    let Some(windows) = meta.get("windows").and_then(|value| value.as_array()) else {
+        return lines;
+    };
+    append_meta_report_window_lines(&mut lines, windows);
     lines
 }

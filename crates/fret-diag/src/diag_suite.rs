@@ -3775,8 +3775,14 @@ mod tests {
         .expect("success tail should fall through to row recording when lint and post-run skip");
 
         assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].get("script").and_then(|value| value.as_str()), Some("unrelated.json"));
-        assert_eq!(rows[0].get("stage").and_then(|value| value.as_str()), Some("passed"));
+        assert_eq!(
+            rows[0].get("script").and_then(|value| value.as_str()),
+            Some("unrelated.json")
+        );
+        assert_eq!(
+            rows[0].get("stage").and_then(|value| value.as_str()),
+            Some("passed")
+        );
         assert!(rows[0].get("lint").is_some_and(|value| value.is_null()));
         assert_eq!(
             rows[0]

@@ -142,6 +142,12 @@ use tooling_failures::{
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value};
 
+pub use diag_dashboard::{
+    DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
+    DashboardSummaryProjection, dashboard_counter_entries, dashboard_failing_summary_entries,
+    dashboard_human_lines_from_projection, dashboard_reason_code_entries,
+    project_dashboard_summary,
+};
 pub(crate) use math::{percentile_nearest_rank_sorted, summarize_times_us};
 
 #[derive(Debug, Clone)]
@@ -3798,23 +3804,66 @@ fn script_env_defaults_value(value: &serde_json::Value) -> Vec<(String, String)>
     out.into_iter().collect()
 }
 
-fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
-    let path = out_dir.join("capabilities.json");
-    let Ok(bytes) = std::fs::read(&path) else {
-        return Vec::new();
+pub(crate) fn resolve_filesystem_capabilities_path(base_dir: &Path) -> Option<PathBuf> {
+    let direct = base_dir.join("capabilities.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = base_dir.join("_root").join("capabilities.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    if let Some(parent) = base_dir.parent() {
+        let from_parent = parent.join("capabilities.json");
+        if from_parent.is_file() {
+            return Some(from_parent);
+        }
+    }
+    None
+}
+
+pub(crate) fn read_filesystem_capabilities_payload(
+    path: &Path,
+) -> Option<fret_diag_protocol::FilesystemCapabilitiesV1> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return None;
     };
-    let Ok(parsed) = serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes)
-    else {
-        return Vec::new();
-    };
+    serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes).ok()
+}
+
+pub(crate) fn normalize_filesystem_capabilities(
+    parsed: &fret_diag_protocol::FilesystemCapabilitiesV1,
+) -> Vec<String> {
     let mut caps: Vec<String> = parsed
         .capabilities
-        .into_iter()
-        .filter_map(|c| compat::normalize_capability(&c))
+        .iter()
+        .filter_map(|c| compat::normalize_capability(c))
         .collect();
     caps.sort();
     caps.dedup();
     caps
+}
+
+fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
+    let Some(path) = resolve_filesystem_capabilities_path(out_dir) else {
+        return Vec::new();
+    };
+    let Some(parsed) = read_filesystem_capabilities_payload(&path) else {
+        return Vec::new();
+    };
+    normalize_filesystem_capabilities(&parsed)
+}
+
+pub(crate) fn read_filesystem_capabilities_with_source(
+    base_dir: &Path,
+) -> (Option<PathBuf>, Vec<String>) {
+    let Some(path) = resolve_filesystem_capabilities_path(base_dir) else {
+        return (None, Vec::new());
+    };
+    let Some(parsed) = read_filesystem_capabilities_payload(&path) else {
+        return (Some(path), Vec::new());
+    };
+    (Some(path), normalize_filesystem_capabilities(&parsed))
 }
 
 fn capabilities_check_v1(
@@ -4003,6 +4052,88 @@ mod capability_tests {
         assert!(missing.contains(&"diag.screenshot_png".to_string()));
 
         let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn read_filesystem_capabilities_with_source_falls_back_to_parent_path() {
+        let parent_dir = make_temp_dir("fret-diag-capabilities-parent");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["multi_window".to_string(), "diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
+        };
+        std::fs::write(
+            parent_dir.join("session").join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+        let expected_source_path = parent_dir.join("session").join("capabilities.json");
+
+        let (source_path, available) = read_filesystem_capabilities_with_source(&run_dir);
+
+        assert_eq!(source_path.as_deref(), Some(expected_source_path.as_path()));
+        assert_eq!(
+            available,
+            vec![
+                "diag.multi_window".to_string(),
+                "diag.script_v2".to_string()
+            ]
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn doctor_report_includes_normalized_capabilities_from_shared_loader() {
+        let bundle_dir = make_temp_dir("fret-diag-doctor-capabilities");
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["multi_window".to_string(), "diag.script_v2".to_string()],
+            runner_kind: Some("filesystem".to_string()),
+            runner_version: Some("1".to_string()),
+            hints: None,
+        };
+        std::fs::write(
+            bundle_dir.join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+        let expected_capabilities_path = bundle_dir.join("capabilities.json");
+        let expected_capabilities_path_str = expected_capabilities_path.display().to_string();
+
+        let report = crate::commands::doctor::doctor_report_json(&bundle_dir, 4);
+
+        assert_eq!(
+            report
+                .get("capabilities_path")
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_path_str.as_str())
+        );
+        assert_eq!(
+            report
+                .get("capabilities")
+                .and_then(|value| value.get("normalized_capabilities_total"))
+                .and_then(|value| value.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            report
+                .get("capabilities")
+                .and_then(|value| value.get("normalized_capabilities"))
+                .and_then(|value| value.as_array())
+                .map(|items| items
+                    .iter()
+                    .filter_map(|item| item.as_str())
+                    .collect::<Vec<_>>()),
+            Some(vec!["diag.multi_window", "diag.script_v2"])
+        );
+
+        let _ = std::fs::remove_dir_all(&bundle_dir);
     }
 
     #[test]

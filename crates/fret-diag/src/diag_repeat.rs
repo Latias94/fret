@@ -8,6 +8,13 @@ use crate::regression_summary::{
     RegressionTotalsV1,
 };
 
+fn repeat_run_bundle_artifact(run: &serde_json::Value) -> Option<String> {
+    run.get("bundle_artifact")
+        .or_else(|| run.get("bundle_json"))
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string())
+}
+
 fn repeat_run_to_regression_item(
     run: &serde_json::Value,
     workspace_root: &Path,
@@ -39,10 +46,7 @@ fn repeat_run_to_regression_item(
             Some("failed") => Some("diag.repeat.run_failed".to_string()),
             Some("error") | Some(_) | None => Some("tooling.diag_repeat.run_error".to_string()),
         });
-    let bundle_artifact = run
-        .get("bundle_artifact")
-        .and_then(|v| v.as_str())
-        .map(|v| v.to_string());
+    let bundle_artifact = repeat_run_bundle_artifact(run);
     let bundle_dir = run
         .get("last_bundle_dir")
         .and_then(|v| v.as_str())
@@ -807,8 +811,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                     "reason_code": s.reason_code,
                     "reason": s.reason,
                     "last_bundle_dir": s.last_bundle_dir,
-                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "perf": perf,
                     "lint": lint,
                     "evidence": evidence,
@@ -917,4 +921,34 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repeat_run_bundle_artifact_accepts_legacy_bundle_json_alias() {
+        let run = serde_json::json!({
+            "bundle_json": "target/fret-diag/bundle.schema2.json"
+        });
+
+        assert_eq!(
+            repeat_run_bundle_artifact(&run).as_deref(),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
+
+    #[test]
+    fn repeat_run_bundle_artifact_prefers_canonical_bundle_artifact() {
+        let run = serde_json::json!({
+            "bundle_artifact": "target/fret-diag/canonical.schema2.json",
+            "bundle_json": "target/fret-diag/legacy.bundle.json"
+        });
+
+        assert_eq!(
+            repeat_run_bundle_artifact(&run).as_deref(),
+            Some("target/fret-diag/canonical.schema2.json")
+        );
+    }
 }

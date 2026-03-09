@@ -175,6 +175,12 @@ use bundle_stats_snapshot::{
     snapshot_widget_measure_hotspots,
 };
 
+fn bundle_artifact_alias_pair(bundle_path: &Path) -> (String, String) {
+    let bundle_artifact = bundle_path.display().to_string();
+    let bundle_json = bundle_artifact.clone();
+    (bundle_artifact, bundle_json)
+}
+
 fn compact_string_middle<'a>(s: &'a str, head_bytes: usize, tail_bytes: usize) -> Cow<'a, str> {
     // Keep `diag stats` output readable: element paths can be extremely long on Windows
     // (workspace root + nested debug identity chain). Prefer keeping both the root prefix and the
@@ -501,6 +507,15 @@ pub(super) fn bundle_stats_diff_from_paths(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bundle_artifact_alias_pair_dual_writes_legacy_bundle_json_alias() {
+        let (bundle_artifact, bundle_json) =
+            bundle_artifact_alias_pair(Path::new("target/fret-diag/bundle.schema2.json"));
+
+        assert_eq!(bundle_artifact, "target/fret-diag/bundle.schema2.json");
+        assert_eq!(bundle_json, "target/fret-diag/bundle.schema2.json");
+    }
 
     #[test]
     fn stats_diff_sorts_by_abs_delta_then_key() {

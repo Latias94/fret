@@ -44,6 +44,42 @@ pub(crate) struct ReproCmdContext {
     pub checks: diag_run::RunChecks,
 }
 
+fn bundle_artifact_alias_string(path: Option<&Path>) -> Option<String> {
+    path.map(|path| path.display().to_string())
+}
+
+fn build_repro_run_row(
+    script_path: &Path,
+    run_id: u64,
+    stage: Option<&str>,
+    step_index: Option<u64>,
+    reason: Option<&str>,
+    last_bundle_dir: Option<&str>,
+    bundle_path: Option<&Path>,
+) -> serde_json::Value {
+    let bundle_artifact = bundle_artifact_alias_string(bundle_path);
+    serde_json::json!({
+        "script_path": script_path.display().to_string(),
+        "run_id": run_id,
+        "stage": stage,
+        "step_index": step_index,
+        "reason": reason,
+        "last_bundle_dir": last_bundle_dir,
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_artifact_alias_string(bundle_path),
+    })
+}
+
+fn build_repro_packed_bundle_entry(item: &crate::ReproPackItem, idx: usize) -> serde_json::Value {
+    let bundle_artifact = item.bundle_artifact.display().to_string();
+    serde_json::json!({
+        "zip_prefix": repro_zip_prefix_for_script(item, idx),
+        "script_path": item.script_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": item.bundle_artifact.display().to_string(),
+    })
+}
+
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
@@ -528,15 +564,15 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             selected_bundle_path = bundle_path.clone();
         }
 
-        run_rows.push(serde_json::json!({
-            "script_path": src.display().to_string(),
-            "run_id": result.run_id,
-            "stage": result.stage,
-            "step_index": result.step_index,
-            "reason": result.reason,
-            "last_bundle_dir": result.last_bundle_dir,
-            "bundle_json": bundle_path.as_ref().map(|p| p.display().to_string()),
-        }));
+        run_rows.push(build_repro_run_row(
+            &src,
+            result.run_id,
+            result.stage.as_deref(),
+            result.step_index,
+            result.reason.as_deref(),
+            result.last_bundle_dir.as_deref(),
+            bundle_path.as_deref(),
+        ));
 
         if result.stage.as_deref() == Some("passed") {
             let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
@@ -688,14 +724,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             pack_items
                 .iter()
                 .enumerate()
-                .map(|(idx, item)| {
-                    serde_json::json!({
-                        "zip_prefix": repro_zip_prefix_for_script(item, idx),
-                        "script_path": item.script_path.display().to_string(),
-                        "bundle_json": item.bundle_artifact.display().to_string(),
-                        "bundle_artifact": item.bundle_artifact.display().to_string(),
-                    })
-                })
+                .map(|(idx, item)| build_repro_packed_bundle_entry(item, idx))
                 .collect(),
         )
     } else {
@@ -1002,4 +1031,50 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     println!("REPRO-OK");
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_repro_run_row_writes_canonical_bundle_artifact_first() {
+        let row = build_repro_run_row(
+            Path::new("tools/diag-scripts/sample.json"),
+            7,
+            Some("passed"),
+            Some(1),
+            Some("ok"),
+            Some("777-bundle"),
+            Some(Path::new("target/fret-diag/bundle.schema2.json")),
+        );
+
+        assert_eq!(
+            row.get("bundle_artifact").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+        assert_eq!(
+            row.get("bundle_json").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
+
+    #[test]
+    fn build_repro_packed_bundle_entry_dual_writes_legacy_alias() {
+        let item = crate::ReproPackItem {
+            script_path: PathBuf::from("tools/diag-scripts/sample.json"),
+            bundle_artifact: PathBuf::from("target/fret-diag/bundle.schema2.json"),
+        };
+
+        let row = build_repro_packed_bundle_entry(&item, 0);
+
+        assert_eq!(
+            row.get("bundle_artifact").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+        assert_eq!(
+            row.get("bundle_json").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
 }

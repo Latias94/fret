@@ -1,5 +1,15 @@
 use std::path::{Path, PathBuf};
 
+fn summary_bundle_artifact_path(summary_json: &serde_json::Value) -> Option<PathBuf> {
+    summary_json
+        .get("selected_bundle_artifact")
+        .or_else(|| summary_json.get("packed_bundle_artifact"))
+        .or_else(|| summary_json.get("selected_bundle_json"))
+        .or_else(|| summary_json.get("packed_bundle_json"))
+        .and_then(|v| v.as_str())
+        .map(PathBuf::from)
+}
+
 fn metadata_mtime_unix_ms(meta: &std::fs::Metadata) -> Option<u64> {
     let modified = meta.modified().ok()?;
     let dur = modified
@@ -482,12 +492,7 @@ pub(crate) fn write_evidence_index(
 
     let footprint = artifacts_root.join("resource.footprint.json");
     let bundle_stats = summary_json
-        .and_then(|v| {
-            v.get("selected_bundle_json")
-                .or_else(|| v.get("packed_bundle_json"))
-        })
-        .and_then(|v| v.as_str())
-        .map(PathBuf::from)
+        .and_then(summary_bundle_artifact_path)
         .filter(|p| p.is_file())
         .and_then(|p| bundle_stats_summary_from_path(&p));
 
@@ -513,4 +518,31 @@ pub(crate) fn write_evidence_index(
 
     let _ = crate::write_json_value(&out_path, &payload);
     Ok(out_path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::summary_bundle_artifact_path;
+    use std::path::Path;
+
+    #[test]
+    fn summary_bundle_artifact_path_prefers_canonical_selected_bundle_artifact() {
+        let summary = serde_json::json!({
+            "selected_bundle_artifact": "target/fret-diag/canonical.schema2.json",
+            "selected_bundle_json": "target/fret-diag/legacy.bundle.json"
+        });
+
+        let path = summary_bundle_artifact_path(&summary).expect("bundle path");
+        assert_eq!(path, Path::new("target/fret-diag/canonical.schema2.json"));
+    }
+
+    #[test]
+    fn summary_bundle_artifact_path_accepts_legacy_bundle_json_aliases() {
+        let summary = serde_json::json!({
+            "packed_bundle_json": "target/fret-diag/legacy.bundle.json"
+        });
+
+        let path = summary_bundle_artifact_path(&summary).expect("bundle path");
+        assert_eq!(path, Path::new("target/fret-diag/legacy.bundle.json"));
+    }
 }
