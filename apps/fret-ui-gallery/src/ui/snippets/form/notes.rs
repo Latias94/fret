@@ -13,7 +13,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ),
             shadcn::typography::muted(
                 cx,
-                "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (Form alias), `ecosystem/fret-ui-shadcn/src/field.rs` (FieldSet), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
+                "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (`FormControl` is slot-like for a single child), `ecosystem/fret-ui-shadcn/src/field.rs` (`Form`/`FormItem`/helpers), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
             ),
             shadcn::typography::muted(
                 cx,
@@ -21,7 +21,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ),
             shadcn::typography::muted(
                 cx,
-                "Fret keeps the shadcn taxonomy (`Form`, `FormField`, `FormItem`, etc.) but maps it onto framework-agnostic field primitives instead of mirroring `react-hook-form` literally.",
+                "Fret keeps the shadcn taxonomy (`Form`, `FormField`, `FormItem`, etc.) but maps it onto framework-agnostic field primitives instead of mirroring `react-hook-form` literally; `FormControl` stays a transparent single-control wrapper rather than a layout column.",
             ),
             shadcn::typography::muted(
                 cx,

@@ -14,8 +14,13 @@ composition model.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/form.mdx`
+There is no single `components/form.mdx` page in the current v4 repo snapshot. Use these sources
+instead:
+
+- Component source: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/form.tsx`
 - Upstream demo: `repo-ref/ui/apps/v4/app/(internal)/sink/components/form-demo.tsx`
+- Related docs: `repo-ref/ui/apps/v4/content/docs/forms/react-hook-form.mdx`
+- Related docs: `repo-ref/ui/apps/v4/content/docs/forms/tanstack-form.mdx`
 
 ## Fret implementation
 
@@ -29,29 +34,39 @@ composition model.
 
 ### Authoring surface
 
-- Pass: `Form` / `FormItem` / `FormLabel` / `FormControl` / `FormDescription` / `FormMessage` are all
-  exposed as shadcn-aligned taxonomy aliases over Fret field primitives.
-- Pass: `FormField::new(form_state, id, control)` covers the common helper path for wiring label,
-  description, control decoration, and error visibility around one field.
-- Pass: The API is intentionally framework-agnostic: upstream RHF-specific render-prop patterns are
-  translated into `FormState` + direct model-bound controls instead of mirroring `react-hook-form` literally.
-- Note: Because this surface is alias/helper-oriented rather than a nested slot tree, it does not need a
-  generic `compose()` builder or a children-driven authoring API beyond the existing `Form`/`FieldSet` composition.
+- Pass: `Form` / `FormItem` / `FormLabel` / `FormControl` / `FormDescription` / `FormMessage`
+  remain available under the expected shadcn taxonomy.
+- Pass: `FormField::new(form_state, id, control)` still covers the common Fret-native helper path
+  for wiring label, description, control decoration, and error visibility around one field.
+- Pass: The API remains intentionally framework-agnostic: upstream RHF-specific render-prop
+  patterns are translated into `FormState` + direct model-bound controls instead of mirroring
+  `react-hook-form` literally.
+- Pass: `FormControl` now approximates upstream `Slot.Root` ownership more closely: a single child
+  passes through unchanged, so the form surface no longer injects `FieldContent`'s `flex-1`
+  / `min-w-0` / `gap-1.5` defaults into every control.
+- Note: Multi-child `FormControl::new([...])` remains supported as a compatibility escape hatch, but
+  it now falls back to a zero-gap column without fill defaults. Upstream-style compositions should
+  prefer passing a single control root (or wrapping multiple controls explicitly at the call site).
 
 ### Composition model
 
 - Pass: `Form` maps to a vertical `FieldSet` container.
 - Pass: `FormItem` maps to `Field`.
-- Pass: `FormControl` maps to `FieldContent`.
 - Pass: `FormMessage` maps to `FieldError`.
-- Pass: `FormField` can decorate common controls with invalid styling and labels based on `FormState`.
+- Pass: `FormField` can decorate common controls with invalid styling and labels based on
+  `FormState`.
+- Adjusted: `FormControl` is no longer treated as a `FieldContent` alias. This was a public-surface
+  drift, because upstream `FormControl` is a slot-like control wrapper rather than a layout column.
 
 ## Conclusion
 
-- Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing surface.
-- Result: The main missing piece for docs parity was a concise gallery `Usage` example and an audit note clarifying the framework-agnostic mapping.
-- Result: Follow-up work should focus on richer validation/resolver recipes only if a concrete product need appears.
+- Result: The main drift was public-surface ownership, not a mechanism-layer gap.
+- Result: `FormControl` now keeps layout negotiation caller-owned by default, which matches shadcn
+  docs/examples more closely and avoids repeating the `card`/`field` width footgun at the form
+  surface.
+- Result: Follow-up work should focus on richer resolver/validation recipes only if a concrete
+  product need appears; the core composition surface no longer forces `FieldContent` defaults.
 
 ## Validation
 
-- `cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-shadcn --lib form_control_is_slot_like_for_single_child form_control_multi_child_fallback_drops_field_content_fill_defaults --status-level fail`
