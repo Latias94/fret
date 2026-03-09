@@ -353,7 +353,7 @@ canonical for breadth/presence/audit state; this queue adds priority, risk class
 | Form | `form` | P1 | Public-surface drift + field ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery usage anchor + focused unit test | Reviewed 2026-03: `FormControl` is slot-like for one child, while `FormField` keeps Fret-native helper ergonomics and leaves width/layout negotiation caller-owned |
 | Field | `field` | P1 | Description/error ownership + width negotiation | shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Layout invariant test | Reviewed 2026-03: `FieldDescription` remains recipe-owned `w-full`, while plain `FieldLabel`/`FieldTitle` keep intrinsic-width defaults and full-width comes from `Field` orientation or wrapped-card label composition |
 | Input Group | `input_group` | P1 | Slot stretch + icon/affordance sizing | shadcn docs/examples + Base UI | `fret-ui-shadcn` | Mixed | Root-width override unit test + gallery page-alignment evidence | Reviewed 2026-03: root `w-full min-w-0` is recipe-owned because upstream source defines it, but caller layout refinements must still override explicit width choices |
-| Table | `table` | P1 | Caller-owned width/overflow + semantics | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery layout invariant | Easy to conflate table shell constraints with recipe defaults |
+| Table | `table` | P1 | Caller-owned width/overflow + semantics | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Existing width-override unit test + gallery page evidence | Reviewed 2026-03: root recipe correctly owns `w-full overflow-x-auto`, while page/container sizing and data-table policy remain caller-owned |
 | Pagination | `pagination` | P1 | Inline layout + truncation + responsive ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Geometry/truncation invariant | Likely small but repetitive width/ellipsis ownership decisions |
 | Breadcrumb | `breadcrumb` | P1 | Inline overflow + separator ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Layout/truncation invariant | Similar risk profile to Pagination; good low-cost cleanup after P0 |
 
@@ -423,7 +423,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | sonner | `sonner` | Present | In review | Toast store + overlay layer + timers; upsert-by-id; swipe-to-dismiss; hover pause/resume; max-toasts eviction; action/cancel; manual promise handle; audit: `docs/audits/shadcn-sonner.md` |
 | spinner | `spinner` | Present | Unreviewed |  |
 | switch | `switch` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`switch-demo`) |
-| table | `table` | Present | Unreviewed |  |
+| table | `table` | Present | In review | Width/overflow ownership aligns with upstream wrapper; audit: `docs/audits/shadcn-table.md`; gates: `ecosystem/fret-ui-shadcn/src/table.rs` |
 | tabs | `tabs` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`tabs-demo`) |
 | textarea | `textarea` | Present | In review | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`) |
 | toggle | `toggle` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`) |
