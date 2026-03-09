@@ -228,7 +228,10 @@ The capability-source side of that behavior is now also aligned:
 - `diag doctor` now reports normalized capabilities from that same resolved source path,
 - the first-pass non-filesystem direction is now documented in
   `NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md` as an additive provenance contract instead of a
-  replacement for filesystem paths.
+  replacement for filesystem paths,
+- the next bounded implementation sketch is now captured in
+  `CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`, which keeps legacy path fields and stages
+  additive `capability_source` adoption separately from any real transport work.
 
 The DevTools/MCP defer audit makes another boundary explicit:
 

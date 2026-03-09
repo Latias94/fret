@@ -22,6 +22,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md`
 - `docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
 - `docs/workstreams/diag-fearless-refactor-v2/DOCUMENT_MIGRATION_INTENT.md`
 - `docs/workstreams/diag-fearless-refactor-v2/DEBT_RETIREMENT_TRACKER.md`

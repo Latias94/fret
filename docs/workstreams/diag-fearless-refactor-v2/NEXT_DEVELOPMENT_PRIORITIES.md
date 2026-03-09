@@ -102,6 +102,8 @@ Recent landing in this priority bucket:
 
 - the first-pass contract direction now lives in
   `NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`,
+- the bounded follow-up implementation sketch now lives in
+  `CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`,
 - the documented recommendation is to keep filesystem path reporting unchanged and grow
   non-filesystem provenance through an additive source object rather than fabricated paths.
 
