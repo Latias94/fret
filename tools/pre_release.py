@@ -111,6 +111,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_material3_snackbar_default_surface.py")],
     )
     _run_checked(
+        "Menu default surface policy (prefer action)",
+        [py, str(repo_root / "tools/gate_menu_action_default_surfaces.py")],
+    )
+    _run_checked(
         "Teaching surfaces policy (no legacy stack helpers)",
         [py, str(repo_root / "tools/gate_no_stack_in_cookbook.py")],
     )

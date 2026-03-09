@@ -207,6 +207,7 @@ Post-v1 direction (recommended):
   - Material snackbar gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now locks that gallery snippet to `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs the gate so the default snippet does not drift back to compat spellings.
   - Menu-family alias update (as of 2026-03-09): `ContextMenu*` and `Menubar*` item/checkbox/radio builders now also expose `action(...)` aliases, and the broader gallery menu surface now prefers that spelling across the main context-menu / menubar snippets (including `demo`, `checkboxes`/`checkbox`, `radio`, `submenu`, `rtl`, and icon/group variants), so the remaining command-first blocker is narrower and mostly about future docs/default-surface adoption rather than missing builder APIs.
   - Menu-helper follow-up (as of 2026-03-09): `text_edit_context_menu.rs`, workspace tab-strip context menus, and the focused menubar/context-menu keyboard-dismiss tests now also prefer `action(...)`, reducing the remaining command-shaped residue to narrower advanced/internal surfaces plus future gating work.
+  - Menu gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now protects the primary ui-gallery context-menu / menubar snippets from drifting back to `.on_select(...)`, and `tools/pre_release.py` runs that gate with the rest of the teaching-surface policy suite.
 
 ---
 

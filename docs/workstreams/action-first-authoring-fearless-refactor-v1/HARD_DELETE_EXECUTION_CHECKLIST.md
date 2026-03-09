@@ -210,7 +210,7 @@ Checklist:
 | Split mechanism-level vs default-facing APIs | In progress | audit recommends keeping catalog/mechanism surfaces command-centric while adding aliases to app-facing widget builders |
 | Add typed-action-first adapters where needed | Mostly done | low-risk alias pass plus `ContextMenu*` / `Menubar*` menu-family aliases are now landed |
 | Update teaching surfaces | In progress | navigation-menu, context-menu, and menubar gallery snippets prefer `action(...)`; remaining app/internal helper surfaces and focused gates still need follow-through |
-| Add focused docs/examples gate | Open | lock the post-decision teaching path |
+| Add focused docs/examples gate | Done | `tools/gate_menu_action_default_surfaces.py` now keeps the primary context-menu / menubar gallery snippets on `action(...)`, and `tools/pre_release.py` runs it in the default policy suite |
 
 Hard-delete exit criteria:
 
