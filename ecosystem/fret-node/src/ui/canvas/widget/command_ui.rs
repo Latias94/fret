@@ -18,8 +18,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 }
 
 pub(super) fn finish_command_paint<H: UiHost>(cx: &mut CommandCx<'_, H>) -> bool {
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::retained_widget_runtime_shared::invalidate_widget_paint(cx);
     true
 }
 

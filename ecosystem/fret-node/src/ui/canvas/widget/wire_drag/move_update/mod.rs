@@ -81,7 +81,6 @@ pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddl
 
     canvas.interaction.hover_edge = new_hover_edge;
     canvas.interaction.wire_drag = Some(w);
-    cx.request_redraw();
-    cx.invalidate_self(Invalidation::Paint);
+    super::super::paint_invalidation::invalidate_paint(cx);
     true
 }

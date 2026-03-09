@@ -2,7 +2,7 @@ pub(super) use std::sync::Arc;
 
 pub(super) use fret_core::{Modifiers, Point, Px};
 pub(super) use fret_ui::UiHost;
-pub(super) use fret_ui::retained_bridge::{EventCx, Invalidation};
+pub(super) use fret_ui::retained_bridge::EventCx;
 
 pub(super) use crate::core::{EdgeId, PortId};
 pub(super) use crate::rules::{ConnectDecision, DiagnosticSeverity};

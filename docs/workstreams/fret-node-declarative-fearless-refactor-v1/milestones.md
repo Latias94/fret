@@ -566,6 +566,10 @@ real editors.
   `context_menu/ui.rs`, `context_menu/opening.rs`, `searcher_ui.rs`, and
   `insert_node_drag/session.rs` stop re-embedding the same event-scope
   redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
+- command / retained-runtime / wire-commit paint tails now also route through small private helper
+  seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
+  `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
+  redraw-plus-paint-invalidation tail blocks inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

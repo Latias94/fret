@@ -38,6 +38,10 @@ pub(super) fn sync_runtime_theme<M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn finish_middleware_handled<H: UiHost, C: WidgetCxLike<H>>(cx: &mut C) {
     cx.stop_propagation();
+    invalidate_widget_paint(cx);
+}
+
+pub(super) fn invalidate_widget_paint<H: UiHost, C: WidgetCxLike<H>>(cx: &mut C) {
     cx.request_redraw();
     cx.invalidate_self(Invalidation::Paint);
 }

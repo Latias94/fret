@@ -127,8 +127,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
     );
 
     cx.release_pointer_capture();
-    cx.request_redraw();
-    cx.invalidate_paint();
+    super::commit_cx::invalidate_commit_paint(cx);
 
     true
 }

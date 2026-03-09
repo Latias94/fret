@@ -10,6 +10,11 @@ pub(in super::super) trait WireCommitCx<H: UiHost> {
     fn invalidate_paint(&mut self);
 }
 
+pub(in super::super) fn invalidate_commit_paint<H: UiHost>(cx: &mut impl WireCommitCx<H>) {
+    cx.request_redraw();
+    cx.invalidate_paint();
+}
+
 impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::EventCx<'a, H> {
     fn host(&mut self) -> &mut H {
         self.app
