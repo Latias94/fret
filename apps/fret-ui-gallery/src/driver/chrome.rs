@@ -33,6 +33,7 @@ pub(super) fn tab_strip_view(
             .unwrap_or_default();
 
         let tab_strip = WorkspaceTabStrip::new(selected.clone())
+            .pane_id(super::UI_GALLERY_WORKSPACE_PANE_ID)
             .test_id_root("ui-gallery-workspace-tabstrip")
             .tab_test_id_prefix("ui-gallery-workspace-tab")
             .tabs(workspace_tab_ids.iter().map(|tab_id| {

@@ -7162,6 +7162,27 @@
       ]
     },
     {
+      "id": "ui-gallery-workspace-shell-focus-command-scope-smoke",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "focus",
+        "keyboard",
+        "smoke",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Sets the theme preset to zinc/dark explicitly and enables the workspace tab strip.",
+        "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
+        "Presses Escape and asserts focus returns to the workspace content surface."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
       "required_capabilities": [],

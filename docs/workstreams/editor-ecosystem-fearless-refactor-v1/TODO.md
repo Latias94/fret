@@ -117,7 +117,10 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       `ecosystem/fret-workspace/src/theme_tokens.rs` unit tests, workspace shell shadcn chrome now
       has a screenshot gate in
       `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`,
-      while workspace-shell focus/command-scope gates remain open.
+      and workspace-shell focus/command-scope now has a dedicated smoke gate in
+      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
+      backed by the `ui_gallery` single-pane `WorkspaceCommandScope` + `WorkspacePaneContentFocusTarget`
+      wiring; edit-session commit/cancel coverage still remains open.
 - [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
       Current status: the `imui` proof surface and the `ui_gallery` workspace-shell proof surface
       now both have anchored code + gate evidence, but the `apps/fret-editor` side still needs the

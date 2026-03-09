@@ -6,10 +6,13 @@ use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
 use fret_ui::declarative;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SemanticsProps, SpacerProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
+    SpacerProps,
+};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
-use fret_workspace::WorkspaceFrame;
+use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
@@ -25,6 +28,7 @@ pub(super) struct PreparedFrame {
     pub(super) selected_page: Model<Arc<str>>,
     pub(super) workspace_tabs: Model<Vec<Arc<str>>>,
     pub(super) workspace_dirty_tabs: Model<Vec<Arc<str>>>,
+    pub(super) workspace_window_layout: Model<fret_workspace::layout::WorkspaceWindowLayout>,
     pub(super) nav_query: Model<String>,
     pub(super) settings_open: Model<bool>,
     pub(super) settings_menu_bar_os: Model<Option<Arc<str>>>,
@@ -57,6 +61,7 @@ pub(super) fn begin_frame(
 
     #[cfg(target_arch = "wasm32")]
     UiGalleryDriver::sync_page_router_from_external_history(app, window, state);
+    UiGalleryDriver::sync_workspace_window_layout_from_models(app, state);
 
     let availability = app
         .global::<WindowCommandAvailabilityService>()
@@ -112,6 +117,7 @@ pub(super) fn begin_frame(
     let selected_page = state.selected_page.clone();
     let workspace_tabs = state.workspace_tabs.clone();
     let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
+    let workspace_window_layout = state.workspace_window_layout.clone();
     let nav_query = state.nav_query.clone();
     let settings_open = state.settings_open.clone();
     let settings_menu_bar_os = state.settings_menu_bar_os.clone();
@@ -165,6 +171,7 @@ pub(super) fn begin_frame(
         selected_page,
         workspace_tabs,
         workspace_dirty_tabs,
+        workspace_window_layout,
         nav_query,
         settings_open,
         settings_menu_bar_os,
@@ -241,6 +248,48 @@ fn render_root_contents(
         &frame.selected_page,
         frame.content_models.as_ref(),
     );
+    let content = cx.pressable(
+        PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+                layout.size.min_width = Some(Length::Px(Px(0.0)));
+                layout.size.min_height = Some(Length::Px(Px(0.0)));
+                layout.flex.grow = 1.0;
+                layout
+            },
+            enabled: true,
+            focusable: true,
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::TextField),
+                label: Some(Arc::from("UI gallery workspace content")),
+                test_id: Some(Arc::from("ui-gallery-workspace-content")),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
+            vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout.size.min_width = Some(Length::Px(Px(0.0)));
+                        layout.size.min_height = Some(Length::Px(Px(0.0)));
+                        layout.flex.grow = 1.0;
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| [content],
+            )]
+        },
+    );
+    let content =
+        WorkspacePaneContentFocusTarget::new(super::UI_GALLERY_WORKSPACE_PANE_ID, content)
+            .into_element(cx);
 
     let show_tab_strip = cx
         .get_model_copied(&frame.chrome_show_workspace_tab_strip, Invalidation::Layout)
@@ -306,6 +355,8 @@ fn render_root_contents(
         |_cx| [frame_el],
     );
     menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
+    let panel =
+        WorkspaceCommandScope::new(frame.workspace_window_layout.clone(), panel).into_element(cx);
 
     let mut content: Vec<AnyElement> = vec![
         panel,
