@@ -14,7 +14,7 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-alert-dialog` (dialog + safety defaults)
 
@@ -52,6 +52,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   content-local composition while preserving the explicit `new(label, open)` constructors.
 - Pass: `AlertDialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Note: Public-surface drift remains at the root authoring surface: Fret still uses a closure/compose
+  root instead of a fully nested children API, but `compose()` is the current recipe-level bridge.
 
 ### Dismissal behavior (safety defaults)
 
