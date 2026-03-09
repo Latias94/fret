@@ -7,43 +7,32 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let header = ui::v_stack(|cx| {
         vec![
-            shadcn::typography::small(cx, "Tailwind CSS"),
-            shadcn::typography::muted(cx, "A utility-first CSS framework."),
+            shadcn::typography::small(cx, "shadcn/ui"),
+            shadcn::typography::muted(cx, "The Foundation for your Design System"),
         ]
     })
-    .gap(Space::N1)
+    .gap(Space::N1p5)
     .items_start()
     .into_element(cx);
 
-    let links = ui::h_flex(|cx| {
-        vec![
-            cx.text("Blog"),
-            shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
-                .into_element(cx),
-            cx.text("Docs"),
-            shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
-                .into_element(cx),
-            cx.text("Source"),
-        ]
-    })
-    .gap(Space::N4)
-    .items_center()
-    .layout(LayoutRefinement::default().w_full().h_px(Px(20.0)))
-    .into_element(cx)
-    .test_id("ui-gallery-separator-links");
-
     let separator = shadcn::Separator::new()
-        .refine_layout(LayoutRefinement::default().w_full().my(Space::N4))
+        .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx);
 
-    ui::v_flex(|_cx| vec![header, separator, links])
+    let description = shadcn::typography::small(
+        cx,
+        "A set of beautifully designed components that you can customize, extend, and build on.",
+    );
+
+    ui::v_flex(|_cx| vec![header, separator, description])
         .gap(Space::N4)
         .items_start()
-        .layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(384.0))
+                .min_w_0(),
+        )
         .into_element(cx)
         .test_id("ui-gallery-separator-demo")
 }
