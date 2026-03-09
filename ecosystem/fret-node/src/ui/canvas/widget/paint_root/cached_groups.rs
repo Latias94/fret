@@ -68,33 +68,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         // Selected group border overlay must remain ordered before edges (ADR 0081).
-        let group_corner = Px(10.0 / zoom);
-        let selected_groups = snapshot.selected_groups.clone();
-        let _ = self.graph.read_ref(cx.app, |g| {
-            for group_id in selected_groups {
-                let Some(group) = g.groups.get(&group_id) else {
-                    continue;
-                };
-                let rect0 = self.group_rect_with_preview(group_id, group.rect);
-                let rect = Rect::new(
-                    Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
-                    Size::new(Px(rect0.size.width), Px(rect0.size.height)),
-                );
-                if render_cull_rect.is_some_and(|c| !rects_intersect(rect, c)) {
-                    continue;
-                }
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect,
-                    background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
-
-                    border: Edges::all(Px(1.0 / zoom)),
-                    border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected)
-                        .into(),
-
-                    corner_radii: Corners::all(group_corner),
-                });
-            }
-        });
+        self.paint_selected_groups_overlay_from_snapshot(cx, snapshot, render_cull_rect, zoom);
     }
 }

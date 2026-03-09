@@ -1075,6 +1075,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/node_layers.rs` seam, so `cached_nodes.rs` and
     `immediate_pass.rs` stop re-embedding the same selected-node replay and dynamic-node overlay
     tail while keeping static node paint ordering explicit at the root.
+  - Progress: selected-group overlay rect replay now also routes through shared helpers in
+    `ui/canvas/widget/paint_groups.rs`, so `paint_root/cached_groups.rs` stops re-embedding the
+    same selected-group rect collection and quad replay tail inline while keeping static group
+    cache orchestration explicit at the root.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

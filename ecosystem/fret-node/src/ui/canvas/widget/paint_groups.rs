@@ -1,6 +1,29 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    fn paint_selected_group_overlay_rects<I>(
+        &mut self,
+        scene: &mut fret_core::Scene,
+        rects: I,
+        zoom: f32,
+    ) where
+        I: IntoIterator<Item = Rect>,
+    {
+        let group_corner = Px(10.0 / zoom);
+        for rect in rects {
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(1),
+                rect,
+                background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
+
+                border: Edges::all(Px(1.0 / zoom)),
+                border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected).into(),
+
+                corner_radii: Corners::all(group_corner),
+            });
+        }
+    }
+
     pub(super) fn paint_groups_static(
         &mut self,
         scene: &mut fret_core::Scene,
@@ -74,21 +97,41 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let group_corner = Px(10.0 / zoom);
-        for (rect, _title, selected) in groups {
-            if !*selected {
-                continue;
+        self.paint_selected_group_overlay_rects(
+            scene,
+            groups
+                .iter()
+                .filter_map(|(rect, _title, selected)| selected.then_some(*rect)),
+            zoom,
+        );
+    }
+
+    pub(super) fn paint_selected_groups_overlay_from_snapshot<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        snapshot: &ViewSnapshot,
+        render_cull_rect: Option<Rect>,
+        zoom: f32,
+    ) {
+        let selected_groups = snapshot.selected_groups.clone();
+        let mut overlay_rects = Vec::with_capacity(selected_groups.len());
+        let _ = self.graph.read_ref(cx.app, |g| {
+            for group_id in &selected_groups {
+                let Some(group) = g.groups.get(group_id) else {
+                    continue;
+                };
+                let rect0 = self.group_rect_with_preview(*group_id, group.rect);
+                let rect = Rect::new(
+                    Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
+                    Size::new(Px(rect0.size.width), Px(rect0.size.height)),
+                );
+                if render_cull_rect.is_some_and(|c| !rects_intersect(rect, c)) {
+                    continue;
+                }
+                overlay_rects.push(rect);
             }
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(1),
-                rect: *rect,
-                background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
+        });
 
-                border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected).into(),
-
-                corner_radii: Corners::all(group_corner),
-            });
-        }
+        self.paint_selected_group_overlay_rects(cx.scene, overlay_rects, zoom);
     }
 }
