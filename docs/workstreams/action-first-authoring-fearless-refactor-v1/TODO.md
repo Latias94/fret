@@ -397,7 +397,7 @@ ID format:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
 - [x] AFA-gates-054 Add a small repo-local gate that prevents legacy MVU from drifting back into the cookbook.
   - Evidence:
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
+    - `tools/gate_no_mvu_in_cookbook.py`
 
 ---
 
@@ -674,18 +674,18 @@ Current sequencing note (as of 2026-03-08):
         - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
         - Teaching-surface gate now covers ui-gallery pages/snippets for bare `cx.on_action*` regressions: `tools/gate_no_on_action_in_teaching_surfaces.py`
         - Advanced helper exceptions are now locked by allowlist: `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`
-        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
+        - Gate: `tools/gate_no_stack_in_ui_gallery_shell.py`
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
-    - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
+    - Gate: `tools/gate_no_public_stack_in_ui_kit.py`
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
   - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
     one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
-    - Gate: `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
+    - Gate: `tools/gate_no_stack_in_cookbook.py`
   - Done: examples no longer use `stack::hstack/vstack` authoring helpers.
-    - Gate: `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
+    - Gate: `tools/gate_no_stack_in_examples.py`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where

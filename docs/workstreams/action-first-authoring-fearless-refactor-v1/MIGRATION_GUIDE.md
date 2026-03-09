@@ -527,11 +527,11 @@ ui::container(|cx| {
   introducing extra adapters.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in
   cookbook/examples (and the UI gallery shell):
-  - `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
-  - `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
-  - `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`) (shell-only; preview pages migrate in batches)
+  - `tools/gate_no_stack_in_cookbook.py`
+  - `tools/gate_no_stack_in_examples.py`
+  - `tools/gate_no_stack_in_ui_gallery_shell.py` (preview pages migrate in batches)
 - Legacy stack helpers are hard-deleted from `fret-ui-kit` and gated to prevent regressions.
-  - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
+  - Gate: `tools/gate_no_public_stack_in_ui_kit.py`
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 

@@ -28,14 +28,14 @@ This note is intentionally operational rather than aspirational:
 | Script | Current status | Category | Recommended next step |
 | --- | --- | --- | --- |
 | `tools/audit_crate.ps1` | `tools/audit_crate.py` exists | Compatibility wrapper | Update remaining docs first, then consider delete |
-| `tools/gate_fret_builder_only_surface.ps1` | `tools/gate_fret_builder_only_surface.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_fret_launch_surface_contract.ps1` | `tools/gate_fret_launch_surface_contract.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_mvu_in_cookbook.ps1` | `tools/gate_no_mvu_in_cookbook.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_mvu_in_tree.ps1` | `tools/gate_no_mvu_in_tree.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_public_stack_in_ui_kit.ps1` | `tools/gate_no_public_stack_in_ui_kit.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_stack_in_cookbook.ps1` | `tools/gate_no_stack_in_cookbook.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_stack_in_examples.ps1` | `tools/gate_no_stack_in_examples.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
-| `tools/gate_no_stack_in_ui_gallery_shell.ps1` | `tools/gate_no_stack_in_ui_gallery_shell.py` exists | Compatibility wrapper | Delete after wrapper-call audit |
+| `tools/gate_fret_builder_only_surface.ps1` | deleted; `tools/gate_fret_builder_only_surface.py` is canonical | Removed wrapper | Done |
+| `tools/gate_fret_launch_surface_contract.ps1` | deleted; `tools/gate_fret_launch_surface_contract.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_mvu_in_cookbook.ps1` | deleted; `tools/gate_no_mvu_in_cookbook.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_mvu_in_tree.ps1` | deleted; `tools/gate_no_mvu_in_tree.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_public_stack_in_ui_kit.ps1` | deleted; `tools/gate_no_public_stack_in_ui_kit.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_stack_in_cookbook.ps1` | deleted; `tools/gate_no_stack_in_cookbook.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_stack_in_examples.ps1` | deleted; `tools/gate_no_stack_in_examples.py` is canonical | Removed wrapper | Done |
+| `tools/gate_no_stack_in_ui_gallery_shell.ps1` | deleted; `tools/gate_no_stack_in_ui_gallery_shell.py` is canonical | Removed wrapper | Done |
 | `tools/diag_gate_action_first_authoring_v1.ps1` | no Python twin yet | Python migration candidate | High-value next candidate |
 | `tools/diag_gate_interaction_kernel_v1.ps1` | no Python twin yet | Python migration candidate | High-value next candidate |
 | `tools/diag_scripts_refresh.ps1` | no Python twin yet | Python migration candidate | Medium-value maintenance candidate |
@@ -49,7 +49,7 @@ This note is intentionally operational rather than aspirational:
 
 ### Phase 1 — Remove easy wrappers
 
-Good next delete candidates because Python equivalents already exist:
+Completed:
 
 - `tools/gate_fret_builder_only_surface.ps1`
 - `tools/gate_fret_launch_surface_contract.ps1`
@@ -60,11 +60,11 @@ Good next delete candidates because Python equivalents already exist:
 - `tools/gate_no_stack_in_examples.ps1`
 - `tools/gate_no_stack_in_ui_gallery_shell.ps1`
 
-Guardrail:
+Guardrail used:
 
-- do a reference audit first,
-- update docs/examples to the Python command,
-- then delete the wrapper in a focused change.
+- reference audit first,
+- docs updated to Python command,
+- wrapper deletion in a focused change.
 
 ### Phase 2 — Migrate high-value diag runners
 
