@@ -57,6 +57,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
 - Pass: `DrawerClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
+- Pass: `DrawerClose::from_scope().build(cx, child)` now supports composable child-close authoring
+  for pressable children, which is the Fret-side approximation of upstream `DrawerClose asChild`.
 - Pass: `Drawer::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog

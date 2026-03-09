@@ -1134,6 +1134,32 @@ impl DialogClose {
     }
 
     #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        let open = self.open.clone().unwrap_or_else(|| {
+            inherited_dialog_open(cx).unwrap_or_else(|| {
+                panic!("DialogClose::from_scope() must be used while rendering Dialog content")
+            })
+        });
+        let child = child.into_child_element(cx);
+        cx.pressable_add_on_activate_for(
+            child.id,
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      acx: fret_ui::action::ActionCx,
+                      _reason: fret_ui::action::ActivateReason| {
+                    let _ = host.models_mut().update(&open, |v| *v = false);
+                    host.request_redraw(acx.window);
+                },
+            ),
+        );
+        child
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();

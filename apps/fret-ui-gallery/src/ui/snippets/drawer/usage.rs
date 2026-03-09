@@ -45,7 +45,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 out.push(
                     shadcn::DrawerFooter::build(|cx, out| {
                         out.push(shadcn::Button::new("Submit").into_element(cx));
-                        out.push(shadcn::DrawerClose::from_scope().into_element(cx));
+                        out.push(shadcn::DrawerClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Cancel").variant(shadcn::ButtonVariant::Outline),
+                        ));
                     })
                     .into_element(cx),
                 );

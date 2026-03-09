@@ -1091,6 +1091,24 @@ impl SheetClose {
     }
 
     #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        let open = self.open.unwrap_or_else(|| {
+            inherited_sheet_open(cx).unwrap_or_else(|| {
+                panic!("SheetClose::from_scope() must be used while rendering Sheet content")
+            })
+        });
+
+        crate::DialogClose::new(open)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .build(cx, child)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open.unwrap_or_else(|| {
             inherited_sheet_open(cx).unwrap_or_else(|| {

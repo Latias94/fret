@@ -19,7 +19,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "`Drawer::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
             "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
-            "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
+            "`DrawerClose::from_scope().build(cx, child)` now gives a composable close-child surface that maps more directly to upstream `DrawerClose asChild` usage.",
         ],
     );
 

@@ -37,9 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let mobile_open = ensure_open(cx, st.mobile_open, |st, model| st.mobile_open = Some(model));
 
     let desktop_open_trigger = desktop_open.clone();
-    let desktop_open_close = desktop_open.clone();
     let mobile_open_trigger = mobile_open.clone();
-    let mobile_open_close = mobile_open.clone();
 
     let desktop_dialog = shadcn::Dialog::new(desktop_open).into_element(
         cx,
@@ -60,10 +58,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .toggle_model(desktop_open_close.clone())
-                    .into_element(cx)])
+                shadcn::DialogFooter::new([shadcn::DialogClose::from_scope().build(
+                    cx,
+                    shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
+                )])
                 .into_element(cx),
             ])
             .into_element(cx)
@@ -90,10 +88,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DrawerFooter::new([shadcn::Button::new("Close")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .toggle_model(mobile_open_close.clone())
-                    .into_element(cx)])
+                shadcn::DrawerFooter::new([shadcn::DrawerClose::from_scope().build(
+                    cx,
+                    shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
+                )])
                 .into_element(cx),
             ])
             .into_element(cx)

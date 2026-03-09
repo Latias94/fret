@@ -1567,6 +1567,15 @@ impl DrawerClose {
     }
 
     #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.inner.build(cx, child)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.inner.into_element(cx)
     }
@@ -2860,6 +2869,149 @@ mod tests {
                                         .h_px(Px(24.0)),
                                 )
                                 .into_element(cx);
+                            close_id_out.set(Some(close.id));
+                            DrawerContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                close,
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![drawer]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+            ui.layout_all(&mut app, &mut services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+        }
+
+        let close_element = close_id.get().expect("close element id");
+        let close_node = fret_ui::elements::node_for_element(&mut app, window, close_element)
+            .expect("close node");
+        let close_bounds = visual_bounds_for_element(&mut app, window, close_element)
+            .expect("close visual bounds");
+        let point = Point::new(
+            Px(close_bounds.origin.x.0 + 2.0),
+            Px(close_bounds.origin.y.0 + 2.0),
+        );
+        assert!(
+            close_bounds.contains(point),
+            "expected click point inside close bounds; point={point:?} bounds={close_bounds:?}"
+        );
+        assert!(
+            b.contains(point),
+            "expected click point inside window bounds; point={point:?} window={b:?}"
+        );
+
+        let pre_hit = ui.debug_hit_test(point).hit.unwrap_or_else(|| {
+            panic!("pre-hit missing; point={point:?} close_bounds={close_bounds:?} window={b:?}")
+        });
+        let pre_path = ui.debug_node_path(pre_hit);
+        assert!(
+            pre_path.contains(&close_node),
+            "expected click point to hit close subtree; point={point:?} hit={pre_hit:?} close={close_node:?} path={pre_path:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn drawer_close_build_with_child_closes_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+
+            let open_for_drawer = open.clone();
+
+            OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                "test",
+                |cx| {
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st| Vec::new(),
+                    );
+
+                    let close_id_out = close_id.clone();
+                    let drawer = Drawer::new(open_for_drawer.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let close = DrawerClose::from_scope().build(
+                                cx,
+                                crate::Button::new("Cancel")
+                                    .variant(crate::ButtonVariant::Outline)
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .relative()
+                                            .w_px(Px(96.0))
+                                            .h_px(Px(36.0)),
+                                    ),
+                            );
                             close_id_out.set(Some(close.id));
                             DrawerContent::new(vec![
                                 cx.container(ContainerProps::default(), |_cx| Vec::new()),
