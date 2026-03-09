@@ -33,6 +33,7 @@ these sources instead:
 - Pass: `Breadcrumb::new().items([...])` covers the common compact authoring path for standard breadcrumb trails.
 - Pass: `BreadcrumbItem::new(...).href(...)`, non-link `BreadcrumbItem::new(...)` current-page text, and `BreadcrumbItem::ellipsis()` cover the important shadcn recipe outcomes.
 - Pass: Upstream-shaped primitives remain available for cases that need more explicit composition.
+- Pass: Gallery `Usage` now prefers the upstream-shaped primitives surface for docs parity, while the compact builder remains an ergonomic Fret shorthand.
 - Note: Because Fret already offers both the compact builder and primitives surface, it intentionally does not add a separate generic `compose()` builder here.
 
 ### Layout & geometry (shadcn parity)

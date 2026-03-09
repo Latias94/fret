@@ -375,13 +375,13 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 
 | Registry name | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
-| accordion | `accordion` | Present | In review | Selection model drives open/close; measured-height motion is wired; shadcn-web layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`accordion-demo`, light+dark) |
+| accordion | `accordion` | Present | In review | Selection model drives open/close; measured-height motion is wired; gallery order now mirrors shadcn docs with dedicated `Basic` / `Multiple` / `Disabled` / `Borders` / `Card` / `RTL` sections, and usage can use the composable Radix-shaped surface; audit: `docs/audits/shadcn-accordion.md`; shadcn-web layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`accordion-demo`, light+dark) |
 | alert | `alert` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`alert-demo`) |
 | alert-dialog | `alert_dialog` | Present | In review | `compose()` + `from_scope(...)` align the common shadcn call site; gallery order now mirrors shadcn docs before Fret-specific extras; root surface still uses a closure/compose bridge instead of fully nested children; audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | In review | Audit: `docs/audits/radix-aspect-ratio.md`; layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`aspect-ratio-demo`); docs page: `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` |
 | avatar | `avatar` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`avatar-demo`) |
 | badge | `badge` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
-| breadcrumb | `breadcrumb` | Present | In review | Semantics alignment landed for root/list/current-page/presentation affordances; audit: `docs/audits/shadcn-breadcrumb.md`; gates: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` |
+| breadcrumb | `breadcrumb` | Present | In review | Semantics alignment landed for root/list/current-page/presentation affordances; gallery usage now mirrors shadcn docs via primitives while the compact builder remains a Fret shorthand; audit: `docs/audits/shadcn-breadcrumb.md`; gates: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` |
 | button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Present | In review | Audit: `docs/audits/shadcn-calendar.md`; headless month grid lives in `fret-ui-kit` (`headless::calendar`); caller owns `rounded/border` and page width, recipe owns inner chrome |
