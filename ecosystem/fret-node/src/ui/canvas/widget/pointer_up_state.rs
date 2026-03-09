@@ -40,14 +40,11 @@ pub(super) fn handle_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
     snapshot: &ViewSnapshot,
     button: MouseButton,
 ) -> bool {
-    if !(canvas.interaction.panning && canvas.interaction.panning_button == Some(button)) {
+    if !super::cancel_session::matches_pan_release(&canvas.interaction, button) {
         return false;
     }
 
-    canvas.interaction.panning = false;
-    canvas.interaction.panning_button = None;
-    canvas.interaction.pan_last_screen_pos = None;
-    canvas.interaction.pan_last_sample_at = None;
+    super::cancel_session::clear_pan_drag_state(&mut canvas.interaction);
     canvas.stop_auto_pan_timer(cx.app);
     let started_inertia = canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
     canvas.emit_move_end(

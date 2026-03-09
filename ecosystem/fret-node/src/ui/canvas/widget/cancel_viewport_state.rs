@@ -13,10 +13,7 @@ pub(super) fn cancel_viewport_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let mut canceled = false;
 
     if canvas.interaction.panning {
-        canvas.interaction.panning = false;
-        canvas.interaction.panning_button = None;
-        canvas.interaction.pan_last_screen_pos = None;
-        canvas.interaction.pan_last_sample_at = None;
+        super::cancel_session::clear_pan_drag_state(&mut canvas.interaction);
         canvas.emit_move_end(
             snapshot,
             ViewportMoveKind::PanDrag,

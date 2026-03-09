@@ -92,6 +92,7 @@ mod callbacks_view;
 mod cancel;
 mod cancel_cleanup;
 mod cancel_gesture_state;
+mod cancel_session;
 mod cancel_viewport_state;
 mod clipboard;
 mod clipboard_anchor;

@@ -16,10 +16,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         });
         self.interaction.sticky_wire = true;
         self.interaction.sticky_wire_ignore_next_up = true;
-        self.interaction.hover_port = None;
-        self.interaction.hover_port_valid = false;
-        self.interaction.hover_port_convertible = false;
-        self.interaction.hover_port_diagnostic = None;
+        super::focus_session::clear_hover_port_hints(&mut self.interaction);
         cx.capture_pointer(cx.node);
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);
@@ -35,10 +32,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.interaction.wire_drag = Some(wire_drag);
             self.interaction.sticky_wire = true;
             self.interaction.sticky_wire_ignore_next_up = true;
-            self.interaction.hover_port = None;
-            self.interaction.hover_port_valid = false;
-            self.interaction.hover_port_convertible = false;
-            self.interaction.hover_port_diagnostic = None;
+            super::focus_session::clear_hover_port_hints(&mut self.interaction);
             cx.capture_pointer(cx.node);
             cx.request_redraw();
             cx.invalidate_self(Invalidation::Paint);

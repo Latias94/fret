@@ -896,6 +896,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: repeated focus-session mutations for focused edge/node/port transitions and
     selection-only sync now route through the private `canvas/widget/focus_session.rs` seam, so
     focus navigation helpers no longer duplicate the same focus-reset and selection-update blocks.
+  - Progress: cancel-path residual cleanup, hover/focus reset, and pan-drag reset now route
+    through the private `canvas/widget/cancel_session.rs` seam, so cancel/pointer-up helpers no
+    longer duplicate the same interaction cleanup blocks inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
