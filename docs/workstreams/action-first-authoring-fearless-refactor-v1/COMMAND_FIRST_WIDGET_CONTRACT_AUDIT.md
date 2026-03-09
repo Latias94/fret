@@ -63,7 +63,7 @@ Current conclusion:
 | `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `on_select(CommandId)` only | same as context menu, plus stronger OS/menu parity expectations | Default-facing blocker | Same as context menu: action-first alias on public builders, command-centric core retained |
 | `NavigationMenuLink` / `NavigationMenuItem` | `on_click(CommandId)` only | current activation path reuses command gating/dispatch | Medium blocker | Add `action(...)` alias; this surface reads like a regular app-facing widget, not a registry API |
 | `BreadcrumbItem` | `on_click(CommandId)` plus `on_activate(...)` closure | historical command pipeline reuse | Medium blocker | Add `action(...)` alias; keep `on_click(...)` as compat name |
-| Material `Snackbar` | `action(label, CommandId)` only | toast action currently lowers to command dispatch | Medium blocker | Add `action_id(...)` or `action_action(...)`-style alias; keep explicit command variant for low-level use |
+| Material `Snackbar` | `action(...)` plus `action_id(...)` / `action_command(...)` aliases | toast action currently lowers to command dispatch | Aligned (dual surface) | Prefer `action_id(...)` in default-facing docs/examples; keep `action(...)` / `action_command(...)` as compat/low-level spellings |
 
 ---
 
@@ -181,8 +181,9 @@ Representative evidence:
 
 Current shape:
 
-- `Snackbar::action(label, CommandId)` is command-shaped even though the surrounding API is a
-  higher-level app-facing notification recipe.
+- `Snackbar::action(label, CommandId)` still exists as the historical spelling,
+- `Snackbar::action_id(label, action)` and `Snackbar::action_command(label, command)` now provide
+  the explicit action-first / low-level split on top of the same toast dispatch path.
 
 Assessment:
 
@@ -192,11 +193,9 @@ Assessment:
 
 Recommendation:
 
-- Add a clearly named action-first variant.
-- Prefer a name that avoids ambiguity with the existing label-bearing method, for example:
-  - `action_id(label, action)`
-  - or rename the current method to `action_command(...)` and let `action(...)` become the
-    action-first spelling in a staged migration.
+- Keep `action_id(...)` as the default public spelling in docs/examples.
+- Keep `action_command(...)` and the historical `action(...)` spelling as additive compatibility
+  surfaces until the repo decides whether this family should deprecate command-shaped naming.
 
 ### 6) One documentation note is now stale relative to the action-first surface
 
@@ -243,7 +242,12 @@ Progress update (as of 2026-03-09):
   `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`.
 - The navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) now prefer
   `action(...)` as the default public spelling.
-- Material `Snackbar` is still pending in this phase.
+- Material `Snackbar::action_id(...)` and `Snackbar::action_command(...)` now exist in
+  `ecosystem/fret-ui-material3/src/snackbar.rs`.
+- The Material3 gallery snackbar snippet now prefers `action_id(...)`:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs`.
+- Material3 regression coverage also uses the alias in
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 
 ### Phase 2 — Menu-family public alias pass
 
