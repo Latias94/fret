@@ -8,6 +8,7 @@ Related:
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -70,6 +71,10 @@ Adoption note (as of 2026-03-07):
   density is mainly adoption of existing builders or advanced/runtime-owned seams, so reopen only
   if a new cross-surface host/root boundary still forces eager landing in multiple real
   default-facing surfaces.
+- Endgame summary update (as of 2026-03-09): `POST_V1_ENDGAME_SUMMARY.md` now compresses the
+  workstream into one page: default-path convergence is effectively complete, builder/keyed-list/
+  invalidation tracks are in maintenance mode, `AFA-postv1-001` remains the main architectural
+  question, and the remaining cleanup work belongs to the staged hard-delete/quarantine sequence.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,

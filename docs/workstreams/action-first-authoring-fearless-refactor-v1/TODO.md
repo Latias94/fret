@@ -10,6 +10,7 @@ Related:
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -539,6 +540,11 @@ Current sequencing note (as of 2026-03-09):
     `on_action_notify_models::<A>(...)` surfaces are now explicitly grouped as
     coordinated-write ownership, command/keymap ownership, and cross-field form ownership so they
     do not keep being mistaken for generic invalidation-helper gaps.
+- endgame summary note (as of 2026-03-09): `POST_V1_ENDGAME_SUMMARY.md` now compresses the current
+  state into one page: default-path convergence is effectively complete, `AFA-postv1-002` /
+  `003` / `004` are maintenance-mode tracks, `AFA-postv1-001` remains open only as an
+  architectural local-state question, and the remaining cleanup pressure is primarily in the
+  staged hard-delete/quarantine sequence.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
