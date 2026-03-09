@@ -1050,6 +1050,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     smaller private helpers in `canvas/widget/paint_root/cached_edges/build_state.rs`, so the
     edge-vs-label cached build path keeps only the budget function choice and state-specific fields
     at the root instead of re-embedding the same clip-op setup and next-edge replay tail inline.
+  - Progress: cached edge root-shell uncached fallback and tile preparation now also route through
+    smaller helpers in `canvas/widget/paint_root/cached_edges/edges.rs` and
+    `canvas/widget/paint_root/cached_edges/geometry.rs`, so `single_rect.rs` and `tile_path.rs`
+    mainly keep cache-mode choice, overlay ordering, and label-pass orchestration at the root.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

@@ -1,5 +1,4 @@
 use super::keys;
-use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -30,20 +29,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
 
         if !snapshot.interaction.elevate_edges_on_select {
-            self.edges_build_states.clear();
-            let render_edges: RenderData = self.collect_render_data(
-                &*cx.app,
+            self.paint_root_edges_uncached(
+                cx,
                 snapshot,
-                Arc::clone(geom),
-                Arc::clone(index),
+                geom,
+                index,
                 render_cull_rect,
-                zoom,
                 hovered_edge,
-                false,
-                false,
-                true,
+                zoom,
+                view_interacting,
             );
-            self.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
         }
 
         let labels_key = keys::edge_labels_single_rect_key(

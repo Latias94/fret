@@ -1,8 +1,36 @@
 use super::geometry::cache_tile_rect;
 use super::keys;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn paint_root_edges_uncached<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        snapshot: &ViewSnapshot,
+        geom: &Arc<CanvasGeometry>,
+        index: &Arc<CanvasSpatialDerived>,
+        render_cull_rect: Option<Rect>,
+        hovered_edge: Option<EdgeId>,
+        zoom: f32,
+        view_interacting: bool,
+    ) {
+        self.edges_build_states.clear();
+        let render_edges: RenderData = self.collect_render_data(
+            &*cx.app,
+            snapshot,
+            Arc::clone(geom),
+            Arc::clone(index),
+            render_cull_rect,
+            zoom,
+            hovered_edge,
+            false,
+            false,
+            true,
+        );
+        self.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
+    }
+
     pub(super) fn try_replay_cached_edges<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,

@@ -641,6 +641,10 @@ real editors.
   private helpers in `canvas/widget/paint_root/cached_edges/build_state.rs`, so the edge-vs-label
   cached build path keeps only the budget function choice and state-specific fields at the root
   instead of re-embedding the same clip-op setup and next-edge replay tail inline.
+- cached-edge root-shell uncached fallback and tile preparation now also route through smaller
+  helpers in `canvas/widget/paint_root/cached_edges/edges.rs` and
+  `canvas/widget/paint_root/cached_edges/geometry.rs`, so `single_rect.rs` and `tile_path.rs`
+  mainly keep cache-mode choice, overlay ordering, and label-pass orchestration at the root.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,4 +1,3 @@
-use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -23,10 +22,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.edges_tile_keys_scratch.clear();
 
         let edges_rect = render_cull_rect.unwrap_or(viewport_rect);
-        let tiles = TileGrid2D::new(edges_cache_tile_size_canvas);
-        tiles.tiles_in_rect(edges_rect, &mut self.edges_tiles_scratch);
-        tiles.sort_tiles_center_first(viewport_rect, &mut self.edges_tiles_scratch);
-        let tiles = self.edges_tiles_scratch.clone();
+        let tiles = self.collect_sorted_edge_cache_tiles(
+            edges_rect,
+            viewport_rect,
+            edges_cache_tile_size_canvas,
+        );
 
         if snapshot.interaction.elevate_edges_on_select {
             self.paint_tiled_edges_cache(
@@ -44,20 +44,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
             self.paint_edge_overlays_selected_hovered(cx, snapshot, geom, zoom);
         } else {
-            self.edges_build_states.clear();
-            let render_edges: RenderData = self.collect_render_data(
-                &*cx.app,
+            self.paint_root_edges_uncached(
+                cx,
                 snapshot,
-                Arc::clone(geom),
-                Arc::clone(index),
+                geom,
+                index,
                 Some(edges_rect),
-                zoom,
                 hovered_edge,
-                false,
-                false,
-                true,
+                zoom,
+                view_interacting,
             );
-            self.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
         }
 
         self.paint_tiled_edge_labels_cache(
