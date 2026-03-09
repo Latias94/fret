@@ -561,6 +561,12 @@ Current sequencing note (as of 2026-03-08):
   - Batch C update (as of 2026-03-09): `apps/fret-examples/src/external_texture_imports_demo.rs` now uses `view_with_hooks::<ExternalTextureImportsView>(...)`, reducing the remaining closure-root app-entry risk to the two platform video-import demos.
   - Windows-video update (as of 2026-03-09): `apps/fret-examples/src/external_video_imports_mf_demo.rs` now uses `view_with_hooks::<ExternalVideoImportsMfView>(...)`, so the remaining app-entry migration risk is now isolated to the AVF/macOS demo.
   - AVF-video update (as of 2026-03-09): `apps/fret-examples/src/external_video_imports_avf_demo.rs` now uses `view_with_hooks::<ExternalVideoImportsAvfView>(...)`, so Batch C is complete and closure-root app-entry work is now purely deprecation/cleanup rather than remaining demo migration.
+  - Final example update (as of 2026-03-09): `apps/fret-examples/src/imui_floating_windows_demo.rs`, `apps/fret-examples/src/imui_node_graph_demo.rs`, and `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` now use `run_view::<...>()`, so there are no in-tree example/demo callers left on `App::ui*`.
+
+- [x] AFA-postv1-012 Start staged deprecation for closure-root app entry on the `fret` facade.
+  - Goal: make the policy decision visible in code and lock the default docs path while leaving a removal window for downstream users.
+  - Evidence target: deprecated `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` plus a narrow gate that keeps `view::<V>()` as the only default path in `ecosystem/fret` README/rustdoc.
+  - Status (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now marks the closure-root app-entry methods as deprecated advanced bridges, `ecosystem/fret/src/lib.rs` and `ecosystem/fret/README.md` now describe `view::<V>()` / `view_with_hooks::<V>(...)` as the only default path, and `ecosystem/fret/src/lib.rs` test `authoring_surface_policy_tests` locks that wording in-tree.
 
 - [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.

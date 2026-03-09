@@ -39,30 +39,27 @@ Reference anchors:
 Current state:
 
 - `fret::App::{ui, ui_with_hooks}` still exist as public entry points.
-- `view::<V>()` is now the documented default, but the closure entry path is still live and still used by some advanced demos.
+- `view::<V>()` is now the documented default.
+- Progress update (as of 2026-03-09): in-tree example/demo callers have moved off the closure entry path, and `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` now carry deprecation warnings.
+- README/rustdoc policy is now locked by an in-crate test so first-contact docs stop reintroducing `.ui(...)` as the default path.
 
 Evidence anchors:
 
 - `ecosystem/fret/src/app_entry.rs`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/README.md`
-- `apps/fret-examples/src/assets_demo.rs`
-- `apps/fret-examples/src/embedded_viewport_demo.rs`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
 
 Why this blocks deletion:
 
-- We have not yet made a repo-level decision whether `ui(...)` is:
-  - a permanent secondary surface,
-  - an advanced-only escape hatch, or
-  - a true legacy surface to deprecate.
+- The repo-level direction is now clear (`view::<V>()` default, `ui(...)` deprecated bridge), but removal timing is still a public-surface policy question.
+- Downstream users may still exist outside the monorepo, so hard delete still needs a deprecation window rather than an immediate removal.
 
 Required before hard delete:
 
-- Recommended policy draft now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`.
-- Adopt one explicit policy: either keep `ui(...)` as advanced-only bridge surface, or begin a deprecation plan toward removal.
-- After that choice, migrate the remaining advanced demos and add the matching gate/deprecation window.
-- The current caller-by-caller migration table now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`.
-- Progress update (as of 2026-03-09): the in-tree Batch A/B/C callers tracked in that inventory have now moved to `view::<V>()` / `view_with_hooks::<V>(...)`; the blocker is now deprecation/removal sequencing, not unresolved demo migration.
+- Keep the deprecation window long enough for downstream cleanup.
+- Decide whether the final end-state is hard delete from `fret` or quarantine behind a more explicit compat surface.
+- Preserve the docs/test gate so `view::<V>()` remains the only default teaching path during the deprecation window.
 
 ---
 

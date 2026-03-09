@@ -9,7 +9,11 @@
 //!
 //! ## Choosing a native entry path
 //!
-//! - `fret::App::new(...).window(...).ui(...)?` is the recommended app-author path.
+//! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path.
+//! - `fret::App::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
+//!   app-author path when driver hooks are required.
+//! - `fret::App::new(...).window(...).ui(...)?` and `ui_with_hooks(...)` are deprecated advanced
+//!   bridge surfaces while older closure-root callers are phased out.
 //! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
 //!   hatches when you need runner-level customization but
@@ -22,18 +26,22 @@
 //! ```no_run
 //! use fret::prelude::*;
 //!
-//! fn init_window(_app: &mut App, _window: AppWindowId) -> () {
-//!     ()
-//! }
+//! struct HelloView;
 //!
-//! fn view<'a>(cx: &mut ElementContext<'a, App>, _st: &mut ()) -> ViewElements {
-//!     ui::text("Fret!").into_element(cx).into()
+//! impl View for HelloView {
+//!     fn init(_app: &mut App, _window: AppWindowId) -> Self {
+//!         Self
+//!     }
+//!
+//!     fn render(&mut self, _cx: &mut ViewCx<'_, '_, App>) -> Elements {
+//!         shadcn::Label::new("Fret!").into()
+//!     }
 //! }
 //!
 //! fn main() -> fret::Result<()> {
 //!     fret::App::new("hello")
 //!         .window("Hello", (560.0, 360.0))
-//!         .ui(init_window, view)?
+//!         .view::<HelloView>()?
 //!         .run()
 //! }
 //! ```
@@ -824,6 +832,7 @@ mod builder_surface_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[test]
     fn app_builder_ui_with_hooks_smoke() {
         let _builder = FretApp::new("builder-ui-smoke")
@@ -875,6 +884,7 @@ mod builder_surface_tests {
             });
     }
 
+    #[allow(deprecated)]
     #[test]
     fn app_builder_ui_smoke() {
         let _builder = AppBuilder::new("builder-ui-basic")
@@ -966,5 +976,35 @@ mod tests {
         );
 
         assert_eq!(Theme::global(&app).revision(), rev_after);
+    }
+}
+
+#[cfg(test)]
+mod authoring_surface_policy_tests {
+    const README: &str = include_str!("../README.md");
+    const LIB_RS: &str = include_str!("lib.rs");
+
+    #[test]
+    fn readme_prefers_view_entry_and_marks_ui_bridge_deprecated() {
+        assert!(README.contains(
+            "App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`"
+        ));
+        assert!(README.contains(
+            "Closure-style UI surface (deprecated advanced bridge): `fret::App::new(...).window(...).ui(...)?`"
+        ));
+        assert!(!README.contains(
+            "Closure-style UI surface (still available): `fret::App::new(...).window(...).ui(...)?`"
+        ));
+    }
+
+    #[test]
+    fn crate_docs_no_longer_teach_ui_as_default_entry() {
+        assert!(LIB_RS.contains(
+            "//! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path."
+        ));
+        assert!(LIB_RS.contains(
+            "//! - `fret::App::new(...).window(...).ui(...)?` and `ui_with_hooks(...)` are deprecated advanced"
+        ));
+        assert!(LIB_RS.contains(".view::<HelloView>()?"));
     }
 }

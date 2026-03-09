@@ -115,17 +115,40 @@ impl App {
     }
 
     /// Build a UI app from `init_window` + `view` and return a runnable builder.
+    ///
+    /// Deprecated: prefer [`view`](Self::view) for the default app-author path. This closure-root
+    /// surface remains only as a temporary advanced bridge while old callers are phased out.
+    #[deprecated(
+        since = "0.1.0",
+        note = "prefer App::view::<V>() for the default path, or App::view_with_hooks::<V>(...) when driver hooks are required"
+    )]
     pub fn ui<S: 'static>(
         self,
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
     ) -> Result<UiAppBuilder<S>> {
-        self.ui_with_hooks(init_window, view, |driver| driver)
+        self.build_ui_with_hooks(init_window, view, |driver| driver)
     }
 
     /// Same as [`ui`](Self::ui), but keeps the `UiAppDriver` configuration seam available on
     /// the builder path.
+    ///
+    /// Deprecated: prefer [`view_with_hooks`](Self::view_with_hooks) unless this call site is
+    /// intentionally bridging older `ElementContext`-style code during migration.
+    #[deprecated(
+        since = "0.1.0",
+        note = "prefer App::view_with_hooks::<V>(...) for the default path; ui_with_hooks(...) is a temporary advanced bridge surface"
+    )]
     pub fn ui_with_hooks<S: 'static>(
+        self,
+        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
+        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
+        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+    ) -> Result<UiAppBuilder<S>> {
+        self.build_ui_with_hooks(init_window, view, configure)
+    }
+
+    fn build_ui_with_hooks<S: 'static>(
         self,
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
@@ -255,22 +278,32 @@ impl App {
     }
 
     /// Convenience: build a UI app and run it immediately.
+    #[deprecated(
+        since = "0.1.0",
+        note = "prefer App::run_view::<V>() for the default path, or App::view::<V>()?.run() when you need the builder value"
+    )]
     pub fn run_ui<S: 'static>(
         self,
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
     ) -> Result<()> {
-        self.ui(init_window, view)?.run()
+        self.build_ui_with_hooks(init_window, view, |driver| driver)?
+            .run()
     }
 
     /// Convenience: build a UI app with driver hooks and run it immediately.
+    #[deprecated(
+        since = "0.1.0",
+        note = "prefer App::run_view_with_hooks::<V>(...) for the default path; run_ui_with_hooks(...) is a temporary advanced bridge surface"
+    )]
     pub fn run_ui_with_hooks<S: 'static>(
         self,
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
         configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
     ) -> Result<()> {
-        self.ui_with_hooks(init_window, view, configure)?.run()
+        self.build_ui_with_hooks(init_window, view, configure)?
+            .run()
     }
 }
 

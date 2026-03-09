@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -147,9 +147,8 @@ Post-v1 direction (recommended):
   - after default-path convergence, shift the next milestone from helper design to productization: onboarding clarity, comparison/advanced-surface positioning, visual defaults, and a future deprecation plan.
   - The current deprecation/hard-delete blockers are now named explicitly in `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible alias, and `CommandId`-first widget contracts.
   - The app-entry blocker now has a concrete recommended direction in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`: `view::<V>()` as the only default path, `.ui(...)` as a temporary advanced bridge on a staged path to deprecation/removal.
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now classifies the remaining `App::ui*` users and suggests a migration order (Batch A/B/C), so the next execution step can be migration work rather than another policy rewrite.
-  - Progress update (as of 2026-03-09): Batch A is complete, Batch B is complete, and the remaining closure-root app-entry callers are now concentrated in Batch C interop demos.
-  - Batch C progress (as of 2026-03-09): `external_texture_imports_demo`, `external_video_imports_mf_demo`, and `external_video_imports_avf_demo` have moved to `view_with_hooks::<...>(...)`, so app-entry migration risk has shifted from caller conversion to deprecation/cleanup sequencing.
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now records that the in-tree `App::ui*` callers have been migrated; the remaining work is deprecation/removal sequencing rather than demo conversion.
+  - Progress update (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now deprecates the closure-root app-entry methods, and `ecosystem/fret/src/lib.rs` plus `ecosystem/fret/README.md` are locked by an in-crate policy test so `view::<V>()` remains the only default path.
 
 ---
 

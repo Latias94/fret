@@ -116,8 +116,8 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 - App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
 - App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
-- Closure-style UI surface (still available): `fret::App::new(...).window(...).ui(...)?`
-- Closure-style UI surface with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
+- Closure-style UI surface (deprecated advanced bridge): `fret::App::new(...).window(...).ui(...)?`
+- Closure-style UI surface with driver hooks (deprecated advanced bridge): `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
@@ -128,7 +128,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
-- `App::{ui_with_hooks, view::<V>, view_with_hooks::<V>}`
+- `App::{view::<V>, view_with_hooks::<V>}`
 - `UiAppBuilder::configure(...)` for launch/window config
 - `UiAppBuilder::on_gpu_ready(...)`
 - `UiAppBuilder::install_custom_effects(...)`
@@ -137,6 +137,10 @@ following seams first-class:
 
 The builder chain is now the only app-author entry story on `fret`. Advanced users still keep
 real extension seams without dropping to `fret-launch` immediately.
+
+The deprecated closure-root bridge remains available temporarily as:
+
+- `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
@@ -153,7 +157,7 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret::App::new(...).ui_with_hooks(...)` -> `fret_bootstrap::ui_app_with_hooks(...)`
+- `fret::App::new(...).ui_with_hooks(...)` -> `fret_bootstrap::ui_app_with_hooks(...)` (deprecated bridge)
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
 - `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
