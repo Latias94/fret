@@ -35,12 +35,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         let replay_delta = Point::new(Px(0.0), Px(0.0));
-        let nodes_hit =
-            self.nodes_scene_cache
-                .try_replay_with(nodes_key, cx.scene, replay_delta, |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                });
-        if !nodes_hit {
+        if !super::static_cache::try_replay_static_scene_cache(
+            &mut self.nodes_scene_cache,
+            cx.scene,
+            &mut self.paint_cache,
+            nodes_key,
+            replay_delta,
+            &|paint_cache, ops| paint_cache.touch_text_blobs_in_scene_ops(ops),
+        ) {
             let render_nodes: RenderData = self.collect_render_data(
                 &*cx.app,
                 snapshot,
@@ -58,13 +60,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             tmp.push(SceneOp::PushClipRect { rect: cache_rect });
             self.paint_nodes_static(&mut tmp, cx.services, cx.scale_factor, &render_nodes, zoom);
             tmp.push(SceneOp::PopClip);
-            self.nodes_scene_cache
-                .store_ops(nodes_key, tmp.ops().to_vec());
-            let _ =
-                self.nodes_scene_cache
-                    .try_replay_with(nodes_key, cx.scene, replay_delta, |ops| {
-                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                    });
+            super::static_cache::store_and_replay_static_scene_cache(
+                &mut self.nodes_scene_cache,
+                cx,
+                &mut self.paint_cache,
+                nodes_key,
+                replay_delta,
+                tmp.ops().to_vec(),
+                |paint_cache, ops| paint_cache.touch_text_blobs_in_scene_ops(ops),
+            );
         }
 
         if snapshot.interaction.elevate_nodes_on_select {

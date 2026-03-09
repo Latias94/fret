@@ -35,12 +35,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         let replay_delta = Point::new(Px(0.0), Px(0.0));
-        let groups_hit =
-            self.groups_scene_cache
-                .try_replay_with(groups_key, cx.scene, replay_delta, |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                });
-        if !groups_hit {
+        if !super::static_cache::try_replay_static_scene_cache(
+            &mut self.groups_scene_cache,
+            cx.scene,
+            &mut self.paint_cache,
+            groups_key,
+            replay_delta,
+            &|paint_cache, ops| paint_cache.touch_text_blobs_in_scene_ops(ops),
+        ) {
             let render_groups: RenderData = self.collect_render_data(
                 &*cx.app,
                 snapshot,
@@ -64,15 +66,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 zoom,
             );
             tmp.push(SceneOp::PopClip);
-            self.groups_scene_cache
-                .store_ops(groups_key, tmp.ops().to_vec());
-            let _ = self.groups_scene_cache.try_replay_with(
+            super::static_cache::store_and_replay_static_scene_cache(
+                &mut self.groups_scene_cache,
+                cx,
+                &mut self.paint_cache,
                 groups_key,
-                cx.scene,
                 replay_delta,
-                |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                },
+                tmp.ops().to_vec(),
+                |paint_cache, ops| paint_cache.touch_text_blobs_in_scene_ops(ops),
             );
         }
 

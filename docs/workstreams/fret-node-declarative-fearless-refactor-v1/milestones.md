@@ -652,6 +652,10 @@ real editors.
   `canvas/widget/paint_root/cached_edges/edges.rs`, so the edge cache paths stop re-embedding the
   same translated replay and finished-store bookkeeping when single-rect and tiled passes share the
   same partially built state.
+- cached static group/node replay and store tails now also route through the private
+  `canvas/widget/paint_root/static_cache.rs` seam, so `cached_groups.rs` and `cached_nodes.rs`
+  stop re-embedding the same cache replay/store-and-replay bookkeeping while keeping the
+  render-data collection and static paint bodies explicit at the root.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

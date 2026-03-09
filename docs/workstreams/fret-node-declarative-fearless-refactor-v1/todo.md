@@ -1061,6 +1061,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/cached_edges/edges.rs`, so the edge cache paths stop re-embedding the
     same translated replay and finished-store bookkeeping when single-rect and tiled passes share
     the same partially built state.
+  - Progress: cached static group/node replay and store tails now also route through the private
+    `canvas/widget/paint_root/static_cache.rs` seam, so `cached_groups.rs` and `cached_nodes.rs`
+    stop re-embedding the same cache replay/store-and-replay bookkeeping while keeping the
+    render-data collection and static paint bodies explicit at the root.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
