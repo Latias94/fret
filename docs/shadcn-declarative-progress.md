@@ -428,7 +428,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | textarea | `textarea` | Present | In review | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`) |
 | toggle | `toggle` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`) |
 | toggle-group | `toggle_group` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-group-demo`) |
-| tooltip | `tooltip` | Present | In review | Hover intent + placement; rendered via overlay root (not clipped); audit: `docs/audits/shadcn-tooltip.md` |
+| tooltip | `tooltip` | Present | In review | `Tooltip::new(trigger, content)` remains the right recipe-level bridge (no extra generic `compose()` needed); gallery order now mirrors shadcn docs before Fret-specific long-content / keyboard-focus parity sections; rendered via overlay root (not clipped); audit: `docs/audits/shadcn-tooltip.md` |
 
 ## Non-registry surfaces
 
