@@ -43,7 +43,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-runner-winit/Cargo.toml`
-- `pwsh -NoProfile -File tools/check_layering.ps1`
+- `python tools/check_layering.py`
 
 ## 4) Module ownership map (internal seams)
 

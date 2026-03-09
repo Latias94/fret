@@ -6,7 +6,7 @@ Status: L0 complete (quick scan; no deep dive yet)
 
 UI substrate (mechanism-only): element tree, layout/dispatch/paint semantics, overlay mechanisms, deterministic routing and caching behavior.
 
-## Snapshot (from `tools/audit_crate.ps1`)
+## Snapshot (from `tools/audit_crate.py`)
 
 - Largest files:
   - `crates/fret-ui/src/tree/mod.rs`
@@ -37,4 +37,3 @@ UI substrate (mechanism-only): element tree, layout/dispatch/paint semantics, ov
 1. Split `crates/fret-ui/src/tree/mod.rs` into a facade that re-exports focused submodules.
 2. Convert huge conformance tests into data-driven harnesses where possible (ties to `BU-FR-guard-004`).
 3. Identify 3–5 “always-run” diag scripts that cover top interaction hazards (ties to `BU-FR-guard-003`).
-

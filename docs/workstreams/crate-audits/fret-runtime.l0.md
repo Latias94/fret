@@ -6,7 +6,7 @@ Status: L0 complete (quick scan; no deep dive yet)
 
 Portable runtime contracts: models, effects, commands/keymap/menubar, window services and capability signals.
 
-## Snapshot (from `tools/audit_crate.ps1`)
+## Snapshot (from `tools/audit_crate.py`)
 
 - Largest files:
   - `crates/fret-runtime/src/model/store.rs`

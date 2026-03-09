@@ -45,7 +45,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `ecosystem/fret-ui-headless/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-headless`
+- `python tools/audit_crate.py --crate fret-ui-headless`
 
 ## 4) Module ownership map (internal seams)
 
@@ -103,4 +103,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - Should `table` expose a curated “stable API” module (and keep internal helpers private), to reduce churn as TanStack parity work continues?
-
