@@ -32,8 +32,8 @@ repo still exposes five recurring friction points in medium demos and the curren
 2. render code still relies heavily on generic tracked-store coordination once coordination crosses
    more than one field, even though the focused keyed-list/default template path is now closed.
 3. `ui::children!` plus repeated `into_element(cx)` remain common composition patterns.
-4. widget-local event wiring still prefers root-level `on_action_notify_*` helpers instead of a
-   lighter `listener` / `dispatch` mental model.
+4. keyed-list / payload-row event wiring still relies on visible root-level `on_action_notify_*`
+   ownership points, and the remaining question is whether that needs a narrower placement aid.
 5. product-facing guidance still needs a sharper default/comparison/advanced taxonomy so users do
    not have to reverse-engineer the intended surface from scattered examples.
 
@@ -368,11 +368,11 @@ closure intact.
 - preserve the current rule that tracked local writes rerender implicitly,
 - only revisit state APIs if real medium-surface evidence still shows a state-boundary cliff after the productization/doc pass.
 
-### Phase 3 — widget-local event ergonomics
+### Phase 3 — keyed-list / payload-row handler ergonomics
 
-- add `listener`, `dispatch`, and `shortcut` helpers,
+- only investigate a narrower row-action / payload-handler placement aid,
 - keep the root-level handler table as the underlying runtime mechanism,
-- migrate one medium demo to validate the story.
+- validate it only against keyed-list evidence surfaces, not command/query/form surfaces.
 
 ### Phase 4 — builder-first composition
 
@@ -432,8 +432,8 @@ Recommended goals:
 2. **Default-path density**
    - keep reducing the remaining `ui::children!` / `into_element(cx)` friction where evidence shows
      repeated medium-surface cost,
-   - investigate widget-local action sugar only if it improves at least two real surfaces without
-     widening the helper surface indiscriminately.
+   - investigate keyed-list / payload-row handler ergonomics only if it improves keyed-list evidence
+     surfaces without widening the helper surface indiscriminately.
 
 3. **Visual productization**
    - deepen theme/recipe assets and make the default app output feel more polished out of the box,

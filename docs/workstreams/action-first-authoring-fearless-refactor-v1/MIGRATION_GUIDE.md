@@ -198,7 +198,8 @@ surface from the post-v1 density goals:
 - Landed in v1: `View` + typed actions, `use_selector` / `use_query`, cx-less `ui::*` constructors,
   semantics/test IDs before `into_element(cx)`, and a narrowed default helper surface.
 - Not yet the default story: plain-Rust local state, builder-only composition that removes most
-  `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
+  `ui::children!`, and any narrower keyed-list / payload-row handler-placement aid beyond the
+  current root action table.
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
 

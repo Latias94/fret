@@ -7,6 +7,7 @@ Related:
 
 - Proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Migration notes: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
 
@@ -126,7 +127,7 @@ bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 
 The clearest remaining gaps are now narrower:
 
-- widget-local `listener` / `dispatch` sugar is still not the default path,
+- keyed-list / payload-row handler placement still has no narrower default path beyond the root action table,
 - builder-first `.child(...)` composition is improving but `ui::children!` remains common in medium surfaces,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do
   not have to infer the intended path from scattered examples,
@@ -150,8 +151,8 @@ The next post-v1 pass should stay disciplined:
    - keep `hello` → `simple-todo` → `todo` as the obvious onboarding ladder,
    - make default/comparison/advanced surfaces explicit in docs and templates,
    - avoid promoting more helpers until that teaching surface is boring and consistent.
-2. **Re-evaluate narrow widget-local action sugar second**
-   - only if at least two real medium surfaces still look materially noisier than the root-handler path,
+2. **Re-evaluate keyed-list / payload-row handler ergonomics second**
+   - only if keyed-list evidence still looks materially noisier than the root-handler path after the product pass,
    - keep action identity and root handler table semantics visible.
 3. **Keep macros third and optional**
    - no new macro work is required for v2 success,
@@ -162,7 +163,7 @@ The next post-v1 pass should stay disciplined:
 These remain valid, but they are not the default golden path:
 
 - raw `cx.on_action(...)`
-- widget-local `listener` / `dispatch` / `shortcut` sugar
+- keyed-list / payload-row-specific handler sugar
 - another default transaction helper beyond `on_action_notify_models::<A>(...)`
 - macros beyond existing minimal helpers
 - `DataTable` as a default first-contact teaching surface; until a curated recipe exists, treat it as

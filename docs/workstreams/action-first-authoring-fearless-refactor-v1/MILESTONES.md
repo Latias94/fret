@@ -9,6 +9,7 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+- Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
@@ -57,16 +58,25 @@ Adoption note (as of 2026-03-07):
   not a Bevy-style single-package root `examples/` rewrite and not an expansion of `ecosystem/fret`
   into the repo?s canonical example host.
 - Active post-v1 order: productize the current default path first (onboarding ladder +
-  default/comparison/advanced taxonomy), then revisit narrow widget-local action sugar, and only
-  then a decision on macros.
+  default/comparison/advanced taxonomy), then revisit keyed-list / payload-row handler ergonomics,
+  and only then a decision on macros.
 - Active shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now narrows the next truly worthwhile
   surfaces to default-path productization first, invalidation/local-state ergonomics second,
-  builder-first last-mile seams third, and widget-local action sugar only after those passes.
+  builder-first last-mile seams third, and keyed-list / payload-row handler ergonomics only after
+  those passes.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`,
   `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `apps/fret-ui-gallery/README.md`,
   the `data_table` gallery page framing, and generated scaffold READMEs now align on the same
   default/comparison/advanced framing.
+- Invalidation review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses
+  `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`,
+  `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`
+  as a focused medium-surface set and records a split result: keyed-list pressure has shifted from
+  invalidation/local-state helpers to root handler placement for payload row actions, query/client
+  invalidation still belongs to the explicit render-time escape hatch path, and command/keymap plus
+  cross-field form root handling remain intentional ownership boundaries rather than the best sugar
+  targets.
 - Business-table note: `DataTable` is now explicitly treated as a separate post-v1 audit/problem
   space. It should not keep the primitive `Table` builder-first cleanup milestone artificially
   open.
@@ -175,7 +185,7 @@ Post-v1 direction (recommended):
   - skill-level parity guidance remains the shared rubric for any future discrete-widget audits before adding helpers,
   - explicit-vs-implicit invalidation ergonomics (`notify()` stays available, but should not be the default burden after tracked state writes),
   - builder-first composition that reduces `ui::children!` / nested `into_element(cx)`,
-  - widget-local action sugar only if a new round of evidence justifies promoting it,
+  - keyed-list / payload-row handler ergonomics only if a new round of evidence justifies promoting it,
   - narrow UI macros only if builder-first authoring still leaves repeated structural boilerplate; they are optional polish, not a v2 prerequisite.
   - after default-path convergence, shift the next milestone from helper design to productization: onboarding clarity, comparison/advanced-surface positioning, visual defaults, and a future deprecation plan.
   - The current deprecation/hard-delete blockers are now named explicitly in `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible alias, and `CommandId`-first widget contracts.

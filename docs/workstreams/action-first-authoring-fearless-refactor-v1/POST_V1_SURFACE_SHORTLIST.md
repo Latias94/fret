@@ -37,7 +37,7 @@ The highest-value post-v1 work is now:
 2. improve invalidation/local-state ergonomics only where medium-surface evidence still shows a real
    cliff,
 3. finish only the builder-first seams that still block cross-cutting default authoring,
-4. revisit widget-local action sugar only if the above still leaves repeated handler noise,
+4. revisit keyed-list / payload-row handler ergonomics only if the above still leaves repeated keyed-list handler noise,
 5. keep macros and `DataTable` helper expansion deferred.
 
 In practical terms, the next phase should optimize for **surface clarity and evidence-backed density
@@ -53,7 +53,7 @@ improvements**, not for adding more API names.
 | P1 | Invalidation ergonomics (`AFA-postv1-004`) | This is the closest remaining gap to the GPUI/Zed-style “state write => rerender” feel. | At least one real medium surface still needs explicit policy explanation around tracked local writes vs escape-hatch `notify()`. | Keep `notify()` as a low-level escape hatch; make tracked local writes the boring default. |
 | P1 | Local-state ergonomics (`AFA-postv1-001`) | `LocalState<T>` is viable, but still model-backed and still visibly different from the north-star plain-Rust feel. | Evidence must come from real medium surfaces, not from synthetic micro helpers. | Improve the local-state boundary only if it reduces real coordination noise without weakening runtime semantics. |
 | P2 | Builder-first last-mile seams (`AFA-postv1-002`) | Broad cleanup already landed; the remaining value is only in cross-cutting host/root seams that still force eager landing. | The seam must affect multiple real surfaces or block the default path directly. | Finish a small number of high-leverage root/container seams; stop leaf-by-leaf churn. |
-| P3 | Widget-local action sugar (`AFA-postv1-003`) | This can reduce root-handler noise, but only after the default path is already stable. | At least two medium surfaces still look materially too noisy after productization + invalidation cleanup. | Add only a narrow `listener` / `dispatch` / `shortcut` layer; keep action identity and root handler semantics visible. |
+| P3 | Keyed-list / payload-row handler ergonomics (`AFA-postv1-003`) | This may reduce keyed-list root-handler noise, but only after the default path is already stable. | Keyed-list evidence still looks materially too noisy after productization + invalidation cleanup; command/query/form surfaces do not count. | Add only a narrow keyed-list/payload-row placement aid; keep action identity and root handler semantics visible. |
 | P4 | Hard-delete/quarantine follow-through | Important for facade hygiene, but not the next authoring-density win. | Deprecation windows and product-policy decisions must mature first. | Continue policy/gate work; do not let cleanup displace the higher-value authoring surfaces above. |
 
 ---
@@ -63,7 +63,7 @@ improvements**, not for adding more API names.
 | Surface | Why it is not worth prioritizing now | Re-entry condition |
 | --- | --- | --- |
 | `DataTable` helper/macro expansion | The audit already shows the main pressure is business-table recipe assembly, not primitive table builders. The repo now has a curated default recipe plus a gallery slice and smoke gate. | Revisit only if the curated recipe still looks materially too noisy in multiple app-grade examples. |
-| Broad macro design (`AFA-postv1-005`) | Macros would freeze a still-settling mental model too early. They are optional polish, not a v2 prerequisite. | Revisit only after productization + invalidation + widget-local sugar still leave repeated structural boilerplate. |
+| Broad macro design (`AFA-postv1-005`) | Macros would freeze a still-settling mental model too early. They are optional polish, not a v2 prerequisite. | Revisit only after productization + invalidation + keyed-list / payload-row ergonomics still leave repeated structural boilerplate. |
 | Compat-runner removal | The current policy already says it is an intentional advanced interop seam for now. | Revisit only if the caller families shrink or a clear quarantine boundary exists. |
 | `use_state` hard delete | Current policy keeps it as an explicit raw-model seam rather than a default local-state story. | Revisit only after the repo decides whether that explicit seam should remain permanent. |
 | More `DataTable`-specific surface tweaks in this workstream | That would blur the line between business-table productization and the main action-first/view-runtime surface. | Track separately if a future business-table workstream is needed. |
@@ -110,12 +110,12 @@ Recommended deliverables:
 - target only seams that still force eager `AnyElement` landing across multiple surfaces,
 - avoid more local demo-by-demo cleanup unless it closes a reusable root/container seam.
 
-### 4. Re-evaluate widget-local action sugar
+### 4. Re-evaluate keyed-list / payload-row handler ergonomics
 
 Recommended deliverables:
 
 - only after steps 1-3,
-- only if at least two medium surfaces still look materially worse than the root-handler story.
+- only if keyed-list / payload-row surfaces still look materially worse than the root-handler story.
 
 ### 5. Leave macros and `DataTable` expansion out of the critical path
 
