@@ -32,6 +32,7 @@ Unless a document says otherwise:
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Action-first authoring + view runtime refactor: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - Current endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
@@ -117,6 +118,7 @@ now taught as `LocalState` + view runtime + typed actions.
 - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - Endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
 - Recommended building blocks:
@@ -156,9 +158,10 @@ now taught as `LocalState` + view runtime + typed actions.
 10. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
 11. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
 12. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-13. `docs/known-issues.md` — common diagnostics and current platform limitations.
-14. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-15. ADR deep dives (pick by subsystem):
+13. `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md` — one-page status view for what is done, what is maintenance mode, what is still architectural, and what remains on the hard-delete track.
+14. `docs/known-issues.md` — common diagnostics and current platform limitations.
+15. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+16. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`

@@ -10,6 +10,9 @@ This document is the **navigation layer** for the repository:
   - and the “closure checklist” to prevent late rewrites.
 
 If you are new, read `docs/README.md` first, then use this file as your always-open index.
+If you want the current high-level status of the action-first/view-runtime refactor before diving
+into subsystem detail, read
+`docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md` first.
 
 ---
 
