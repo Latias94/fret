@@ -249,14 +249,14 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - [x] a follow-up scan now shows no other obvious small reader-side canonical-first patch left
       inside `crates/fret-diag` outside deferred Layer A surfaces or intentional dual-write
       producers,
-    - [ ] the remaining Layer B follow-up outside the `stats` tree is now reduced to one explicit
+    - [x] the remaining Layer B follow-up outside the `stats` tree is now reduced to one explicit
       decision before any Layer A manifest chunk-index contract change is considered,
     - [x] the non-`stats/*` Layer B audit is now captured in
       `LAYER_B_PAYLOAD_FAMILIES_AUDIT_V1.md`, which classifies `diag_repro`, `diag_repeat`, and
-      `evidence_index` as aligned, keeps `lint.rs` as the only obvious small P1 producer, and
+      `evidence_index` as aligned, initially scoped `lint.rs` as the last small P1 producer, and
       explicitly defers Layer A chunk-index surfaces,
-    - [ ] decide whether `crates/fret-diag/src/lint.rs` should adopt the shared canonical-first
-      helper policy or remain the last intentional small inline dual-write producer,
+    - [x] `crates/fret-diag/src/lint.rs` now adopts the shared canonical-first helper policy, so
+      the non-`stats/*` Layer B follow-up is closed unless a new payload family appears,
     - [x] DevTools/MCP residual `*json` names are now explicitly classified in the audit as mostly
       raw JSON text holders rather than artifact-path contract drift, so they are deferred by
       default unless those modules are already being changed for another reason.

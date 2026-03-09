@@ -39,7 +39,8 @@ Main conclusion:
 1. non-`stats/*` Layer B review is now mostly complete,
 2. `diag_repro`, `diag_repeat`, and `evidence_index` are already aligned with canonical-first
    additive compatibility,
-3. the only obvious small remaining non-`stats/*` producer is `crates/fret-diag/src/lint.rs`,
+3. the audit initially identified `crates/fret-diag/src/lint.rs` as the only obvious small
+   remaining non-`stats/*` producer, and that follow-up is now landed through the shared helper,
 4. Layer A chunk-index surfaces should remain deferred until a dedicated contract note says whether
    `bundle_json` is still intentionally format-specific there.
 
@@ -108,25 +109,28 @@ Recommendation:
 
 - Treat reader-side Layer B adoption outside `stats/*` as materially complete.
 
-### P1 candidate — `lint.rs`
+### Landed follow-up — `lint.rs`
 
 Key anchors:
 
 - `crates/fret-diag/src/lint.rs:427`
 - `crates/fret-diag/src/lint.rs:428`
 
-Observations:
+Original observation:
 
 - lint payload emission still hand-writes both `bundle_artifact` and `bundle_json` inline,
 - this is still a Layer B payload producer rather than a Layer A manifest concern,
 - the remaining drift is small enough to address separately without widening scope.
 
+Current state:
+
+- `lint.rs` now uses the same shared alias helper policy as the rest of the additive Layer B
+  cleanup.
+
 Recommendation:
 
-- Keep this as the only obvious small non-`stats/*` Layer B cleanup candidate.
-- If touched, prefer using the same canonical-first helper policy already adopted elsewhere.
-- If not touched yet, record it explicitly as an intentional carry-over rather than reopening the
-  broader audit.
+- Treat this follow-up as done.
+- Do not reopen non-`stats/*` Layer B review unless a new payload family appears.
 
 ### Defer — Layer A chunk-index surfaces
 
@@ -165,7 +169,6 @@ Interpretation:
 ## Recommended next move
 
 1. Treat this audit as closing the broad non-`stats/*` Layer B review.
-2. Keep `lint.rs` as the only obvious small P1 follow-up candidate.
+2. Treat the non-`stats/*` Layer B follow-up as closed for now.
 3. Do not expand this into Layer A chunk-index renaming.
-4. Update the workstream TODO so the remaining work is stated as a narrow `lint.rs` choice rather
-   than an open-ended review bucket.
+4. Keep any future naming work focused on new evidence that a real consumer contract still drifts.

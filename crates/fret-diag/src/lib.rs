@@ -21,6 +21,7 @@ use fret_diag_protocol::{
 };
 
 pub mod api;
+mod artifact_alias;
 mod artifact_lint;
 mod artifact_store;
 pub mod artifacts;
