@@ -1071,6 +1071,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: paint-root cache prune tails now also route through smaller private helpers in
     `canvas/widget/paint_root/prune.rs`, so the root prune entry keeps static tile-cache cleanup
     and dynamic paint-cache cleanup as explicit, separately reviewable responsibilities.
+  - Progress: selected-node overlay and dynamic-node paint tails now also route through the private
+    `canvas/widget/paint_root/node_layers.rs` seam, so `cached_nodes.rs` and
+    `immediate_pass.rs` stop re-embedding the same selected-node replay and dynamic-node overlay
+    tail while keeping static node paint ordering explicit at the root.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

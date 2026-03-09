@@ -61,26 +61,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
         }
 
-        if snapshot.interaction.elevate_nodes_on_select {
-            let render_selected = self.collect_selected_nodes_render_data(
-                &*cx.app,
-                snapshot,
-                geom,
-                render_cull_rect,
-                zoom,
-            );
-            if !render_selected.nodes.is_empty() {
-                self.paint_nodes_static(
-                    cx.scene,
-                    cx.services,
-                    cx.scale_factor,
-                    &render_selected,
-                    zoom,
-                );
-            }
-        }
-
-        // --- Nodes (dynamic overlays) ---
-        self.paint_nodes_dynamic_from_geometry(cx, snapshot, geom, zoom);
+        self.paint_root_node_overlay_layers(cx, snapshot, geom, render_cull_rect, zoom);
     }
 }

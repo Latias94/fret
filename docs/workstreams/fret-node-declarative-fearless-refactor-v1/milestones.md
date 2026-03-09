@@ -662,6 +662,10 @@ real editors.
 - paint-root cache prune tails now also route through smaller private helpers in
   `canvas/widget/paint_root/prune.rs`, so the root prune entry keeps static tile-cache cleanup and
   dynamic paint-cache cleanup as explicit, separately reviewable responsibilities.
+- selected-node overlay and dynamic-node paint tails now also route through the private
+  `canvas/widget/paint_root/node_layers.rs` seam, so `cached_nodes.rs` and
+  `immediate_pass.rs` stop re-embedding the same selected-node replay and dynamic-node overlay tail
+  while keeping static node paint ordering explicit at the root.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
