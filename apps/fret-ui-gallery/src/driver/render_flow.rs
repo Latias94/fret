@@ -1615,6 +1615,27 @@ mod tests {
     }
 
     #[test]
+    fn gallery_sidebar_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_SIDEBAR);
+
+        for target in [
+            "ui-gallery-sidebar-usage-content",
+            "ui-gallery-sidebar-controlled-content",
+            "ui-gallery-sidebar-demo-content",
+            "ui-gallery-sidebar-use-sidebar-content",
+            "ui-gallery-sidebar-mobile-content",
+            "ui-gallery-sidebar-rtl-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Sidebar page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_date_picker_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page(PAGE_DATE_PICKER);
 
