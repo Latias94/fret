@@ -14,6 +14,7 @@ Related:
 - Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
@@ -195,7 +196,10 @@ Current policy exit criteria:
 
 Recommended next action:
 
-- add a narrow first-contact/docs/template gate if reintroduction risk becomes real, then revisit whether `use_state` should remain permanent or eventually move to deprecation.
+- keep the first-contact/docs/template gate stable, then revisit whether `use_state` should remain
+  permanent or eventually move to deprecation.
+- if future facade reduction is chosen, use `USE_STATE_SURFACE_PLAYBOOK.md` to execute the
+  explicit-seam-vs-deprecation decision without reopening the default-path migration debate.
 
 ---
 

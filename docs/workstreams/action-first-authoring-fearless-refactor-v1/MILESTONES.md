@@ -23,6 +23,7 @@ Related:
 - Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 
 ---
@@ -84,6 +85,9 @@ Adoption note (as of 2026-03-07):
   records the quarantine-first execution steps for `run_native_with_compat_driver(...)`, so future
   facade reduction no longer has to reconstruct how to move that advanced seam out of the default
   top-level surface.
+- `use_state` cleanup update (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records the
+  future keep-vs-deprecate execution path for the explicit raw-model seam, so the repo can shrink
+  that surface later without reopening the already-closed default-path migration question.
 - Productization update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the ladder
   and label contract explicitly, and `README.md`, `docs/first-hour.md`,
   `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`,

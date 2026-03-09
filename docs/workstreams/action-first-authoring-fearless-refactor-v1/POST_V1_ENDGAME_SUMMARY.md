@@ -12,6 +12,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 
 ---
 
@@ -154,6 +155,11 @@ The compat-runner lane now has the same treatment:
 - `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` records the quarantine-first patch shape for future facade
   reduction, while keeping the current product stance as “intentional advanced interop, not a
   near-term delete”.
+
+The `use_state` lane is now also explicit:
+
+- `USE_STATE_SURFACE_PLAYBOOK.md` records the future keep-vs-deprecate sequence for the raw-model
+  seam, while preserving the current stance that `use_local*` is the only default teaching path.
 
 This is why the hard-delete sequence should stay explicit and staged rather than turning into one
 last grep-and-delete pass.

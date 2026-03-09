@@ -24,6 +24,7 @@ Related:
 - Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 
 ADRs (decision gates for this workstream):
@@ -555,6 +556,10 @@ Current sequencing note (as of 2026-03-09):
   `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the quarantine-first execution checklist for
   `run_native_with_compat_driver(...)`, so a future facade-reduction pass can move that advanced
   seam behind an explicit compat boundary without reopening the same policy debate.
+- `use_state` surface note (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records the
+  future keep-vs-deprecate execution checklist for the explicit raw-model seam, so a later
+  surface-reduction pass can proceed without relitigating whether the default local-state migration
+  is already complete.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -704,6 +709,16 @@ Current sequencing note (as of 2026-03-09):
   - Goal: decide whether `use_state` is a near-term deprecation target or an intentionally retained explicit raw-model seam.
   - Evidence target: one decision note that states the default teaching rule, the explicit low-level rule, and the preconditions for any future deprecation.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md` now recommends keeping `use_state` for now as an explicit raw-model hook while `use_local*` remains the only default local-state teaching path; `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 4 with starter/reference cleanup complete, `docs/examples/todo-app-golden-path.md` no longer lists `use_state` as a generic default hook, and all current first-contact/reference code paths now follow that policy in code.
+
+- [x] AFA-postv1-017b Publish a surface playbook for future `use_state` reduction.
+  - Goal: record the exact keep-vs-deprecate execution path for `use_state` so the repo can revisit
+    the raw-model seam later without reopening the first-contact migration argument.
+  - Evidence target: one execution note that states preconditions, option split, patch shape,
+    validation, release wording, and abort conditions for either retaining or shrinking the public
+    `use_state` surface.
+  - Status (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records that sequence, and the
+    policy/checklist/status summary docs all point to it as the concrete follow-up only if the repo
+    later chooses to revisit the public raw-model seam.
 
 - [x] AFA-postv1-018 Add a narrow default-path gate against reintroducing `use_state::<T>()`.
   - Goal: keep first-contact docs/templates/examples on `use_local*` after the current cleanup lands, without banning explicit raw-model usage in advanced/runtime code.
