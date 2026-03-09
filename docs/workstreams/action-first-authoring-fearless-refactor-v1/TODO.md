@@ -709,6 +709,17 @@ Current sequencing note (as of 2026-03-09):
     - `apps/fret-cookbook/EXAMPLES.md`
     - `apps/fret-ui-gallery/README.md`
 
+- [x] AFA-postv1-026 Close one medium-surface builder seam in the `Alert` family.
+  - Goal: prove that post-v1 builder-density work can stay narrow and evidence-driven instead of reopening broad helper expansion.
+  - Status (as of 2026-03-09): `Alert::build(...)` and `AlertAction::build(...)` now keep alert content/action composition on the builder path, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, ui-gallery alert snippets) have migrated without widening the default authoring story beyond one component family.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/alert.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-cookbook/examples/form_basics.rs`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/alert/basic.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/alert/action.rs`
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.

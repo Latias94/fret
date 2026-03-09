@@ -4,22 +4,23 @@ use fret_core::SemanticsRole;
 use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_kit::prelude::*;
 use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
-    Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AvatarImage,
-    Badge, Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader,
-    CardTitle, Collapsible, Combobox, Command, CommandDialog, CommandEmpty, CommandInput,
-    CommandItem, CommandList, CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry,
-    DataGridCanvas, DataGridCanvasAxis, DataTable, DataTableGlobalFilterInput,
-    DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
-    DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
-    DropdownMenu, DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover,
-    PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet,
-    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
-    TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
-    TooltipContent,
+    Alert, AlertAction, AlertDescription, AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+    AlertDialogTitle, AlertTitle, AvatarImage, Badge, Breadcrumb, Button, Card, CardContent,
+    CardDescription, CardFooter, CardHeader, CardTitle, Collapsible, Combobox, Command,
+    CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList, CommandPalette,
+    CommandShortcut, ContextMenu, ContextMenuEntry, DataGridCanvas, DataGridCanvasAxis, DataTable,
+    DataTableGlobalFilterInput, DataTableViewOptionItem, DataTableViewOptions, Dialog,
+    DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
+    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, DropdownMenuEntry, Empty,
+    HoverCardContent, Kbd, Menubar, Popover, PopoverContent, PopoverDescription, PopoverHeader,
+    PopoverTitle, Progress, Select, Sheet, SheetContent, SheetDescription, SheetFooter,
+    SheetHeader, SheetTitle, Slider, Switch, TableBody, TableCaption, TableFooter, TableHead,
+    TableHeader, TableRow, TabsRoot, Toaster, TooltipContent,
 };
 use time::{Date, OffsetDateTime};
 
@@ -137,6 +138,20 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         .p_4()
         .border_1()
         .into_element(cx);
+    let _ = Alert::build(|cx, out| {
+        out.push_ui(cx, AlertTitle::new("x"));
+        out.push_ui(cx, AlertDescription::new("y"));
+        out.push_ui(
+            cx,
+            AlertAction::build(|cx, out| {
+                out.push(cx.text("Undo"));
+            }),
+        );
+    })
+    .ui()
+    .p_4()
+    .border_1()
+    .into_element(cx);
     let _ = Badge::new("x").ui().px_2().into_element(cx);
     let _ = Kbd::new("x").ui().px_2().into_element(cx);
 }
@@ -182,24 +197,20 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
             .ui()
             .p_2()
             .into_element(cx, |cx| {
-                vec![
-                    primitives::BreadcrumbList::new()
-                        .ui()
-                        .p_2()
-                        .into_element(cx, |cx| {
-                            vec![primitives::BreadcrumbItem::new().ui().p_2().into_element(
-                                cx,
-                                |cx| {
-                                    vec![
-                                        primitives::BreadcrumbLink::new("Home")
-                                            .ui()
-                                            .p_0()
-                                            .into_element(cx),
-                                    ]
-                                },
-                            )]
-                        }),
-                ]
+                vec![primitives::BreadcrumbList::new()
+                    .ui()
+                    .p_2()
+                    .into_element(cx, |cx| {
+                        vec![primitives::BreadcrumbItem::new()
+                            .ui()
+                            .p_2()
+                            .into_element(cx, |cx| {
+                                vec![primitives::BreadcrumbLink::new("Home")
+                                    .ui()
+                                    .p_0()
+                                    .into_element(cx)]
+                            })]
+                    })]
             });
 
         let _ = primitives::BreadcrumbSeparator::new().ui().into_element(cx);
@@ -260,6 +271,14 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
+    let _ = Alert::build::<fret_ui_app::App, _>(|cx, out| {
+        out.push_ui(cx, AlertTitle::new("x"));
+        out.push_ui(cx, AlertDescription::new("y"));
+    })
+    .ui()
+    .p_4()
+    .border_1()
+    .build();
     let _ = Badge::new("x").ui().px_2().build();
     let _ = Kbd::new("x").ui().px_2().build();
     let _ = AvatarImage::maybe(None).ui().px_2().build();

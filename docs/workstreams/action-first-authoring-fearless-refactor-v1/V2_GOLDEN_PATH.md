@@ -38,6 +38,7 @@ Use root `build(...)` helpers when the component owns the runtime boundary.
 Examples:
 
 - `shadcn::Card::build(...)`
+- `shadcn::Alert::build(...)`
 - `shadcn::Dialog::build(cx, trigger, content)`
 - `shadcn::AlertDialog::build(cx, trigger, content)`
 - `shadcn::Popover::build(cx, trigger, content)`

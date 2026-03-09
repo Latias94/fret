@@ -200,6 +200,12 @@ The remaining question is narrower:
 - which medium, real demos still feel too heavy even after the current builder-first path,
 - and whether those cases justify another very small helper pass.
 
+The first disciplined post-v1 answer is now in place:
+
+- `Alert::build(...)` and `AlertAction::build(...)` close one repeated alert-family seam without adding a new helper family,
+- cookbook `form_basics` / `assets_reload_epoch_basics` plus the main ui-gallery alert snippets now serve as the evidence slice,
+- so the remaining medium-surface pressure has shifted away from alert composition and toward other still-repeated families only if they show the same cross-surface pattern.
+
 ---
 
 ## What should not be mistaken for missing v2

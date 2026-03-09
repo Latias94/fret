@@ -130,11 +130,13 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
 - `ecosystem/fret-ui-kit/src/ui.rs` (`UiElementSinkExt` + `UiChildIntoElement` for builder-first `*_build` sink composition and heterogeneous child bridging)
 - `ecosystem/fret-ui-shadcn/src/card.rs` (`Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` allow late child landing, host-bound `.ui()` patching, and direct `children!` / `push_ui()` participation across the query-demo card tree)
+- `ecosystem/fret-ui-shadcn/src/alert.rs` (`Alert::build(...)` keeps alert title/description content on the builder path, while `AlertAction::build(...)` does the same for the top-right action slot without reopening a broader helper family)
 - `ecosystem/fret-ui-shadcn/src/layout.rs` (`container_vstack_build(...)` / `container_hstack_build(...)` / `container_hstack_centered_build(...)` keep older shadcn layout helpers on the same late-landing child pipeline)
 - `ecosystem/fret-ui-shadcn/src/table.rs` (`Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` extend the same late-landing child pipeline into the table composite stack)
 - `ecosystem/fret-ui-shadcn/src/table.rs` (`TableCell::build(child)` is the first single-child late-landing sample layered onto the same authoring surface)
 - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`DialogTrigger::build(...)` and `Dialog::compose().content_with(...)` keep trigger/content authoring on the late-landing pipeline while supporting `DialogClose::from_scope()` in deferred content)
 - `ecosystem/fret-ui-shadcn/src/sheet.rs` (`SheetTrigger::build(...)` and `Sheet::compose().content_with(...)` keep trigger/content authoring on the late-landing pipeline while supporting `SheetClose::from_scope()` in deferred content)
+- `apps/fret-cookbook/examples/form_basics.rs`, `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`, `apps/fret-ui-gallery/src/ui/snippets/alert/basic.rs`, `apps/fret-ui-gallery/src/ui/snippets/alert/action.rs` (the first medium alert-family surfaces now stay on the builder-first path instead of pre-collecting alert children)
 - `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs` (gallery snippet now demonstrates the `TableCell::build(ui::text(...))` shape instead of forcing early child landing)
 - `ecosystem/fret-genui-shadcn/src/resolver/data.rs` (GenUI data-table rendering now uses the table builder-first path instead of pre-collecting header/body row vectors)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions and now late-land their todo-card trees via `Card::build(...)`)
@@ -218,6 +220,7 @@ Post-v1 direction (recommended):
   - Current-vs-target v2 note (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now makes the next-stage framing explicit: v1 migration is effectively complete, action/menu residue is no longer the main work item, and the highest-value remaining gap is productization plus tracked-write/invalidation ergonomics.
   - `notify()` policy draft (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now fixes the near-term direction for `AFA-postv1-004`: keep `notify()` as a low-level escape hatch, keep tracked writes as the boring default rerender path, and do not reopen generic invalidation helper design unless a new medium-surface contradiction appears.
   - Productization ingress update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md`, `docs/examples/README.md`, `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, and `apps/fret-ui-gallery/README.md` now repeat the same default/comparison/advanced framing, reducing the remaining post-v1 work from taxonomy drift to keeping those ingress docs stable.
+  - Medium-surface builder follow-up (as of 2026-03-09): `Alert::build(...)` plus `AlertAction::build(...)` now close one deliberately narrow alert-family seam in `ecosystem/fret-ui-shadcn/src/alert.rs`, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, and the main ui-gallery alert snippets) now use that late-landing path instead of pre-collecting alert children.
 
 ---
 

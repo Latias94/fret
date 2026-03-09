@@ -100,21 +100,23 @@ impl View for AssetsReloadEpochBasicsView {
 
         let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
         let svgs = fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);
-        let stats = shadcn::Alert::new(ui::children![
-            cx;
-            shadcn::AlertTitle::new("Budgets + cache stats"),
-            shadcn::AlertDescription::new(format!(
-                "Images: ready={} pending={} failed={} bytes={} / {} | SVGs: ready={} bytes={} / {}",
-                images.ready_count,
-                images.pending_count,
-                images.failed_count,
-                images.bytes_ready,
-                images.bytes_budget,
-                svgs.ready_count,
-                svgs.bytes_ready,
-                svgs.bytes_budget
-            )),
-        ]);
+        let stats = shadcn::Alert::build(|cx, out| {
+            out.push_ui(cx, shadcn::AlertTitle::new("Budgets + cache stats"));
+            out.push_ui(
+                cx,
+                shadcn::AlertDescription::new(format!(
+                    "Images: ready={} pending={} failed={} bytes={} / {} | SVGs: ready={} bytes={} / {}",
+                    images.ready_count,
+                    images.pending_count,
+                    images.failed_count,
+                    images.bytes_ready,
+                    images.bytes_budget,
+                    svgs.ready_count,
+                    svgs.bytes_ready,
+                    svgs.bytes_budget
+                )),
+            );
+        });
 
         let content = ui::v_flex(|cx| ui::children![cx; actions, image_panel, svg_panel, stats])
             .gap(Space::N4)
@@ -200,10 +202,10 @@ fn render_image_panel(
         out.push_ui(cx, image_box);
 
         if let Some(msg) = st.error {
-            let alert = shadcn::Alert::new(ui::children![cx;
-                shadcn::AlertTitle::new("Image decode/upload failed"),
-                shadcn::AlertDescription::new(msg),
-            ])
+            let alert = shadcn::Alert::build(|cx, out| {
+                out.push_ui(cx, shadcn::AlertTitle::new("Image decode/upload failed"));
+                out.push_ui(cx, shadcn::AlertDescription::new(msg));
+            })
             .variant(shadcn::AlertVariant::Destructive);
             out.push_ui(cx, alert);
         }
