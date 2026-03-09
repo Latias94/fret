@@ -1850,6 +1850,9 @@ impl ElementHostWidget {
                     && (direct_children_layout_invalidated || cached.is_some())
                     && ((props.axis.scroll_x() && content_w.0 > desired.width.0 + 0.5)
                         || (props.axis.scroll_y() && content_h.0 > desired.height.0 + 0.5)));
+            let post_layout_authoritative_scan = post_layout_extents_mode
+                && children_layout_invalidated
+                && !must_probe_for_growing_extent;
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,
                 cx.children,
@@ -1858,7 +1861,8 @@ impl ElementHostWidget {
                 Size::new(content_w, content_h),
                 extent_may_be_stale,
                 (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
-                    || shrink_validation_enabled,
+                    || shrink_validation_enabled
+                    || post_layout_authoritative_scan,
             );
 
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
@@ -1892,161 +1896,47 @@ impl ElementHostWidget {
                 cx.request_redraw();
             }
 
-            // If post-layout child bounds exceed the currently inferred extent (cached/deferral
-            // cases), expand the scroll handle immediately so users can reach the new content.
-            let mut changed_grow = false;
-            if props.axis.scroll_x()
-                && observed.trusted.width.0 > 0.0
-                && observed.trusted.width.0 > content_w.0 + 0.5
-            {
-                content_w = Px(observed.trusted.width.0.max(desired.width.0.max(0.0)));
-                changed_grow = true;
-            }
-            if props.axis.scroll_y()
-                && observed.trusted.height.0 > 0.0
-                && observed.trusted.height.0 > content_h.0 + 0.5
-            {
-                content_h = Px(observed.trusted.height.0.max(desired.height.0.max(0.0)));
-                changed_grow = true;
-            }
-            if changed_grow {
-                relayout_with_updated_content_bounds = true;
-                if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
-                    eprintln!(
-                        "scroll extent grew element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed=({:.1},{:.1}) viewport=({:.1},{:.1}) pending_probe={} must_probe={}",
-                        self.element,
-                        cx.node,
-                        props.axis,
-                        handle.content_size().width.0,
-                        handle.content_size().height.0,
-                        observed.loose.width.0,
-                        observed.loose.height.0,
-                        handle.viewport_size().width.0,
-                        handle.viewport_size().height.0,
-                        pending_extent_probe,
-                        must_probe_for_growing_extent,
-                    );
-                }
-                handle.set_content_size_internal(Size::new(content_w, content_h));
-                let prev = handle.offset();
-                handle.set_offset_internal(prev);
-
-                cx.tree
-                    .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
-                        node: cx.node,
-                        element: Some(self.element),
-                        test_id: debug_test_id.clone(),
-                        axis: match props.axis {
-                            crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
-                            crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
-                            crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
-                        },
-                        offset: handle.offset(),
-                        viewport: handle.viewport_size(),
-                        content: handle.content_size(),
-                        observed_extent: None,
-                        overflow_observation: None,
-                    });
-
-                crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    ScrollLayoutProbeCacheState::default,
-                    |state| state.last_max_child = Size::new(content_w, content_h),
-                );
-
-                crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::ScrollState::default,
-                    |state| {
-                        if cx.children.len() == 1 {
-                            state.intrinsic_measure_cache =
-                                Some(crate::element::ScrollIntrinsicMeasureCache {
-                                    key: crate::element::ScrollIntrinsicMeasureCacheKey {
-                                        avail_w: available_space_cache_key(
-                                            child_constraints.available.width,
-                                        ),
-                                        avail_h: available_space_cache_key(
-                                            child_constraints.available.height,
-                                        ),
-                                        axis: match props.axis {
-                                            crate::element::ScrollAxis::X => 0,
-                                            crate::element::ScrollAxis::Y => 1,
-                                            crate::element::ScrollAxis::Both => 2,
-                                        },
-                                        probe_unbounded: probe_unbounded_for_measure,
-                                        scale_bits: cx.scale_factor.to_bits(),
-                                    },
-                                    max_child: Size::new(content_w, content_h),
-                                });
-                        }
-                    },
-                );
-            }
-
-            if shrink_validation_enabled
+            let authoritative_post_layout_observation = post_layout_authoritative_scan
                 && !observation.wrapper_peel_budget_hit
-                && !observation.deep_scan_budget_hit
-            {
-                // Single-child scroll subtrees can over-measure under unbounded probe passes
-                // (including deferred/cached paths and clean probe/final flows). When a bounded
-                // post-layout observation proves the laid-out content is smaller, clamp the
-                // scroll extent down without scheduling another deep measure walk.
-                //
-                // Important nuance:
-                //
-                // In fresh unbounded-probe flows, bounded layout commonly clamps the child subtree
-                // back to the viewport on the scroll axis. An observed extent equal to the viewport
-                // is therefore ambiguous: it does not prove the probed content extent was too
-                // large, only that the final layout phase constrained it. Only treat fresh-probe
-                // observations as shrink proof when the laid-out subtree still exceeds the viewport
-                // (i.e. the observation contains real post-layout overflow beyond `desired`).
-                let can_shrink_x = defer_this_frame
-                    || post_layout_shrink_revalidation
-                    || observed.trusted.width.0 > desired.width.0 + 0.5;
-                let can_shrink_y = defer_this_frame
-                    || post_layout_shrink_revalidation
-                    || observed.trusted.height.0 > desired.height.0 + 0.5;
-                let mut changed = false;
-                if props.axis.scroll_x()
-                    && can_shrink_x
-                    && observed.trusted.width.0 > 0.0
-                    && observed.trusted.width.0 + 0.5 < content_w.0
-                {
-                    content_w = Px(observed.trusted.width.0.max(desired.width.0.max(0.0)));
-                    changed = true;
-                }
-                if props.axis.scroll_y()
-                    && can_shrink_y
-                    && observed.trusted.height.0 > 0.0
-                    && observed.trusted.height.0 + 0.5 < content_h.0
-                {
-                    content_h = Px(observed.trusted.height.0.max(desired.height.0.max(0.0)));
-                    changed = true;
-                }
-
+                && !observation.deep_scan_budget_hit;
+            if authoritative_post_layout_observation {
+                // Move the post-layout path closer to GPUI's authoritative child-bounds union:
+                // when descendants changed and the bounded observation completed within budget,
+                // trust the freshly observed extent for the current frame instead of carrying a
+                // cached/probed baseline forward and then patching it via separate grow/shrink
+                // branches.
+                let next_content_w = if props.axis.scroll_x() && observed.trusted.width.0 > 0.0 {
+                    Px(observed.trusted.width.0.max(desired.width.0.max(0.0)))
+                } else {
+                    content_w
+                };
+                let next_content_h = if props.axis.scroll_y() && observed.trusted.height.0 > 0.0 {
+                    Px(observed.trusted.height.0.max(desired.height.0.max(0.0)))
+                } else {
+                    content_h
+                };
+                let changed = (next_content_w.0 - content_w.0).abs() > 0.5
+                    || (next_content_h.0 - content_h.0).abs() > 0.5;
                 if changed {
                     if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
                         eprintln!(
-                            "scroll extent shrank element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed_trusted=({:.1},{:.1}) observed_loose=({:.1},{:.1}) desired=({:.1},{:.1}) post_layout_shrink={} defer_this_frame={}",
+                            "scroll extent authoritative sync element={:?} node={:?} axis={:?} previous=({:.1},{:.1}) observed_trusted=({:.1},{:.1}) desired=({:.1},{:.1}) stale_hint={} deep_scan={} invalidated={}",
                             self.element,
                             cx.node,
                             props.axis,
-                            handle.content_size().width.0,
-                            handle.content_size().height.0,
+                            content_w.0,
+                            content_h.0,
                             observed.trusted.width.0,
                             observed.trusted.height.0,
-                            observed.loose.width.0,
-                            observed.loose.height.0,
                             desired.width.0,
                             desired.height.0,
-                            post_layout_shrink_revalidation,
-                            defer_this_frame,
+                            extent_may_be_stale,
+                            observation.deep_scan_enabled,
+                            children_layout_invalidated,
                         );
                     }
+                    content_w = next_content_w;
+                    content_h = next_content_h;
                     relayout_with_updated_content_bounds = true;
                     handle.set_content_size_internal(Size::new(content_w, content_h));
                     let prev = handle.offset();
@@ -2106,6 +1996,223 @@ impl ElementHostWidget {
                             }
                         },
                     );
+                }
+            } else {
+                // If post-layout child bounds exceed the currently inferred extent (cached/deferral
+                // cases), expand the scroll handle immediately so users can reach the new content.
+                let mut changed_grow = false;
+                if props.axis.scroll_x()
+                    && observed.trusted.width.0 > 0.0
+                    && observed.trusted.width.0 > content_w.0 + 0.5
+                {
+                    content_w = Px(observed.trusted.width.0.max(desired.width.0.max(0.0)));
+                    changed_grow = true;
+                }
+                if props.axis.scroll_y()
+                    && observed.trusted.height.0 > 0.0
+                    && observed.trusted.height.0 > content_h.0 + 0.5
+                {
+                    content_h = Px(observed.trusted.height.0.max(desired.height.0.max(0.0)));
+                    changed_grow = true;
+                }
+                if changed_grow {
+                    relayout_with_updated_content_bounds = true;
+                    if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
+                        eprintln!(
+                            "scroll extent grew element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed=({:.1},{:.1}) viewport=({:.1},{:.1}) pending_probe={} must_probe={}",
+                            self.element,
+                            cx.node,
+                            props.axis,
+                            handle.content_size().width.0,
+                            handle.content_size().height.0,
+                            observed.loose.width.0,
+                            observed.loose.height.0,
+                            handle.viewport_size().width.0,
+                            handle.viewport_size().height.0,
+                            pending_extent_probe,
+                            must_probe_for_growing_extent,
+                        );
+                    }
+                    handle.set_content_size_internal(Size::new(content_w, content_h));
+                    let prev = handle.offset();
+                    handle.set_offset_internal(prev);
+
+                    cx.tree
+                        .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                            node: cx.node,
+                            element: Some(self.element),
+                            test_id: debug_test_id.clone(),
+                            axis: match props.axis {
+                                crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                                crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                                crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                            },
+                            offset: handle.offset(),
+                            viewport: handle.viewport_size(),
+                            content: handle.content_size(),
+                            observed_extent: None,
+                            overflow_observation: None,
+                        });
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        ScrollLayoutProbeCacheState::default,
+                        |state| state.last_max_child = Size::new(content_w, content_h),
+                    );
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::ScrollState::default,
+                        |state| {
+                            if cx.children.len() == 1 {
+                                state.intrinsic_measure_cache =
+                                    Some(crate::element::ScrollIntrinsicMeasureCache {
+                                        key: crate::element::ScrollIntrinsicMeasureCacheKey {
+                                            avail_w: available_space_cache_key(
+                                                child_constraints.available.width,
+                                            ),
+                                            avail_h: available_space_cache_key(
+                                                child_constraints.available.height,
+                                            ),
+                                            axis: match props.axis {
+                                                crate::element::ScrollAxis::X => 0,
+                                                crate::element::ScrollAxis::Y => 1,
+                                                crate::element::ScrollAxis::Both => 2,
+                                            },
+                                            probe_unbounded: probe_unbounded_for_measure,
+                                            scale_bits: cx.scale_factor.to_bits(),
+                                        },
+                                        max_child: Size::new(content_w, content_h),
+                                    });
+                            }
+                        },
+                    );
+                }
+
+                if shrink_validation_enabled
+                    && !observation.wrapper_peel_budget_hit
+                    && !observation.deep_scan_budget_hit
+                {
+                    // Single-child scroll subtrees can over-measure under unbounded probe passes
+                    // (including deferred/cached paths and clean probe/final flows). When a bounded
+                    // post-layout observation proves the laid-out content is smaller, clamp the
+                    // scroll extent down without scheduling another deep measure walk.
+                    //
+                    // Important nuance:
+                    //
+                    // In fresh unbounded-probe flows, bounded layout commonly clamps the child subtree
+                    // back to the viewport on the scroll axis. An observed extent equal to the viewport
+                    // is therefore ambiguous: it does not prove the probed content extent was too
+                    // large, only that the final layout phase constrained it. Only treat fresh-probe
+                    // observations as shrink proof when the laid-out subtree still exceeds the viewport
+                    // (i.e. the observation contains real post-layout overflow beyond `desired`).
+                    let can_shrink_x = defer_this_frame
+                        || post_layout_shrink_revalidation
+                        || observed.trusted.width.0 > desired.width.0 + 0.5;
+                    let can_shrink_y = defer_this_frame
+                        || post_layout_shrink_revalidation
+                        || observed.trusted.height.0 > desired.height.0 + 0.5;
+                    let mut changed = false;
+                    if props.axis.scroll_x()
+                        && can_shrink_x
+                        && observed.trusted.width.0 > 0.0
+                        && observed.trusted.width.0 + 0.5 < content_w.0
+                    {
+                        content_w = Px(observed.trusted.width.0.max(desired.width.0.max(0.0)));
+                        changed = true;
+                    }
+                    if props.axis.scroll_y()
+                        && can_shrink_y
+                        && observed.trusted.height.0 > 0.0
+                        && observed.trusted.height.0 + 0.5 < content_h.0
+                    {
+                        content_h = Px(observed.trusted.height.0.max(desired.height.0.max(0.0)));
+                        changed = true;
+                    }
+
+                    if changed {
+                        if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
+                            eprintln!(
+                                "scroll extent shrank element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed_trusted=({:.1},{:.1}) observed_loose=({:.1},{:.1}) desired=({:.1},{:.1}) post_layout_shrink={} defer_this_frame={}",
+                                self.element,
+                                cx.node,
+                                props.axis,
+                                handle.content_size().width.0,
+                                handle.content_size().height.0,
+                                observed.trusted.width.0,
+                                observed.trusted.height.0,
+                                observed.loose.width.0,
+                                observed.loose.height.0,
+                                desired.width.0,
+                                desired.height.0,
+                                post_layout_shrink_revalidation,
+                                defer_this_frame,
+                            );
+                        }
+                        relayout_with_updated_content_bounds = true;
+                        handle.set_content_size_internal(Size::new(content_w, content_h));
+                        let prev = handle.offset();
+                        handle.set_offset_internal(prev);
+
+                        cx.tree
+                            .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                                node: cx.node,
+                                element: Some(self.element),
+                                test_id: debug_test_id.clone(),
+                                axis: match props.axis {
+                                    crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                                    crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                                    crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                                },
+                                offset: handle.offset(),
+                                viewport: handle.viewport_size(),
+                                content: handle.content_size(),
+                                observed_extent: None,
+                                overflow_observation: None,
+                            });
+
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            ScrollLayoutProbeCacheState::default,
+                            |state| state.last_max_child = Size::new(content_w, content_h),
+                        );
+
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                if cx.children.len() == 1 {
+                                    state.intrinsic_measure_cache =
+                                        Some(crate::element::ScrollIntrinsicMeasureCache {
+                                            key: crate::element::ScrollIntrinsicMeasureCacheKey {
+                                                avail_w: available_space_cache_key(
+                                                    child_constraints.available.width,
+                                                ),
+                                                avail_h: available_space_cache_key(
+                                                    child_constraints.available.height,
+                                                ),
+                                                axis: match props.axis {
+                                                    crate::element::ScrollAxis::X => 0,
+                                                    crate::element::ScrollAxis::Y => 1,
+                                                    crate::element::ScrollAxis::Both => 2,
+                                                },
+                                                probe_unbounded: probe_unbounded_for_measure,
+                                                scale_bits: cx.scale_factor.to_bits(),
+                                            },
+                                            max_child: Size::new(content_w, content_h),
+                                        });
+                                }
+                            },
+                        );
+                    }
                 }
             }
 
