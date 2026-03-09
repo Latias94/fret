@@ -903,6 +903,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     cache preview/key helpers through the private `canvas/state/state_paste_series.rs`,
     `canvas/state/state_viewport_animation.rs`, and `canvas/state/state_geometry_cache.rs` seams,
     so the root state module now mainly holds shared state/data types plus tests.
+  - Progress: `ui/canvas/state.rs` now also routes menu/searcher/toast/paste session structs
+    through the private `canvas/state/state_overlay_sessions.rs` seam, and derived geometry cache
+    key / preview cache structs through the private `canvas/state/state_preview_cache.rs` seam, so
+    the root state module keeps shrinking toward a pure state shell without changing state paths.
   - Progress: `ui/canvas/workflow.rs` now routes wire-drop insert planning through the private
     `canvas/workflow/workflow_insert.rs` seam, so the root workflow module now mainly holds the
     shared plan type, root re-export, and tests.

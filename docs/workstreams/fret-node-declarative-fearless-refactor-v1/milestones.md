@@ -490,6 +490,10 @@ real editors.
   `canvas/state/state_viewport_animation.rs`, and `canvas/state/state_geometry_cache.rs` seams, so
   the root state module stops re-embedding isolated helper impl blocks inline while keeping the
   same shared state contract and tests.
+- `ui/canvas/state.rs` now also routes menu/searcher/toast/paste session structs through the
+  private `canvas/state/state_overlay_sessions.rs` seam, and derived geometry cache key / preview
+  cache structs through the private `canvas/state/state_preview_cache.rs` seam, so the root state
+  module stops re-embedding pure data clusters inline while keeping the same state paths and tests.
 - `ui/canvas/workflow.rs` now also routes wire-drop insert planning through the private
   `canvas/workflow/workflow_insert.rs` seam, so the root workflow module stops re-embedding the
   insert/autoconnect planner inline while keeping the same root export and tests.
@@ -1197,6 +1201,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/state/state_paste_series.rs`
 - `ecosystem/fret-node/src/ui/canvas/state/state_viewport_animation.rs`
 - `ecosystem/fret-node/src/ui/canvas/state/state_geometry_cache.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_overlay_sessions.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_preview_cache.rs`
 - `ecosystem/fret-node/src/ui/canvas/workflow.rs`
 - `ecosystem/fret-node/src/ui/canvas/workflow/workflow_insert.rs`
 - `ecosystem/fret-node/src/ui/canvas/searcher.rs`
