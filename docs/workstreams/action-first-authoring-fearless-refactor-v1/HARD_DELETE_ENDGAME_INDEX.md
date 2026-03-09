@@ -7,6 +7,7 @@ Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
@@ -27,6 +28,9 @@ Use it when the repo needs a fast answer to:
 
 It is intentionally smaller than the status matrix and less procedural than the execution
 checklist.
+
+For the current best guess of what will actually be deleted vs retained, pair this note with
+`ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`.
 
 ---
 

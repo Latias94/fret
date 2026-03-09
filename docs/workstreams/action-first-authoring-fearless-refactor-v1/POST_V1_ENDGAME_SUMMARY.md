@@ -10,6 +10,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
@@ -149,6 +150,9 @@ The repo still has real cleanup work, but it is narrower now:
 
 `HARD_DELETE_ENDGAME_INDEX.md` now acts as the one-page entrypoint for these lanes before opening
 the deeper matrix/checklist/playbooks.
+
+`ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records the repo's current best execution outlook for
+which lanes are actually expected to delete, retain, or only conditionally shrink.
 
 That app-entry lane now has an execution note as well:
 

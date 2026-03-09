@@ -11,6 +11,7 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -579,6 +580,10 @@ Current sequencing note (as of 2026-03-09):
 - author-surface audit note (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
   now records that the remaining author-entry docs already align with the action-first story, and
   `ecosystem/fret-ui-material3/README.md` now closes the last missing crate-entry surface.
+- endgame outlook note (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records
+  the repo's current best execution forecast: `App::ui*` is the only lane that presently looks
+  truly headed toward removal, while compat runner, `use_state`, and command-first retained seams
+  are all currently expected to stay unless a later explicit product decision reopens them.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -793,6 +798,15 @@ Current sequencing note (as of 2026-03-09):
   - Status (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md` now records the
     audit result, and `ecosystem/fret-ui-material3/README.md` now gives Material3 the same kind of
     author-facing entrypoint that shadcn already had.
+
+- [x] AFA-postv1-021d Publish a blunt execution outlook for the remaining endgame surfaces.
+  - Goal: stop treating every retained seam as equally likely to be deleted and record the repo's
+    current best forecast for real removal vs long-term retention.
+  - Evidence target: one short note that classifies `App::ui*`, compat runner, `use_state`, and
+    command-first retained seams by expected outcome and reopen trigger.
+  - Status (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records that forecast,
+    and the high-level endgame summary/index/milestones docs all point to it as the blunt
+    execution-level reading of the current cleanup track.
 
 - [x] AFA-postv1-022 Audit `DataTable` authoring as a separate post-v1 surface instead of treating it as more primitive `Table` builder cleanup.
   - Goal: determine whether the remaining density pressure is really another `build(...)` / `into_element(cx)` problem or a higher-level business-table recipe/productization problem.

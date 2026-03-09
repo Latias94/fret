@@ -10,6 +10,7 @@ Related:
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
+- Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
@@ -104,6 +105,11 @@ Adoption note (as of 2026-03-07):
   three lane-specific playbooks plus the command-first retained-seam track into one reviewer-facing
   entrypoint, so the repo has a single “start here” note before opening the deeper matrix/checklist
   docs.
+- Endgame outlook update (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now turns
+  the hard-delete/quarantine sequence into a blunt execution forecast: `App::ui*` is the only lane
+  that currently looks truly headed toward removal, while compat runner, `use_state`, and
+  command-first retained seams are all currently expected to stay unless a later explicit product
+  decision reopens them.
 - Command-first retained-seam update (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
   pressure is split between permanent mechanism/catalog seams and intentionally retained
