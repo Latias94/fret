@@ -62,6 +62,33 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    pub fn with_measured_output_store(mut self, store: Arc<MeasuredGeometryStore>) -> Self {
+        self.measured_output = Some(store);
+        self.measured_output_key = None;
+        self
+    }
+
+    pub fn with_internals_store(mut self, store: Arc<NodeGraphInternalsStore>) -> Self {
+        self.internals = Some(store);
+        self
+    }
+
+    pub fn with_diagnostics_anchor_ports(
+        mut self,
+        child_offset: usize,
+        ports: Vec<PortId>,
+    ) -> Self {
+        self.diagnostics_anchor_ports = if ports.is_empty() {
+            None
+        } else {
+            Some(DiagnosticsAnchorPorts {
+                child_offset,
+                ports,
+            })
+        };
+        self
+    }
+
     pub fn with_store(mut self, store: Model<NodeGraphStore>) -> Self {
         self.store = Some(store);
         self.store_rev = None;

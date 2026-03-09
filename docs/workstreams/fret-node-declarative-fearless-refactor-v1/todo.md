@@ -1095,6 +1095,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/widget_surface/construct.rs` seam, so `widget_surface.rs` stops
     re-embedding the same default state allocation and cross-middleware field transplant block
     inline while keeping the public constructor/composition API unchanged.
+  - Progress: widget-surface runtime helpers now also route through the private
+    `ui/canvas/widget/widget_surface/runtime.rs` seam, so `widget_surface.rs` stops re-embedding
+    the same render-cull, debug-metrics, interaction-state, and edge-path helper bodies inline.
+  - Progress: widget-surface output/diagnostics builders now also route through the same private
+    `ui/canvas/widget/widget_surface/builders.rs` seam, so `widget_surface.rs` no longer keeps the
+    measured-output, internals, and diagnostics-anchor builder tails inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

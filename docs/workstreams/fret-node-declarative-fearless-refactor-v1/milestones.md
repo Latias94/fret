@@ -686,6 +686,12 @@ real editors.
   `ui/canvas/widget/widget_surface/construct.rs` seam, so `widget_surface.rs` stops re-embedding
   the same default state allocation and cross-middleware field transplant block inline while
   keeping the public constructor/composition API unchanged.
+- widget-surface runtime helpers now also route through the private
+  `ui/canvas/widget/widget_surface/runtime.rs` seam, so `widget_surface.rs` stops re-embedding the
+  same render-cull, debug-metrics, interaction-state, and edge-path helper bodies inline.
+- widget-surface output/diagnostics builders now also route through the same private
+  `ui/canvas/widget/widget_surface/builders.rs` seam, so `widget_surface.rs` no longer keeps the
+  measured-output, internals, and diagnostics-anchor builder tails inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
