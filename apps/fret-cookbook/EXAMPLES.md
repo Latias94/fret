@@ -18,6 +18,15 @@ Taxonomy guide:
 If you are new to the repo, stay on the Default sections first and treat the Advanced sections
 below as later reference material.
 
+Repo-wide ladder reminder:
+
+1. `hello` (template)
+2. `simple-todo` (template)
+3. `todo` (template / richer baseline)
+
+This cookbook index starts after the first two rungs and is meant to provide focused follow-up
+lessons, not replace the ladder itself.
+
 How to run an example (recommended):
 
 ```bash
@@ -48,14 +57,14 @@ Notes:
 - Most suites are “smoke + screenshot + bundle”.
 - Some examples require additional features beyond `cookbook-diag` (listed below).
 
-## The bare minimum
+## Default — the bare minimum
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
 [`hello.rs`](./examples/hello.rs) | Official | `cargo run -p fretboard -- dev native --example hello` | `cookbook-hello`
 [`simple_todo.rs`](./examples/simple_todo.rs) | Official | `cargo run -p fretboard -- dev native --example simple_todo` | `cookbook-simple-todo`
 
-## Core UI + input + commands (onboarding-friendly)
+## Default — Core UI + input + commands
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
@@ -63,7 +72,7 @@ Example | Status | Run | Diag suite
 [`text_input_basics.rs`](./examples/text_input_basics.rs) | Official | `cargo run -p fretboard -- dev native --example text_input_basics` | `cookbook-text-input-basics`
 [`commands_keymap_basics.rs`](./examples/commands_keymap_basics.rs) | Official | `cargo run -p fretboard -- dev native --example commands_keymap_basics` | `cookbook-commands-keymap-basics`
 
-## App patterns (small, copy/paste-ready)
+## Default — App patterns (small, copy/paste-ready)
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
@@ -85,7 +94,7 @@ Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`router_basics.rs`](./examples/router_basics.rs) | Lab | `cookbook-router` | `cargo run -p fretboard -- dev native --example router_basics` | `cookbook-router-basics`
 
-## State + derived state
+## Default follow-up — State + derived state
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---

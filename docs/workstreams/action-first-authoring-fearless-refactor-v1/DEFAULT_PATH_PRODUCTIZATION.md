@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Default-Path Productization
 
-Status: draft plan
+Status: active post-v1 productization note
 Last updated: 2026-03-09
 
 Related:
@@ -21,6 +21,13 @@ This note defines what “productize the current default path” means for the p
 This is intentionally **not** a new runtime/API proposal.
 It is a product-surface cleanup pass so users no longer have to infer the intended path from
 scattered examples.
+
+Current status:
+
+- the ladder itself is already decided,
+- the main first-contact docs now mostly agree on the same taxonomy,
+- the remaining work is to keep that framing stable across repo entry points rather than widening
+  the default API surface.
 
 ---
 
@@ -53,6 +60,14 @@ The same ladder should appear consistently in:
 - cookbook README,
 - scaffold template READMEs,
 - gallery README and page framing.
+
+Current convergence snapshot (as of 2026-03-09):
+
+- `docs/examples/README.md` already frames the repo with the default/comparison/advanced taxonomy.
+- `apps/fret-cookbook/README.md` and `apps/fret-cookbook/EXAMPLES.md` now act as the cookbook-side
+  default/comparison/advanced portal rather than a flat example dump.
+- `apps/fret-ui-gallery/README.md` already frames the gallery as advanced/reference instead of a
+  first-contact learning surface.
 
 ### 2. The default path must stay intentionally small
 
@@ -113,6 +128,15 @@ This productization pass is successful when:
 2. comparison surfaces are called out explicitly as comparison-only,
 3. gallery/interop/renderer surfaces are explicitly framed as advanced/reference,
 4. the default path no longer depends on tribal knowledge to understand which examples to follow.
+
+## Remaining narrow work
+
+The next productization pass should stay narrow:
+
+1. keep the examples/cookbook/gallery ingress wording aligned,
+2. keep scaffold README output aligned with the same ladder,
+3. avoid reintroducing advanced/reference surfaces into first-contact pages,
+4. only reopen API/helper work if productized docs still leave a real default-path cliff.
 
 ---
 

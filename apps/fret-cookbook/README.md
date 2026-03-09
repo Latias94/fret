@@ -24,7 +24,16 @@ Full index (Bevy-style table of contents): [apps/fret-cookbook/EXAMPLES.md](./EX
 
 ## Recommended order (boring ladder)
 
-Start with these before jumping into the UI Gallery:
+Repo-wide default ladder:
+
+1. `hello` (template)
+2. `simple-todo` (template)
+3. `todo` (template / richer baseline)
+
+Cookbook fits immediately after the first two rungs: use it for focused, boring lessons before
+jumping into the gallery/reference surfaces.
+
+Start with these cookbook lessons before jumping into the UI Gallery:
 
 ```bash
 cargo run -p fretboard -- dev native --example hello
@@ -34,14 +43,19 @@ cargo run -p fretboard -- dev native --example text_input_basics
 cargo run -p fretboard -- dev native --example commands_keymap_basics
 ```
 
+If you need the richer third rung after that ladder, read:
+
+- `docs/examples/todo-app-golden-path.md`
+
 Then pick a topic:
 
-Maintainer comparison target (reference-only; not part of the boring ladder):
+Comparison target (reference-only; not part of the boring ladder):
 
 - `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
   - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + payload-action path now used by `todo_demo` and the simple-todo scaffold, so its role is to stay as an explicit comparison surface rather than a missing-default-path preview
 
-- State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
+- Default follow-up topics: `hello_counter`, `form_basics`, `virtual_list_basics`
+- State + derived state: `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
 - Queries (feature-gated): `query_basics`
 - Routing (feature-gated): `router_basics`
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)

@@ -9,6 +9,13 @@ Surface taxonomy:
 - **Not the default learning surface**: start with `hello`, `simple-todo`, and `todo` first if you
   are learning the authoring model.
 
+Recommended order:
+
+1. `hello`
+2. `simple-todo`
+3. `todo`
+4. then use `fret-ui-gallery` for recipe discovery, parity checks, and polish validation
+
 ## Features
 
 By default the gallery only exposes a small set of Core pages + the Shadcn component set.

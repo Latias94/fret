@@ -696,6 +696,16 @@ Current sequencing note (as of 2026-03-09):
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 
+- [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
+  - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
+  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `docs/examples/README.md` now states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` now frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, and `apps/fret-ui-gallery/README.md` now repeats the same “use after the ladder” order explicitly.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+    - `docs/examples/README.md`
+    - `apps/fret-cookbook/README.md`
+    - `apps/fret-cookbook/EXAMPLES.md`
+    - `apps/fret-ui-gallery/README.md`
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.

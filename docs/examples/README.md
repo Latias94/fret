@@ -9,6 +9,12 @@ Default reading rule:
 - use **Comparison** surfaces only when you are intentionally reviewing ergonomics,
 - treat **Advanced** surfaces as reference/product-validation layers, not as first-contact teaching material.
 
+Productization note:
+
+- the repo intentionally keeps this taxonomy small and repetitive; if a page/example does not clearly
+  fit **Default**, **Comparison**, or **Advanced**, treat that as a docs bug rather than as a cue to
+  infer a fourth category.
+
 ## 0) Boring ladder (recommended)
 
 These are intentionally stable and should be your default onboarding path:
