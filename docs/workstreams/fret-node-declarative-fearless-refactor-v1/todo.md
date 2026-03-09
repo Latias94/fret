@@ -834,6 +834,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `paint_only.rs` now routes grid/derived/nodes/edges cache rebuild helpers through the
     private `paint_only/cache.rs` seam, so declarative paint-only surface assembly no longer keeps
     cache warming and draw-cache rebuild sequencing embedded inline.
+  - Progress: `paint_only.rs` now also routes local uncontrolled-model/bootstrap wiring through the
+    private `paint_only/surface_models.rs` seam, so declarative paint-only surface assembly no
+    longer keeps all local state bundle construction embedded inline.
 
 ## M5 - Compatibility retained convergence
 

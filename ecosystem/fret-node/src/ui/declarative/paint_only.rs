@@ -60,6 +60,8 @@ mod pointer_session;
 mod portal_measurement;
 #[path = "paint_only/selection.rs"]
 mod selection;
+#[path = "paint_only/surface_models.rs"]
+mod surface_models;
 #[path = "paint_only/transactions.rs"]
 mod transactions;
 
@@ -98,6 +100,7 @@ use self::selection::{
     commit_marquee_selection_action_host, commit_pending_selection_action_host,
     effective_selected_nodes_for_paint,
 };
+use self::surface_models::{PaintOnlySurfaceModels, use_paint_only_surface_models};
 use self::transactions::{
     build_node_drag_transaction, commit_graph_transaction, commit_node_drag_transaction,
     update_view_state_action_host, update_view_state_ui_host,
@@ -1667,68 +1670,25 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let view_state = binding.view_state_model();
     let controller = binding.controller();
 
-    // Drag state is internal to the surface and stored in element state (uncontrolled model).
-    let drag: Model<Option<DragState>> = use_uncontrolled_model(cx, || None);
-
-    // Marquee selection drag state is internal to the surface (paint-only baseline).
-    let marquee_drag: Model<Option<MarqueeDragState>> = use_uncontrolled_model(cx, || None);
-
-    // Node dragging preview state (paint-only baseline).
-    let node_drag: Model<Option<NodeDragState>> = use_uncontrolled_model(cx, || None);
-
-    // Pending click-selection preview that should only commit on pointer-up / drag activation.
-    let pending_selection: Model<Option<PendingSelectionState>> =
-        use_uncontrolled_model(cx, || None);
-
-    // Hover state is internal and intentionally not persisted in view state.
-    let hovered_node: Model<Option<crate::core::NodeId>> = use_uncontrolled_model(cx, || None);
-    // Scratch vec used by hit tests to avoid per-event allocations.
-    let hit_scratch: Model<Vec<crate::core::NodeId>> = use_uncontrolled_model(cx, Vec::new);
-
-    // Diagnostics-only: an internal paint overrides map so `diag.script_v2` can toggle a paint-only
-    // revision bump without demo-specific command routing.
-    let diag_paint_overrides: Model<Arc<NodeGraphPaintOverridesMap>> =
-        use_uncontrolled_model(cx, || Arc::new(NodeGraphPaintOverridesMap::default()));
-    let diag_paint_overrides_enabled: Model<bool> = use_uncontrolled_model(cx, || false);
-
-    // Grid paint cache is a paint-only implementation detail. It uses a deterministic key so we can
-    // gate steady-state behavior via diagnostics (no rebuild churn when view is stable).
-    let grid_cache: Model<GridPaintCacheState> =
-        use_uncontrolled_model(cx, GridPaintCacheState::default);
-
-    // Derived geometry cache shared by node/edge builders.
-    let derived_cache: Model<DerivedGeometryCacheState> =
-        use_uncontrolled_model(cx, DerivedGeometryCacheState::default);
-
-    // Edges paint cache is another paint-only implementation detail. Unlike the grid, it stores
-    // precomputed path commands rather than prepared `PathId`s so hosted caches can manage
-    // lifetime/budgets (ADR 0141 / ADR 0161 direction).
-    let edges_cache: Model<EdgePaintCacheState> =
-        use_uncontrolled_model(cx, EdgePaintCacheState::default);
-
-    // Node chrome cache (paint-only baseline).
-    let nodes_cache: Model<NodePaintCacheState> =
-        use_uncontrolled_model(cx, NodePaintCacheState::default);
-
-    // Optional, internal store for hosting portal subtrees and harvesting their last-known bounds.
-    // This is intentionally local state (not part of `NodeGraphViewState`) while we iterate on the
-    // declarative surface strategy.
-    let portal_bounds_store: Model<PortalBoundsStore> =
-        use_uncontrolled_model(cx, PortalBoundsStore::default);
-    let portal_measured_geometry_state: Model<PortalMeasuredGeometryState> =
-        use_uncontrolled_model(cx, PortalMeasuredGeometryState::default);
-
-    // Diagnostics-only toggles for portal hosting.
-    let portal_debug_flags: Model<PortalDebugFlags> =
-        use_uncontrolled_model(cx, PortalDebugFlags::default);
-
-    // Hover anchor store used by overlays that should not depend on portal hosting caps.
-    let hover_anchor_store: Model<HoverAnchorStore> =
-        use_uncontrolled_model(cx, HoverAnchorStore::default);
-
-    // Tracks the authoritative graph/selection boundary seen by this surface instance.
-    let authoritative_surface_boundary: Model<Option<AuthoritativeSurfaceBoundarySnapshot>> =
-        use_uncontrolled_model(cx, || None);
+    let PaintOnlySurfaceModels {
+        drag,
+        marquee_drag,
+        node_drag,
+        pending_selection,
+        hovered_node,
+        hit_scratch,
+        diag_paint_overrides,
+        diag_paint_overrides_enabled,
+        grid_cache,
+        derived_cache,
+        edges_cache,
+        nodes_cache,
+        portal_bounds_store,
+        portal_measured_geometry_state,
+        portal_debug_flags,
+        hover_anchor_store,
+        authoritative_surface_boundary,
+    } = use_paint_only_surface_models(cx);
 
     // Always observe the graph model so changes can invalidate the surface even when we don't need
     // to clone it on steady-state frames.
