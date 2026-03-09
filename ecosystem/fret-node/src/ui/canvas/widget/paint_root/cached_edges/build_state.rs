@@ -1,4 +1,3 @@
-use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
 fn extend_clip_stack_ops(ops: &mut Vec<SceneOp>, tmp: &[SceneOp]) {
@@ -25,18 +24,21 @@ fn extend_clip_stack_ops(ops: &mut Vec<SceneOp>, tmp: &[SceneOp]) {
     }
 }
 
+fn initial_clip_ops(clip_rect: Rect) -> Vec<SceneOp> {
+    vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip]
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn init_edges_build_state<H: UiHost>(
+    pub(super) fn collect_cached_edge_renders<H: UiHost>(
         &mut self,
         host: &H,
         snapshot: &ViewSnapshot,
         geom: &Arc<CanvasGeometry>,
         index: &Arc<CanvasSpatialDerived>,
-        clip_rect: Rect,
         cull_rect: Rect,
         zoom: f32,
-    ) -> EdgesBuildState {
-        let render_edges: RenderData = self.collect_render_data(
+    ) -> Vec<paint_render_data::EdgeRender> {
+        self.collect_render_data(
             host,
             snapshot,
             Arc::clone(geom),
@@ -47,10 +49,23 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             false,
             false,
             true,
-        );
+        )
+        .edges
+    }
+
+    pub(super) fn init_edges_build_state<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        geom: &Arc<CanvasGeometry>,
+        index: &Arc<CanvasSpatialDerived>,
+        clip_rect: Rect,
+        cull_rect: Rect,
+        zoom: f32,
+    ) -> EdgesBuildState {
         EdgesBuildState {
-            ops: vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip],
-            edges: render_edges.edges,
+            ops: initial_clip_ops(clip_rect),
+            edges: self.collect_cached_edge_renders(host, snapshot, geom, index, cull_rect, zoom),
             next_edge: 0,
         }
     }
@@ -66,22 +81,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cull_rect: Rect,
         zoom: f32,
     ) -> EdgeLabelsBuildState {
-        let render_edges: RenderData = self.collect_render_data(
-            host,
-            snapshot,
-            Arc::clone(geom),
-            Arc::clone(index),
-            Some(cull_rect),
-            zoom,
-            None,
-            false,
-            false,
-            true,
-        );
         EdgeLabelsBuildState {
             key,
-            ops: vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip],
-            edges: render_edges.edges,
+            ops: initial_clip_ops(clip_rect),
+            edges: self.collect_cached_edge_renders(host, snapshot, geom, index, cull_rect, zoom),
             next_edge: 0,
         }
     }

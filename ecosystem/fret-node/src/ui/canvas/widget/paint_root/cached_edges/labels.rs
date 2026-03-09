@@ -1,13 +1,6 @@
+use super::geometry::cache_tile_rect;
 use super::keys;
 use crate::ui::canvas::widget::*;
-
-fn tile_rect(tile: TileCoord, tile_size_canvas: f32) -> Rect {
-    let tile_origin = tile.origin(tile_size_canvas);
-    Rect::new(
-        tile_origin,
-        Size::new(Px(tile_size_canvas), Px(tile_size_canvas)),
-    )
-}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn try_replay_cached_edge_labels<H: UiHost>(
@@ -142,15 +135,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             }
 
-            let tile_rect = tile_rect(tile, edges_cache_tile_size_canvas);
-            let tile_cull_rect = {
-                let margin_screen = self.style.paint.render_cull_margin_px;
-                if margin_screen.is_finite() && margin_screen > 0.0 {
-                    inflate_rect(tile_rect, margin_screen / zoom)
-                } else {
-                    tile_rect
-                }
-            };
+            let tile_rect = cache_tile_rect(tile, edges_cache_tile_size_canvas);
+            let tile_cull_rect = self.cache_tile_cull_rect(tile_rect, zoom);
 
             let mut state = self
                 .edge_labels_build_states

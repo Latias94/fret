@@ -1017,6 +1017,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/paint_root/cached_edges/labels.rs` seams, so
     `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` now mainly
     choose cache mode, fall back to uncached paint when needed, and keep overlay ordering explicit.
+  - Progress: cached-edge tile geometry plus cached render-data/build-state initialization now also
+    route through the private `canvas/widget/paint_root/cached_edges/geometry.rs` and
+    `canvas/widget/paint_root/cached_edges/build_state.rs` helpers, so the edge/label cache seams
+    stop re-embedding tile-rect math, cull inflation, and render-data collection boilerplate.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

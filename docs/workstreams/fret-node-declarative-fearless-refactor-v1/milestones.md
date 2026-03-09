@@ -609,6 +609,10 @@ real editors.
   `canvas/widget/paint_root/cached_edges/labels.rs` seams, so
   `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` mainly keep
   cache-mode selection, uncached fallbacks, and overlay-order orchestration at the root.
+- cached-edge tile geometry plus cached render-data/build-state initialization now also route
+  through the private `canvas/widget/paint_root/cached_edges/geometry.rs` and
+  `canvas/widget/paint_root/cached_edges/build_state.rs` helpers, so the edge/label cache seams
+  stop re-embedding tile-rect math, cull inflation, and render-data collection boilerplate.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

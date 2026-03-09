@@ -3,6 +3,7 @@ use crate::ui::canvas::widget::*;
 
 mod build_state;
 mod edges;
+mod geometry;
 mod keys;
 mod labels;
 mod single_rect;
