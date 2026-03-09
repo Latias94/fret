@@ -286,6 +286,8 @@ mod retained_widget_command_availability;
 mod retained_widget_command_availability_gate;
 mod retained_widget_command_availability_query;
 mod retained_widget_cull_window;
+mod retained_widget_cull_window_key;
+mod retained_widget_cull_window_shift;
 mod retained_widget_frame;
 mod retained_widget_layout;
 mod retained_widget_layout_children;

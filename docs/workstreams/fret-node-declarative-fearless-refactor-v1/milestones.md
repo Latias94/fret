@@ -734,6 +734,12 @@ real editors.
   `canvas/widget/retained_widget_layout_drain.rs` seams, so retained layout sync no
   longer keeps mixed observation, diagnostics, child placement, and queue drain logic in
   one surface.
+- `retained_widget_cull_window.rs` now routes cull-window gating/key derivation and
+  key-shift application through the private
+  `canvas/widget/retained_widget_cull_window_key.rs` and
+  `canvas/widget/retained_widget_cull_window_shift.rs` seams, so retained prepaint cull
+  tracking no longer keeps visibility gating, tile-key math, and shift reporting in one
+  surface.
 - `delete.rs` now routes delete-op construction, removable-id collection,
   and deletable predicates through the private
   `canvas/widget/delete_ops_builder.rs`,
@@ -931,6 +937,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_observe.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_publish.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_key.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete_ops_builder.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/delete_removed_ids.rs`
