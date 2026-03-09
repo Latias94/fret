@@ -30,6 +30,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/RETIREMENT_CRITERIA.md`
 - `docs/workstreams/diag-fearless-refactor-v2/RESIDUAL_NAMING_AUDIT.md`
 - `docs/workstreams/diag-fearless-refactor-v2/BUNDLE_ARTIFACT_ALIAS_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/LAYER_B_PAYLOAD_FAMILIES_AUDIT_V1.md`
 
 Related workstreams and context:
 
