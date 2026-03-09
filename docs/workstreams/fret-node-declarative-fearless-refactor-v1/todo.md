@@ -1123,6 +1123,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/paint_nodes/dynamic_ports.rs` seams, while
     `paint_nodes/dynamic_from_geometry.rs` reuses the shared insert-preview helper and now mainly
     keeps transient paint setup plus top-level orchestration explicit.
+  - Progress: static node chrome/text and static port-label/shape paint now also route through the
+    private `ui/canvas/widget/paint_nodes/static_node_chrome.rs` and
+    `ui/canvas/widget/paint_nodes/static_ports.rs` seams, so `paint_nodes/static_nodes.rs` now
+    mainly keeps shared paint setup plus top-level node/port pass ordering explicit.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
