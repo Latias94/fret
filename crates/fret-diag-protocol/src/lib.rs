@@ -846,6 +846,23 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Wait until a target's structured semantics scroll field has remained stable for
+    /// `stable_frames`.
+    ///
+    /// This is intended for scrollable surfaces whose content extent converges across a few
+    /// post-layout frames (for example after switching tabs or appending content at the bottom).
+    WaitSemanticsScrollStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+        #[serde(default = "default_semantics_scroll_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_semantics_scroll_stable_max_delta")]
+        max_delta: f64,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     EnsureVisible {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -1297,6 +1314,14 @@ fn default_bounds_stable_frames() -> u32 {
 }
 
 fn default_bounds_stable_max_move_px() -> f32 {
+    1.0
+}
+
+fn default_semantics_scroll_stable_frames() -> u32 {
+    2
+}
+
+fn default_semantics_scroll_stable_max_delta() -> f64 {
     1.0
 }
 
@@ -3787,6 +3812,35 @@ mod tests {
                 assert!(timeout_ms.is_none());
             }
             _ => panic!("expected wait_until"),
+        }
+    }
+
+    #[test]
+    fn step_wait_semantics_scroll_stable_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "wait_semantics_scroll_stable",
+            "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+            "field": "y_max"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::WaitSemanticsScrollStable {
+                window,
+                target,
+                field,
+                stable_frames,
+                max_delta,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(field, UiSemanticsScrollFieldV1::YMax);
+                assert_eq!(stable_frames, default_semantics_scroll_stable_frames());
+                assert_eq!(max_delta, default_semantics_scroll_stable_max_delta());
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected wait_semantics_scroll_stable"),
         }
     }
 }

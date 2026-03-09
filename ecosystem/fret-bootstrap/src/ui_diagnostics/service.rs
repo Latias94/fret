@@ -352,6 +352,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::ClickStable { target, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
             | UiActionStepV2::WaitBoundsStable { target, .. }
+            | UiActionStepV2::WaitSemanticsScrollStable { target, .. }
             | UiActionStepV2::EnsureVisible { target, .. }
             | UiActionStepV2::ScrollIntoView { target, .. }
             | UiActionStepV2::TypeTextInto { target, .. }
@@ -613,6 +614,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ClickStable { window, .. }
                 | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
                 | UiActionStepV2::WaitBoundsStable { window, .. }
+                | UiActionStepV2::WaitSemanticsScrollStable { window, .. }
                 | UiActionStepV2::EnsureVisible { window, .. }
                 | UiActionStepV2::ScrollIntoView { window, .. }
                 | UiActionStepV2::TypeTextInto { window, .. }
@@ -663,6 +665,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::ClickStable { window, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
             | UiActionStepV2::WaitBoundsStable { window, .. }
+            | UiActionStepV2::WaitSemanticsScrollStable { window, .. }
             | UiActionStepV2::EnsureVisible { window, .. }
             | UiActionStepV2::ScrollIntoView { window, .. }
             | UiActionStepV2::TypeTextInto { window, .. }

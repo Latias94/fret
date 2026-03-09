@@ -299,6 +299,141 @@ pub(super) fn handle_wait_bounds_stable_step(
     true
 }
 
+pub(super) fn handle_wait_semantics_scroll_stable_step(
+    svc: &mut UiDiagnosticsService,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::WaitSemanticsScrollStable {
+        window: _,
+        target,
+        field,
+        stable_frames,
+        max_delta,
+        timeout_frames,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    if let Some(snapshot) = semantics_snapshot {
+        let stable_required = stable_frames.max(1);
+        let max_delta = max_delta.abs();
+
+        if timeout_frames != 0 && stable_required > timeout_frames {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-wait_semantics_scroll_stable-impossible-stable-frames-gt-timeout"
+            ));
+            *stop_script = true;
+            *failure_reason = Some(
+                "wait_semantics_scroll_stable_impossible_stable_frames_gt_timeout_frames"
+                    .to_string(),
+            );
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
+        }
+
+        let mut state = match active.v2_step_state.take() {
+            Some(V2StepState::WaitSemanticsScrollStable(mut state))
+                if state.step_index == step_index =>
+            {
+                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                state
+            }
+            _ => V2WaitSemanticsScrollStableState {
+                step_index,
+                remaining_frames: timeout_frames,
+                stable_count: 0,
+                last_value: None,
+            },
+        };
+
+        let node = select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            &target,
+            active.scope_root_for_window(window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &mut active.selector_resolution_trace,
+        );
+
+        if state.remaining_frames == 0 {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-wait_semantics_scroll_stable-timeout"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("wait_semantics_scroll_stable_timeout".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+        } else if let Some(node) = node {
+            let value = semantics_scroll_field_value(node, field).filter(|v| v.is_finite());
+            if let Some(value) = value {
+                let delta = state
+                    .last_value
+                    .map(|last| (value - last).abs())
+                    .unwrap_or(0.0);
+                if delta <= max_delta {
+                    state.stable_count = state.stable_count.saturating_add(1);
+                } else {
+                    state.stable_count = 1;
+                }
+                state.last_value = Some(value);
+
+                if state.stable_count >= stable_required {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if svc.cfg.script_auto_dump {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-wait_semantics_scroll_stable"
+                        ));
+                    }
+                } else {
+                    state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::WaitSemanticsScrollStable(state));
+                    output.request_redraw = true;
+                }
+            } else {
+                state.stable_count = 0;
+                state.last_value = None;
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                active.v2_step_state = Some(V2StepState::WaitSemanticsScrollStable(state));
+                output.request_redraw = true;
+            }
+        } else {
+            state.stable_count = 0;
+            state.last_value = None;
+            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+            active.v2_step_state = Some(V2StepState::WaitSemanticsScrollStable(state));
+            output.request_redraw = true;
+        }
+    } else {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-wait_semantics_scroll_stable-no-semantics"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("no_semantics_snapshot".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    }
+
+    true
+}
+
 pub(super) fn handle_wait_shortcut_routing_trace_step(
     app: &App,
     step_index: usize,
