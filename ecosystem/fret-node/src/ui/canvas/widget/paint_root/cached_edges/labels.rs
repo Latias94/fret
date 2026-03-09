@@ -2,7 +2,25 @@ use super::geometry::cache_tile_rect;
 use super::keys;
 use crate::ui::canvas::widget::*;
 
+fn replay_edge_label_ops<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    paint_cache: &mut CanvasPaintCache,
+    ops: &[SceneOp],
+    replay_delta: Point,
+) {
+    cx.scene.replay_ops_translated(ops, replay_delta);
+    paint_cache.touch_text_blobs_in_scene_ops(ops);
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    fn store_finished_edge_label_state(&mut self, key: u64, state: EdgeLabelsBuildState) {
+        if state.ops.len() == 2 {
+            self.edge_labels_scene_cache.store_ops(key, Vec::new());
+        } else {
+            self.edge_labels_scene_cache.store_ops(key, state.ops);
+        }
+    }
+
     pub(super) fn try_replay_cached_edge_labels<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -89,8 +107,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .as_ref()
             .filter(|state| state.key == labels_key)
         {
-            cx.scene.replay_ops_translated(&state.ops, replay_delta);
-            self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
+            replay_edge_label_ops(cx, &mut self.paint_cache, &state.ops, replay_delta);
         }
     }
 
@@ -174,16 +191,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
 
             if state.ops.len() > 2 {
-                cx.scene.replay_ops_translated(&state.ops, replay_delta);
-                self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
+                replay_edge_label_ops(cx, &mut self.paint_cache, &state.ops, replay_delta);
             }
 
             if state.next_edge >= state.edges.len() {
-                if state.ops.len() == 2 {
-                    self.edge_labels_scene_cache.store_ops(tile_key, Vec::new());
-                } else {
-                    self.edge_labels_scene_cache.store_ops(tile_key, state.ops);
-                }
+                self.store_finished_edge_label_state(tile_key, state);
             } else {
                 self.edge_labels_build_states.insert(tile_key, state);
             }
