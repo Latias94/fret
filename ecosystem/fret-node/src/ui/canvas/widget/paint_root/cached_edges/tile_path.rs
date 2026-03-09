@@ -169,14 +169,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let tile_key = tile_cache_key(labels_base_key, tile);
             self.edge_labels_tile_keys_scratch.push(tile_key);
 
-            if self.edge_labels_scene_cache.try_replay_with(
-                tile_key,
-                cx.scene,
-                replay_delta,
-                |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                },
-            ) {
+            if self.try_replay_cached_edge_labels(cx, tile_key, replay_delta) {
                 self.edge_labels_build_states.remove(&tile_key);
                 continue;
             }

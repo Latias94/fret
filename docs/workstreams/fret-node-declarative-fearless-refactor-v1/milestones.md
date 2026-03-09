@@ -599,6 +599,10 @@ real editors.
   bookkeeping through the private `canvas/widget/paint_edges/pass.rs` seam, so the root
   edge-paint surface stops re-embedding the full edge iteration loop and redraw-budget
   bookkeeping inline.
+- cached-edge single-rect/tiled label replay and single-rect label build orchestration now also
+  route through the private `canvas/widget/paint_root/cached_edges/labels.rs` seam, so
+  `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` stop
+  re-embedding the same label-cache replay closure or the single-rect label build tail inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

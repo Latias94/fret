@@ -1007,6 +1007,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     paint-budget bookkeeping through the private `canvas/widget/paint_edges/pass.rs` seam, so the
     root edge-paint surface no longer re-embeds the full edge iteration loop and redraw-budget
     bookkeeping inline.
+  - Progress: cached-edge single-rect/tiled label replay and single-rect label build orchestration
+    now also route through the private `canvas/widget/paint_root/cached_edges/labels.rs` seam, so
+    `paint_root/cached_edges/single_rect.rs` and `paint_root/cached_edges/tile_path.rs` no longer
+    re-embed the same label-cache replay closure or the single-rect label build tail inline.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

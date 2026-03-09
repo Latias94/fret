@@ -3,6 +3,7 @@ use crate::ui::canvas::widget::*;
 
 mod build_state;
 mod keys;
+mod labels;
 mod single_rect;
 mod tile_path;
 

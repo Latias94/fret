@@ -118,91 +118,20 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.edges_build_states.remove(&edges_key);
         }
 
-        if self.edge_labels_scene_cache.contains_key(labels_key) {
-            self.edge_labels_build_state = None;
-        } else {
-            let mut state = self
-                .edge_labels_build_state
-                .take()
-                .filter(|s| s.key == labels_key)
-                .unwrap_or_else(|| {
-                    self.init_edge_labels_build_state(
-                        &*cx.app,
-                        snapshot,
-                        geom,
-                        index,
-                        labels_key,
-                        edges_cache_rect,
-                        edges_cache_rect,
-                        zoom,
-                    )
-                });
-
-            let budget_limit = Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
-            let mut budget = WorkBudget::new(budget_limit);
-            let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
-
-            let mut tmp = fret_core::Scene::default();
-            if self.paint_edge_labels_build_state_step(
-                &mut tmp,
-                &*cx.app,
-                cx.services,
-                cx.scale_factor,
-                zoom,
-                bezier_steps,
-                &mut state,
-                &mut budget,
-            ) {
-                super::super::redraw_request::request_paint_redraw(cx);
-            }
-
-            if state.next_edge >= state.edges.len() {
-                self.edge_labels_scene_cache
-                    .store_ops(labels_key, state.ops.clone());
-                self.edge_labels_build_state = None;
-            } else {
-                self.edge_labels_build_state = Some(state);
-            }
-        }
+        self.build_single_rect_edge_labels_cache(
+            cx,
+            snapshot,
+            geom,
+            index,
+            labels_key,
+            edges_cache_rect,
+            zoom,
+            view_interacting,
+        );
 
         if snapshot.interaction.elevate_edges_on_select {
             self.paint_edge_overlays_selected_hovered(cx, snapshot, geom, zoom);
-
-            // Labels must remain on top of selected/hovered overlays.
-            if self.edge_labels_scene_cache.try_replay_with(
-                labels_key,
-                cx.scene,
-                replay_delta,
-                |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                },
-            ) {
-            } else if let Some(state) = self
-                .edge_labels_build_state
-                .as_ref()
-                .filter(|s| s.key == labels_key)
-            {
-                cx.scene.replay_ops_translated(&state.ops, replay_delta);
-                self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
-            }
-        } else {
-            // Labels may be present in the cache without being replayed (hit path).
-            if self.edge_labels_scene_cache.try_replay_with(
-                labels_key,
-                cx.scene,
-                replay_delta,
-                |ops| {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                },
-            ) {
-            } else if let Some(state) = self
-                .edge_labels_build_state
-                .as_ref()
-                .filter(|s| s.key == labels_key)
-            {
-                cx.scene.replay_ops_translated(&state.ops, replay_delta);
-                self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
-            }
         }
+        self.replay_single_rect_edge_labels(cx, labels_key, replay_delta);
     }
 }
