@@ -27,7 +27,7 @@ Tracking format:
     - `dt_ms` min/p50/p95/max = `61/62/62/62`
     - `layout_time_us` min/p50/p95/max = `32093/32651/33184/33184`
     - Bundles: `target/fret-diag-se020-baseline/*ui-gallery-nav-card-click-latency-second/bundle.json`
-  - Gate on (`FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`):
+  - Authoritative post-layout path (historically gate-on before 2026-03-09):
     - `dt_ms` min/p50/p95/max = `59/61/63/63`
     - `layout_time_us` min/p50/p95/max = `30913/31956/32330/32330`
     - Bundles: `target/fret-diag-se020-post-layout/*ui-gallery-nav-card-click-latency-second/bundle.json`
@@ -74,11 +74,10 @@ Tracking format:
     - `crates/fret-ui/src/tree/debug/scroll.rs` (`UiDebugScrollOverflowObservationTelemetry`)
     - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (`observe_scroll_overflow_extents`, budget-hit recording)
 
-## Prototype (Behind a Gate)
+## Implementation Rollout
 
-- [x] SE-200 Add an opt-in implementation (env flag or compile-time flag) for “post-layout scroll extents”.
-  - Must not change default behavior yet.
-  - Env: `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`
+- [x] SE-200 Land the post-layout scroll extents implementation and keep historical gate evidence.
+  - Status: post-layout extents is now the default authoritative path; the temporary env toggle was retired on 2026-03-09.
 - [~] SE-210 Add focused unit tests (incremental).
   - [x] SE-211 Pure-geometry overflow observation (wrapper peeling + bounded deep scan).
   - [x] SE-212 Offset clamping invariants (`ScrollHandle`).
@@ -86,7 +85,7 @@ Tracking format:
     - [x] SE-213a Add `fretboard diag query overlay-placement-trace` (reads `script.result.json` evidence).
     - [x] SE-213b Add a UI Gallery script that (1) opens an anchored overlay, (2) expands a doc code tab
       (content growth), and (3) re-opens the overlay and asserts it is still clamped within the window.
-    - [x] SE-213c Record evidence for baseline vs `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1` (optional but recommended).
+    - [x] SE-213c Record historical evidence for baseline vs the former gate-on path (optional but recommended).
     - [x] SE-213d Add Popover coverage (click-triggered anchored panel) to reduce false confidence from hover-only overlays.
       - Scripts:
         - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
@@ -94,5 +93,5 @@ Tracking format:
 
 ## Rollout
 
-- [ ] SE-300 Turn the prototype into the default for vertical scrolling surfaces.
-- [ ] SE-310 Keep an escape hatch for horizontal “true unbounded” cases if needed.
+- [x] SE-300 Turn the post-layout path into the default for vertical scrolling surfaces.
+- [x] SE-310 Retire the temporary env escape hatch; keep scope-based fallback logic inside the mechanism for unsupported cases.

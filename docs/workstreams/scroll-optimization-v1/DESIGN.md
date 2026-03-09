@@ -42,8 +42,8 @@ Key mechanism pieces:
 - Scroll handle and revision: `crates/fret-ui/src/scroll/mod.rs`
   - External setters bump `revision`; internal setters used during layout do not.
 - Scroll layout + extent probing: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
-  - Supports `probe_unbounded` and a post-layout overflow observation mode behind
-    `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT`.
+  - Supports `probe_unbounded` plus the authoritative post-layout overflow observation path
+    used to derive scroll extents without relying on legacy probe-first behavior.
 - Scroll / vlist events: `crates/fret-ui/src/declarative/host_widget/event/scroll.rs`
   - Wheel is handled by the deepest scrollable first (capture returns early for Wheel).
   - Scroll offset changes are treated as `HitTestOnly` invalidations (fast path).

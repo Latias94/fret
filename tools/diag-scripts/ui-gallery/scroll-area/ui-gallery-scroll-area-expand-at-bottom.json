@@ -3,9 +3,6 @@
   "meta": {
     "name": "ui-gallery-scroll-area-expand-at-bottom",
     "required_capabilities": ["diag.script_v2"],
-    "env_defaults": {
-      "FRET_UI_SCROLL_EXTENTS_POST_LAYOUT": 1
-    },
     "tags": ["scroll", "extents", "ui_gallery", "regression_pack"]
   },
   "steps": [

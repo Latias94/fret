@@ -2091,8 +2091,7 @@ fn scroll_post_layout_growth_relayouts_child_root_same_frame() {
         }
     }
 
-    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
-    cfg.scroll_extents_post_layout = true;
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
     let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
 
     let mut app = TestHost::new();
@@ -2200,8 +2199,7 @@ fn scroll_post_layout_does_not_grow_from_stale_nonleaf_wrapper_extent() {
         }
     }
 
-    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
-    cfg.scroll_extents_post_layout = true;
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
     let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
 
     let mut app = TestHost::new();
@@ -2311,8 +2309,7 @@ fn scroll_post_layout_edge_revalidation_reuses_previous_extent_for_deep_scan() {
         }
     }
 
-    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
-    cfg.scroll_extents_post_layout = true;
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
     let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
 
     let mut app = TestHost::new();
@@ -2451,8 +2448,7 @@ fn scroll_post_layout_shrink_revalidation_clamps_stale_extent_after_content_cont
         }
     }
 
-    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
-    cfg.scroll_extents_post_layout = true;
+    let cfg = crate::runtime_config::ui_runtime_config().clone();
     let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
 
     let mut app = TestHost::new();

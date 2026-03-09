@@ -70,27 +70,18 @@ fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
     crate::runtime_config::ui_runtime_config().scroll_defer_unbounded_probe_stable_frames
 }
 
-fn scroll_extents_post_layout_enabled() -> bool {
-    crate::runtime_config::ui_runtime_config().scroll_extents_post_layout
-}
-
 fn maybe_schedule_extent_probe_after_observation_budget_hit<H: UiHost>(
     app: &mut H,
     tree: &mut UiTree<H>,
     window: AppWindowId,
     node: NodeId,
     element: GlobalElementId,
-    post_layout_extents_mode: bool,
-    _at_scroll_extent_edge: bool,
     observation: UiDebugScrollOverflowObservationTelemetry,
 ) -> bool {
-    // If we cannot confidently observe overflow in post-layout geometry (budget hit), fall back to
-    // a measured unbounded probe on the next frame when the user is already at the current scroll
-    // extent edge. This avoids "pinned scroll range" regressions (e.g. expanding a code tab at the
-    // bottom of a docs page).
-    if !post_layout_extents_mode
-        || !(observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
-    {
+    // If we cannot confidently observe overflow in post-layout geometry (budget hit), schedule a
+    // measured unbounded probe on the next frame. This keeps the authoritative path robust even
+    // when wrapper peeling or deep-scan observation runs out of budget.
+    if !(observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit) {
         return false;
     }
 
@@ -1166,11 +1157,10 @@ impl ElementHostWidget {
 
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
-        // Opt-in prototype: attempt to avoid deep unbounded extent probes by using post-layout
-        // observed geometry to grow the scroll range when needed. This is currently scoped to
-        // vertical scroll surfaces under definite viewport constraints.
+        // The post-layout extents path is the authoritative scroll-range update strategy.
+        // Keep it scoped to vertical scroll surfaces under definite viewport constraints where
+        // post-layout geometry is trustworthy and GPUI/DOM parity is required.
         let post_layout_extents_mode = !is_probe_layout
-            && scroll_extents_post_layout_enabled()
             && props.probe_unbounded
             && matches!(props.axis, crate::element::ScrollAxis::Y)
             && cx.available.width.0 > 0.0
@@ -1380,7 +1370,7 @@ impl ElementHostWidget {
         let must_probe_for_growing_extent = pending_extent_probe
             || (at_scroll_extent_edge
                 && (children_layout_invalidated || defer_state.pending_invalidation_probe));
-        // In post-layout extents mode, avoid measuring children under MaxContent constraints by
+        // On the authoritative post-layout extents path, avoid measuring children under MaxContent constraints by
         // default; rely on post-layout observed overflow to grow extents. When correctness is at
         // risk (e.g. the user is already at the scroll edge), we still fall back to an unbounded
         // probe for that frame.
@@ -1628,7 +1618,7 @@ impl ElementHostWidget {
                 measured
             }
         } else if post_layout_extents_mode && props.axis.scroll_x() {
-            // In post-layout extents mode, keep the previous observed content extent as the
+            // On the authoritative post-layout extents path, keep the previous observed content extent as the
             // baseline for the next frame. Re-seeding from the viewport each frame can make the
             // overflow observer rediscover deep content incrementally at the scroll edge, which
             // shows up as a "bottom keeps moving away" loop on wrapper-heavy docs/gallery pages.
@@ -1674,7 +1664,7 @@ impl ElementHostWidget {
                 || (props.axis.scroll_y() && content_h.0 + 0.5 < previous_content.height.0))
         {
             eprintln!(
-                "scroll extent measured smaller element={:?} node={:?} axis={:?} previous=({:.1},{:.1}) measured=({:.1},{:.1}) max_child=({:.1},{:.1}) desired=({:.1},{:.1}) cached_probe={} cached_intrinsic={} cached_max_child={} direct_invalidated={} descendant_dirty={} at_edge={} defer_this_frame={} pending_probe={} post_layout={}",
+                "scroll extent measured smaller element={:?} node={:?} axis={:?} previous=({:.1},{:.1}) measured=({:.1},{:.1}) max_child=({:.1},{:.1}) desired=({:.1},{:.1}) cached_probe={} cached_intrinsic={} cached_max_child={} direct_invalidated={} descendant_dirty={} at_edge={} defer_this_frame={} pending_probe={}",
                 self.element,
                 cx.node,
                 props.axis,
@@ -1694,7 +1684,6 @@ impl ElementHostWidget {
                 at_scroll_extent_edge,
                 defer_this_frame,
                 pending_extent_probe,
-                post_layout_extents_mode,
             );
         }
 
@@ -1788,7 +1777,7 @@ impl ElementHostWidget {
 
         let mut content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
-        // When running the post-layout extents prototype, install an overflow context so wrapper
+        // Install an overflow context so wrapper
         // widgets can probe their descendants with `MaxContent` on the scroll axis. This is a
         // prerequisite for making overflow observable in post-layout geometry without relying on
         // deep unbounded pre-measure passes.
@@ -1890,24 +1879,21 @@ impl ElementHostWidget {
                 );
             }
 
-            // If we cannot confidently observe overflow in post-layout geometry (budget hit), fall
-            // back to a measured unbounded probe on the next frame when the user is already at
-            // the current scroll extent edge. This avoids "pinned scroll range" regressions (e.g.
-            // expanding a code tab at the bottom of a docs page).
+            // If we cannot confidently observe overflow in post-layout geometry (budget hit), schedule a
+            // measured unbounded probe on the next frame. This keeps the authoritative path robust
+            // when bounded observation runs out of budget on wrapper-heavy trees.
             if maybe_schedule_extent_probe_after_observation_budget_hit(
                 &mut *cx.app,
                 cx.tree,
                 window,
                 cx.node,
                 self.element,
-                post_layout_extents_mode,
-                at_scroll_extent_edge,
                 observation,
             ) {
                 cx.request_redraw();
             }
 
-            // Best-effort: if post-layout child bounds exceed the probed extent (cached/deferral
+            // If post-layout child bounds exceed the currently inferred extent (cached/deferral
             // cases), expand the scroll handle immediately so users can reach the new content.
             let mut changed_grow = false;
             if props.axis.scroll_x()
@@ -2295,8 +2281,6 @@ mod budget_probe_tests {
                 window,
                 node_peel,
                 element_peel,
-                true,
-                true,
                 make_observation(true, false),
             ),
             "expected wrapper-peel budget hit to schedule a probe"
@@ -2308,8 +2292,6 @@ mod budget_probe_tests {
                 window,
                 node_deep,
                 element_deep,
-                true,
-                true,
                 make_observation(false, true),
             ),
             "expected deep-scan budget hit to schedule a probe"
@@ -2347,8 +2329,6 @@ mod budget_probe_tests {
                 window,
                 node_peel,
                 element_peel,
-                true,
-                true,
                 make_observation(true, false),
             ),
             "expected repeated scheduling to be a no-op once pending"
@@ -2360,7 +2340,7 @@ mod budget_probe_tests {
     }
 
     #[test]
-    fn scroll_post_layout_observation_budget_hit_schedules_probe_before_edge() {
+    fn scroll_post_layout_observation_budget_hit_schedules_probe_without_edge_requirement() {
         let mut app = crate::test_host::TestHost::new();
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         let window = AppWindowId::default();
@@ -2379,8 +2359,6 @@ mod budget_probe_tests {
             window,
             node,
             element,
-            true,
-            false,
             make_observation(false, true),
         ));
 

@@ -33,7 +33,6 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) scroll_defer_unbounded_probe_on_resize: bool,
     pub(crate) scroll_defer_unbounded_probe_on_invalidation: bool,
     pub(crate) scroll_defer_unbounded_probe_stable_frames: u8,
-    pub(crate) scroll_extents_post_layout: bool,
 
     pub(crate) debug_pointer_region_move_hook: bool,
     pub(crate) debug_pointer_region_move_backtrace: bool,
@@ -180,14 +179,6 @@ impl UiRuntimeEnvConfig {
                 .and_then(|v| v.parse::<u8>().ok())
                 .unwrap_or(2)
                 .min(60);
-
-        // Default-on: the post-layout extents path is the authoritative scroll-range update
-        // strategy for DOM/GPUI parity. Set to "0" to fall back to the legacy probe-first path
-        // for comparison/debugging.
-        let scroll_extents_post_layout = std::env::var("FRET_UI_SCROLL_EXTENTS_POST_LAYOUT")
-            .ok()
-            .map(|v| v != "0")
-            .unwrap_or(true);
 
         let debug_pointer_region_move_hook = env_present("FRET_DEBUG_POINTER_REGION_MOVE_HOOK");
         let debug_pointer_region_move_backtrace =
@@ -353,7 +344,6 @@ impl UiRuntimeEnvConfig {
             scroll_defer_unbounded_probe_on_resize,
             scroll_defer_unbounded_probe_on_invalidation,
             scroll_defer_unbounded_probe_stable_frames,
-            scroll_extents_post_layout,
             debug_pointer_region_move_hook,
             debug_pointer_region_move_backtrace,
             debug_scroll_wheel_vlist,
