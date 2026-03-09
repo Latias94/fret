@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use fret_canvas::view::{
-    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, screen_rect_to_canvas_rect,
-    wheel_zoom_factor,
+    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, wheel_zoom_factor,
 };
 use fret_canvas::wires as canvas_wires;
 use fret_core::scene::{
@@ -18,11 +17,7 @@ use fret_ui::action::{
     OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel,
 };
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
-use fret_ui::element::{
-    AnyElement, CanvasProps, ColumnProps, ContainerProps, LayoutQueryRegionProps, LayoutStyle,
-    Length, PointerRegionProps, PositionStyle, SemanticsDecoration, SemanticsProps, SpacingEdges,
-    SpacingLength, TextProps,
-};
+use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
@@ -30,8 +25,7 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphTransaction, graph_diff};
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
-    apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
-    view_from_state,
+    apply_pan_by_screen_delta, apply_zoom_about_screen_point, view_from_state,
 };
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
@@ -50,6 +44,8 @@ mod diag;
 mod hover_anchor;
 #[path = "paint_only/overlay_elements.rs"]
 mod overlay_elements;
+#[path = "paint_only/overlays.rs"]
+mod overlays;
 #[path = "paint_only/pointer_down.rs"]
 mod pointer_down;
 #[path = "paint_only/pointer_move.rs"]
@@ -58,6 +54,8 @@ mod pointer_move;
 mod pointer_session;
 #[path = "paint_only/portal_measurement.rs"]
 mod portal_measurement;
+#[path = "paint_only/portals.rs"]
+mod portals;
 #[path = "paint_only/selection.rs"]
 mod selection;
 #[path = "paint_only/surface_models.rs"]
@@ -71,11 +69,12 @@ use self::diag::{
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
     handle_declarative_keyboard_zoom_action_host,
 };
-use self::hover_anchor::{
-    HoverAnchorStore, resolve_hover_tooltip_anchor, sync_hover_anchor_store_in_models,
-};
-use self::overlay_elements::{
-    build_hover_tooltip_overlay_spec, push_hover_tooltip_overlay, push_marquee_overlay,
+#[cfg(test)]
+use self::hover_anchor::resolve_hover_tooltip_anchor;
+use self::hover_anchor::{HoverAnchorStore, sync_hover_anchor_store_in_models};
+use self::overlays::{
+    HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,
+    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
 };
 use self::pointer_down::{
     begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
@@ -95,6 +94,9 @@ use self::portal_measurement::{
     flush_portal_measured_geometry_state, record_portal_measured_node_size_in_state,
     sync_portal_canvas_bounds_in_models,
 };
+#[cfg(test)]
+use self::portals::collect_portal_label_infos_for_visible_subset;
+use self::portals::{apply_pending_fit_to_portals, host_visible_portal_labels};
 use self::selection::{
     build_click_selection_preview_nodes, build_marquee_preview_selected_nodes,
     commit_marquee_selection_action_host, commit_pending_selection_action_host,
@@ -842,126 +844,6 @@ struct NodePaintCacheKeyV3 {
 struct NodeRectDraw {
     id: crate::core::NodeId,
     rect: Rect,
-}
-
-#[derive(Debug, Clone)]
-struct PortalLabelInfo {
-    id: crate::core::NodeId,
-    left: Px,
-    top: Px,
-    width: Px,
-    height: Px,
-    label: Arc<str>,
-    ports_in: u32,
-    ports_out: u32,
-    selected: bool,
-    hovered: bool,
-}
-
-fn portal_node_rect_for_surface(
-    draw: &NodeRectDraw,
-    drag_active: bool,
-    dragged_nodes: Option<&[crate::core::NodeId]>,
-    ddx: f32,
-    ddy: f32,
-) -> Rect {
-    let mut rect = draw.rect;
-    if drag_active && dragged_nodes.is_some_and(|nodes| nodes.binary_search(&draw.id).is_ok()) {
-        rect.origin = Point::new(Px(rect.origin.x.0 + ddx), Px(rect.origin.y.0 + ddy));
-    }
-    rect
-}
-
-fn collect_portal_label_infos_for_visible_subset(
-    graph: &Graph,
-    draws: Option<&[NodeRectDraw]>,
-    bounds: Rect,
-    view: PanZoom2D,
-    cull_canvas: Option<Rect>,
-    portal_max_nodes: usize,
-    hovered_node: Option<crate::core::NodeId>,
-    selected_nodes: &[crate::core::NodeId],
-    node_drag: Option<&NodeDragState>,
-) -> Vec<PortalLabelInfo> {
-    let Some(draws) = draws else {
-        return Vec::new();
-    };
-    if portal_max_nodes == 0 {
-        return Vec::new();
-    }
-
-    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
-    let drag_active = node_drag.is_some_and(NodeDragState::is_active);
-    let (ddx, ddy) = node_drag
-        .filter(|_| drag_active)
-        .map(|d| node_drag_delta_canvas(view, d))
-        .unwrap_or((0.0, 0.0));
-    let dragged_nodes = node_drag
-        .filter(|d| d.is_active())
-        .map(|d| d.nodes_sorted.as_ref());
-
-    let mut infos: Vec<PortalLabelInfo> = Vec::new();
-    for draw in draws.iter() {
-        if infos.len() >= portal_max_nodes {
-            break;
-        }
-
-        let rect = portal_node_rect_for_surface(draw, drag_active, dragged_nodes, ddx, ddy);
-        if let Some(cull) = cull_canvas
-            && !rects_intersect(cull, rect)
-        {
-            continue;
-        }
-
-        let origin_screen = view.canvas_to_screen(bounds, rect.origin);
-        let left = Px(origin_screen.x.0 - bounds.origin.x.0);
-        let top = Px(origin_screen.y.0 - bounds.origin.y.0);
-        let width = Px((rect.size.width.0 * zoom).max(0.0));
-
-        if !left.0.is_finite() || !top.0.is_finite() || !width.0.is_finite() {
-            continue;
-        }
-
-        let label: Arc<str> = graph
-            .nodes
-            .get(&draw.id)
-            .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-            .unwrap_or_else(|| Arc::<str>::from("node"));
-
-        let (ports_in, ports_out) = graph
-            .nodes
-            .get(&draw.id)
-            .map(|node| {
-                let mut ports_in = 0u32;
-                let mut ports_out = 0u32;
-                for pid in node.ports.iter() {
-                    let Some(port) = graph.ports.get(pid) else {
-                        continue;
-                    };
-                    match port.dir {
-                        crate::core::PortDirection::In => ports_in += 1,
-                        crate::core::PortDirection::Out => ports_out += 1,
-                    }
-                }
-                (ports_in, ports_out)
-            })
-            .unwrap_or((0, 0));
-
-        infos.push(PortalLabelInfo {
-            id: draw.id,
-            left,
-            top,
-            width,
-            height: Px(38.0),
-            label,
-            ports_in,
-            ports_out,
-            selected: selected_nodes.iter().any(|id| *id == draw.id),
-            hovered: hovered_node.is_some_and(|id| id == draw.id),
-        });
-    }
-
-    infos
 }
 
 fn rect_contains_point(rect: Rect, p: Point) -> bool {
@@ -2184,7 +2066,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                             }
                             if outcome.needs_layout_redraw {
                                 // Node dragging moves portals (layout) and the canvas chrome (paint).
-                                invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
+                                invalidate_notify_and_redraw_pointer_action_host(
+                                    host,
+                                    action_cx,
+                                    Invalidation::Layout,
+                                );
                             }
                             return outcome.needs_layout_redraw;
                         }
@@ -2220,7 +2106,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                             bounds,
                         );
                         if changed {
-                            invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Paint);
+                            invalidate_notify_and_redraw_pointer_action_host(
+                                host,
+                                action_cx,
+                                Invalidation::Paint,
+                            );
                         }
                         return changed;
                     };
@@ -2234,14 +2124,10 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                         return false;
                     }
 
-                    let updated = update_view_state_action_host(
-                        host,
-                        &view_pan,
-                        &controller_pan,
-                        |state| {
+                    let updated =
+                        update_view_state_action_host(host, &view_pan, &controller_pan, |state| {
                             apply_pan_by_screen_delta(state, dx, dy);
-                        },
-                    );
+                        });
                     if !updated {
                         return false;
                     }
@@ -2254,7 +2140,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     });
 
                     // Panning repositions portals (layout) and changes world mapping (hit-test + paint).
-                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
+                    invalidate_notify_and_redraw_pointer_action_host(
+                        host,
+                        action_cx,
+                        Invalidation::Layout,
+                    );
                     true
                 },
             );
@@ -2353,7 +2243,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                         return false;
                     }
 
-                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
+                    invalidate_notify_and_redraw_pointer_action_host(
+                        host,
+                        action_cx,
+                        Invalidation::Layout,
+                    );
                     true
                 },
             );
@@ -2401,7 +2295,11 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                         return false;
                     }
 
-                    invalidate_notify_and_redraw_pointer_action_host(host, action_cx, Invalidation::Layout);
+                    invalidate_notify_and_redraw_pointer_action_host(
+                        host,
+                        action_cx,
+                        Invalidation::Layout,
+                    );
                     true
                 },
             );
@@ -2452,7 +2350,12 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     p.observe_model_id(node_drag_model_id, Invalidation::Paint);
                     p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
 
-                    paint_debug_grid_cached(p, view_for_paint, grid_ops.clone(), &style_tokens_for_paint);
+                    paint_debug_grid_cached(
+                        p,
+                        view_for_paint,
+                        grid_ops.clone(),
+                        &style_tokens_for_paint,
+                    );
                     paint_nodes_cached(
                         p,
                         view_for_paint,
@@ -2479,205 +2382,28 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 let mut out: Vec<AnyElement> = Vec::new();
                 out.push(canvas);
                 let mut overlay_children: Vec<AnyElement> = Vec::new();
-                let mut hovered_portal_hosted: bool = false;
-
-                if portals_enabled && portal_max_nodes > 0 && !portals_disabled {
-                    // Portals are positioned in screen space (semantic zoom) and gated off from
-                    // hit-testing so the surface-level pointer region remains the sole input
-                    // router during this milestone.
-                    let bounds = grid_cache_value.bounds;
-                    let view = view_for_paint;
-
-                    if bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0
-                    {
-                        let cull_canvas = canvas_viewport_rect(bounds, view, cull_margin_screen_px);
-
-                        let portal_bounds_store = portal_bounds_store.clone();
-                        let portal_infos: Vec<PortalLabelInfo> = cx
-                            .read_model_ref(&graph, Invalidation::Paint, |graph_value| {
-                                collect_portal_label_infos_for_visible_subset(
-                                    graph_value,
-                                    node_draws.as_deref().map(|draws| draws.as_slice()),
-                                    bounds,
-                                    view,
-                                    cull_canvas,
-                                    portal_max_nodes,
-                                    hovered_node_value,
-                                    selected_nodes.as_slice(),
-                                    node_drag_value.as_ref(),
-                                )
-                            })
-                            .unwrap_or_default();
-
-                        if !portal_infos.is_empty() {
-                            hovered_portal_hosted = hovered_node_value
-                                .is_some_and(|id| portal_infos.iter().any(|p| p.id == id));
-
-                            // Best-effort prune for nodes that are no longer hosted this frame. Bounds are
-                            // frame-lagged by contract, so removals may trail unmount by one frame.
-                            let visible: std::collections::BTreeSet<crate::core::NodeId> =
-                                portal_infos.iter().map(|p| p.id).collect();
-                            let should_prune = cx
-                                .app
-                                .models()
-                                .read(&portal_bounds_store, |st| {
-                                    st.nodes_canvas_bounds
-                                        .keys()
-                                        .any(|id| !visible.contains(id))
-                                })
-                                .unwrap_or(false);
-                            if should_prune {
-                                let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {
-                                    st.nodes_canvas_bounds.retain(|id, _| visible.contains(id));
-                                });
-                                cx.request_frame();
-                            }
-
-                            for (ordinal, info) in portal_infos.iter().cloned().enumerate() {
-                                let style_tokens = style_tokens.clone();
-                                let theme = theme.clone();
-                                let portal_bounds_store = portal_bounds_store.clone();
-                                let portal_measured_geometry_state =
-                                    portal_measured_geometry_state.clone();
-                                let measured_geometry_enabled = measured_geometry.is_some();
-                                overlay_children.push(cx.keyed(
-                                    ("fret-node.portal-label.v1", info.id),
-                                    move |cx| {
-                                        let bounds = bounds;
-                                        let view = view;
-                                        let mut query = LayoutQueryRegionProps {
-                                            name: Some("fret-node.portal.node_label.v1".into()),
-                                            ..Default::default()
-                                        };
-                                        // Make the query region itself the absolutely positioned item.
-                                        // Otherwise, the region's bounds would not include its absolute
-                                        // descendants, and harvested portal bounds would collapse to 0x0.
-                                        query.layout.position = PositionStyle::Absolute;
-                                        query.layout.inset.left = Some(info.left).into();
-                                        query.layout.inset.top = Some(info.top).into();
-                                        query.layout.size.width = Length::Px(info.width);
-                                        query.layout.size.height = Length::Px(info.height);
-
-                                        cx.layout_query_region_with_id(query, move |cx, element| {
-                                            let visual_bounds = cx
-                                                .last_visual_bounds_for_element(element)
-                                                .or_else(|| cx.last_bounds_for_element(element));
-
-                                            if let Some(visual_bounds) = visual_bounds {
-                                                let canvas_bounds = screen_rect_to_canvas_rect(
-                                                    bounds,
-                                                    view,
-                                                    visual_bounds,
-                                                );
-
-                                                let mut request_frame = sync_portal_canvas_bounds_in_models(
-                                                    cx.app.models_mut(),
-                                                    &portal_bounds_store,
-                                                    info.id,
-                                                    canvas_bounds,
-                                                );
-                                                if measured_geometry_enabled {
-                                                    request_frame |= record_portal_measured_node_size_in_state(
-                                                        cx.app.models_mut(),
-                                                        &portal_measured_geometry_state,
-                                                        info.id,
-                                                        (
-                                                            visual_bounds.size.width.0,
-                                                            visual_bounds.size.height.0,
-                                                        ),
-                                                    );
-                                                }
-                                                if request_frame {
-                                                    cx.request_frame();
-                                                }
-                                            }
-
-                                            let mut p = ContainerProps::default();
-                                            p.layout.size.width = Length::Fill;
-                                            p.layout.size.height = Length::Fill;
-                                            p.padding =
-                                                SpacingEdges::all(SpacingLength::Px(Px(4.0)));
-                                            p.snap_to_device_pixels = true;
-                                            p.background = Some(Color {
-                                                a: if info.selected {
-                                                    0.98
-                                                } else if info.hovered {
-                                                    0.95
-                                                } else {
-                                                    0.92
-                                                },
-                                                ..style_tokens.paint.node_background
-                                            });
-                                            p.border = fret_core::Edges::all(Px(1.0));
-                                            p.border_color = Some(Color {
-                                                a: 0.35,
-                                                ..style_tokens.paint.node_border
-                                            });
-
-                                            let header_color = theme.color_token("card-foreground");
-                                            let ports_color = theme.color_token("muted-foreground");
-
-                                            let header = {
-                                                let mut props = TextProps::new(info.label.clone());
-                                                props.color = Some(header_color);
-                                                cx.text_props(props).attach_semantics(
-                                                    SemanticsDecoration::default().test_id(
-                                                        Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}.header"
-                                                        )),
-                                                    ),
-                                                )
-                                            };
-                                            let ports = {
-                                                let mut props = TextProps::new(Arc::<str>::from(
-                                                    format!(
-                                                        "in:{} out:{}",
-                                                        info.ports_in, info.ports_out
-                                                    ),
-                                                ));
-                                                props.color = Some(ports_color);
-                                                cx.text_props(props).attach_semantics(
-                                                    SemanticsDecoration::default().test_id(
-                                                        Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}.ports"
-                                                        )),
-                                                    ),
-                                                )
-                                            };
-
-                                            vec![
-                                                cx.container(p, move |cx| {
-                                                    let mut col = ColumnProps::default();
-                                                    col.layout.size.width = Length::Fill;
-                                                    col.layout.size.height = Length::Fill;
-                                                    col.gap = SpacingLength::Px(Px(2.0));
-                                                    vec![cx.column(col, move |_cx| {
-                                                        vec![header, ports]
-                                                    })]
-                                                })
-                                                .attach_semantics(
-                                                    SemanticsDecoration::default()
-                                                        .test_id(Arc::<str>::from(format!(
-                                                            "node_graph.portal.node.{ordinal}"
-                                                        )))
-                                                        .value(Arc::<str>::from(format!(
-                                                            "node_id={}; ports_in={} ports_out={}",
-                                                            info.id.0,
-                                                            info.ports_in,
-                                                            info.ports_out
-                                                        ))),
-                                                ),
-                                            ]
-                                        })
-                                    },
-                                ));
-                            }
-                        }
-                    }
-                }
+                let hovered_portal_hosted = if portals_enabled && !portals_disabled {
+                    host_visible_portal_labels(
+                        cx,
+                        &mut overlay_children,
+                        &graph,
+                        node_draws.as_ref(),
+                        grid_cache_value.bounds,
+                        view_for_paint,
+                        cull_margin_screen_px,
+                        portal_max_nodes,
+                        hovered_node_value,
+                        selected_nodes.as_slice(),
+                        node_drag_value.as_ref(),
+                        &portal_bounds_store,
+                        &portal_measured_geometry_state,
+                        measured_geometry.is_some(),
+                        &style_tokens,
+                        &theme,
+                    )
+                } else {
+                    false
+                };
 
                 // Keep a best-effort hovered bounds record independent of portal hosting caps.
                 if sync_hover_anchor_store_in_models(
@@ -2699,194 +2425,52 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                 // bounds-query loop (host subtree → harvest bounds → consume bounds).
                 // Keep this diagnostics-only. When portals are hosted, avoid duplicating portal
                 // label content: the tooltip should focus on debug details (anchor source, ids).
-                if diag_keys_enabled
-                    && !panning
-                    && !marquee_active
-                    && !node_dragging
-                {
-                    if let Some(hovered_id) = hovered_node_value {
-                        let bounds = grid_cache_value.bounds;
-                        let view = view_for_paint;
-                        if bounds.size.width.0.is_finite()
-                            && bounds.size.height.0.is_finite()
-                            && bounds.size.width.0 > 0.0
-                            && bounds.size.height.0 > 0.0
-                        {
-                            let portal_canvas_bounds = if portals_disabled {
-                                None
-                            } else {
-                                cx.app
-                                    .models()
-                                    .read(&portal_bounds_store, |st| {
-                                        st.nodes_canvas_bounds.get(&hovered_id).copied()
-                                    })
-                                    .ok()
-                                    .flatten()
-                            };
-
-                            let anchor_canvas_bounds = cx
-                                .app
-                                .models()
-                                .read(&hover_anchor_store, |st| {
-                                    if st.hovered_id == Some(hovered_id) {
-                                        st.hovered_canvas_bounds
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .ok()
-                                .flatten();
-
-                            let tooltip_anchor = resolve_hover_tooltip_anchor(
-                                bounds,
-                                view,
-                                portals_disabled,
-                                portal_canvas_bounds,
-                                anchor_canvas_bounds,
-                            );
-
-                            if let Some(tooltip_anchor) = tooltip_anchor {
-                                let hovered_label = cx
-                                    .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                        g.nodes
-                                            .get(&hovered_id)
-                                            .map(|n| Arc::<str>::from(n.kind.0.as_str()))
-                                    })
-                                    .ok()
-                                    .flatten()
-                                    .unwrap_or_else(|| Arc::<str>::from("node"));
-
-                                let (ports_in, ports_out) = cx
-                                    .read_model_ref(&graph, Invalidation::Paint, |g| {
-                                        g.nodes.get(&hovered_id).map(|n| {
-                                            let mut ports_in = 0u32;
-                                            let mut ports_out = 0u32;
-                                            for pid in n.ports.iter() {
-                                                let Some(port) = g.ports.get(pid) else {
-                                                    continue;
-                                                };
-                                                match port.dir {
-                                                    crate::core::PortDirection::In => ports_in += 1,
-                                                    crate::core::PortDirection::Out => ports_out += 1,
-                                                }
-                                            }
-                                            (ports_in, ports_out)
-                                        })
-                                    })
-                                    .ok()
-                                    .flatten()
-                                    .unwrap_or((0, 0));
-
-                                if let Some(spec) = build_hover_tooltip_overlay_spec(
-                                    bounds,
-                                    hovered_id,
-                                    tooltip_anchor,
-                                    hovered_portal_hosted,
-                                    hovered_label,
-                                    ports_in,
-                                    ports_out,
-                                ) {
-                                    push_hover_tooltip_overlay(
-                                        cx,
-                                        &mut overlay_children,
-                                        spec,
-                                        style_tokens.clone(),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
+                push_hover_tooltip_overlay_if_needed(
+                    cx,
+                    &mut overlay_children,
+                    HoverTooltipOverlayParams {
+                        graph: &graph,
+                        portal_bounds_store: &portal_bounds_store,
+                        hover_anchor_store: &hover_anchor_store,
+                        style_tokens: &style_tokens,
+                        diag_keys_enabled,
+                        panning,
+                        marquee_active,
+                        node_dragging,
+                        hovered_node: hovered_node_value,
+                        hovered_portal_hosted,
+                        portals_disabled,
+                        bounds: grid_cache_value.bounds,
+                        view: view_for_paint,
+                    },
+                );
 
                 // Diagnostics-only: if Ctrl+9 was pressed before portal bounds arrived, apply the
                 // fit request once we have harvested at least one portal rect.
                 //
                 // This keeps scripted gates deterministic without requiring arbitrary sleeps.
-                let pending_fit = cx
-                    .app
-                    .models()
-                    .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
-                    .unwrap_or(false);
-                if pending_fit && portals_enabled && !portals_disabled {
-                    let bounds = grid_cache_value.bounds;
-                    let bounds_valid = bounds.size.width.0.is_finite()
-                        && bounds.size.height.0.is_finite()
-                        && bounds.size.width.0 > 0.0
-                        && bounds.size.height.0 > 0.0;
-                    let target = cx
-                        .app
-                        .models()
-                        .read(&portal_bounds_store, |st| {
-                            let mut out: Option<Rect> = None;
-                            for rect in st.nodes_canvas_bounds.values().copied() {
-                                out = Some(match out {
-                                    Some(prev) => rect_union(prev, rect),
-                                    None => rect,
-                                });
-                            }
-                            out
-                        })
-                        .ok()
-                        .flatten();
-
-                    if bounds_valid && let Some(target) = target {
-                        let applied = update_view_state_ui_host(
-                            cx.app,
-                            &view_state,
-                            &controller,
-                            |state| {
-                                let _ = apply_fit_view_to_canvas_rect(
-                                    state, bounds, target, 24.0, min_zoom, max_zoom,
-                                );
-                            },
-                        );
-
-                        if applied {
-                            let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {
-                                st.fit_to_portals_count = st.fit_to_portals_count.saturating_add(1);
-                                st.pending_fit_to_portals = false;
-                            });
-                            // Ensure the semantics `value` string updates promptly for script gates.
-                            cx.request_frame();
-                        }
-                    }
-
-                    // Keep polling until bounds are available, but only while the request is armed.
-                    let still_pending = cx
-                        .app
-                        .models()
-                        .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
-                        .unwrap_or(false);
-                    if still_pending {
-                        cx.request_frame();
-                    }
-                }
+                apply_pending_fit_to_portals(
+                    cx,
+                    &view_state,
+                    &controller,
+                    &portal_bounds_store,
+                    portals_enabled,
+                    portals_disabled,
+                    grid_cache_value.bounds,
+                    min_zoom,
+                    max_zoom,
+                );
 
                 // Marquee chrome must render above portals, so keep it as a normal overlay element
                 // instead of drawing it in the canvas paint pass.
-                if let Some(marquee) = marquee_value.as_ref()
-                    && marquee.active
-                {
-                    push_marquee_overlay(
-                        cx,
-                        &mut overlay_children,
-                        grid_cache_value.bounds,
-                        marquee_rect_screen(marquee),
-                        &style_tokens,
-                    );
-                }
-
-                if !overlay_children.is_empty() {
-                    let mut layer = ContainerProps::default();
-                    layer.layout = LayoutStyle::default();
-                    layer.layout.size.width = Length::Fill;
-                    layer.layout.size.height = Length::Fill;
-                    layer.layout.position = PositionStyle::Relative;
-
-                    out.push(cx.hit_test_gate(false, move |cx| {
-                        vec![cx.container(layer, move |_cx| overlay_children)]
-                    }));
-                }
+                push_marquee_overlay_if_active(
+                    cx,
+                    &mut overlay_children,
+                    marquee_value.as_ref(),
+                    grid_cache_value.bounds,
+                    &style_tokens,
+                );
+                push_overlay_layer_if_needed(cx, &mut out, overlay_children);
 
                 out
             })]

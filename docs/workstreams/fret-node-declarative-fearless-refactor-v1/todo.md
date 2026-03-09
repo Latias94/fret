@@ -837,6 +837,17 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `paint_only.rs` now also routes local uncontrolled-model/bootstrap wiring through the
     private `paint_only/surface_models.rs` seam, so declarative paint-only surface assembly no
     longer keeps all local state bundle construction embedded inline.
+  - Progress: `paint_only.rs` now also routes visible-subset portal hosting and deferred
+    `fit-to-portals` viewport application through the private `paint_only/portals.rs` seam, so
+    declarative paint-only surface assembly no longer keeps portal subtree hosting, bounds-store
+    pruning, and pending-fit orchestration embedded inline.
+  - Progress: `paint_only.rs` now also routes diagnostics hover-tooltip overlay orchestration
+    through the private `paint_only/overlays.rs` seam, so declarative paint-only surface assembly
+    no longer keeps hover-anchor reads, portal-bounds fallback, and tooltip element wiring
+    embedded inline.
+  - Progress: `paint_only.rs` now also routes marquee overlay append and final overlay-layer
+    wrapping through the same private `paint_only/overlays.rs` seam, so declarative paint-only
+    surface assembly no longer keeps overlay child flush/wrap plumbing embedded inline.
 
 ## M5 - Compatibility retained convergence
 

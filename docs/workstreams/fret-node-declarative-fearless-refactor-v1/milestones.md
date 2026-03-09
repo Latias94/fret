@@ -416,6 +416,17 @@ real editors.
 - Declarative local uncontrolled-model/bootstrap wiring now also lives under the private
   `paint_only/surface_models.rs` seam, so the main paint-only surface stops re-embedding local
   state bundle construction inline.
+- Declarative visible-subset portal hosting and deferred `fit-to-portals` viewport application now
+  also live under the private `paint_only/portals.rs` seam, so the main paint-only surface stops
+  re-embedding portal subtree hosting, bounds-store pruning, and pending-fit orchestration inline
+  while keeping the same dragged-rect visibility and portal-bounds contracts.
+- Declarative diagnostics hover-tooltip overlay orchestration now also lives under the private
+  `paint_only/overlays.rs` seam, so the main paint-only surface stops re-embedding hover-anchor
+  reads, portal-bounds fallback, and tooltip element wiring inline while keeping the same
+  portal-vs-hover anchor precedence contract.
+- Declarative marquee overlay append and final overlay-layer wrapping now also live under the
+  private `paint_only/overlays.rs` seam, so the main paint-only surface stops re-embedding
+  overlay child flush/wrap plumbing inline and keeps the overlay stack reviewable from one seam.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1075,6 +1086,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_models.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
