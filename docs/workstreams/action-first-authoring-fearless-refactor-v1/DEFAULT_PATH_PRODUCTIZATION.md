@@ -63,6 +63,13 @@ The same ladder should appear consistently in:
 
 Current convergence snapshot (as of 2026-03-09):
 
+- `README.md` now states the same `hello` -> `simple-todo` -> `todo` ladder at the repo root and
+  labels `simple_todo_v2_target` as comparison-only instead of leaving users to infer that split.
+- `docs/first-hour.md` now repeats the same default/comparison/advanced taxonomy so the first guided
+  walkthrough does not drift away from the repo-wide onboarding story.
+- `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now also point back to the
+  same ladder, which keeps crate-level guidance and ergonomics guidance from reading like
+  independent entry paths.
 - `docs/examples/README.md` already frames the repo with the default/comparison/advanced taxonomy.
 - `apps/fret-cookbook/README.md` and `apps/fret-cookbook/EXAMPLES.md` now act as the cookbook-side
   default/comparison/advanced portal rather than a flat example dump.
@@ -131,7 +138,8 @@ This productization pass is successful when:
 1. the same ladder appears in the key first-contact docs and generated READMEs,
 2. comparison surfaces are called out explicitly as comparison-only,
 3. gallery/interop/renderer surfaces are explicitly framed as advanced/reference,
-4. the default path no longer depends on tribal knowledge to understand which examples to follow.
+4. the default path no longer depends on tribal knowledge to understand which examples to follow,
+5. crate-level and ergonomics-oriented docs do not accidentally read like separate onboarding paths.
 
 ## Remaining narrow work
 

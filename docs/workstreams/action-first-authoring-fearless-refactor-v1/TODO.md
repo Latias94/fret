@@ -524,9 +524,10 @@ Current sequencing note (as of 2026-03-09):
   `DataTable` helper churn, broad macros, and compat cleanup do not displace the higher-value
   default-path and invalidation work.
 - productization note (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the
-  repo-wide ladder and label contract explicitly, and the examples index, todo golden-path note,
-  cookbook README/index, gallery README/page framing, and generated scaffold READMEs now use that same
-  default/comparison/advanced framing.
+  repo-wide ladder and label contract explicitly, and `README.md`, `docs/first-hour.md`,
+  `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, the examples index, todo
+  golden-path note, cookbook README/index, gallery README/page framing, and generated scaffold
+  READMEs now use that same default/comparison/advanced framing.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -705,9 +706,13 @@ Current sequencing note (as of 2026-03-09):
 
 - [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
   - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
-  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `docs/examples/README.md` now states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` now frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` now points back to the same ladder instead of presenting the facade README as the canonical example host.
+  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, and `docs/ui-ergonomics-and-interop.md` now repeat the same ladder/taxonomy at the repo-root, first-hour, crate-guidance, and ergonomics-guidance entry points, `docs/examples/README.md` states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` points back to the same ladder instead of presenting the facade README as the canonical example host.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+    - `README.md`
+    - `docs/first-hour.md`
+    - `docs/crate-usage-guide.md`
+    - `docs/ui-ergonomics-and-interop.md`
     - `docs/examples/README.md`
     - `apps/fret-cookbook/README.md`
     - `apps/fret-cookbook/EXAMPLES.md`
