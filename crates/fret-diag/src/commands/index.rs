@@ -30,7 +30,6 @@ pub(crate) fn cmd_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (index_path, default_out) = if src.is_file()
         && src
@@ -51,22 +50,20 @@ pub(crate) fn cmd_index(
                 src.display()
             ));
         }
-    } else if src.is_dir() {
-        let direct = src.join("bundle.index.json");
+    } else {
+        let resolved = resolve::resolve_bundle_ref(&src)?;
+        let bundle_dir = resolved.bundle_dir;
+        let bundle_path = resolved.bundle_artifact;
+
+        let direct = bundle_dir.join("bundle.index.json");
         if direct.is_file() && try_read_bundle_index_json(&direct, warmup_frames).is_some() {
             (direct.clone(), direct)
         } else {
-            let bundle_path = crate::resolve_bundle_artifact_path(&src);
             let canonical =
                 crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
             let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
             (canonical, out)
         }
-    } else {
-        let bundle_path = crate::resolve_bundle_artifact_path(&src);
-        let canonical = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-        let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
-        (canonical, out)
     };
 
     let out = index_out

@@ -28,6 +28,7 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 ### Authoring surface
 
 - Pass: `Calendar::new(month, selected)` covers the common single-date authoring path.
+- Pass: `Calendar::new_controllable(cx, selected, default_selected)` covers the docs/gallery-style uncontrolled path without forcing callers to allocate a month model.
 - Pass: `caption_layout(...)`, `number_of_months(...)`, `week_start(...)`, `show_week_number(...)`, `locale(...)`, and disabled matchers cover the important recipe surface from the upstream docs.
 - Pass: Range / multiple / Hijri variants live as dedicated components instead of overloading one generic builder, which keeps the contract surface explicit.
 - Note: `Calendar` already exposes the knobs it needs, so Fret intentionally does not add a generic `compose()` builder here.

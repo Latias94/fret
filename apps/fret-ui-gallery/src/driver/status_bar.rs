@@ -54,9 +54,18 @@ pub(super) fn status_bar_view(
             move |cx| vec![cx.text(status_last_action_text.as_ref())],
         );
 
-        WorkspaceStatusBar::new()
+        let status_bar = WorkspaceStatusBar::new()
             .left(vec![status_last_action_item])
             .right(right_items)
-            .into_element(cx)
+            .into_element(cx);
+
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(Arc::from("ui-gallery-status-bar")),
+                ..Default::default()
+            },
+            |_cx| [status_bar],
+        )
     })
 }

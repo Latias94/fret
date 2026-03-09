@@ -667,7 +667,7 @@ impl CustomEffectV2LutWebDriver {
                 ])
                 .into_element(cx);
 
-                let mode_row = ui::v_flex(move |cx| {
+                let mode_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
                     vec![
                         label_row(cx, "Effect mode", mode_value.clone()),
                         shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
@@ -829,7 +829,7 @@ impl CustomEffectV2LutWebDriver {
                 .gap(Space::N2)
                 .into_element(cx);
 
-                let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+                let content = shadcn::CardContent::new([ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
                     let supported = cx
                         .app
                         .global::<RendererCapabilities>()
@@ -894,7 +894,8 @@ impl CustomEffectV2LutWebDriver {
                     ]
                 })
                 .gap(Space::N3)
-                .items_stretch()])
+                .items_stretch()
+                .into_element(cx)])
                 .into_element(cx);
 
                 vec![
@@ -1204,6 +1205,7 @@ fn render(
     let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.drive_script_for_window(
             app,
+            services,
             window,
             bounds,
             scale_factor,
@@ -1277,7 +1279,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo custom_effect_v2_lut_web_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     }
 }

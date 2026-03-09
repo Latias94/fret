@@ -116,7 +116,7 @@ fn build_hit_test_explain_ack_v1(
         };
     };
 
-    let raw = ui.semantics_snapshot();
+    let raw = ui.semantics_snapshot_arc();
     let Some(snapshot) = raw else {
         return UiHitTestExplainAckV1 {
             schema_version: 1,
@@ -131,6 +131,7 @@ fn build_hit_test_explain_ack_v1(
         };
     };
 
+    let snapshot = snapshot.as_ref();
     let window = AppWindowId::from(KeyData::from_ffi(window_ffi));
     let semantics_fingerprint = Some(semantics_fingerprint_v1(
         snapshot,

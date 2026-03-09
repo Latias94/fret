@@ -42,7 +42,9 @@ pub(super) fn preview_data_table(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-data-table-code")
                 .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),
-            DocSection::new("Notes", notes_stack).max_w(Px(980.0)),
+            DocSection::new("Notes", notes_stack)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-data-table-notes"),
         ],
     );
 

@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{
@@ -84,13 +84,6 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         |_cx| Vec::new(),
     )
-}
-
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style
 }
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -968,7 +961,12 @@ impl AudioPlayerElement {
         let el = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from(""),
-            style: Some(text_sm(&theme, FontWeight::NORMAL)),
+            style: Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            )),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -984,5 +982,47 @@ impl AudioPlayerElement {
                 .role(SemanticsRole::Generic)
                 .test_id(test_id),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn audio_player_element_uses_shared_sm_typography_preset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                AudioPlayerElement::new().into_element(cx)
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected AudioPlayerElement to render a text placeholder");
+        };
+
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            props.style,
+            Some(typography::preset_text_style_with_overrides(
+                &theme,
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                Some(FontWeight::NORMAL),
+                None,
+            ))
+        );
     }
 }

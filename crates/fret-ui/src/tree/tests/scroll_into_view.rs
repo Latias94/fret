@@ -507,3 +507,118 @@ fn scroll_into_view_does_not_drift_scroll_when_descendant_is_already_visible() {
         scroll_handle.offset()
     );
 }
+
+#[test]
+fn scroll_into_view_scrolls_horizontal_scroll_container_when_descendant_is_offscreen() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let mut target_id: Option<GlobalElementId> = None;
+    let target_index = 4usize;
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(80.0)));
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-into-view-horizontal",
+        |cx| {
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Px(Px(100.0));
+                        layout.size.height = crate::element::Length::Px(Px(80.0));
+                        layout.overflow = crate::element::Overflow::Clip;
+                        layout
+                    },
+                    axis: crate::element::ScrollAxis::X,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: crate::element::MainAlign::Start,
+                            align: crate::element::CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            (0..8)
+                                .map(|index| {
+                                    cx.keyed(index, |cx| {
+                                        cx.pressable_with_id(
+                                            crate::element::PressableProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        crate::element::LayoutStyle::default();
+                                                    layout.size.width =
+                                                        crate::element::Length::Px(Px(60.0));
+                                                    layout.size.height =
+                                                        crate::element::Length::Px(Px(40.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                ..Default::default()
+                                            },
+                                            |_cx, _st, id| {
+                                                if index == target_index {
+                                                    target_id = Some(id);
+                                                }
+                                                Vec::new()
+                                            },
+                                        )
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_id = target_id.expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
+
+    assert!(
+        scroll_handle.max_offset().x.0 > 0.01,
+        "expected a horizontal scroll range, got viewport={:?} content={:?} max={:?}",
+        scroll_handle.viewport_size(),
+        scroll_handle.content_size(),
+        scroll_handle.max_offset()
+    );
+
+    let before = scroll_handle.offset();
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    let after = scroll_handle.offset();
+
+    assert!(
+        did_scroll,
+        "expected horizontal scroll_into_view to report scrolling"
+    );
+    assert!(
+        after.x.0 > before.x.0 + 0.5,
+        "expected horizontal scroll_into_view to increase x offset: before={:?} after={:?}",
+        before,
+        after
+    );
+}

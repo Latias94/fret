@@ -885,7 +885,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             ),
                             cx.bounds.size,
                         );
-                        scroll_handle_into_view_y(&handle, viewport_in_content, descendant_bounds)
+                        scroll_handle_into_view(&handle, viewport_in_content, descendant_bounds)
                     },
                 }
             }
@@ -904,7 +904,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         ),
                         cx.bounds.size,
                     );
-                    scroll_handle_into_view_y(handle, viewport_in_content, descendant_bounds)
+                    scroll_handle_into_view(handle, viewport_in_content, descendant_bounds)
                 },
             },
             _ => crate::widget::ScrollIntoViewResult::NotHandled,
@@ -961,22 +961,40 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
     }
 }
 
-fn scroll_handle_into_view_y(
+fn scroll_handle_into_view(
     handle: &crate::scroll::ScrollHandle,
     viewport: Rect,
     child: Rect,
 ) -> bool {
+    let viewport_w = viewport.size.width.0.max(0.0);
     let viewport_h = viewport.size.height.0.max(0.0);
-    if viewport_h <= 0.0 {
+    if viewport_w <= 0.0 && viewport_h <= 0.0 {
         return false;
     }
 
+    let view_left = viewport.origin.x.0;
     let view_top = viewport.origin.y.0;
+    let view_right = view_left + viewport_w;
     let view_bottom = view_top + viewport_h;
+
+    let child_left = child.origin.x.0;
     let child_top = child.origin.y.0;
+    let child_right = child_left + child.size.width.0.max(0.0);
     let child_bottom = child_top + child.size.height.0.max(0.0);
 
-    let delta = if child_top < view_top {
+    let delta_x = if viewport_w <= 0.0 {
+        0.0
+    } else if child_left < view_left {
+        child_left - view_left
+    } else if child_right > view_right {
+        child_right - view_right
+    } else {
+        0.0
+    };
+
+    let delta_y = if viewport_h <= 0.0 {
+        0.0
+    } else if child_top < view_top {
         child_top - view_top
     } else if child_bottom > view_bottom {
         child_bottom - view_bottom
@@ -984,13 +1002,13 @@ fn scroll_handle_into_view_y(
         0.0
     };
 
-    if delta.abs() <= 0.01 {
+    if delta_x.abs() <= 0.01 && delta_y.abs() <= 0.01 {
         return false;
     }
 
     let prev = handle.offset();
-    handle.set_offset(Point::new(prev.x, Px(prev.y.0 + delta)));
+    handle.set_offset(Point::new(Px(prev.x.0 + delta_x), Px(prev.y.0 + delta_y)));
 
     let next = handle.offset();
-    (prev.y.0 - next.y.0).abs() > 0.01
+    (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
 }

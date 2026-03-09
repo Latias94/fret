@@ -860,6 +860,31 @@ impl ElementDiagnosticsSnapshotV1 {
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
             hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
+            continuous_frame_leases: snapshot
+                .continuous_frame_leases
+                .into_iter()
+                .map(|entry| {
+                    let mut debug_path = entry.debug_path;
+                    truncate_opt_string_bytes(&mut debug_path, max_debug_string_bytes);
+                    ElementContinuousFrameLeaseV1 {
+                        element: entry.element.0,
+                        count: entry.count,
+                        debug_path,
+                    }
+                })
+                .collect(),
+            animation_frame_request_roots: snapshot
+                .animation_frame_request_roots
+                .into_iter()
+                .map(|entry| {
+                    let mut debug_path = entry.debug_path;
+                    truncate_opt_string_bytes(&mut debug_path, max_debug_string_bytes);
+                    ElementAnimationFrameRequestRootV1 {
+                        element: entry.element.0,
+                        debug_path,
+                    }
+                })
+                .collect(),
             observed_models: snapshot
                 .observed_models
                 .into_iter()
@@ -956,6 +981,25 @@ impl ElementDiagnosticsSnapshotV1 {
                     elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
                 })
                 .collect(),
+            rendered_state_entries: snapshot.rendered_state_entries,
+            next_state_entries: snapshot.next_state_entries,
+            lag_state_frames: snapshot.lag_state_frames,
+            lag_state_entries_total: snapshot.lag_state_entries_total,
+            state_entries_total: snapshot.state_entries_total,
+            nodes_count: snapshot.nodes_count,
+            bounds_entries_total: snapshot.bounds_entries_total,
+            timer_targets_count: snapshot.timer_targets_count,
+            transient_events_count: snapshot.transient_events_count,
+            view_cache_state_key_roots_count: snapshot.view_cache_state_key_roots_count,
+            view_cache_state_key_entries_total: snapshot.view_cache_state_key_entries_total,
+            view_cache_element_roots_count: snapshot.view_cache_element_roots_count,
+            view_cache_element_entries_total: snapshot.view_cache_element_entries_total,
+            view_cache_key_mismatch_roots_count: snapshot.view_cache_key_mismatch_roots_count,
+            scratch_element_children_vec_pool_len: snapshot.scratch_element_children_vec_pool_len,
+            scratch_element_children_vec_pool_capacity_total: snapshot
+                .scratch_element_children_vec_pool_capacity_total,
+            scratch_element_children_vec_pool_bytes_estimate_total: snapshot
+                .scratch_element_children_vec_pool_bytes_estimate_total,
             retained_keep_alive_roots_len: snapshot.retained_keep_alive_roots_len,
             retained_keep_alive_roots_head: snapshot
                 .retained_keep_alive_roots_head

@@ -21,6 +21,10 @@ impl CustomEffectV3PyramidScratch {
         }
         (w, h)
     }
+
+    pub(super) fn estimated_bytes(&self) -> u64 {
+        estimate_mipped_texture_bytes(self.size, self.format, 1, self.levels)
+    }
 }
 
 impl Renderer {

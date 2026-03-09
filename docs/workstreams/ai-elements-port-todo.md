@@ -33,6 +33,16 @@ Each TODO is labeled:
 
 ## Next up (recommended priority)
 
+- [x] AIEL-MVP0-audit-013 Record a docs-parity + text-infra migration matrix for `fret-ui-ai`.
+  - Evidence: `docs/workstreams/ai-elements-upstream-alignment.md` (`2026-03-07 closure audit`).
+- [x] AIEL-MVP1-chat-096 Reuse the `Conversation` compound inside `AiChat` so transcript scroll ownership stays single-source.
+  - Evidence: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs`
+  - Evidence: `ecosystem/fret-ui-ai/src/elements/conversation.rs`
+  - Gate: `ecosystem/fret-ui-ai/src/elements/ai_chat.rs` (`ai_chat_reuses_conversation_without_nested_scroll_area`)
+- [x] AIEL-MVP0-audit-014 Run the next passive-text cleanup batch for `fret-ui-ai` (`task`, `persona`, voice-family surfaces).
+  - Done in slices: `inline_citation` + `sources_block`, then `agent` + `sandbox`, then `task` + `persona`, then `audio_player` + `mic_selector` + `voice_selector` + `transcription`, and now `chain_of_thought`; the tracked AI batch now uses the shared preset helper or inherited text scopes.
+  - Follow-up note: remaining AI-side closure work is behavior/token polish plus explicit authoring seams, not another family-wide text-infra migration pass.
+
 - [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
 - [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.
 - [x] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).
@@ -124,7 +134,7 @@ Status legend:
 | `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
 | `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
 | `persona` | Prototype | `fret-ui-ai` | UI-only placeholder (upstream uses Rive/webgl2). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
-| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
+| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` + `AttachmentHoverCard*` surfaces exist; UI Gallery page now uses docs-aligned compound composition and the screenshot gate waits for the inline hover preview. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
 | `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces with deferred slot resolution for direct compound children, docs-aligned UI Gallery examples, and a diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
@@ -142,7 +152,7 @@ Status legend:
 | `artifact` | Prototype | `fret-ui-ai` | Artifact container surfaces (`Artifact*`) + UI Gallery demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
-| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
+| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; docs-aligned gallery page now covers default-open, collapsed, and hide-internal examples with dedicated diag gates. |
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
@@ -171,7 +181,7 @@ Status legend:
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
 | `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
-| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
+| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + docs-aligned UI Gallery demo + diag gates: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`, `tools/diag-scripts/ui-gallery-ai-transcription-demo-screenshot-zinc-dark.json`. Playback timing remains app-owned. |
 | `mic-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`MicSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-mic-selector-demo-select.json`. Device enumeration remains app-owned. |
 | `speech-input` | Prototype | `fret-ui-ai` | UI-only chrome port (`SpeechInput`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-speech-input-demo-toggle.json`. Capture + ASR backends remain app-owned. |
 | `voice-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`VoiceSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-voice-selector-demo-select.json`. Voice inventory + preview playback remain app-owned. |
@@ -238,11 +248,13 @@ Existing gates (UI Gallery `ai_commit_large_demo`):
 
 Existing gates (UI Gallery `ai_stack_trace_demo`):
 
-- `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-demo-copy.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-collapsed.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-no-internal.json`
 
 Existing gates (UI Gallery `ai_stack_trace_large_demo`):
 
-- `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+- `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`
 
 Existing gates (UI Gallery workflow):
 
@@ -329,7 +341,7 @@ Prioritize thin adapters over new engines:
 - [x] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
-  - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
+  - `StackTrace` is implemented with a docs-aligned UI Gallery page and dedicated gates for default-open copy flow, collapsed disclosure, and hide-internal behavior.
   - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
   - Parity polish checklist (make it measurable):
     - [~] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
@@ -342,7 +354,7 @@ Prioritize thin adapters over new engines:
     - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
       - commit: many files; stack trace: many frames; test results: many suites.
       - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
-      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`).
+      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`).
       - Done: test results many-tests scroll/activate gate (`tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`).
     - [~] Confirm extension hooks exist for app-owned effects:
       - commit: file row click / open file

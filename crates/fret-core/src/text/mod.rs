@@ -321,6 +321,130 @@ impl Default for TextStyle {
     }
 }
 
+/// Partial, mergeable subtree text-style refinement used for inherited typography defaults.
+///
+/// This is intentionally narrower than [`TextStyle`]: v1 only carries the portable fields needed
+/// for passive-text cascade (`Text`, `StyledText`, `SelectableText`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct TextStyleRefinement {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<FontId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<Px>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<FontWeight>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slant: Option<TextSlant>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height: Option<Px>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height_em: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height_policy: Option<TextLineHeightPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing_em: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_placement: Option<TextVerticalPlacement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub leading_distribution: Option<TextLeadingDistribution>,
+}
+
+impl TextStyleRefinement {
+    pub fn is_empty(&self) -> bool {
+        self.font.is_none()
+            && self.size.is_none()
+            && self.weight.is_none()
+            && self.slant.is_none()
+            && self.line_height.is_none()
+            && self.line_height_em.is_none()
+            && self.line_height_policy.is_none()
+            && self.letter_spacing_em.is_none()
+            && self.vertical_placement.is_none()
+            && self.leading_distribution.is_none()
+    }
+
+    pub fn merge(&mut self, other: &Self) {
+        if let Some(font) = other.font.clone() {
+            self.font = Some(font);
+        }
+        if let Some(size) = other.size {
+            self.size = Some(size);
+        }
+        if let Some(weight) = other.weight {
+            self.weight = Some(weight);
+        }
+        if let Some(slant) = other.slant {
+            self.slant = Some(slant);
+        }
+        if let Some(line_height) = other.line_height {
+            self.line_height = Some(line_height);
+            self.line_height_em = None;
+        } else if let Some(line_height_em) = other.line_height_em {
+            self.line_height_em = Some(line_height_em);
+            self.line_height = None;
+        }
+        if let Some(line_height_policy) = other.line_height_policy {
+            self.line_height_policy = Some(line_height_policy);
+        }
+        if let Some(letter_spacing_em) = other.letter_spacing_em {
+            self.letter_spacing_em = Some(letter_spacing_em);
+        }
+        if let Some(vertical_placement) = other.vertical_placement {
+            self.vertical_placement = Some(vertical_placement);
+        }
+        if let Some(leading_distribution) = other.leading_distribution {
+            self.leading_distribution = Some(leading_distribution);
+        }
+    }
+
+    pub fn merged(&self, other: &Self) -> Self {
+        let mut merged = self.clone();
+        merged.merge(other);
+        merged
+    }
+}
+
+impl TextStyle {
+    pub fn refine(&mut self, refinement: &TextStyleRefinement) {
+        if let Some(font) = refinement.font.clone() {
+            self.font = font;
+        }
+        if let Some(size) = refinement.size {
+            self.size = size;
+        }
+        if let Some(weight) = refinement.weight {
+            self.weight = weight;
+        }
+        if let Some(slant) = refinement.slant {
+            self.slant = slant;
+        }
+        if let Some(line_height) = refinement.line_height {
+            self.line_height = Some(line_height);
+            self.line_height_em = None;
+        } else if let Some(line_height_em) = refinement.line_height_em {
+            self.line_height_em = Some(line_height_em);
+            self.line_height = None;
+        }
+        if let Some(line_height_policy) = refinement.line_height_policy {
+            self.line_height_policy = line_height_policy;
+        }
+        if let Some(letter_spacing_em) = refinement.letter_spacing_em {
+            self.letter_spacing_em = Some(letter_spacing_em);
+        }
+        if let Some(vertical_placement) = refinement.vertical_placement {
+            self.vertical_placement = vertical_placement;
+        }
+        if let Some(leading_distribution) = refinement.leading_distribution {
+            self.leading_distribution = leading_distribution;
+        }
+    }
+
+    pub fn refined(mut self, refinement: &TextStyleRefinement) -> Self {
+        self.refine(refinement);
+        self
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextMetrics {
     pub size: crate::Size,

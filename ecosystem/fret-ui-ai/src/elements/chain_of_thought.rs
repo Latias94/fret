@@ -4,9 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{Color, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
@@ -44,20 +42,6 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
-fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-    style.weight = weight;
-    style
-}
-
-fn text_xs(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let mut style =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
-    style.weight = weight;
-    style
-}
-
 #[derive(Debug, Default, Clone)]
 struct ChainOfThoughtProviderState {
     controller: Option<ChainOfThoughtController>,
@@ -87,7 +71,6 @@ pub fn use_chain_of_thought_controller<H: UiHost>(
         .and_then(|st| st.controller.clone())
 }
 
-#[derive(Clone)]
 /// Collapsible container aligned with AI Elements `ChainOfThought`.
 pub struct ChainOfThought {
     open: Option<Model<bool>>,
@@ -155,6 +138,29 @@ impl ChainOfThought {
         self
     }
 
+    /// Docs-style compound children composition.
+    ///
+    /// This keeps `ChainOfThoughtHeader` / `ChainOfThoughtContent` move-only builders intact while
+    /// still letting the root install provider state before those parts are rendered.
+    pub fn children<I, C>(self, children: I) -> ChainOfThoughtWithChildren
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ChainOfThoughtChild>,
+    {
+        ChainOfThoughtWithChildren {
+            root: self,
+            children: children.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    pub fn header(self, header: ChainOfThoughtHeader) -> ChainOfThoughtWithChildren {
+        self.children([ChainOfThoughtChild::Header(header)])
+    }
+
+    pub fn content(self, content: ChainOfThoughtContent) -> ChainOfThoughtWithChildren {
+        self.children([ChainOfThoughtChild::Content(content)])
+    }
+
     pub fn into_element_with_children<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -207,6 +213,76 @@ impl ChainOfThought {
                 );
             }
             root
+        })
+    }
+}
+
+pub enum ChainOfThoughtChild {
+    Header(ChainOfThoughtHeader),
+    Content(ChainOfThoughtContent),
+}
+
+impl std::fmt::Debug for ChainOfThoughtChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Header(_) => f.write_str("ChainOfThoughtChild::Header(..)"),
+            Self::Content(_) => f.write_str("ChainOfThoughtChild::Content(..)"),
+        }
+    }
+}
+
+impl From<ChainOfThoughtHeader> for ChainOfThoughtChild {
+    fn from(value: ChainOfThoughtHeader) -> Self {
+        Self::Header(value)
+    }
+}
+
+impl From<ChainOfThoughtContent> for ChainOfThoughtChild {
+    fn from(value: ChainOfThoughtContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+impl ChainOfThoughtChild {
+    fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        match self {
+            Self::Header(header) => header.into_element(cx),
+            Self::Content(content) => content.into_element(cx),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ChainOfThoughtWithChildren {
+    root: ChainOfThought,
+    children: Vec<ChainOfThoughtChild>,
+}
+
+impl ChainOfThoughtWithChildren {
+    pub fn children<I, C>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = C>,
+        C: Into<ChainOfThoughtChild>,
+    {
+        self.children.extend(children.into_iter().map(Into::into));
+        self
+    }
+
+    pub fn header(self, header: ChainOfThoughtHeader) -> Self {
+        self.children([ChainOfThoughtChild::Header(header)])
+    }
+
+    pub fn content(self, content: ChainOfThoughtContent) -> Self {
+        self.children([ChainOfThoughtChild::Content(content)])
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self { root, children } = self;
+        root.into_element_with_children(cx, move |cx| {
+            children
+                .into_iter()
+                .map(|child| child.into_element(cx))
+                .collect()
         })
     }
 }
@@ -336,7 +412,12 @@ impl ChainOfThoughtHeader {
                             LayoutRefinement::default().min_w_0().flex_1(),
                         ),
                         text: Arc::from("Chain of Thought"),
-                        style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                        style: Some(typography::preset_text_style_with_overrides(
+                            &theme,
+                            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                            Some(FontWeight::NORMAL),
+                            None,
+                        )),
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -615,7 +696,12 @@ impl ChainOfThoughtStep {
             ChainOfThoughtStepSlot::Text(label) => cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: label,
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -634,31 +720,48 @@ impl ChainOfThoughtStep {
             ),
         };
 
+        let description_refinement = typography::composable_preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+
         let mut body_children: Vec<AnyElement> = Vec::new();
         body_children.push(label);
 
         if let Some(description) = self.description {
             let description = match description {
-                ChainOfThoughtStepSlot::Text(description) => cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: description,
-                    style: Some(text_xs(&theme, FontWeight::NORMAL)),
-                    color: Some(base_fg),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }),
-                ChainOfThoughtStepSlot::Elements(children) => cx.container(
-                    ContainerProps {
-                        layout: decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
+                ChainOfThoughtStepSlot::Text(description) => {
+                    typography::scope_text_style_with_color(
+                        cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: description,
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
+                        }),
+                        description_refinement.clone(),
+                        base_fg,
+                    )
+                }
+                ChainOfThoughtStepSlot::Elements(children) => {
+                    typography::scope_text_style_with_color(
+                        cx.container(
+                            ContainerProps {
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                                ..Default::default()
+                            },
+                            move |_cx| children,
                         ),
-                        ..Default::default()
-                    },
-                    move |_cx| children,
-                ),
+                        description_refinement,
+                        base_fg,
+                    )
+                }
             };
             body_children.push(description);
         }
@@ -888,7 +991,12 @@ impl ChainOfThoughtImage {
             out.push(cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: caption,
-                style: Some(text_xs(&theme, FontWeight::NORMAL)),
+                style: Some(typography::preset_text_style_with_overrides(
+                    &theme,
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+                    Some(FontWeight::NORMAL),
+                    None,
+                )),
                 color: Some(caption_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -925,13 +1033,65 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(600.0), Px(400.0)),
         )
+    }
+
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        if let ElementKind::Pressable(props) = &element.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn has_inherited_scope(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_inherited_scope(child, refinement, foreground))
     }
 
     #[test]
@@ -953,6 +1113,52 @@ mod tests {
                 "expected ChainOfThoughtSearchResults to enable flex wrap"
             );
         });
+    }
+
+    #[test]
+    fn chain_of_thought_step_description_scopes_inherited_typography_for_text_and_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let expected_theme = fret_ui::Theme::global(&app).snapshot();
+        let expected_refinement = typography::composable_preset_text_refinement(
+            &expected_theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+        );
+        let expected_fg = expected_theme.color_token("muted-foreground");
+
+        let text_element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThoughtStep::new("label")
+                    .description("desc")
+                    .into_element(cx)
+            });
+
+        let text_desc =
+            find_text_by_content(&text_element, "desc").expect("expected text description element");
+        let ElementKind::Text(props) = &text_desc.kind else {
+            panic!("expected description branch to render a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            text_desc.inherited_text_style.as_ref(),
+            Some(&expected_refinement)
+        );
+        assert_eq!(text_desc.inherited_foreground, Some(expected_fg));
+
+        let children_element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThoughtStep::new("label")
+                    .description_children([ui::raw_text("child description").into_element(cx)])
+                    .into_element(cx)
+            });
+
+        assert!(
+            has_inherited_scope(&children_element, &expected_refinement, expected_fg),
+            "expected description children slot to inherit xs muted typography"
+        );
     }
 
     #[test]
@@ -1002,5 +1208,83 @@ mod tests {
                 other => panic!("expected description children slot, got {:?}", other),
             }
         });
+    }
+
+    #[test]
+    fn chain_of_thought_children_api_renders_header_and_content_in_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThought::new()
+                    .default_open(true)
+                    .test_id_root("root")
+                    .header(ChainOfThoughtHeader::new().test_id("header"))
+                    .content(
+                        ChainOfThoughtContent::new([cx.text("Visible content")]).test_id("content"),
+                    )
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "root"));
+        assert!(has_test_id(&element, "header"));
+        assert!(has_test_id(&element, "content"));
+    }
+
+    #[test]
+    fn chain_of_thought_surfaces_use_shared_typography_presets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ChainOfThought::new()
+                    .default_open(true)
+                    .header(ChainOfThoughtHeader::new())
+                    .content(ChainOfThoughtContent::new([
+                        ChainOfThoughtStep::new("Reason about repo state")
+                            .description("Summarize remaining work")
+                            .into_element(cx),
+                        ChainOfThoughtImage::new([cx.text("diagram")])
+                            .caption("Architecture snapshot")
+                            .into_element(cx),
+                    ]))
+                    .into_element(cx)
+            });
+
+        let theme = Theme::global(&app).clone();
+        let expected_sm = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+        let expected_xs = Some(typography::preset_text_style_with_overrides(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Xs),
+            Some(FontWeight::NORMAL),
+            None,
+        ));
+
+        let header = find_text_by_content(&element, "Chain of Thought").expect("header text");
+        let ElementKind::Text(header_props) = &header.kind else {
+            panic!("expected header default label to render as text");
+        };
+        assert_eq!(header_props.style, expected_sm.clone());
+
+        let step_label =
+            find_text_by_content(&element, "Reason about repo state").expect("step label text");
+        let ElementKind::Text(step_label_props) = &step_label.kind else {
+            panic!("expected step label to render as text");
+        };
+        assert_eq!(step_label_props.style, expected_sm);
+
+        let caption =
+            find_text_by_content(&element, "Architecture snapshot").expect("image caption text");
+        let ElementKind::Text(caption_props) = &caption.kind else {
+            panic!("expected image caption to render as text");
+        };
+        assert_eq!(caption_props.style, expected_xs);
     }
 }

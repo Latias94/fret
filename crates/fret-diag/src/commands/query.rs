@@ -315,32 +315,6 @@ pub(crate) fn cmd_query(
     }
 }
 
-fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<PathBuf> {
-    let mut cur = Some(start);
-    let mut first_found: Option<PathBuf> = None;
-    for _ in 0..10 {
-        let Some(dir) = cur else { break };
-        let direct = dir.join("script.result.json");
-        if direct.is_file() {
-            if first_found.is_none() {
-                first_found = Some(direct.clone());
-            }
-            if let Some(result) = read_script_result_typed(&direct)
-                && result.evidence.is_some()
-            {
-                return Some(direct);
-            }
-        }
-        cur = dir.parent();
-    }
-    first_found
-}
-
-fn read_script_result_typed(path: &Path) -> Option<fret_diag_protocol::UiScriptResultV1> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes).ok()
-}
-
 fn read_bundle_artifact_json(path: &Path) -> Result<serde_json::Value, String> {
     let bytes = std::fs::read(path).map_err(|e| {
         format!(
@@ -371,6 +345,7 @@ fn cmd_query_scroll_extents_observation(
     let mut window_filter: Option<u64> = None;
     let mut include_all: bool = false;
     let mut include_deep_scan: bool = false;
+    let mut include_timeline: bool = false;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -405,6 +380,10 @@ fn cmd_query_scroll_extents_observation(
                 include_deep_scan = true;
                 i += 1;
             }
+            "--timeline" => {
+                include_timeline = true;
+                i += 1;
+            }
             other if other.starts_with("--") => {
                 return Err(format!(
                     "unknown flag for query scroll-extents-observation: {other}"
@@ -427,9 +406,8 @@ fn cmd_query_scroll_extents_observation(
     let bundle_path = match positionals.as_slice() {
         [bundle_src] => {
             let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
-            let resolved =
-                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&bundle_src);
-            crate::resolve_bundle_artifact_path(&resolved)
+            let resolved = resolve::resolve_bundle_ref(&bundle_src)?;
+            resolved.bundle_artifact
         }
         [] => resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
         _ => unreachable!(),
@@ -442,7 +420,18 @@ fn cmd_query_scroll_extents_observation(
         .map(|v| v.as_slice())
         .unwrap_or(&[]);
 
-    let mut results: Vec<serde_json::Value> = Vec::new();
+    let mut encounter_seq: u64 = 0;
+    let mut results_timeline: Vec<serde_json::Value> = Vec::new();
+    let mut latest_by_scroll_node: HashMap<
+        (
+            u64,
+            Option<u64>,
+            Option<u64>,
+            Option<String>,
+            Option<String>,
+        ),
+        (u64, serde_json::Value),
+    > = HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         if let Some(filter) = window_filter
@@ -496,16 +485,23 @@ fn cmd_query_scroll_extents_observation(
                     continue;
                 }
 
-                results.push(serde_json::json!({
+                let node = n.get("node").and_then(|v| v.as_u64());
+                let element = n.get("element").and_then(|v| v.as_u64());
+                let test_id = n
+                    .get("test_id")
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string);
+                let axis = n.get("axis").and_then(|v| v.as_str()).map(str::to_string);
+                let row = serde_json::json!({
                     "window": window_id,
                     "tick_id": tick_id,
                     "frame_id": frame_id,
                     "window_snapshot_seq": window_snapshot_seq,
                     "timestamp_unix_ms": timestamp_unix_ms,
-                    "node": n.get("node").and_then(|v| v.as_u64()),
-                    "element": n.get("element").and_then(|v| v.as_u64()),
-                    "test_id": n.get("test_id").and_then(|v| v.as_str()),
-                    "axis": n.get("axis").and_then(|v| v.as_str()),
+                    "node": node,
+                    "element": element,
+                    "test_id": test_id.clone(),
+                    "axis": axis.clone(),
                     "offset_x": n.get("offset_x").and_then(|v| v.as_f64()),
                     "offset_y": n.get("offset_y").and_then(|v| v.as_f64()),
                     "viewport_w": n.get("viewport_w").and_then(|v| v.as_f64()),
@@ -515,21 +511,30 @@ fn cmd_query_scroll_extents_observation(
                     "observed_w": n.get("observed_w").and_then(|v| v.as_f64()),
                     "observed_h": n.get("observed_h").and_then(|v| v.as_f64()),
                     "overflow_observation": overflow_observation.cloned().unwrap_or(serde_json::Value::Null),
-                }));
+                });
 
-                if top > 0 && results.len() >= top {
-                    break;
+                encounter_seq = encounter_seq.saturating_add(1);
+                if include_timeline {
+                    results_timeline.push(row);
+                } else {
+                    latest_by_scroll_node.insert(
+                        (window_id, node, element, test_id, axis),
+                        (encounter_seq, row),
+                    );
                 }
             }
-
-            if top > 0 && results.len() >= top {
-                break;
-            }
         }
+    }
 
-        if top > 0 && results.len() >= top {
-            break;
-        }
+    let mut results: Vec<serde_json::Value> = if include_timeline {
+        results_timeline
+    } else {
+        let mut rows: Vec<(u64, serde_json::Value)> = latest_by_scroll_node.into_values().collect();
+        rows.sort_by(|a, b| b.0.cmp(&a.0));
+        rows.into_iter().map(|(_, row)| row).collect()
+    };
+    if top > 0 && results.len() > top {
+        results.truncate(top);
     }
 
     let payload = serde_json::json!({
@@ -540,6 +545,8 @@ fn cmd_query_scroll_extents_observation(
         "top": top,
         "window": window_filter,
         "all": include_all,
+        "deep_scan": include_deep_scan,
+        "timeline": include_timeline,
         "results": results,
     });
 
@@ -867,75 +874,16 @@ fn cmd_query_overlay_placement_trace(
         ));
     }
 
-    let script_result_path = if let Some(src) = positionals.first() {
-        let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-        if src.is_dir() {
-            let direct = src.join("script.result.json");
-            if direct.is_file() {
-                find_nearest_script_result_json_preferring_evidence(&src).ok_or_else(|| {
-                    format!(
-                        "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                        src.display()
-                    )
-                })?
-            } else {
-                let resolved =
-                    resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-                let start = if resolved.is_dir() {
-                    resolved.as_path()
-                } else {
-                    resolved.parent().unwrap_or_else(|| resolved.as_path())
-                };
-                find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                    format!(
-                        "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                        src.display()
-                    )
-                })?
-            }
-        } else if src.is_file()
-            && src
-                .file_name()
-                .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
-        {
-            let start = src.parent().unwrap_or_else(|| Path::new("."));
-            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                format!(
-                    "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                    src.display()
-                )
-            })?
-        } else {
-            let resolved =
-                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-            let start = if resolved.is_dir() {
-                resolved.as_path()
-            } else {
-                resolved.parent().unwrap_or_else(|| resolved.as_path())
-            };
-            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-                format!(
-                    "failed to locate script.result.json near: {}\n\
-hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
-                    src.display()
-                )
-            })?
-        }
-    } else {
-        let bundle_path = resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
-        let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-        find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
-            format!(
-                "failed to locate script.result.json near latest bundle: {}",
-                bundle_path.display()
-            )
-        })?
-    };
+    let src_path = positionals
+        .first()
+        .map(|src| crate::resolve_path(workspace_root, PathBuf::from(src)));
+    let script_result_path = resolve::resolve_script_result_json_path_or_latest(
+        src_path.as_deref(),
+        workspace_root,
+        out_dir,
+    )?;
 
-    let result = read_script_result_typed(&script_result_path).ok_or_else(|| {
+    let result = resolve::try_read_script_result_v1(&script_result_path).ok_or_else(|| {
         format!(
             "script.result.json is missing or invalid (expected UiScriptResultV1 JSON)\n  path: {}",
             script_result_path.display()
@@ -2077,6 +2025,59 @@ mod tests {
         path
     }
 
+    fn write_bundle_schema2_with_scroll_observation_updates(dir: &Path) -> PathBuf {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1u64,
+                "snapshots": [{
+                    "tick_id": 10u64,
+                    "frame_id": 20u64,
+                    "timestamp_unix_ms": 30u64,
+                    "debug": {
+                        "scroll_nodes": [
+                            {
+                                "node": 999u64,
+                                "element": 123u64,
+                                "test_id": "ui-gallery-content-viewport",
+                                "axis": "y",
+                                "offset_x": 0.0,
+                                "offset_y": 0.0,
+                                "viewport_w": 804.0,
+                                "viewport_h": 496.0,
+                                "content_w": 804.0,
+                                "content_h": 7648.0,
+                                "observed_w": null,
+                                "observed_h": null,
+                                "overflow_observation": null
+                            },
+                            {
+                                "node": 999u64,
+                                "element": 123u64,
+                                "test_id": "ui-gallery-content-viewport",
+                                "axis": "y",
+                                "offset_x": 0.0,
+                                "offset_y": 0.0,
+                                "viewport_w": 804.0,
+                                "viewport_h": 496.0,
+                                "content_w": 804.0,
+                                "content_h": 3203.3333,
+                                "observed_w": null,
+                                "observed_h": null,
+                                "overflow_observation": null
+                            }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        let path = dir.join("bundle.schema2.json");
+        let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
+        std::fs::write(&path, bytes).expect("write bundle.schema2.json");
+        path
+    }
+
     #[test]
     fn query_scroll_extents_observation_writes_json() {
         let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation");
@@ -2114,6 +2115,76 @@ mod tests {
                 .and_then(|v| v.as_bool()),
             Some(true)
         );
+    }
+
+    #[test]
+    fn query_scroll_extents_observation_returns_latest_row_per_node_by_default() {
+        let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation-latest");
+        let bundle = write_bundle_schema2_with_scroll_observation_updates(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_scroll_extents_observation(
+            &[bundle.display().to_string(), "--all".to_string()],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].get("content_h").and_then(|v| v.as_f64()),
+            Some(3203.3333)
+        );
+        assert_eq!(v.get("timeline").and_then(|v| v.as_bool()), Some(false));
+    }
+
+    #[test]
+    fn query_scroll_extents_observation_timeline_keeps_full_row_history() {
+        let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation-timeline");
+        let bundle = write_bundle_schema2_with_scroll_observation_updates(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_scroll_extents_observation(
+            &[
+                bundle.display().to_string(),
+                "--all".to_string(),
+                "--timeline".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results[0].get("content_h").and_then(|v| v.as_f64()),
+            Some(7648.0)
+        );
+        assert_eq!(
+            results[1].get("content_h").and_then(|v| v.as_f64()),
+            Some(3203.3333)
+        );
+        assert_eq!(v.get("timeline").and_then(|v| v.as_bool()), Some(true));
     }
 
     #[test]

@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
-use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
+use fret_core::TextLineHeightPolicy;
 use fret_ui::Theme;
+use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Alert, Button, ButtonSize, ButtonVariant};
@@ -325,8 +327,10 @@ impl ConfirmationTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let el = cx.foreground_scope(fg, move |_cx| self.children);
+        let description_style = description_text_refinement(&theme, "component.alert.description");
+        let el = cx
+            .foreground_scope(muted_foreground_color(&theme), move |_cx| self.children)
+            .inherit_text_style(description_style);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -709,13 +713,29 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Px, Rect, SemanticsRole, Size};
-    use fret_ui::element::{CrossAlign, ElementKind, Length};
+    use fret_ui::element::{CrossAlign, ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(200.0)),
         )
+    }
+
+    fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, test_id))
     }
 
     #[test]
@@ -850,22 +870,6 @@ mod tests {
                     })
             });
 
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
-
         assert!(has_test_id(&element, "accepted"));
         assert!(!has_test_id(&element, "request"));
         assert!(!has_test_id(&element, "rejected"));
@@ -901,22 +905,6 @@ mod tests {
                     ])
                     .into_element(cx)
             });
-
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
 
         assert!(has_test_id(&element, "request"));
         assert!(has_test_id(&element, "actions"));
@@ -954,25 +942,63 @@ mod tests {
                     .into_element(cx)
             });
 
-        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
-            if element
-                .semantics_decoration
-                .as_ref()
-                .and_then(|d| d.test_id.as_deref())
-                == Some(test_id)
-            {
-                return true;
-            }
-
-            element
-                .children
-                .iter()
-                .any(|child| has_test_id(child, test_id))
-        }
-
         assert!(has_test_id(&element, "accepted"));
         assert!(!has_test_id(&element, "request"));
         assert!(!has_test_id(&element, "rejected"));
         assert!(!has_test_id(&element, "actions"));
+    }
+
+    fn find_text<'a>(element: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => return Some(props),
+            _ => {}
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text(child, text))
+    }
+
+    #[test]
+    fn confirmation_title_scopes_alert_description_typography_without_patching_nested_plain_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ConfirmationTitle::new([ConfirmationRequest::new([cx.text("Ask")])
+                    .state(ToolUiPartState::ApprovalRequested)
+                    .into_element(cx)])
+                .into_element(cx)
+            });
+
+        let text = find_text(&element, "Ask").expect("expected nested text node");
+        assert!(
+            text.style.is_none(),
+            "expected nested passive text to inherit typography at runtime instead of being patched"
+        );
+
+        let style = element
+            .inherited_text_style
+            .as_ref()
+            .expect("expected confirmation title root to carry inherited text style");
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.alert.description_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.alert.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+        assert_eq!(style.size, Some(expected_px));
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(
+            style.line_height_policy,
+            Some(TextLineHeightPolicy::FixedFromStyle)
+        );
     }
 }

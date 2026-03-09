@@ -6,7 +6,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     LayoutStyle, MainAlign, PointerRegionProps, RowProps, SemanticsDecoration, SemanticsProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
@@ -15,12 +15,10 @@ use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
-fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
-    theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or_else(|| theme.color_token("muted.foreground"))
-}
+use fret_ui_kit::typography::{
+    description_text_refinement_with_fallbacks, muted_foreground_color,
+    scope_description_text_with_fallbacks,
+};
 
 fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
     loop {
@@ -81,39 +79,59 @@ fn is_field_legend_variant_legend(element: &AnyElement) -> bool {
     line_height.is_some_and(|lh| (lh.0 - 24.0).abs() <= 0.5)
 }
 
+fn passive_text_color(element: &AnyElement) -> Option<fret_core::Color> {
+    match &element.kind {
+        ElementKind::Text(props) => props.color.or(element.inherited_foreground),
+        ElementKind::StyledText(props) => props.color.or(element.inherited_foreground),
+        ElementKind::SelectableText(props) => props.color.or(element.inherited_foreground),
+        _ => None,
+    }
+}
+
+fn passive_text_line_height(element: &AnyElement) -> Option<Px> {
+    let explicit = match &element.kind {
+        ElementKind::Text(props) => props.style.as_ref().and_then(|style| style.line_height),
+        ElementKind::StyledText(props) => props.style.as_ref().and_then(|style| style.line_height),
+        ElementKind::SelectableText(props) => {
+            props.style.as_ref().and_then(|style| style.line_height)
+        }
+        _ => return None,
+    };
+
+    explicit.or_else(|| {
+        element
+            .inherited_text_style
+            .as_ref()
+            .and_then(|style| style.line_height)
+    })
+}
+
 fn is_field_description(
     muted: fret_core::Color,
     desc_line_height: Px,
     element: &AnyElement,
 ) -> bool {
     let element = peel_single_child_wrappers(element);
-    match &element.kind {
-        ElementKind::Text(props) => {
-            props.color == Some(muted)
-                && matches!(
-                    props.wrap,
-                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
-                )
-                && props
-                    .style
-                    .as_ref()
-                    .and_then(|s| s.line_height)
-                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
-        }
-        ElementKind::StyledText(props) => {
-            props.color == Some(muted)
-                && matches!(
-                    props.wrap,
-                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
-                )
-                && props
-                    .style
-                    .as_ref()
-                    .and_then(|s| s.line_height)
-                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
-        }
+    let is_wrapped_text = match &element.kind {
+        ElementKind::Text(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
+        ElementKind::StyledText(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
+        ElementKind::SelectableText(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
         _ => false,
-    }
+    };
+
+    is_wrapped_text
+        && passive_text_color(element) == Some(muted)
+        && passive_text_line_height(element)
+            .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
 }
 
 fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
@@ -381,18 +399,19 @@ impl FieldSet {
             let rest_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
             let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
-            let muted = muted_foreground(&theme);
+            let muted = muted_foreground_color(&theme);
             let desc_mt_neg_n1 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
             let desc_mt_neg_n1p5 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1p5));
-            let desc_line_height = theme
-                .metric_by_key("component.field.description_line_height")
-                .or_else(|| {
-                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                })
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
+            let desc_line_height = description_text_refinement_with_fallbacks(
+                &theme,
+                "component.field.description",
+                Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+            )
+            .line_height
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (
                 gap,
                 layout,
@@ -1182,23 +1201,7 @@ impl FieldDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = muted_foreground(&theme);
-            let px = theme
-                .metric_by_key("component.field.description_px")
-                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
-                .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_token("font.size"));
-            let line_height = theme
-                .metric_by_key("component.field.description_line_height")
-                .or_else(|| {
-                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                })
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            (fg, px, line_height)
-        };
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let align = match crate::use_direction(cx, None) {
             LayoutDirection::Rtl => TextAlign::End,
@@ -1206,17 +1209,19 @@ impl FieldDescription {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        let el = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(wrap)
-            .overflow(overflow)
-            .text_align(align)
-            .w_full()
-            .min_w_0()
-            .into_element(cx);
+        let el = scope_description_text_with_fallbacks(
+            ui::raw_text(self.text)
+                .wrap(wrap)
+                .overflow(overflow)
+                .text_align(align)
+                .w_full()
+                .min_w_0()
+                .into_element(cx),
+            &theme,
+            "component.field.description",
+            Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+            Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+        );
 
         if let Some(for_control) = self.for_control {
             let control_registry = control_registry_model(cx);
@@ -1537,16 +1542,17 @@ impl Field {
                     &theme,
                     LayoutRefinement::default().w_full().min_w_0(),
                 );
-                let muted = muted_foreground(&theme);
+                let muted = muted_foreground_color(&theme);
                 let desc_mt_neg =
                     decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
-                let desc_line_height = theme
-                    .metric_by_key("component.field.description_line_height")
-                    .or_else(|| {
-                        theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                    })
-                    .or_else(|| theme.metric_by_key("font.line_height"))
-                    .unwrap_or_else(|| theme.metric_token("font.line_height"));
+                let desc_line_height = description_text_refinement_with_fallbacks(
+                    &theme,
+                    "component.field.description",
+                    Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                    Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                )
+                .line_height
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
                 (
                     gap,
                     wrapper,
@@ -1862,6 +1868,40 @@ mod tests {
             "expected Field gap ~ {}px, got {}px",
             expected.0,
             gap.0
+        );
+    }
+
+    #[test]
+    fn field_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                FieldDescription::new("We will never share it.").into_element(cx)
+            });
+
+        let fret_ui::element::ElementKind::Text(props) = &element.kind else {
+            panic!("expected FieldDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(
+                &fret_ui_kit::typography::description_text_refinement_with_fallbacks(
+                    &theme,
+                    "component.field.description",
+                    Some(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                    Some(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                )
+            )
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
     }
 

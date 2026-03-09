@@ -13,6 +13,7 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use crate::test_id::attach_test_id;
+use fret_ui_kit::typography::scope_description_text;
 
 const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action";
 const CARD_FOOTER_MARKER_PREFIX: &str = "fret-ui-shadcn.card-footer";
@@ -185,7 +186,7 @@ impl Card {
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
@@ -635,7 +636,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Rect, Size};
     use fret_ui::element::{
-        ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
+        ContainerProps, CrossAlign, FlexProps, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -679,6 +680,83 @@ mod tests {
         assert!(!is_card_action_marker(&el));
     }
 
+    fn find_text<'a>(
+        element: &'a AnyElement,
+        needle: &str,
+    ) -> Option<&'a fret_ui::element::TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text(child, needle)),
+        }
+    }
+
+    #[test]
+    fn card_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected CardDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.card.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
+    #[test]
+    fn card_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardDescription::new_children([cx.text("Nested description")]).into_element(cx)
+        });
+
+        let nested = find_text(&element, "Nested description").expect("expected nested text child");
+        assert!(nested.style.is_none());
+        assert!(nested.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.card.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
     #[test]
     fn card_root_has_default_vertical_padding_and_visible_overflow() {
         let window = AppWindowId::default();
@@ -714,6 +792,23 @@ mod tests {
             assert_eq!(padding.right, Px(0.0).into());
             assert_eq!(padding.bottom, py.into());
             assert_eq!(padding.left, Px(0.0).into());
+
+            let inner = card
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected Card surface to contain an inner stack"));
+            let ElementKind::Container(ContainerProps {
+                layout: inner_layout,
+                ..
+            }) = &inner.kind
+            else {
+                panic!("expected Card inner stack wrapper to be a container element");
+            };
+            assert_eq!(
+                inner_layout.size.width,
+                Length::Fill,
+                "expected Card inner stack wrapper to request fill width so nested sections inherit a definite inline-size budget"
+            );
         });
     }
 
@@ -765,10 +860,43 @@ mod tests {
                 .first()
                 .unwrap_or_else(|| panic!("expected CardContent to have a single vstack child"));
 
-            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
-                panic!("expected CardContent child to be a column element");
+            let ElementKind::Container(ContainerProps {
+                layout: wrapper_layout,
+                ..
+            }) = &child.kind
+            else {
+                panic!("expected CardContent child to be a fill-width wrapper container");
             };
 
+            let inner = child.children.first().unwrap_or_else(|| {
+                panic!("expected CardContent fill-width wrapper to contain an inner flex root")
+            });
+
+            let ElementKind::Flex(FlexProps {
+                align,
+                direction,
+                layout,
+                ..
+            }) = &inner.kind
+            else {
+                panic!("expected CardContent wrapper child to be a flex element");
+            };
+
+            assert_eq!(
+                wrapper_layout.size.width,
+                Length::Fill,
+                "expected CardContent inner wrapper to request fill width so wrapped text resolves against the card's inner width"
+            );
+            assert_eq!(
+                wrapper_layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardContent inner wrapper to opt into min-w-0 so nested flex/text content can shrink and wrap"
+            );
+            assert_eq!(
+                *direction,
+                Axis::Vertical,
+                "expected CardContent inner flow root to stay vertical"
+            );
             assert_eq!(
                 *align,
                 CrossAlign::Start,
@@ -778,11 +906,6 @@ mod tests {
                 layout.size.width,
                 Length::Fill,
                 "expected CardContent inner flow root to request fill width so wrapped text resolves against the card's inner width"
-            );
-            assert_eq!(
-                layout.size.min_width,
-                Some(Length::Px(Px(0.0))),
-                "expected CardContent inner flow root to opt into min-w-0 so nested flex/text content can shrink and wrap"
             );
         });
     }
@@ -811,10 +934,43 @@ mod tests {
                 .first()
                 .unwrap_or_else(|| panic!("expected CardHeader to have a single inner flow child"));
 
-            let ElementKind::Column(ColumnProps { align, layout, .. }) = &child.kind else {
-                panic!("expected CardHeader child to be a column element");
+            let ElementKind::Container(ContainerProps {
+                layout: wrapper_layout,
+                ..
+            }) = &child.kind
+            else {
+                panic!("expected CardHeader child to be a fill-width wrapper container");
             };
 
+            let inner = child.children.first().unwrap_or_else(|| {
+                panic!("expected CardHeader fill-width wrapper to contain an inner flex root")
+            });
+
+            let ElementKind::Flex(FlexProps {
+                align,
+                direction,
+                layout,
+                ..
+            }) = &inner.kind
+            else {
+                panic!("expected CardHeader wrapper child to be a flex element");
+            };
+
+            assert_eq!(
+                wrapper_layout.size.width,
+                Length::Fill,
+                "expected CardHeader inner wrapper to request fill width so wrapped title/description text resolves against the card width"
+            );
+            assert_eq!(
+                wrapper_layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardHeader inner wrapper to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
+            );
+            assert_eq!(
+                *direction,
+                Axis::Vertical,
+                "expected CardHeader inner flow root to stay vertical"
+            );
             assert_eq!(
                 *align,
                 CrossAlign::Start,
@@ -824,11 +980,6 @@ mod tests {
                 layout.size.width,
                 Length::Fill,
                 "expected CardHeader inner flow root to request fill width so wrapped title/description text resolves against the card width"
-            );
-            assert_eq!(
-                layout.size.min_width,
-                Some(Length::Px(Px(0.0))),
-                "expected CardHeader inner flow root to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
             );
         });
     }
@@ -1505,9 +1656,7 @@ impl CardContent {
                 // inline-sized children (e.g. buttons) to fill the card width. Still request a
                 // fill-width flow root so wrapped text resolves against the section's inner width
                 // instead of shrink-wrapping to an intrinsic/min-content width.
-                shadcn_layout::VStackProps::default()
-                    .items_start()
-                    .layout(LayoutRefinement::default()),
+                shadcn_layout::VStackProps::default().items_start(),
                 children,
             )
         })
@@ -1931,39 +2080,52 @@ impl CardTitle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardDescription {
-    text: Arc<str>,
+    content: CardDescriptionContent,
+}
+
+#[derive(Debug)]
+enum CardDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl CardDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: CardDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: CardDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app);
-            let fg = theme.color_token("muted-foreground");
-            let px = theme
-                .metric_by_key("component.card.description_px")
-                .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_token("font.size"));
-            let line_height = theme
-                .metric_by_key("component.card.description_line_height")
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            (fg, px, line_height)
-        };
+        let theme = Theme::global(&*cx.app).snapshot();
 
-        ui::text(self.text)
-            .w_full()
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .wrap(TextWrap::Word)
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        match self.content {
+            CardDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .w_full()
+                    .wrap(TextWrap::Word)
+                    .into_element(cx),
+                &theme,
+                "component.card.description",
+            ),
+            CardDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.card.description",
+            ),
+        }
     }
 }

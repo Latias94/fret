@@ -29,10 +29,12 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
-- Pass: A composable Radix/shadcn-shaped children surface is also available via
-  `fret_ui_shadcn::collapsible_primitives`.
+- Pass: A composable Radix/shadcn-shaped children surface is available via
+  `fret_ui_shadcn::collapsible::primitives`.
+- Pass: The legacy flat module path `fret_ui_shadcn::collapsible_primitives` remains available for
+  compatibility.
 - Note: Fret intentionally does not add a generic `compose()` builder on the top-level shadcn
-  wrapper because the composable children API already exists in `collapsible_primitives`, while the
+  wrapper because the composable children API already exists in the primitives surface, while the
   wrapper keeps a compact closure-based ergonomic API.
 - Pass: Supports a controlled open state (`Model<bool>`).
 - Pass: Supports uncontrolled `defaultOpen` (internal open model).

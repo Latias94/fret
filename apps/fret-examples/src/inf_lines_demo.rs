@@ -265,7 +265,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<InfLinesDemoDriver, InfLinesDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         InfLinesDemoDriver::default(),
         create_window_state,

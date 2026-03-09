@@ -55,8 +55,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Content").into_element(cx),
-                        shadcn::CardDescription::new("This card has header + content.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
@@ -81,8 +79,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Footer").into_element(cx),
-                        shadcn::CardDescription::new("No CardContent in this one.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardFooter::new(vec![
@@ -111,8 +107,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Content + Footer").into_element(cx),
-                        shadcn::CardDescription::new("The common default composition.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
@@ -127,31 +121,15 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 cell(cx, card)
             };
 
-            let header_with_border = {
+            let bordered_sections = {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header with Border").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "CardHeader can render a bottom border (optional).",
-                        )
-                        .into_element(cx),
+                        shadcn::CardTitle::new("Bordered Sections").into_element(cx),
                     ])
                     .border_bottom(true)
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
-                        ui::text("Content under a bordered header.")
-                            .text_sm()
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, card)
-            };
-
-            let footer_with_border = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![
-                        ui::text("Content above a bordered footer.")
+                        ui::text("Header/footer borders can be enabled independently.")
                             .text_sm()
                             .into_element(cx),
                     ])
@@ -173,8 +151,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 header_and_footer,
                 content_and_footer,
                 header_content_footer,
-                header_with_border,
-                footer_with_border,
+                bordered_sections,
             ]
         },
     )

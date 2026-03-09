@@ -214,8 +214,7 @@ fn custom_checkpoint_icon<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
 ) -> fret_ui::element::AnyElement {
     fret_ui_ai::CheckpointIcon::default()
-        .children(cx.text("⟲"))
-        .into_element(cx)
+        .into_element_with_children(cx, |cx| vec![cx.text("⟲"), cx.text("•")])
 }
 // endregion: custom_icon
 

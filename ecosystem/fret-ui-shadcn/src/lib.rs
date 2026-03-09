@@ -131,8 +131,8 @@ pub use accordion::{
 pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
-    AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHandle, AlertDialogHeader,
+    AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
 };
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{

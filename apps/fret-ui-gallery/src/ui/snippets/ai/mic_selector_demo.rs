@@ -62,26 +62,41 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let selector = ui_ai::MicSelector::from_arc(devices)
         .open_model(open.clone())
         .value_model(value.clone())
-        .into_element(
-            cx,
-            |cx| {
+        .into_element_with_children(cx, move |cx| {
+            let trigger =
                 ui_ai::MicSelectorTrigger::new([ui_ai::MicSelectorValue::new().into_element(cx)])
                     .test_id("ui-ai-mic-selector-demo-trigger")
-                    .into_element(cx)
-            },
-            |cx| {
-                ui_ai::MicSelectorContent::new([
-                    ui_ai::MicSelectorInput::new()
-                        .test_id("ui-ai-mic-selector-demo-input")
-                        .into_element(cx),
-                    ui_ai::MicSelectorList::new()
-                        .test_id_prefix("ui-ai-mic-selector-demo-item")
-                        .into_element(cx),
-                ])
-                .test_id_root("ui-ai-mic-selector-demo-content")
-                .into_element(cx)
-            },
-        );
+                    .into_element(cx);
+
+            let content = ui_ai::MicSelectorContent::new([
+                ui_ai::MicSelectorInput::new()
+                    .test_id("ui-ai-mic-selector-demo-input")
+                    .into_element(cx),
+                ui_ai::MicSelectorList::new()
+                    .empty(ui_ai::MicSelectorEmpty::new())
+                    .into_element_with_children(cx, |cx, devices| {
+                        devices
+                            .iter()
+                            .cloned()
+                            .map(|device| {
+                                ui_ai::MicSelectorItem::new(device.label.clone())
+                                    .value(device.id.clone())
+                                    .test_id(format!(
+                                        "ui-ai-mic-selector-demo-item-{}",
+                                        device.id.as_ref().replace(' ', "-")
+                                    ))
+                                    .children([
+                                        ui_ai::MicSelectorLabel::new(device).into_element(cx)
+                                    ])
+                            })
+                            .collect::<Vec<_>>()
+                    }),
+            ])
+            .test_id_root("ui-ai-mic-selector-demo-content")
+            .into_element(cx);
+
+            (trigger, content)
+        });
 
     let open_now = cx
         .get_model_copied(&open, Invalidation::Paint)
@@ -99,7 +114,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     ui::v_flex(move |cx| {
         vec![
             cx.text("MicSelector (AI Elements)"),
-            cx.text("UI-only chrome. Apps own device enumeration + permissions."),
+            cx.text(
+                "Docs-aligned compound example. Device enumeration + permissions stay app-owned.",
+            ),
             marker,
             open_marker,
             selector,
@@ -107,6 +124,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N4)
+    .test_id("ui-ai-mic-selector-demo-root")
     .into_element(cx)
 }
 // endregion: example

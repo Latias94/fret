@@ -28,6 +28,7 @@ Active tracker highlights:
 
 - Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`.
+- Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity-todo.md`).
 - Fonts bootstrap + invalidation contract: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`.
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).

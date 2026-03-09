@@ -538,23 +538,10 @@ pub(super) fn handle_scroll<H: UiHost>(
             cx.request_redraw();
             cx.stop_propagation();
         } else if clamped_at_edge {
-            let first_set = crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                this.element,
-                crate::element::ScrollState::default,
-                |state| {
-                    let prev = state.pending_extent_probe;
-                    state.pending_extent_probe = true;
-                    !prev
-                },
-            );
-            if first_set && crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
-                eprintln!(
-                    "scroll extent probe scheduled element={:?} axis={:?}",
-                    this.element, props.axis
-                );
-            }
+            // A wheel delta clamped at the current edge warrants a follow-up layout pass, but it
+            // should not force an unbounded extent probe by itself. Real growth cases are already
+            // surfaced via descendant layout dirtiness / subtree-dirty aggregation during layout,
+            // while budget-hit recovery uses `pending_extent_probe` from the layout path.
             cx.invalidate_self(Invalidation::Layout);
             cx.request_redraw();
         }

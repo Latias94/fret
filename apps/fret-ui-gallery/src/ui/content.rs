@@ -16,7 +16,7 @@ pub(crate) fn content_view(
     // ViewCache root (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`). Querying viewport bounds with
     // `Invalidation::Layout` would churn the view-cache key during interactive resize and defeat
     // reuse.
-    let header = ui::v_flex(|cx| {
+    let header_content = ui::v_flex(|cx| {
         let left = ui::v_flex(|cx| {
             [
                 cx.text_props(TextProps {
@@ -114,20 +114,37 @@ pub(crate) fn content_view(
             .items_center()
             .into_element(cx);
 
-        let right = ui::v_flex(|_cx| [presets])
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .items_start()
-            .into_element(cx);
-
-        [left, right]
+        [left, presets]
     })
     .layout(LayoutRefinement::default().w_full())
     .gap(Space::N2)
     .items_start()
     .into_element(cx);
 
-    let preview_panel = page_preview(cx, theme, selected, models);
+    let mut header_semantics_layout = fret_ui::element::LayoutStyle::default();
+    header_semantics_layout.size.width = fret_ui::element::Length::Fill;
+    let header = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            layout: header_semantics_layout,
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::from("ui-gallery-content-header")),
+            ..Default::default()
+        },
+        |_cx| [header_content],
+    );
+
+    let preview_panel_content = page_preview(cx, theme, selected, models);
+    let mut preview_semantics_layout = fret_ui::element::LayoutStyle::default();
+    preview_semantics_layout.size.width = fret_ui::element::Length::Fill;
+    let preview_panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            layout: preview_semantics_layout,
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::from("ui-gallery-page-preview")),
+            ..Default::default()
+        },
+        |_cx| [preview_panel_content],
+    );
 
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         // When content scroll is disabled, keep the header and page body in one static stack.
@@ -166,6 +183,7 @@ pub(crate) fn content_view(
                     LayoutRefinement::default()
                         .w_full()
                         .h_full()
+                        .flex_1()
                         .min_w_0()
                         .min_h_0(),
                 )
@@ -183,20 +201,7 @@ pub(crate) fn content_view(
             scroll.into_element(cx).test_id("ui-gallery-content-scroll")
         });
 
-        let scroll = cx.container(
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default(),
-                LayoutRefinement::default()
-                    .w_full()
-                    .flex_1()
-                    .min_h_0()
-                    .min_w_0(),
-            ),
-            move |_cx| [scroll_body],
-        );
-
-        ui::v_flex(|_cx| [header, scroll])
+        ui::v_flex(|_cx| [header, scroll_body])
             .layout(LayoutRefinement::default().w_full().h_full())
             .gap(Space::N6)
             .into_element(cx)
@@ -215,15 +220,38 @@ pub(crate) fn content_view(
             background: Some(ColorRef::Color(theme.color_token("background"))),
             ..ChromeRefinement::default()
         };
-        cx.container(
+        let page_root_content = cx.container(
             decl_style::container_props(
                 theme,
                 chrome,
                 LayoutRefinement::default().w_full().h_full(),
             ),
             |_cx| [content],
+        );
+
+        let mut semantics_fill_layout = fret_ui::element::LayoutStyle::default();
+        semantics_fill_layout.size.width = fret_ui::element::Length::Fill;
+        semantics_fill_layout.size.height = fret_ui::element::Length::Fill;
+
+        let page_root = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: semantics_fill_layout,
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(page_test_id),
+                ..Default::default()
+            },
+            |_cx| [page_root_content],
+        );
+
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: semantics_fill_layout,
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(Arc::from("ui-gallery-content-shell")),
+                ..Default::default()
+            },
+            |_cx| [page_root],
         )
-        .test_id(page_test_id)
     })
 }
 
@@ -813,13 +841,13 @@ fn page_preview(
             pages::material3::preview_material3_tooltip,
         ),
         other if other.starts_with("ai_") => {
-            #[cfg(feature = "gallery-dev")]
+            #[cfg(feature = "gallery-ai")]
             {
                 pages::preview_ai_by_id(cx, theme, other)
                     .unwrap_or_else(|| preview_ai_unwired(cx, theme, other))
             }
 
-            #[cfg(not(feature = "gallery-dev"))]
+            #[cfg(not(feature = "gallery-ai"))]
             {
                 preview_ai_unwired(cx, theme, other)
             }
@@ -833,11 +861,15 @@ fn page_preview(
             shadcn::CardDescription::new("Interactive preview for validating behaviors.")
                 .into_element(cx),
         ])
-        .into_element(cx),
-        shadcn::CardContent::new(body).into_element(cx),
+        .into_element(cx)
+        .test_id("ui-gallery-preview-card-header"),
+        shadcn::CardContent::new(body)
+            .into_element(cx)
+            .test_id("ui-gallery-preview-card-content"),
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+    .test_id("ui-gallery-preview-card")
 }
 
 fn preview_ai_unwired(

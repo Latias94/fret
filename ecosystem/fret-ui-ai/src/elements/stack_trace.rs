@@ -11,11 +11,13 @@ use fret_icons::ids;
 use fret_runtime::{Effect, Model};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
-    SemanticsDecoration, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, PressableA11y,
+    PressableProps, SemanticsDecoration, SemanticsProps, SizeStyle, TextProps,
+    VisualTransformProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
@@ -28,6 +30,17 @@ use fret_ui_shadcn::{Collapsible, ScrollArea};
 
 pub type OnStackTraceFilePathClick =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>, Option<u32>, Option<u32>) + 'static>;
+
+fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: LayoutStyle::default(),
+            present: false,
+            interactive: false,
+        },
+        |_cx| Vec::new(),
+    )
+}
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -73,6 +86,26 @@ pub struct ParsedStackTrace {
     pub error_message: Arc<str>,
     pub frames: Arc<[StackFrame]>,
     pub raw: Arc<str>,
+}
+
+#[derive(Clone)]
+struct StackTraceContext {
+    parsed: ParsedStackTrace,
+    raw: Arc<str>,
+    open: Model<bool>,
+    show_internal_frames: bool,
+    max_height: Px,
+    on_file_path_click: Option<OnStackTraceFilePathClick>,
+}
+
+#[derive(Default, Clone)]
+struct StackTraceProviderState {
+    context: Option<StackTraceContext>,
+}
+
+fn use_stack_trace_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<StackTraceContext> {
+    cx.inherited_state::<StackTraceProviderState>()
+        .and_then(|st| st.context.clone())
 }
 
 fn is_error_type(s: &str) -> bool {
@@ -215,7 +248,7 @@ impl CopyFeedbackRef {
 /// Copy button aligned with AI Elements `StackTraceCopyButton`.
 #[derive(Clone)]
 pub struct StackTraceCopyButton {
-    raw: Arc<str>,
+    raw: Option<Arc<str>>,
     on_copy: Option<
         Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
     >,
@@ -227,7 +260,7 @@ pub struct StackTraceCopyButton {
 impl std::fmt::Debug for StackTraceCopyButton {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StackTraceCopyButton")
-            .field("raw_len", &self.raw.len())
+            .field("raw_len", &self.raw.as_ref().map(|raw| raw.len()))
             .field("timeout_ms", &self.timeout.as_millis())
             .field("test_id", &self.test_id.as_deref())
             .field(
@@ -238,14 +271,23 @@ impl std::fmt::Debug for StackTraceCopyButton {
     }
 }
 
-impl StackTraceCopyButton {
-    pub fn new(raw: impl Into<Arc<str>>) -> Self {
+impl Default for StackTraceCopyButton {
+    fn default() -> Self {
         Self {
-            raw: raw.into(),
+            raw: None,
             on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
+        }
+    }
+}
+
+impl StackTraceCopyButton {
+    pub fn new(raw: impl Into<Arc<str>>) -> Self {
+        Self {
+            raw: Some(raw.into()),
+            ..Default::default()
         }
     }
 
@@ -282,10 +324,15 @@ impl StackTraceCopyButton {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(raw) = self
+            .raw
+            .or_else(|| use_stack_trace_context(cx).map(|ctx| ctx.raw))
+        else {
+            return hidden(cx);
+        };
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
 
-        let raw = self.raw;
         let on_copy = self.on_copy;
         let timeout = self.timeout;
         let test_id = self.test_id;
@@ -438,10 +485,475 @@ impl StackTraceCopyButton {
     }
 }
 
+/// Trigger/header row aligned with AI Elements `StackTraceHeader`.
+#[derive(Debug)]
+pub struct StackTraceHeader {
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    layout: LayoutRefinement,
+    chrome: ChromeRefinement,
+}
+
+impl StackTraceHeader {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            test_id: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+            chrome: ChromeRefinement::default().p(Space::N3),
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(context) = use_stack_trace_context(cx) else {
+            return hidden(cx);
+        };
+        let theme = Theme::global(&*cx.app).clone();
+        let is_open = cx
+            .get_model_copied(&context.open, Invalidation::Layout)
+            .unwrap_or(false);
+
+        let mut children = self.children;
+        if children.is_empty() {
+            children = vec![
+                StackTraceError::new(Vec::new()).into_element(cx),
+                StackTraceActions::new(Vec::new()).into_element(cx),
+            ];
+        }
+
+        let row = ui::h_row(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .into_element(cx);
+
+        let header = cx.container(
+            decl_style::container_props(&theme, self.chrome, self.layout),
+            move |_cx| vec![row],
+        );
+
+        let trigger = fret_ui_shadcn::CollapsibleTrigger::new(context.open, vec![header])
+            .a11y_label("Toggle stack trace details")
+            .into_element(cx, is_open);
+
+        let Some(test_id) = self.test_id else {
+            return trigger;
+        };
+        trigger.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Error row aligned with AI Elements `StackTraceError`.
+#[derive(Debug)]
+pub struct StackTraceError {
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+}
+
+impl StackTraceError {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let error_fg = theme
+            .color_by_key("destructive")
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        let icon = decl_icon::icon_with(
+            cx,
+            ids::ui::ALERT_TRIANGLE,
+            Some(Px(16.0)),
+            Some(ColorRef::Color(error_fg)),
+        );
+
+        let mut children = self.children;
+        if children.is_empty() {
+            children = vec![
+                StackTraceErrorType::default().into_element(cx),
+                StackTraceErrorMessage::default().into_element(cx),
+            ];
+        }
+
+        let mut row_children = Vec::with_capacity(children.len() + 1);
+        row_children.push(icon);
+        row_children.extend(children);
+
+        let row = ui::h_row(move |_cx| row_children)
+            .layout(LayoutRefinement::default().flex_1().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
+
+        let Some(test_id) = self.test_id else {
+            return row;
+        };
+        row.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Error type text aligned with AI Elements `StackTraceErrorType`.
+#[derive(Debug, Default, Clone)]
+pub struct StackTraceErrorType {
+    text: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl StackTraceErrorType {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: Some(text.into()),
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let context = use_stack_trace_context(cx);
+        let text = self
+            .text
+            .or_else(|| context.and_then(|ctx| ctx.parsed.error_type))
+            .unwrap_or_else(|| Arc::<str>::from("Error"));
+
+        let text_px = theme
+            .metric_by_key("fret.ai.stack_trace.header.text_px")
+            .or_else(|| theme.metric_by_key("component.code_block.text_px"))
+            .unwrap_or(Px(12.0));
+
+        let el = cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text,
+            style: Some(monospace_style(&theme, text_px, FontWeight::SEMIBOLD)),
+            color: Some(
+                theme
+                    .color_by_key("destructive")
+                    .unwrap_or_else(|| theme.color_token("foreground")),
+            ),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
+        });
+
+        let Some(test_id) = self.test_id else {
+            return el;
+        };
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Text)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Error message text aligned with AI Elements `StackTraceErrorMessage`.
+#[derive(Debug, Default, Clone)]
+pub struct StackTraceErrorMessage {
+    text: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl StackTraceErrorMessage {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: Some(text.into()),
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let context = use_stack_trace_context(cx);
+        let text = self
+            .text
+            .or_else(|| context.map(|ctx| ctx.parsed.error_message))
+            .unwrap_or_default();
+
+        let text_px = theme
+            .metric_by_key("fret.ai.stack_trace.header.text_px")
+            .or_else(|| theme.metric_by_key("component.code_block.text_px"))
+            .unwrap_or(Px(12.0));
+
+        let el = cx.text_props(TextProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    min_width: Some(Length::Px(Px(0.0))),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            text,
+            style: Some(monospace_style(&theme, text_px, FontWeight::NORMAL)),
+            color: Some(theme.color_token("foreground")),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
+        });
+
+        let Some(test_id) = self.test_id else {
+            return el;
+        };
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Text)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Action row aligned with AI Elements `StackTraceActions`.
+#[derive(Debug)]
+pub struct StackTraceActions {
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+}
+
+impl StackTraceActions {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut children = self.children;
+        if children.is_empty() {
+            children = vec![
+                StackTraceCopyButton::default().into_element(cx),
+                StackTraceExpandButton::default().into_element(cx),
+            ];
+        }
+
+        let row = ui::h_row(move |_cx| children)
+            .layout(LayoutRefinement::default().flex_shrink_0())
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx);
+
+        let Some(test_id) = self.test_id else {
+            return row;
+        };
+        row.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Chevron indicator aligned with AI Elements `StackTraceExpandButton`.
+#[derive(Debug, Default, Clone)]
+pub struct StackTraceExpandButton {
+    test_id: Option<Arc<str>>,
+}
+
+impl StackTraceExpandButton {
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let Some(context) = use_stack_trace_context(cx) else {
+            return hidden(cx);
+        };
+        let is_open = cx
+            .get_model_copied(&context.open, Invalidation::Layout)
+            .unwrap_or(false);
+
+        let chevron_size = Px(28.0);
+        let chevron_icon_size = Px(16.0);
+        let center = Point::new(Px(8.0), Px(8.0));
+        let rotation = if is_open { 180.0 } else { 0.0 };
+        let chevron_transform = Transform2D::rotation_about_degrees(rotation, center);
+        let chevron_fg = muted_fg(&theme);
+
+        let el = cx.visual_transform_props(
+            VisualTransformProps {
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(chevron_size))
+                        .h_px(MetricRef::Px(chevron_size))
+                        .flex_shrink_0(),
+                ),
+                transform: chevron_transform,
+            },
+            move |cx| {
+                vec![decl_icon::icon_with(
+                    cx,
+                    ids::ui::CHEVRON_DOWN,
+                    Some(chevron_icon_size),
+                    Some(ColorRef::Color(chevron_fg)),
+                )]
+            },
+        );
+
+        let Some(test_id) = self.test_id else {
+            return el;
+        };
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Generic)
+                .test_id(test_id),
+        )
+    }
+}
+
+/// Collapsible content aligned with AI Elements `StackTraceContent`.
+#[derive(Debug)]
+pub struct StackTraceContent {
+    children: Vec<AnyElement>,
+    max_height: Option<Px>,
+    test_id: Option<Arc<str>>,
+    viewport_test_id: Option<Arc<str>>,
+}
+
+impl StackTraceContent {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            max_height: None,
+            test_id: None,
+            viewport_test_id: None,
+        }
+    }
+
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(Px(max_height.0.max(0.0)));
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn viewport_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(context) = use_stack_trace_context(cx) else {
+            return hidden(cx);
+        };
+        let theme = Theme::global(&*cx.app).clone();
+        let max_height = self.max_height.unwrap_or(context.max_height);
+
+        let mut children = self.children;
+        if children.is_empty() {
+            children = vec![StackTraceFrames::default().into_element(cx)];
+        }
+
+        Collapsible::new(context.open.clone()).into_element(
+            cx,
+            |cx, _is_open| hidden(cx),
+            move |cx| {
+                let mut scroll = ScrollArea::new(children).refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .max_h(MetricRef::Px(max_height)),
+                );
+                if let Some(test_id) = self.viewport_test_id.clone() {
+                    scroll = scroll.viewport_test_id(test_id);
+                }
+                let scroll = scroll.into_element(cx);
+
+                let mut content_props = ContainerProps::default();
+                content_props.layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().min_w_0(),
+                );
+                content_props.background = Some(
+                    theme
+                        .color_by_key("muted")
+                        .map(|c| alpha(c, 0.30))
+                        .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.18)),
+                );
+                content_props.border = Edges {
+                    top: Px(1.0),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                    left: Px(0.0),
+                };
+                content_props.border_color = Some(theme.color_token("border"));
+
+                let content = cx.container(content_props, move |_cx| vec![scroll]);
+                let content = if let Some(test_id) = self.test_id.clone() {
+                    content.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
+                    )
+                } else {
+                    content
+                };
+
+                fret_ui_shadcn::CollapsibleContent::new([content]).into_element(cx)
+            },
+        )
+    }
+}
+
 #[derive(Clone)]
 pub struct StackTraceFrames {
-    frames: Arc<[StackFrame]>,
-    show_internal_frames: bool,
+    frames: Option<Arc<[StackFrame]>>,
+    show_internal_frames: Option<bool>,
     on_file_path_click: Option<OnStackTraceFilePathClick>,
     test_id: Option<Arc<str>>,
     frame_test_id_prefix: Option<Arc<str>>,
@@ -452,7 +964,10 @@ pub struct StackTraceFrames {
 impl std::fmt::Debug for StackTraceFrames {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StackTraceFrames")
-            .field("frames_len", &self.frames.len())
+            .field(
+                "frames_len",
+                &self.frames.as_ref().map(|frames| frames.len()),
+            )
             .field("show_internal_frames", &self.show_internal_frames)
             .field("has_on_file_path_click", &self.on_file_path_click.is_some())
             .field("test_id", &self.test_id.as_deref())
@@ -466,11 +981,11 @@ impl std::fmt::Debug for StackTraceFrames {
     }
 }
 
-impl StackTraceFrames {
-    pub fn new(frames: impl Into<Arc<[StackFrame]>>) -> Self {
+impl Default for StackTraceFrames {
+    fn default() -> Self {
         Self {
-            frames: frames.into(),
-            show_internal_frames: true,
+            frames: None,
+            show_internal_frames: None,
             on_file_path_click: None,
             test_id: None,
             frame_test_id_prefix: None,
@@ -478,9 +993,18 @@ impl StackTraceFrames {
             chrome: ChromeRefinement::default().p(Space::N3),
         }
     }
+}
+
+impl StackTraceFrames {
+    pub fn new(frames: impl Into<Arc<[StackFrame]>>) -> Self {
+        Self {
+            frames: Some(frames.into()),
+            ..Default::default()
+        }
+    }
 
     pub fn show_internal_frames(mut self, show: bool) -> Self {
-        self.show_internal_frames = show;
+        self.show_internal_frames = Some(show);
         self
     }
 
@@ -513,19 +1037,33 @@ impl StackTraceFrames {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let context = use_stack_trace_context(cx);
+        let Some(frames_src) = self
+            .frames
+            .or_else(|| context.as_ref().map(|ctx| ctx.parsed.frames.clone()))
+        else {
+            return hidden(cx);
+        };
         let theme = Theme::global(&*cx.app).clone();
 
-        let frames: Vec<StackFrame> = if self.show_internal_frames {
-            self.frames.to_vec()
+        let show_internal_frames = self
+            .show_internal_frames
+            .or_else(|| context.as_ref().map(|ctx| ctx.show_internal_frames))
+            .unwrap_or(true);
+
+        let frames: Vec<StackFrame> = if show_internal_frames {
+            frames_src.to_vec()
         } else {
-            self.frames
+            frames_src
                 .iter()
                 .filter(|f| !f.is_internal)
                 .cloned()
                 .collect()
         };
 
-        let on_file_path_click = self.on_file_path_click;
+        let on_file_path_click = self
+            .on_file_path_click
+            .or_else(|| context.and_then(|ctx| ctx.on_file_path_click));
         let frame_test_id_prefix = self.frame_test_id_prefix;
         let text_px = theme
             .metric_by_key("fret.ai.stack_trace.frames.text_px")
@@ -734,7 +1272,6 @@ impl StackTraceFrames {
 }
 
 /// Stack trace disclosure surface aligned with AI Elements `stack-trace.tsx`.
-#[derive(Clone)]
 pub struct StackTrace {
     trace: Arc<str>,
     open: Option<Model<bool>>,
@@ -890,253 +1427,133 @@ impl StackTrace {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let theme_header = theme.clone();
-        let theme_content = theme.clone();
+        let max_height = self.max_height;
+        let test_id_header_trigger = self.test_id_header_trigger.clone();
+        let test_id_copy_button = self.test_id_copy_button.clone();
+        let test_id_copy_copied_marker = self.test_id_copy_copied_marker.clone();
+        let test_id_content = self.test_id_content.clone();
+        let test_id_frames = self.test_id_frames.clone();
+        let test_id_frames_viewport = self.test_id_frames_viewport.clone();
+        let frame_test_id_prefix = self.frame_test_id_prefix.clone();
 
+        self.into_element_with_children(cx, move |cx| {
+            let mut copy = StackTraceCopyButton::default();
+            if let Some(test_id) = test_id_copy_button.clone() {
+                copy = copy.test_id(test_id);
+            }
+            if let Some(test_id) = test_id_copy_copied_marker.clone() {
+                copy = copy.copied_marker_test_id(test_id);
+            }
+
+            let actions = StackTraceActions::new([
+                copy.into_element(cx),
+                StackTraceExpandButton::default().into_element(cx),
+            ])
+            .into_element(cx);
+
+            let error = StackTraceError::new([
+                StackTraceErrorType::default().into_element(cx),
+                StackTraceErrorMessage::default().into_element(cx),
+            ])
+            .into_element(cx);
+
+            let mut header = StackTraceHeader::new([error, actions]);
+            if let Some(test_id) = test_id_header_trigger.clone() {
+                header = header.test_id(test_id);
+            }
+
+            let mut frames = StackTraceFrames::default();
+            if let Some(test_id) = test_id_frames.clone() {
+                frames = frames.test_id(test_id);
+            }
+            if let Some(prefix) = frame_test_id_prefix.clone() {
+                frames = frames.frame_test_id_prefix(prefix);
+            }
+
+            let mut content =
+                StackTraceContent::new([frames.into_element(cx)]).max_height(max_height);
+            if let Some(test_id) = test_id_content.clone() {
+                content = content.test_id(test_id);
+            }
+            if let Some(test_id) = test_id_frames_viewport.clone() {
+                content = content.viewport_test_id(test_id);
+            }
+
+            vec![header.into_element(cx), content.into_element(cx)]
+        })
+    }
+
+    pub fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
         let trace_raw = self.trace.clone();
         let parsed = parse_stack_trace(self.trace);
-
-        let base_chrome = ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .border_1()
-            .bg(ColorRef::Token {
-                key: "background",
-                fallback: ColorFallback::ThemePanelBackground,
-            })
-            .border_color(ColorRef::Token {
-                key: "border",
-                fallback: ColorFallback::ThemePanelBorder,
-            });
-
-        let chrome = base_chrome.merge(self.chrome);
-        let layout = LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .merge(self.layout);
-
-        let error_fg = theme
-            .color_by_key("destructive")
-            .unwrap_or_else(|| theme.color_token("foreground"));
-        let text_px = theme
-            .metric_by_key("fret.ai.stack_trace.header.text_px")
-            .or_else(|| theme.metric_by_key("component.code_block.text_px"))
-            .unwrap_or(Px(12.0));
-        let style_normal = monospace_style(&theme, text_px, FontWeight::NORMAL);
-        let style_bold = monospace_style(&theme, text_px, FontWeight::SEMIBOLD);
-        let header_fg = theme.color_token("foreground");
-        let chevron_fg = muted_fg(&theme);
-        let content_border = theme.color_token("border");
-        let content_bg = theme
-            .color_by_key("muted")
-            .map(|c| alpha(c, 0.30))
-            .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.18));
-
-        let error_type = parsed
-            .error_type
-            .clone()
-            .unwrap_or_else(|| Arc::<str>::from("Error"));
-        let error_message = parsed.error_message.clone();
-
-        let on_file_path_click = self.on_file_path_click;
+        let controlled_open = self.open.clone();
+        let default_open = self.default_open;
         let show_internal_frames = self.show_internal_frames;
         let max_height = self.max_height;
-        let test_id_header_trigger = self.test_id_header_trigger;
-        let test_id_copy_button = self.test_id_copy_button;
-        let test_id_copy_copied_marker = self.test_id_copy_copied_marker;
-        let test_id_content = self.test_id_content;
-        let test_id_frames = self.test_id_frames;
-        let test_id_frames_viewport = self.test_id_frames_viewport;
-        let frame_test_id_prefix = self.frame_test_id_prefix;
+        let on_file_path_click = self.on_file_path_click.clone();
+        let layout = self.layout;
+        let chrome = self.chrome;
+        let test_id_root = self.test_id_root;
 
-        let collapsible = if let Some(open) = self.open {
-            Collapsible::new(open)
-        } else {
-            Collapsible::uncontrolled(self.default_open)
-        };
+        cx.scope(move |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let base_chrome = ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .border_1()
+                .bg(ColorRef::Token {
+                    key: "background",
+                    fallback: ColorFallback::ThemePanelBackground,
+                })
+                .border_color(ColorRef::Token {
+                    key: "border",
+                    fallback: ColorFallback::ThemePanelBorder,
+                });
 
-        let root = collapsible
-            .refine_layout(layout)
-            .refine_style(chrome)
-            .into_element_with_open_model(
-                cx,
-                move |cx, open_model, is_open| {
-                    let icon = decl_icon::icon_with(
-                        cx,
-                        ids::ui::ALERT_TRIANGLE,
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(error_fg)),
-                    );
-
-                    let ty = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: error_type.clone(),
-                        style: Some(style_bold),
-                        color: Some(error_fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    });
-
-                    let msg = cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                min_width: Some(Length::Px(Px(0.0))),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        text: error_message.clone(),
-                        style: Some(style_normal.clone()),
-                        color: Some(header_fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Ellipsis,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    });
-
-                    let error_row = ui::h_row(move |_cx| vec![icon, ty, msg])
-                        .layout(LayoutRefinement::default().flex_1().min_w_0())
-                        .gap(Space::N2)
-                        .items(Items::Center)
-                        .into_element(cx);
-
-                    let mut copy = StackTraceCopyButton::new(trace_raw.clone());
-                    if let Some(test_id) = test_id_copy_button.clone() {
-                        copy = copy.test_id(test_id);
-                    }
-                    if let Some(test_id) = test_id_copy_copied_marker.clone() {
-                        copy = copy.copied_marker_test_id(test_id);
-                    }
-                    let copy = copy.into_element(cx);
-
-                    let chevron_size = Px(28.0);
-                    let chevron_icon_size = Px(16.0);
-                    let center = Point::new(Px(8.0), Px(8.0));
-                    let rotation = if is_open { 180.0 } else { 0.0 };
-                    let chevron_transform = Transform2D::rotation_about_degrees(rotation, center);
-                    let chevron = cx.visual_transform_props(
-                        VisualTransformProps {
-                            layout: decl_style::layout_style(
-                                &theme_header,
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(chevron_size))
-                                    .h_px(MetricRef::Px(chevron_size))
-                                    .flex_shrink_0(),
-                            ),
-                            transform: chevron_transform,
-                        },
-                        move |cx| {
-                            vec![decl_icon::icon_with(
-                                cx,
-                                ids::ui::CHEVRON_DOWN,
-                                Some(chevron_icon_size),
-                                Some(ColorRef::Color(chevron_fg)),
-                            )]
-                        },
-                    );
-
-                    let actions = ui::h_row(move |_cx| vec![copy, chevron])
-                        .layout(LayoutRefinement::default().flex_shrink_0())
-                        .gap(Space::N1)
-                        .items(Items::Center)
-                        .into_element(cx);
-
-                    let row = ui::h_row(move |_cx| vec![error_row, actions])
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N3)
-                        .justify(Justify::Between)
-                        .items(Items::Center)
-                        .into_element(cx);
-
-                    let header = cx.container(
-                        decl_style::container_props(
-                            &theme_header,
-                            ChromeRefinement::default().p(Space::N3),
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        ),
-                        move |_cx| vec![row],
-                    );
-
-                    let trigger = fret_ui_shadcn::CollapsibleTrigger::new(open_model, vec![header])
-                        .a11y_label("Toggle stack trace details")
-                        .into_element(cx, is_open);
-
-                    let Some(test_id) = test_id_header_trigger.clone() else {
-                        return trigger;
-                    };
-                    trigger.attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Button)
-                            .test_id(test_id),
-                    )
-                },
+            let chrome = base_chrome.merge(chrome);
+            let layout = LayoutRefinement::default().w_full().min_w_0().merge(layout);
+            let root = cx.container(
+                decl_style::container_props(&theme, chrome, layout),
                 move |cx| {
-                    let mut frames = StackTraceFrames::new(parsed.frames.clone())
-                        .show_internal_frames(show_internal_frames);
-                    if let Some(on_file_path_click) = on_file_path_click.clone() {
-                        frames = frames.on_file_path_click(on_file_path_click);
-                    }
-                    if let Some(test_id) = test_id_frames.clone() {
-                        frames = frames.test_id(test_id);
-                    }
-                    if let Some(prefix) = frame_test_id_prefix.clone() {
-                        frames = frames.frame_test_id_prefix(prefix);
-                    }
-                    let frames = frames.into_element(cx);
+                    let open_model = controllable_state::use_controllable_model(
+                        cx,
+                        controlled_open.clone(),
+                        || default_open,
+                    )
+                    .model();
 
-                    let mut scroll = ScrollArea::new([frames]).refine_layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .min_w_0()
-                            .max_h(MetricRef::Px(max_height)),
-                    );
-                    if let Some(test_id) = test_id_frames_viewport.clone() {
-                        scroll = scroll.viewport_test_id(test_id);
-                    }
-                    let scroll = scroll.into_element(cx);
+                    cx.with_state(StackTraceProviderState::default, |st| {
+                        st.context = Some(StackTraceContext {
+                            parsed: parsed.clone(),
+                            raw: trace_raw.clone(),
+                            open: open_model,
+                            show_internal_frames,
+                            max_height,
+                            on_file_path_click: on_file_path_click.clone(),
+                        });
+                    });
 
-                    let mut content_props = ContainerProps::default();
-                    content_props.layout = decl_style::layout_style(
-                        &theme_content,
-                        LayoutRefinement::default().w_full(),
-                    );
-                    content_props.background = Some(content_bg);
-                    content_props.border = Edges {
-                        top: Px(1.0),
-                        right: Px(0.0),
-                        bottom: Px(0.0),
-                        left: Px(0.0),
-                    };
-                    content_props.border_color = Some(content_border);
+                    let body = ui::v_stack(move |cx| children(cx))
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N0)
+                        .into_element(cx);
 
-                    let content = cx.container(content_props, move |_cx| vec![scroll]);
-
-                    let content = if let Some(test_id) = test_id_content.clone() {
-                        content.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(SemanticsRole::Group)
-                                .test_id(test_id),
-                        )
-                    } else {
-                        content
-                    };
-
-                    fret_ui_shadcn::CollapsibleContent::new([content]).into_element(cx)
+                    vec![body]
                 },
             );
 
-        let Some(test_id) = self.test_id_root else {
-            return root;
-        };
-        root.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+            let Some(test_id) = test_id_root else {
+                return root;
+            };
+            root.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(test_id),
+            )
+        })
     }
 }
 

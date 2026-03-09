@@ -31,17 +31,18 @@ pub(super) fn preview_calendar(
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
-            "Calendar already exposes the important authoring surface (`new`, caption layout, locale, multi-month, week numbers, disabled matchers), so the main parity gap here is usage clarity rather than missing composition APIs.",
+            "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
             "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
-            "Diagnostics scripts depend on `ui-gallery.calendar.*` test_id prefixes and calendar section doc IDs.",
+            "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
+            "Upstream Calendar is a DayPicker-style wrapper, so richer day-cell customization would more likely land as a dedicated slot API than a generic children API.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Calendar docs flow: Demo -> Usage. Gallery adds range, pickers, presets, locale, and regression-focused variants.",
+            "Preview starts with the shadcn docs flow (Demo -> Usage), then adds curated examples and Fret-specific regression surfaces.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -52,7 +53,7 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Basic", basic)
+            DocSection::new("Selected Date", basic)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-single")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
@@ -117,5 +118,5 @@ pub(super) fn preview_calendar(
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-calendar")]
 }

@@ -87,7 +87,19 @@ impl<H: UiHost> UiTree<H> {
             let theme_revision = Theme::global(&*app).revision();
             let children_render_transform = self.node_children_render_transform(node);
             let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
-            PaintCacheKey::new(bounds, sf, theme_revision, paint_style, child_transform)
+            let inherited_text_style_fingerprint = self.window.and_then(|window| {
+                crate::declarative::frame::inherited_text_style_for_node(app, window, node)
+                    .as_ref()
+                    .map(crate::text_props::text_style_refinement_fingerprint)
+            });
+            PaintCacheKey::new(
+                bounds,
+                sf,
+                theme_revision,
+                paint_style,
+                inherited_text_style_fingerprint,
+                child_transform,
+            )
         });
         let relax_view_cache_gating = super::paint_cache_relax_view_cache_gating();
         let allow_hit_test_only = super::paint_cache_allow_hit_test_only();

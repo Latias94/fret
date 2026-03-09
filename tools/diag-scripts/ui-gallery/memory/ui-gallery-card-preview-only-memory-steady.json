@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery: card memory steady (preview only)",
+    "tags": ["ui-gallery", "card", "memory", "steady", "bisect", "code-tabs", "preview-only"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DIAG_DEBUG_SNAPSHOT": 0,
+      "FRET_DIAG_SEMANTICS_TEST_IDS_ONLY": 1,
+      "FRET_DIAG_MAX_SEMANTICS_NODES": 8000,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_UI_GALLERY_START_PAGE": "card",
+      "FRET_UI_GALLERY_BISECT": 131072
+    },
+    "target_hints": [
+      "Starts UI Gallery on the card page with all card code tabs hidden so each section renders preview-only content and captures a steady-state bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "ui-gallery-card-preview-only-memory-steady", "max_snapshots": 1 }
+  ]
+}

@@ -16,6 +16,7 @@ and “contract-first” philosophy.
 Related foundations:
 
 - Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
+- Artifact + evidence contract (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect + pick UX: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - Base contract ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
@@ -24,6 +25,8 @@ Related foundations:
 - In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Offline viewer: `tools/fret-bundle-viewer`
 - UI prototype (rough): `docs/devtool.html`
+- v2 dogfood workflow: `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`
+- GUI refresh follow-up: `docs/workstreams/diag-devtools-gui-refresh-v1.md`
 
 ## Problem statement
 
@@ -39,6 +42,21 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - makes script authoring and selector management fast (pick-to-fill, library browsing),
 - makes artifacts navigable (latest bundle, pack/share, open in viewer),
 - supports **web runner** from day 1 (browser targets cannot rely on filesystem triggers).
+
+## Current status snapshot
+
+- `apps/fret-devtools` already has a first read-only `Regression` details tab.
+- The tab reuses the existing artifacts-root contract and reads:
+  - `regression.summary.json`,
+  - `regression.index.json`.
+- The tab now also exposes a thin `Summarize` trigger that runs the existing aggregate summarization flow
+  against the current artifacts root and refreshes the panel when the job completes.
+- It does not invent a new campaign model; it is only a thin GUI consumer over the same aggregate
+  artifacts already used by CLI and MCP.
+- The current end-to-end dogfood path is documented in
+  `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
+- A product/UX-focused follow-up track now lives in
+  `docs/workstreams/diag-devtools-gui-refresh-v1.md`.
 
 ## Goals (v1)
 

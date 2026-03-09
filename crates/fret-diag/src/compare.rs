@@ -1051,6 +1051,130 @@ pub(crate) fn maybe_launch_demo(
     Ok(Some(demo))
 }
 
+pub(crate) fn maybe_launch_demo_without_diagnostics(
+    launch: &Option<Vec<String>>,
+    launch_env: &[(String, String)],
+    workspace_root: &Path,
+    out_dir: &Path,
+    _poll_ms: u64,
+    _launch_high_priority: bool,
+) -> Result<Option<LaunchedDemo>, String> {
+    let Some(launch) = launch else {
+        return Ok(None);
+    };
+
+    let exe = launch
+        .first()
+        .ok_or_else(|| "missing launch command".to_string())?;
+
+    let mut cmd = Command::new(exe);
+    cmd.args(launch.iter().skip(1));
+    cmd.current_dir(workspace_root);
+
+    let scrub_env_prefixes = TOOL_LAUNCH_SCRUB_ENV_PREFIXES;
+    let mut inherited_keys_to_remove: Vec<String> = std::env::vars()
+        .map(|(k, _)| k)
+        .filter(|k| scrub_env_prefixes.iter().any(|p| k.starts_with(p)))
+        .collect();
+    inherited_keys_to_remove.sort();
+    inherited_keys_to_remove.dedup();
+
+    let mut scrubbed_inherited_nonreserved_keys: Vec<String> = Vec::new();
+    for key in &inherited_keys_to_remove {
+        if !tool_launch_env_key_is_reserved(key) {
+            scrubbed_inherited_nonreserved_keys.push(key.clone());
+        }
+        cmd.env_remove(key);
+    }
+
+    let mut explicit_override_fret_keys: Vec<String> = Vec::new();
+    let mut explicit_override_other_keys_total: u64 = 0;
+    for (key, _) in launch_env {
+        if key.starts_with("FRET_") {
+            explicit_override_fret_keys.push(key.clone());
+        } else {
+            explicit_override_other_keys_total =
+                explicit_override_other_keys_total.saturating_add(1);
+        }
+    }
+    explicit_override_fret_keys.sort();
+    explicit_override_fret_keys.dedup();
+
+    if !scrubbed_inherited_nonreserved_keys.is_empty()
+        || !explicit_override_fret_keys.is_empty()
+        || explicit_override_other_keys_total > 0
+    {
+        fn format_keys(keys: &[String], max: usize) -> String {
+            let mut out: Vec<&str> = keys.iter().take(max).map(|s| s.as_str()).collect();
+            if keys.len() > max {
+                out.push("...");
+            }
+            out.join(",")
+        }
+
+        scrubbed_inherited_nonreserved_keys.sort();
+        scrubbed_inherited_nonreserved_keys.dedup();
+
+        let scrubbed = format_keys(&scrubbed_inherited_nonreserved_keys, 8);
+        let overrides = format_keys(&explicit_override_fret_keys, 8);
+        eprintln!(
+            "diag --launch(no-diagnostics) env: scrubbed_inherited_nonreserved=[{}] explicit_overrides_fret=[{}] explicit_overrides_other_total={}",
+            scrubbed, overrides, explicit_override_other_keys_total,
+        );
+    }
+
+    std::fs::create_dir_all(out_dir).map_err(|e| {
+        format!(
+            "failed to create diagnostics out_dir (required for --launch): {} ({e})",
+            out_dir.display()
+        )
+    })?;
+
+    for (key, value) in launch_env {
+        if tool_launch_env_key_is_reserved(key) {
+            return Err(format!(
+                "--env cannot override reserved diagnostics var in no-diagnostics mode: {key}"
+            ));
+        }
+        cmd.env(key, value);
+    }
+
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
+        cmd.env("CARGO_TARGET_DIR", target_dir);
+    }
+
+    let launched_unix_ms = now_unix_ms();
+    let launched_instant = Instant::now();
+    let child = cmd
+        .spawn()
+        .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+    let pid = child.id();
+
+    let _ = std::fs::write(out_dir.join("launched.pid"), pid.to_string());
+    let _ = std::fs::write(
+        out_dir.join("launched.demo.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "pid": pid,
+            "launched_unix_ms": launched_unix_ms,
+            "launch_cmd": launch,
+            "mode": "external_no_diagnostics",
+        }))
+        .unwrap_or_else(|_| b"{}".to_vec()),
+    );
+
+    let demo = LaunchedDemo {
+        child,
+        launched_unix_ms,
+        launched_instant,
+        launch_cmd: launch.clone(),
+        #[cfg(not(windows))]
+        process_footprint_sampler: Some(ProcessFootprintSamplerHandle::spawn(pid)),
+    };
+
+    Ok(Some(demo))
+}
+
 #[cfg(test)]
 mod tool_launch_config_tests {
     use std::path::PathBuf;

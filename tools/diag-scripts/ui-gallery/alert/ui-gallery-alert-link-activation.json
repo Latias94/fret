@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-alert-link-activation",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "alert", "links"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "alert" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-alert" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-alert" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-component" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-alert-interactive-links" },
+      "delta_y": -220.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 20.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-link-status-idle" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-alert-link-billing" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-alert-link-status-billing-information"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-alert-link-activation" }
+  ]
+}

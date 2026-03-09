@@ -63,6 +63,21 @@ Batch run:
   - `{ "scripts": ["tools/diag-scripts/a.json", ".fret/diag/scripts/b.json"] }`, or
   - `{ "glob": "ui-gallery-*.json" }`
 
+### Step 3.5: Aggregate regression summaries when you need a campaign view
+
+- tool: `fret_diag_regression_summarize`
+  - when `dir` is omitted, it reuses the current session artifacts root from the latest
+    `bundle.dumped` event,
+  - when `include_json` is `true`, it also returns the generated `regression.summary.json` and
+    `regression.index.json` payloads inline,
+  - when the directory is session-derived, it also emits MCP resource update notifications for the
+    regression summary/index resources.
+
+- tool: `fret_diag_regression_dashboard`
+  - reads `regression.index.json` from the same shared artifacts root,
+  - returns a structured first-open dashboard view plus a human-readable summary string,
+  - can optionally include the raw index JSON inline.
+
 ### Step 4: Pack the latest bundle and open the offline viewer
 
 - tool: `fret_diag_pack_last_bundle` (creates a zip on disk; returns `pack_path`)
@@ -84,12 +99,18 @@ For a session `<session_id>`:
   - zip blob (base64) containing `bundle.json` in the same layout as `diag pack`
 - `fret-diag://sessions/<session_id>/repro.summary.json`
   - JSON text (only if present on disk in the artifacts root)
+- `fret-diag://sessions/<session_id>/regression.summary.json`
+  - JSON text for the aggregate regression summary in the artifacts root (only if present on disk)
+- `fret-diag://sessions/<session_id>/regression.index.json`
+  - JSON text for the lighter consumer-oriented regression index in the artifacts root (only if present on disk)
 
 The server also accepts `selected` as an alias for the default session:
 
 - `fret-diag://selected/bundle.json`
 - `fret-diag://selected/bundle.zip`
 - `fret-diag://selected/repro.summary.json`
+- `fret-diag://selected/regression.summary.json`
+- `fret-diag://selected/regression.index.json`
 
 ### Notes
 
@@ -109,4 +130,5 @@ about instead of polling.
   - `notifications/resources/list_changed` when sessions/resources appear/disappear.
 
 If updates do not arrive, trigger a fresh dump via the tool `fret_diag_bundle_dump` and then read the
-resource again.
+resource again. For aggregate regression resources, ensure the artifacts root also contains
+`regression.summary.json` / `regression.index.json` (for example via `fretboard diag summarize`).

@@ -1158,9 +1158,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     _ => {}
                 },
-                Effect::Redraw(target) | Effect::RequestAnimationFrame(target) => {
+                Effect::Redraw(target) => {
                     if target == self.app_window {
                         window.request_redraw();
+                        self.app.with_global_mut_untracked(
+                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record(
+                                    self.app_window,
+                                    self.frame_id,
+                                    fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+                                );
+                            },
+                        );
+                    }
+                }
+                Effect::RequestAnimationFrame(target) => {
+                    if target == self.app_window {
+                        window.request_redraw();
+                        self.app.with_global_mut_untracked(
+                            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record(
+                                    self.app_window,
+                                    self.frame_id,
+                                    fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
+                                );
+                            },
+                        );
                     }
                 }
                 Effect::IncomingOpenReadAll {

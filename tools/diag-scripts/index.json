@@ -1593,13 +1593,54 @@
       ]
     },
     {
+      "id": "image-heavy-memory-size-2048-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-size-2048-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-size"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Size sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-size-512-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-size-512-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-size"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Size sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
       "id": "image-heavy-memory-steady",
       "path": "tools/diag-scripts/tooling/images/image-heavy-memory-steady.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "tooling-image-heavy-memory-sweep-count"
+        "tooling-image-heavy-memory-sweep-count",
+        "tooling-image-heavy-memory-sweep-size"
       ],
       "tags": [
         "images",
@@ -2201,6 +2242,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-extras-multiple-compact-layout",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-multiple-compact-layout.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "accordion",
+        "extras",
+        "layout",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
       "required_capabilities": [],
@@ -2246,6 +2306,16 @@
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-ai-agent"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-artifact-docs-run-action",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-artifact-docs-run-action.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
       ],
       "tags": [],
       "target_hints": []
@@ -2312,7 +2382,7 @@
       ],
       "target_hints": [
         "Navigates to the AI Elements Conversation demo page.",
-        "Sends a long message to ensure the transcript can scroll.",
+        "Preseeds a long transcript through a diag-only environment default to avoid prompt input flake.",
         "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
       ]
     },
@@ -2477,6 +2547,39 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-transcription-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "screenshots",
+        "transcription",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements transcription demo.",
+        "Seeks into the transcript and captures a docs-aligned playback screenshot."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-transcription-demo-seek",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcription-demo-seek.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-alert-action-text-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
       "required_capabilities": [
@@ -2520,6 +2623,41 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-detached-trigger-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert_dialog",
+        "focus",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-link-activation",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert",
+        "links",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {

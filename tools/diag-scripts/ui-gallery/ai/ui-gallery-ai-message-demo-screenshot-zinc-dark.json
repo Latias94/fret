@@ -7,7 +7,7 @@
     "target_hints": [
       "Sets theme preset to zinc/dark.",
       "Navigates to the AI Elements Message demo page.",
-      "Captures a screenshot to gate bubble on-color contrast (secondary + foreground)."
+      "Captures a screenshot from the docs-aligned usage section to gate user-bubble on-color contrast (secondary + foreground)."
     ]
   },
   "steps": [
@@ -61,7 +61,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-ai-message-demo-user-content" },
+      "target": { "kind": "test_id", "id": "ui-ai-message-usage-msg-0-content" },
       "delta_y": -160.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -70,7 +70,7 @@
     },
     {
       "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-ai-message-demo-user-content" },
+      "target": { "kind": "test_id", "id": "ui-ai-message-usage-msg-0-content" },
       "padding_px": 8.0,
       "within_window": true,
       "timeout_frames": 600

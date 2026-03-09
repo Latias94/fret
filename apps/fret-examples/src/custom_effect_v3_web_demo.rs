@@ -12,7 +12,7 @@ use fret_core::scene::{
     Color, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DrawOrder, EffectChain, EffectMode,
     EffectParamsV1, EffectQuality, EffectStep, Paint, SceneOp,
 };
-use fret_core::{CustomEffectDescriptorV3, CustomEffectService as _, EffectId, Event};
+use fret_core::{AppWindowId, CustomEffectDescriptorV3, CustomEffectService as _, EffectId, Event};
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -70,7 +70,7 @@ fn handle_event(
 }
 
 fn render(
-    _driver: &mut CustomEffectV3WebDriver,
+    driver: &mut CustomEffectV3WebDriver,
     context: WinitRenderContext<'_, CustomEffectV3WebWindowState>,
 ) {
     let WinitRenderContext {
@@ -305,7 +305,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo custom_effect_v3_web_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     }
 }

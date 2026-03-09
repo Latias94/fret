@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "kind": "script_redirect",
   "to": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-modals-visible.json"
 }

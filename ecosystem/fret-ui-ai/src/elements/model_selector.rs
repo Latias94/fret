@@ -61,6 +61,41 @@ impl ModelSelector {
         self
     }
 
+    /// Rust-friendly compound entrypoint for composing trigger + content in one closure.
+    pub fn into_element_with_children<H, F>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        F: Fn(&mut ElementContext<'_, H>, Model<bool>) -> (AnyElement, AnyElement)
+            + Clone
+            + 'static,
+    {
+        let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
+            .open(self.open)
+            .default_open(self.default_open)
+            .open_model(cx);
+
+        let open_for_trigger = open.clone();
+        let open_for_content = open.clone();
+        let children_for_trigger = children.clone();
+        let children_for_content = children;
+
+        Dialog::new(open.clone()).into_element(
+            cx,
+            move |cx| {
+                let (trigger, _) = children_for_trigger(cx, open_for_trigger.clone());
+                trigger
+            },
+            move |cx| {
+                let (_, content) = children_for_content(cx, open_for_content.clone());
+                content
+            },
+        )
+    }
+
     pub fn into_element<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,

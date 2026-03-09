@@ -64,22 +64,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     shadcn::Table::new(vec![
-        shadcn::TableHeader::new(vec![shadcn::TableRow::new(
-            3,
-            vec![
-                shadcn::TableCell::new(
-                    shadcn::Checkbox::new(table_all)
-                        .a11y_label("Select all rows")
-                        .test_id("ui-gallery-checkbox-table-all")
-                        .into_element(cx),
-                )
-                .into_element(cx),
-                shadcn::TableHead::new("Member").into_element(cx),
-                shadcn::TableHead::new("Role").into_element(cx),
-            ],
-        )
-        .border_bottom(true)
-        .into_element(cx)])
+        shadcn::TableHeader::new(vec![
+            shadcn::TableRow::new(
+                3,
+                vec![
+                    shadcn::TableCell::new(
+                        shadcn::Checkbox::new(table_all)
+                            .a11y_label("Select all rows")
+                            .test_id("ui-gallery-checkbox-table-all")
+                            .into_element(cx),
+                    )
+                    .into_element(cx),
+                    shadcn::TableHead::new("Member").into_element(cx),
+                    shadcn::TableHead::new("Role").into_element(cx),
+                ],
+            )
+            .border_bottom(true)
+            .into_element(cx),
+        ])
         .into_element(cx),
         shadcn::TableBody::new(vec![
             table_row(

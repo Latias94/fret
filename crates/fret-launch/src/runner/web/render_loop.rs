@@ -577,51 +577,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
         }
 
-        let diag_wgpu_report =
-            std::env::var_os("FRET_DIAG_WGPU_REPORT").is_some_and(|v| !v.is_empty());
-        if diag_wgpu_report {
-            let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
-                .ok()
-                .and_then(|v| v.trim().parse::<u64>().ok())
-                .unwrap_or(60)
-                .max(1);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let diag_wgpu_report =
+                std::env::var_os("FRET_DIAG_WGPU_REPORT").is_some_and(|v| !v.is_empty());
+            if diag_wgpu_report {
+                let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
+                    .ok()
+                    .and_then(|v| v.trim().parse::<u64>().ok())
+                    .unwrap_or(60)
+                    .max(1);
 
-            let tick_id = self.tick_id.0;
-            let frame_id = self.frame_id.0;
-            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+                let tick_id = self.tick_id.0;
+                let frame_id = self.frame_id.0;
+                let should_sample = frame_id <= 2 || frame_id % every_n == 0;
 
-            if should_sample && let Some(report) = gfx.ctx.instance.generate_report() {
-                let hub = report.hub_report();
-                let counts = fret_render::WgpuHubReportCounts {
-                    adapters: (hub.adapters.num_allocated + hub.adapters.num_kept_from_user) as u64,
-                    devices: (hub.devices.num_allocated + hub.devices.num_kept_from_user) as u64,
-                    queues: (hub.queues.num_allocated + hub.queues.num_kept_from_user) as u64,
-                    command_encoders: (hub.command_encoders.num_allocated
-                        + hub.command_encoders.num_kept_from_user)
-                        as u64,
-                    buffers: (hub.buffers.num_allocated + hub.buffers.num_kept_from_user) as u64,
-                    textures: (hub.textures.num_allocated + hub.textures.num_kept_from_user) as u64,
-                    texture_views: (hub.texture_views.num_allocated
-                        + hub.texture_views.num_kept_from_user)
-                        as u64,
-                    samplers: (hub.samplers.num_allocated + hub.samplers.num_kept_from_user) as u64,
-                    shader_modules: (hub.shader_modules.num_allocated
-                        + hub.shader_modules.num_kept_from_user)
-                        as u64,
-                    render_pipelines: (hub.render_pipelines.num_allocated
-                        + hub.render_pipelines.num_kept_from_user)
-                        as u64,
-                    compute_pipelines: (hub.compute_pipelines.num_allocated
-                        + hub.compute_pipelines.num_kept_from_user)
-                        as u64,
-                };
+                if should_sample && let Some(report) = gfx.ctx.instance.generate_report() {
+                    let hub = report.hub_report();
+                    let counts = fret_render::WgpuHubReportCounts {
+                        adapters: (hub.adapters.num_allocated + hub.adapters.num_kept_from_user)
+                            as u64,
+                        devices: (hub.devices.num_allocated + hub.devices.num_kept_from_user)
+                            as u64,
+                        queues: (hub.queues.num_allocated + hub.queues.num_kept_from_user) as u64,
+                        command_encoders: (hub.command_encoders.num_allocated
+                            + hub.command_encoders.num_kept_from_user)
+                            as u64,
+                        buffers: (hub.buffers.num_allocated + hub.buffers.num_kept_from_user)
+                            as u64,
+                        textures: (hub.textures.num_allocated + hub.textures.num_kept_from_user)
+                            as u64,
+                        texture_views: (hub.texture_views.num_allocated
+                            + hub.texture_views.num_kept_from_user)
+                            as u64,
+                        samplers: (hub.samplers.num_allocated + hub.samplers.num_kept_from_user)
+                            as u64,
+                        shader_modules: (hub.shader_modules.num_allocated
+                            + hub.shader_modules.num_kept_from_user)
+                            as u64,
+                        render_pipelines: (hub.render_pipelines.num_allocated
+                            + hub.render_pipelines.num_kept_from_user)
+                            as u64,
+                        compute_pipelines: (hub.compute_pipelines.num_allocated
+                            + hub.compute_pipelines.num_kept_from_user)
+                            as u64,
+                    };
 
-                self.app.with_global_mut_untracked(
-                    fret_render::WgpuHubReportFrameStore::default,
-                    |store, _app| {
-                        store.record(self.app_window, tick_id, frame_id, counts);
-                    },
-                );
+                    self.app.with_global_mut_untracked(
+                        fret_render::WgpuHubReportFrameStore::default,
+                        |store, _app| {
+                            store.record(self.app_window, tick_id, frame_id, counts);
+                        },
+                    );
+                }
             }
         }
 
@@ -671,11 +679,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         submit.push(cmd);
         gfx.ctx.queue.submit(submit);
         frame.present();
+        self.app.with_global_mut_untracked(
+            fret_runtime::RunnerPresentDiagnosticsStore::default,
+            |store, _app| {
+                store.record_present(self.app_window, self.frame_id);
+            },
+        );
         drop(keepalive);
 
         self.drain_turns(event_loop, window, &mut gfx, &mut state);
         if gfx.diag_keepalive_redraw {
             window.request_redraw();
+            self.app.with_global_mut_untracked(
+                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                |store, _app| {
+                    store.record(
+                        self.app_window,
+                        self.frame_id,
+                        fret_runtime::RunnerFrameDriveReason::WebDiagKeepaliveRedraw,
+                    );
+                },
+            );
         }
 
         self.window_state = Some(state);

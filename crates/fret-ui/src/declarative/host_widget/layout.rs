@@ -972,7 +972,11 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let style = props.resolved_text_style(cx.theme().snapshot());
+                let inherited_text_style = inherited_text_style_for_node(cx.app, window, cx.node);
+                let style = props.resolved_text_style_with_inherited(
+                    cx.theme().snapshot(),
+                    inherited_text_style.as_ref(),
+                );
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
@@ -1128,7 +1132,11 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let style = props.resolved_text_style(cx.theme().snapshot());
+                let inherited_text_style = inherited_text_style_for_node(cx.app, window, cx.node);
+                let style = props.resolved_text_style_with_inherited(
+                    cx.theme().snapshot(),
+                    inherited_text_style.as_ref(),
+                );
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
@@ -1296,7 +1304,11 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let style = props.resolved_text_style(cx.theme().snapshot());
+                let inherited_text_style = inherited_text_style_for_node(cx.app, window, cx.node);
+                let style = props.resolved_text_style_with_inherited(
+                    cx.theme().snapshot(),
+                    inherited_text_style.as_ref(),
+                );
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,

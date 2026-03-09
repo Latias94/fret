@@ -7,6 +7,9 @@ use std::time::Duration;
 
 use base64::Engine;
 use fret_diag::artifacts;
+use fret_diag::regression_summary::{
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+};
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
@@ -35,6 +38,8 @@ const RESOURCE_SCHEME: &str = "fret-diag://";
 const RESOURCE_KIND_BUNDLE_JSON: &str = "bundle.json";
 const RESOURCE_KIND_BUNDLE_ZIP: &str = "bundle.zip";
 const RESOURCE_KIND_REPRO_SUMMARY_JSON: &str = "repro.summary.json";
+const RESOURCE_KIND_REGRESSION_SUMMARY_JSON: &str = DIAG_REGRESSION_SUMMARY_FILENAME_V1;
+const RESOURCE_KIND_REGRESSION_INDEX_JSON: &str = DIAG_REGRESSION_INDEX_FILENAME_V1;
 
 #[derive(Clone)]
 struct WsState {
@@ -100,6 +105,81 @@ impl FretDevtoolsMcp {
             peer,
             subscribed_resources,
             tool_router: Self::tool_router(),
+        }
+    }
+
+    async fn resolve_regression_context(
+        &self,
+        repo_root: &Path,
+        session_id: Option<String>,
+        dir: Option<String>,
+    ) -> Result<(PathBuf, String, Option<String>), String> {
+        let (dir_abs, resolved_session_id) = if let Some(dir) =
+            dir.as_deref().map(str::trim).filter(|s| !s.is_empty())
+        {
+            (resolve_repo_path(repo_root, dir), None)
+        } else {
+            let session_id = self.resolve_session_id(session_id).await?;
+            let dumped_payload = {
+                let inbox = self.inbox.lock().await;
+                inbox
+                    .iter()
+                    .rev()
+                    .find(|m| {
+                        m.r#type == "bundle.dumped"
+                            && m.session_id.as_deref() == Some(session_id.as_str())
+                    })
+                    .map(|m| m.payload.clone())
+            }
+            .ok_or_else(|| {
+                "missing dir and no bundle.dumped available for the selected session".to_string()
+            })?;
+            let dir_abs = artifacts_root_from_bundle_dumped_payload(repo_root, &dumped_payload)
+                .ok_or_else(|| {
+                    "bundle.dumped missing out_dir/dir for artifacts root resolution".to_string()
+                })?;
+            (dir_abs, Some(session_id))
+        };
+
+        let dir_arg = dir_abs
+            .strip_prefix(repo_root)
+            .ok()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| dir_abs.to_string_lossy().to_string());
+
+        Ok((dir_abs, dir_arg, resolved_session_id))
+    }
+
+    async fn notify_resource_updates(
+        &self,
+        notify_resources_list_changed: bool,
+        resource_updated_uris: Vec<String>,
+    ) {
+        if !notify_resources_list_changed && resource_updated_uris.is_empty() {
+            return;
+        }
+        let peer = self.peer.lock().await.clone();
+        let subscribed = self.subscribed_resources.lock().await.clone();
+        if let Some(peer) = peer {
+            if notify_resources_list_changed {
+                let n = ResourceListChangedNotification {
+                    method: Default::default(),
+                    extensions: Extensions::default(),
+                };
+                let _ = peer
+                    .send_notification(ServerNotification::ResourceListChangedNotification(n))
+                    .await;
+            }
+
+            for uri in resource_updated_uris {
+                if !subscribed.contains(&uri) {
+                    continue;
+                }
+                let n = ResourceUpdatedNotification::new(ResourceUpdatedNotificationParam { uri });
+                let _ = peer
+                    .send_notification(ServerNotification::ResourceUpdatedNotification(n))
+                    .await;
+            }
         }
     }
 
@@ -351,6 +431,122 @@ impl FretDevtoolsMcp {
             bundle_dumped_json: serde_json::to_string_pretty(&dumped.payload)
                 .unwrap_or_else(|_| "{}".to_string()),
         }))
+    }
+
+    #[tool(
+        description = "Aggregate regression summaries under a directory and return the generated summary/index paths. When dir is omitted, reuse the current session artifacts root from the latest bundle.dumped event."
+    )]
+    async fn fret_diag_regression_summarize(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RegressionSummarizeRequestV1>,
+    ) -> Result<Json<RegressionSummarizeResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let (dir_abs, dir_arg, resolved_session_id) = self
+            .resolve_regression_context(
+                &repo_root,
+                params.0.session_id.clone(),
+                params.0.dir.clone(),
+            )
+            .await?;
+
+        let mut args = vec![
+            "--dir".to_string(),
+            dir_arg.clone(),
+            "summarize".to_string(),
+        ];
+        if let Some(inputs) = params.0.inputs.clone() {
+            args.extend(inputs.into_iter().filter(|s| !s.trim().is_empty()));
+        }
+
+        tokio::task::spawn_blocking(move || fret_diag::diag_cmd(args))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+        let summary_path = dir_abs.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+        let index_path = dir_abs.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+        let include_json = params.0.include_json.unwrap_or(false);
+
+        if let Some(session_id) = resolved_session_id.as_deref() {
+            let selected_session_id = self.selected_session_id.lock().await.clone();
+            let uris = session_resource_uris(
+                session_id,
+                selected_session_id.as_deref(),
+                &[
+                    RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                    RESOURCE_KIND_REGRESSION_INDEX_JSON,
+                ],
+            );
+            self.notify_resource_updates(true, uris).await;
+        }
+
+        Ok(Json(RegressionSummarizeResultV1 {
+            schema_version: 1,
+            dir: dir_arg,
+            summary_path: summary_path.to_string_lossy().to_string(),
+            index_path: index_path.to_string_lossy().to_string(),
+            summary_json: if include_json {
+                Some(std::fs::read_to_string(&summary_path).map_err(|e| e.to_string())?)
+            } else {
+                None
+            },
+            index_json: if include_json {
+                Some(std::fs::read_to_string(&index_path).map_err(|e| e.to_string())?)
+            } else {
+                None
+            },
+        }))
+    }
+
+    #[tool(
+        description = "Read regression.index.json and return a first-open dashboard summary. When dir is omitted, reuse the current session artifacts root from the latest bundle.dumped event."
+    )]
+    async fn fret_diag_regression_dashboard(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RegressionDashboardRequestV1>,
+    ) -> Result<Json<RegressionDashboardResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let (dir_abs, dir_arg, _resolved_session_id) = self
+            .resolve_regression_context(
+                &repo_root,
+                params.0.session_id.clone(),
+                params.0.dir.clone(),
+            )
+            .await?;
+        let index_path = dir_abs.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+        if !index_path.is_file() {
+            let summary_path = dir_abs.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+            if summary_path.is_file() {
+                return Err(format!(
+                    "regression.index.json is missing under {} (call fret_diag_regression_summarize or `fretboard diag summarize --dir {}` first)",
+                    dir_abs.display(),
+                    dir_arg,
+                ));
+            }
+            return Err(format!(
+                "regression.index.json not found under {}",
+                dir_abs.display()
+            ));
+        }
+
+        let index_json = std::fs::read_to_string(&index_path).map_err(|e| e.to_string())?;
+        let payload: serde_json::Value = serde_json::from_str(&index_json)
+            .map_err(|e| format!("invalid dashboard index {}: {}", index_path.display(), e))?;
+
+        Ok(Json(build_regression_dashboard_result(
+            dir_arg,
+            &index_path,
+            &payload,
+            params.0.top.unwrap_or(5).max(1),
+            params.0.include_json.unwrap_or(false),
+            Some(index_json),
+        )))
     }
 
     #[tool(description = "Return the most recent bundle.dumped payload currently in the inbox.")]
@@ -1037,6 +1233,38 @@ impl ServerHandler for FretDevtoolsMcp {
                     );
                     resources.push(repro.no_annotation());
                 }
+
+                if let Some(summary_path) =
+                    regression_summary_path_from_latest_bundle_dumped_payload(&inbox, &sid)
+                    && summary_path.is_file()
+                {
+                    let mut summary = RawResource::new(
+                        format!("{base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"),
+                        format!("regression.summary.json [{sid}]"),
+                    );
+                    summary.mime_type = Some("application/json".to_string());
+                    summary.description = Some(
+                        "Aggregate regression summary for the artifacts root (if present on disk)."
+                            .to_string(),
+                    );
+                    resources.push(summary.no_annotation());
+                }
+
+                if let Some(index_path) =
+                    regression_index_path_from_latest_bundle_dumped_payload(&inbox, &sid)
+                    && index_path.is_file()
+                {
+                    let mut index = RawResource::new(
+                        format!("{base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"),
+                        format!("regression.index.json [{sid}]"),
+                    );
+                    index.mime_type = Some("application/json".to_string());
+                    index.description = Some(
+                        "Consumer-oriented regression index for the artifacts root (if present on disk)."
+                            .to_string(),
+                    );
+                    resources.push(index.no_annotation());
+                }
             }
 
             Ok(ListResourcesResult::with_all_items(resources))
@@ -1080,6 +1308,18 @@ impl ServerHandler for FretDevtoolsMcp {
                     "repro.summary.json",
                     "application/json",
                     "Repro summary for a session (only if present on disk).",
+                ),
+                mk(
+                    "fret-diag://sessions/{session_id}/regression.summary.json",
+                    "regression.summary.json",
+                    "application/json",
+                    "Aggregate regression summary for a session artifacts root (only if present on disk).",
+                ),
+                mk(
+                    "fret-diag://sessions/{session_id}/regression.index.json",
+                    "regression.index.json",
+                    "application/json",
+                    "Consumer-oriented regression index for a session artifacts root (only if present on disk).",
                 ),
             ]))
         }
@@ -1182,6 +1422,56 @@ impl ServerHandler for FretDevtoolsMcp {
                         }],
                     })
                 }
+                RESOURCE_KIND_REGRESSION_SUMMARY_JSON => {
+                    let path = regression_summary_path_from_bundle_dumped_payload(
+                        &repo_root,
+                        &dumped_payload,
+                    )
+                    .ok_or_else(|| {
+                        McpError::resource_not_found("bundle.dumped missing out_dir/dir", None)
+                    })?;
+                    if !path.is_file() {
+                        return Err(McpError::resource_not_found(
+                            "regression.summary.json not found for this session",
+                            None,
+                        ));
+                    }
+                    let text = std::fs::read_to_string(&path)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    Ok(ReadResourceResult {
+                        contents: vec![ResourceContents::TextResourceContents {
+                            uri: uri.to_string(),
+                            mime_type: Some("application/json".to_string()),
+                            text,
+                            meta: None,
+                        }],
+                    })
+                }
+                RESOURCE_KIND_REGRESSION_INDEX_JSON => {
+                    let path = regression_index_path_from_bundle_dumped_payload(
+                        &repo_root,
+                        &dumped_payload,
+                    )
+                    .ok_or_else(|| {
+                        McpError::resource_not_found("bundle.dumped missing out_dir/dir", None)
+                    })?;
+                    if !path.is_file() {
+                        return Err(McpError::resource_not_found(
+                            "regression.index.json not found for this session",
+                            None,
+                        ));
+                    }
+                    let text = std::fs::read_to_string(&path)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    Ok(ReadResourceResult {
+                        contents: vec![ResourceContents::TextResourceContents {
+                            uri: uri.to_string(),
+                            mime_type: Some("application/json".to_string()),
+                            text,
+                            meta: None,
+                        }],
+                    })
+                }
                 _ => Err(McpError::resource_not_found("unknown resource kind", None)),
             }
         }
@@ -1256,6 +1546,83 @@ struct PackLastBundleResultV1 {
     bundle_dir: String,
     pack_path: String,
     bundle_dumped_json: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionSummarizeRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    dir: Option<String>,
+    #[serde(default)]
+    inputs: Option<Vec<String>>,
+    #[serde(default)]
+    include_json: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionSummarizeResultV1 {
+    schema_version: u32,
+    dir: String,
+    summary_path: String,
+    index_path: String,
+    #[serde(default)]
+    summary_json: Option<String>,
+    #[serde(default)]
+    index_json: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionDashboardRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    dir: Option<String>,
+    #[serde(default)]
+    top: Option<usize>,
+    #[serde(default)]
+    include_json: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DashboardCountEntryV1 {
+    key: String,
+    count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DashboardReasonCodeEntryV1 {
+    reason_code: String,
+    count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct DashboardFailingSummaryEntryV1 {
+    path: String,
+    lane: String,
+    failures: u64,
+    items_total: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionDashboardResultV1 {
+    schema_version: u32,
+    dir: String,
+    index_path: String,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    out_dir: Option<String>,
+    summaries_total: u64,
+    items_total: u64,
+    status_counters: Vec<DashboardCountEntryV1>,
+    lane_counters: Vec<DashboardCountEntryV1>,
+    tool_counters: Vec<DashboardCountEntryV1>,
+    top_reason_codes: Vec<DashboardReasonCodeEntryV1>,
+    failing_summaries: Vec<DashboardFailingSummaryEntryV1>,
+    human_summary: String,
+    #[serde(default)]
+    index_json: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1634,22 +2001,18 @@ async fn run_client_task(
                 "bundle.dumped" => {
                     notify_resources_list_changed = true;
                     if let Some(sid) = msg.session_id.as_deref() {
-                        let base = format!("{RESOURCE_SCHEME}sessions/{sid}/");
-                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_JSON}"));
-                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_ZIP}"));
-                        resource_updated_uris
-                            .push(format!("{base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
-
                         let selected = selected_session_id.lock().await.clone();
-                        if selected.as_deref() == Some(sid) {
-                            let selected_base = format!("{RESOURCE_SCHEME}selected/");
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_JSON}"));
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_ZIP}"));
-                            resource_updated_uris
-                                .push(format!("{selected_base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
-                        }
+                        resource_updated_uris.extend(session_resource_uris(
+                            sid,
+                            selected.as_deref(),
+                            &[
+                                RESOURCE_KIND_BUNDLE_JSON,
+                                RESOURCE_KIND_BUNDLE_ZIP,
+                                RESOURCE_KIND_REPRO_SUMMARY_JSON,
+                                RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                                RESOURCE_KIND_REGRESSION_INDEX_JSON,
+                            ],
+                        ));
                     }
                 }
                 _ => {}
@@ -1763,6 +2126,192 @@ fn connect_client(ws_defaults: &WsState, cfg: ConnectConfig) -> Result<ToolingDi
 
 fn env_u16(key: &str) -> Option<u16> {
     std::env::var(key).ok().and_then(|v| v.parse().ok())
+}
+
+fn session_resource_uris(
+    session_id: &str,
+    selected_session_id: Option<&str>,
+    resource_kinds: &[&str],
+) -> Vec<String> {
+    let mut uris = Vec::with_capacity(resource_kinds.len() * 2);
+    let base = format!("{RESOURCE_SCHEME}sessions/{session_id}/");
+    for kind in resource_kinds {
+        uris.push(format!("{base}{kind}"));
+    }
+    if selected_session_id == Some(session_id) {
+        let selected_base = format!("{RESOURCE_SCHEME}selected/");
+        for kind in resource_kinds {
+            uris.push(format!("{selected_base}{kind}"));
+        }
+    }
+    uris
+}
+
+fn build_regression_dashboard_result(
+    dir: String,
+    index_path: &Path,
+    payload: &serde_json::Value,
+    top: usize,
+    include_json: bool,
+    index_json: Option<String>,
+) -> RegressionDashboardResultV1 {
+    let kind = payload
+        .get("kind")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+    let out_dir = payload
+        .get("out_dir")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+    let summaries_total = payload
+        .get("summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| rows.len() as u64)
+        .unwrap_or(0);
+    let items_total = payload
+        .get("summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
+                .sum::<u64>()
+        })
+        .unwrap_or(0);
+    let status_counters = dashboard_counter_entries(payload, "/counters/by_status");
+    let lane_counters = dashboard_counter_entries(payload, "/counters/by_lane");
+    let tool_counters = dashboard_counter_entries(payload, "/counters/by_tool");
+    let top_reason_codes = dashboard_reason_code_entries(payload, top);
+    let failing_summaries = dashboard_failing_summary_entries(payload, top);
+
+    let mut lines = vec![format!("dashboard index: {}", index_path.display())];
+    if let Some(kind) = kind.as_deref() {
+        lines.push(format!("kind: {kind}"));
+    }
+    if let Some(out_dir) = out_dir.as_deref() {
+        lines.push(format!("out_dir: {out_dir}"));
+    }
+    lines.push(format!("summaries_total: {summaries_total}"));
+    lines.push(format!("items_total: {items_total}"));
+    push_counter_lines(&mut lines, "status counters", &status_counters);
+    push_counter_lines(&mut lines, "lane counters", &lane_counters);
+    push_counter_lines(&mut lines, "tool counters", &tool_counters);
+    if !top_reason_codes.is_empty() {
+        lines.push("top reason codes:".to_string());
+        for row in &top_reason_codes {
+            lines.push(format!("  {}: {}", row.reason_code, row.count));
+        }
+    }
+    if !failing_summaries.is_empty() {
+        lines.push("failing summaries:".to_string());
+        for row in &failing_summaries {
+            lines.push(format!(
+                "  {} | lane={} failures={} items={}",
+                row.path, row.lane, row.failures, row.items_total
+            ));
+        }
+    }
+
+    RegressionDashboardResultV1 {
+        schema_version: 1,
+        dir,
+        index_path: index_path.to_string_lossy().to_string(),
+        kind,
+        out_dir,
+        summaries_total,
+        items_total,
+        status_counters,
+        lane_counters,
+        tool_counters,
+        top_reason_codes,
+        failing_summaries,
+        human_summary: lines.join(
+            "
+",
+        ),
+        index_json: if include_json { index_json } else { None },
+    }
+}
+
+fn dashboard_counter_entries(
+    payload: &serde_json::Value,
+    pointer: &str,
+) -> Vec<DashboardCountEntryV1> {
+    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
+        return Vec::new();
+    };
+    let mut rows: Vec<DashboardCountEntryV1> = obj
+        .iter()
+        .filter_map(|(key, value)| {
+            Some(DashboardCountEntryV1 {
+                key: key.to_string(),
+                count: value.as_u64()?,
+            })
+        })
+        .collect();
+    rows.sort_by(|a, b| a.key.cmp(&b.key));
+    rows
+}
+
+fn dashboard_reason_code_entries(
+    payload: &serde_json::Value,
+    top: usize,
+) -> Vec<DashboardReasonCodeEntryV1> {
+    payload
+        .get("top_reason_codes")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .take(top)
+                .map(|row| DashboardReasonCodeEntryV1 {
+                    reason_code: row
+                        .get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<unknown>")
+                        .to_string(),
+                    count: row.get("count").and_then(|v| v.as_u64()).unwrap_or(0),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn dashboard_failing_summary_entries(
+    payload: &serde_json::Value,
+    top: usize,
+) -> Vec<DashboardFailingSummaryEntryV1> {
+    payload
+        .get("failing_summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .take(top)
+                .map(|row| DashboardFailingSummaryEntryV1 {
+                    path: row
+                        .get("path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<unknown>")
+                        .to_string(),
+                    lane: row
+                        .get("lane")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<unknown>")
+                        .to_string(),
+                    failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
+                    items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn push_counter_lines(lines: &mut Vec<String>, title: &str, rows: &[DashboardCountEntryV1]) {
+    if rows.is_empty() {
+        return;
+    }
+    lines.push(format!("{title}:"));
+    for row in rows {
+        lines.push(format!("  {}: {}", row.key, row.count));
+    }
 }
 
 fn repo_root_from_manifest_dir() -> Option<PathBuf> {
@@ -2098,6 +2647,40 @@ fn repro_summary_path_from_latest_bundle_dumped_payload(
     inbox: &VecDeque<DiagTransportMessageV1>,
     session_id: &str,
 ) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REPRO_SUMMARY_JSON,
+    )
+}
+
+fn regression_summary_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+    )
+}
+
+fn regression_index_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REGRESSION_INDEX_JSON,
+    )
+}
+
+fn artifact_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+    filename: &str,
+) -> Option<PathBuf> {
     let payload = inbox
         .iter()
         .rev()
@@ -2105,10 +2688,52 @@ fn repro_summary_path_from_latest_bundle_dumped_payload(
         .map(|m| m.payload.clone())?;
 
     let repo_root = repo_root_from_manifest_dir().or_else(|| std::env::current_dir().ok())?;
-    repro_summary_path_from_bundle_dumped_payload(&repo_root, &payload)
+    artifact_path_from_bundle_dumped_payload(&repo_root, &payload, filename)
 }
 
 fn repro_summary_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REPRO_SUMMARY_JSON,
+    )
+}
+
+fn regression_summary_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+    )
+}
+
+fn regression_index_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REGRESSION_INDEX_JSON,
+    )
+}
+
+fn artifact_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+    filename: &str,
+) -> Option<PathBuf> {
+    let artifacts_root = artifacts_root_from_bundle_dumped_payload(repo_root, dumped_payload)?;
+    Some(artifacts_root.join(filename))
+}
+
+fn artifacts_root_from_bundle_dumped_payload(
     repo_root: &Path,
     dumped_payload: &serde_json::Value,
 ) -> Option<PathBuf> {
@@ -2134,5 +2759,105 @@ fn repro_summary_path_from_bundle_dumped_payload(
         bundle_dir.parent().unwrap_or(repo_root).to_path_buf()
     };
 
-    Some(artifacts_root.join("repro.summary.json"))
+    Some(artifacts_root)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_resource_uri_accepts_regression_index_for_selected_alias() {
+        let parsed = parse_resource_uri("fret-diag://selected/regression.index.json")
+            .expect("selected regression index resource uri should parse");
+        assert_eq!(parsed.session_id, None);
+        assert_eq!(parsed.kind, RESOURCE_KIND_REGRESSION_INDEX_JSON);
+    }
+
+    #[test]
+    fn artifact_path_from_bundle_dumped_payload_resolves_regression_files() {
+        let repo_root = Path::new("F:/repo");
+        let payload = serde_json::json!({
+            "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
+            "dir": "runs/case-a",
+        });
+
+        let summary = regression_summary_path_from_bundle_dumped_payload(repo_root, &payload)
+            .expect("summary path");
+        let index = regression_index_path_from_bundle_dumped_payload(repo_root, &payload)
+            .expect("index path");
+
+        assert_eq!(
+            summary,
+            PathBuf::from("F:/repo")
+                .join("target/fret-diag/campaigns/ui-gallery-pr")
+                .join(RESOURCE_KIND_REGRESSION_SUMMARY_JSON)
+        );
+        assert_eq!(
+            index,
+            PathBuf::from("F:/repo")
+                .join("target/fret-diag/campaigns/ui-gallery-pr")
+                .join(RESOURCE_KIND_REGRESSION_INDEX_JSON)
+        );
+    }
+
+    #[test]
+    fn build_regression_dashboard_result_limits_top_rows_and_builds_human_summary() {
+        let payload = serde_json::json!({
+            "kind": "diag_regression_index",
+            "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
+            "summaries": [
+                { "items_total": 2 },
+                { "items_total": 3 }
+            ],
+            "counters": {
+                "by_status": { "passed": 3, "failed_deterministic": 2 },
+                "by_lane": { "smoke": 1, "perf": 1 },
+                "by_tool": { "suite": 1, "perf": 1 }
+            },
+            "top_reason_codes": [
+                { "reason_code": "pixel_diff", "count": 4 },
+                { "reason_code": "perf_budget_exceeded", "count": 2 }
+            ],
+            "failing_summaries": [
+                { "path": "a/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 5 },
+                { "path": "b/regression.summary.json", "lane": "perf", "failures": 1, "items_total": 3 }
+            ]
+        });
+
+        let result = build_regression_dashboard_result(
+            "target/fret-diag/campaigns/ui-gallery-pr".to_string(),
+            Path::new("F:/repo/target/fret-diag/campaigns/ui-gallery-pr/regression.index.json"),
+            &payload,
+            1,
+            false,
+            None,
+        );
+
+        assert_eq!(result.summaries_total, 2);
+        assert_eq!(result.items_total, 5);
+        assert_eq!(result.top_reason_codes.len(), 1);
+        assert_eq!(result.failing_summaries.len(), 1);
+        assert!(result.human_summary.contains("top reason codes:"));
+        assert!(result.human_summary.contains("pixel_diff: 4"));
+    }
+
+    #[test]
+    fn session_resource_uris_includes_selected_alias_when_session_matches() {
+        let uris = session_resource_uris(
+            "session-a",
+            Some("session-a"),
+            &[
+                RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+                RESOURCE_KIND_REGRESSION_INDEX_JSON,
+            ],
+        );
+
+        assert!(
+            uris.contains(&"fret-diag://sessions/session-a/regression.summary.json".to_string())
+        );
+        assert!(uris.contains(&"fret-diag://sessions/session-a/regression.index.json".to_string()));
+        assert!(uris.contains(&"fret-diag://selected/regression.summary.json".to_string()));
+        assert!(uris.contains(&"fret-diag://selected/regression.index.json".to_string()));
+    }
 }

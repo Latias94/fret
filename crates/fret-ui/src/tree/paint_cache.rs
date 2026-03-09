@@ -11,6 +11,8 @@ pub(super) struct PaintCacheKey {
     fg_g_bits: u32,
     fg_b_bits: u32,
     fg_a_bits: u32,
+    text_style_present: bool,
+    text_style_fingerprint: u64,
     child_a_bits: u32,
     child_b_bits: u32,
     child_c_bits: u32,
@@ -25,6 +27,7 @@ impl PaintCacheKey {
         scale_factor: f32,
         theme_revision: u64,
         paint_style: crate::tree::paint_style::PaintStyleState,
+        inherited_text_style_fingerprint: Option<u64>,
         child_transform: Transform2D,
     ) -> Self {
         let (fg_present, fg_r_bits, fg_g_bits, fg_b_bits, fg_a_bits) =
@@ -50,6 +53,8 @@ impl PaintCacheKey {
             fg_g_bits,
             fg_b_bits,
             fg_a_bits,
+            text_style_present: inherited_text_style_fingerprint.is_some(),
+            text_style_fingerprint: inherited_text_style_fingerprint.unwrap_or(0),
             child_a_bits: child_transform.a.to_bits(),
             child_b_bits: child_transform.b.to_bits(),
             child_c_bits: child_transform.c.to_bits(),

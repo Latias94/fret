@@ -1,6 +1,6 @@
 use super::super::*;
 
-use crate::ui::doc_layout::DocSection;
+use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 
 pub(super) fn preview_ai_attachments_demo(
@@ -12,11 +12,19 @@ pub(super) fn preview_ai_attachments_demo(
     let inline = snippets::attachments_inline::render(cx);
     let list = snippets::attachments_list::render(cx);
     let empty = snippets::attachments_empty::render(cx);
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Mechanism looked healthy in this audit: the drift was in the component layer and the UI Gallery page shape, not in `fret-ui` runtime contracts.",
+            "`Attachment` already supports composable parts via `into_element_with_children(...)` plus `AttachmentPreview/Info/Remove::from_context()`, which is the Rust equivalent of the upstream compound-children API.",
+            "`AttachmentHoverCard*` now lives in `fret-ui-ai`, so the inline example can mirror the official AI Elements docs without reaching directly into generic shadcn hover-card wrappers.",
+        ],
+    );
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
         Some(
-            "A flexible, composable attachment surface for files, images, videos, audio, and source documents.",
+            "Docs-aligned Attachments examples covering the same grid / inline / list composition model as the official AI Elements page.",
         ),
         vec![
             DocSection::new("Usage with AI SDK", usage)
@@ -39,8 +47,10 @@ pub(super) fn preview_ai_attachments_demo(
                 .description("Fallback content when there are no attachments.")
                 .test_id_prefix("ui-gallery-ai-attachments-empty")
                 .code_rust_from_file_region(snippets::attachments_empty::SOURCE, "example"),
+            DocSection::new("Notes", notes)
+                .description("Parity findings and layering decision for Attachments."),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-page-ai-attachments-demo")]
 }

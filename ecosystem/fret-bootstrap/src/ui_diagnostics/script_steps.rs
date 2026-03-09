@@ -927,6 +927,7 @@ pub(super) fn handle_capture_layout_sidecar_step(
     };
 
     let captured_at_unix_ms = unix_ms_now();
+    #[cfg(not(target_arch = "wasm32"))]
     let sidecar_result = ui.debug_write_layout_sidecar_taffy_v1_json(
         app,
         window,
@@ -937,6 +938,10 @@ pub(super) fn handle_capture_layout_sidecar_step(
         &dumped_dir,
         captured_at_unix_ms,
     );
+    #[cfg(target_arch = "wasm32")]
+    let sidecar_result: std::io::Result<std::path::PathBuf> = Err(std::io::Error::other(
+        "layout_taffy_sidecar_unsupported_on_wasm32",
+    ));
 
     match sidecar_result {
         Ok(path) => {

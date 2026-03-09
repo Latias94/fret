@@ -14,6 +14,13 @@ Deliverables:
   - asserts a stable dock graph outcome.
 - A bounded evidence bundle captured near the end of the scenario.
 
+Cross-reference:
+
+- Interpret bundle artifacts, sidecars, share exports, and future campaign outputs using the repo-level
+  contract in `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`.
+- This milestone file tracks docking-specific evidence requirements; it does not redefine which artifacts are
+  source-of-truth, derived projections, or optional handoff evidence.
+
 Status (2026-03-02):
 
 - Diagnostics/runtime hang class addressed (no more “script.result stuck running” when a target window is occluded).

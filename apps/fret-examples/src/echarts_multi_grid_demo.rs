@@ -10,7 +10,7 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-use fret_chart::retained::{create_multi_grid_chart_canvas_nodes, UniformGrid};
+use fret_chart::retained::{UniformGrid, create_multi_grid_chart_canvas_nodes};
 
 pub struct EchartsMultiGridDemoWindowState {
     ui: UiTree<App>,

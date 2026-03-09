@@ -40,7 +40,9 @@ pub(super) fn preview_accordion(
                 .description("Fret-specific variants + RTL coverage.")
                 .test_id_prefix("ui-gallery-accordion-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("Parity notes and references."),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-accordion-notes")
+                .description("Parity notes and references."),
         ],
     );
 

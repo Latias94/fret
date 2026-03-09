@@ -41,6 +41,7 @@ Unless a document says otherwise:
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
+- Text style cascade fearless refactor (GPUI-style subtree text refinement for passive text): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`
 - Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
 - Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`
@@ -56,7 +57,9 @@ Unless a document says otherwise:
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
 - UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
+- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port.md`, `docs/workstreams/ai-elements-port-todo.md`, and `docs/workstreams/ai-elements-upstream-alignment.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
+- Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`

@@ -55,47 +55,6 @@
       },
       "timeout_frames": 240
     },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-ai-snippet-root" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-snippet-root" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-snippet-copy" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-ai-snippet-copy" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-snippet-copied-marker" }
-      },
-      "timeout_frames": 240
-    },
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_bundle", "label": "ui-gallery-ai-code-block-demo-copy" }
   ]

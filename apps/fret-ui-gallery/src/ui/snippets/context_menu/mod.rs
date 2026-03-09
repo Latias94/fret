@@ -8,11 +8,13 @@
 
 pub mod basic;
 pub mod checkboxes;
+pub mod demo;
 pub mod destructive;
 pub mod groups;
 pub mod icons;
 pub mod radio;
 pub mod rtl;
 pub mod shortcuts;
+pub mod sides;
 pub mod submenu;
 pub mod usage;

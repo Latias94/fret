@@ -31,6 +31,10 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_hover_region_path: Option<String>,
     pub wants_continuous_frames: bool,
+    #[serde(default)]
+    pub continuous_frame_leases: Vec<ElementContinuousFrameLeaseV1>,
+    #[serde(default)]
+    pub animation_frame_request_roots: Vec<ElementAnimationFrameRequestRootV1>,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -48,6 +52,40 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(default)]
     pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
     #[serde(default)]
+    pub rendered_state_entries: u64,
+    #[serde(default)]
+    pub next_state_entries: u64,
+    #[serde(default)]
+    pub lag_state_frames: u64,
+    #[serde(default)]
+    pub lag_state_entries_total: u64,
+    #[serde(default)]
+    pub state_entries_total: u64,
+    #[serde(default)]
+    pub nodes_count: u64,
+    #[serde(default)]
+    pub bounds_entries_total: u64,
+    #[serde(default)]
+    pub timer_targets_count: u64,
+    #[serde(default)]
+    pub transient_events_count: u64,
+    #[serde(default)]
+    pub view_cache_state_key_roots_count: u64,
+    #[serde(default)]
+    pub view_cache_state_key_entries_total: u64,
+    #[serde(default)]
+    pub view_cache_element_roots_count: u64,
+    #[serde(default)]
+    pub view_cache_element_entries_total: u64,
+    #[serde(default)]
+    pub view_cache_key_mismatch_roots_count: u64,
+    #[serde(default)]
+    pub scratch_element_children_vec_pool_len: u64,
+    #[serde(default)]
+    pub scratch_element_children_vec_pool_capacity_total: u64,
+    #[serde(default)]
+    pub scratch_element_children_vec_pool_bytes_estimate_total: u64,
+    #[serde(default)]
     pub retained_keep_alive_roots_len: u32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub retained_keep_alive_roots_head: Vec<u64>,
@@ -55,6 +93,21 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub retained_keep_alive_roots_tail: Vec<u64>,
     #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementContinuousFrameLeaseV1 {
+    pub element: u64,
+    pub count: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementAnimationFrameRequestRootV1 {
+    pub element: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,4 +259,3 @@ pub struct ElementObservedEnvironmentKeyV1 {
     pub key_revision: u64,
     pub key_changed_this_frame: bool,
 }
-

@@ -262,13 +262,15 @@ fn normalize_text_measure_constraints(
     wrap: TextWrap,
 ) -> LayoutConstraints {
     // During intrinsic sizing, parents may pass `available.width = 0` as a placeholder for
-    // "unknown". Treat that as non-definite so shrink-wrapped text can report its natural width
-    // (and avoid pathological mid-word wrapping when `TextWrap::Word` is enabled).
+    // "unknown". Treat that as non-definite for non-fixed-width text so intrinsic probes can
+    // report a natural width/height instead of forcing a zero-width wrap.
     //
     // This mirrors gpui's behavior: text wraps only when a definite width is known/available; for
-    // min/max-content probes, wrap width is omitted.
-    if width != Length::Auto {
-        return constraints;
+    // min/max-content probes, wrap width is omitted. This matters for docs/gallery scaffolds where
+    // descriptive copy often uses `w_full` under intrinsic scroll extent measurement.
+    match width {
+        Length::Px(_) => return constraints,
+        Length::Auto | Length::Fill | Length::Fraction(_) => {}
     }
     if constraints.known.width.is_some() {
         return constraints;
@@ -358,15 +360,15 @@ impl ElementHostWidget {
             },
         );
 
-        let Some(instance) =
-            crate::declarative::frame::with_element_record_for_node(cx.app, window, cx.node, |r| {
-                r.instance.clone()
-            })
+        let Some(record) =
+            crate::declarative::frame::element_record_for_node(cx.app, window, cx.node)
         else {
             return Size::new(Px(0.0), Px(0.0));
         };
 
-        match instance {
+        let inherited_text_style = record.inherited_text_style;
+
+        match record.instance {
             ElementInstance::InteractivityGate(props) if !props.present => {
                 // When `present == false`, this subtree is treated like `display: none`. The layout
                 // engine may skip calling `layout_impl`, so we must eagerly update the widget-level
@@ -499,9 +501,15 @@ impl ElementHostWidget {
             ),
             ElementInstance::Scroll(props) => self.measure_scroll(cx, window, props),
             ElementInstance::VirtualList(props) => self.measure_virtual_list(cx, window, props),
-            ElementInstance::Text(props) => self.measure_text(cx, props),
-            ElementInstance::StyledText(props) => self.measure_styled_text(cx, props),
-            ElementInstance::SelectableText(props) => self.measure_selectable_text(cx, props),
+            ElementInstance::Text(props) => {
+                self.measure_text(cx, props, inherited_text_style.as_ref())
+            }
+            ElementInstance::StyledText(props) => {
+                self.measure_styled_text(cx, props, inherited_text_style.as_ref())
+            }
+            ElementInstance::SelectableText(props) => {
+                self.measure_selectable_text(cx, props, inherited_text_style.as_ref())
+            }
             ElementInstance::TextInput(props) => self.measure_text_input(cx, props),
             ElementInstance::TextArea(props) => self.measure_text_area(cx, props),
             ElementInstance::ResizablePanelGroup(props) => clamp_to_constraints_in_measure(
@@ -636,7 +644,12 @@ impl ElementHostWidget {
         clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
     }
 
-    fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
+    fn measure_text<H: UiHost>(
+        &mut self,
+        cx: &mut MeasureCx<'_, H>,
+        props: TextProps,
+        inherited_text_style: Option<&fret_core::TextStyleRefinement>,
+    ) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
@@ -655,8 +668,9 @@ impl ElementHostWidget {
             (other, None) => other,
         };
         let theme = cx.theme();
-        let theme_revision = theme.revision();
-        let input = props.build_text_input(theme.snapshot());
+        let style =
+            props.resolved_text_style_with_inherited(theme.snapshot(), inherited_text_style);
+        let input = props.build_text_input_with_style(style.clone());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -682,8 +696,7 @@ impl ElementHostWidget {
                 .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
                 &props.text,
-                props.style.as_ref(),
-                theme_revision,
+                &style,
                 props.overflow,
                 props.align,
                 cx.scale_factor,
@@ -712,6 +725,7 @@ impl ElementHostWidget {
         &mut self,
         cx: &mut MeasureCx<'_, H>,
         props: crate::element::StyledTextProps,
+        inherited_text_style: Option<&fret_core::TextStyleRefinement>,
     ) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
@@ -731,8 +745,9 @@ impl ElementHostWidget {
             (other, None) => other,
         };
         let theme = cx.theme();
-        let theme_revision = theme.revision();
-        let input = props.build_text_input(theme.snapshot());
+        let style =
+            props.resolved_text_style_with_inherited(theme.snapshot(), inherited_text_style);
+        let input = props.build_text_input_with_style(style.clone());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -758,8 +773,7 @@ impl ElementHostWidget {
                 .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
-                props.style.as_ref(),
-                theme_revision,
+                &style,
                 props.overflow,
                 props.align,
                 cx.scale_factor,
@@ -788,6 +802,7 @@ impl ElementHostWidget {
         &mut self,
         cx: &mut MeasureCx<'_, H>,
         props: crate::element::SelectableTextProps,
+        inherited_text_style: Option<&fret_core::TextStyleRefinement>,
     ) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
@@ -807,8 +822,9 @@ impl ElementHostWidget {
             (other, None) => other,
         };
         let theme = cx.theme();
-        let theme_revision = theme.revision();
-        let input = props.build_text_input(theme.snapshot());
+        let style =
+            props.resolved_text_style_with_inherited(theme.snapshot(), inherited_text_style);
+        let input = props.build_text_input_with_style(style.clone());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -834,8 +850,7 @@ impl ElementHostWidget {
                 .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
-                props.style.as_ref(),
-                theme_revision,
+                &style,
                 props.overflow,
                 props.align,
                 cx.scale_factor,
@@ -962,14 +977,12 @@ impl ElementHostWidget {
         // shrink-wrapping layouts.
         let mut constraints = cx.constraints;
         if props.probe_unbounded {
-            if props.axis.scroll_x()
-                && constraints.known.width.is_none()
+            if constraints.known.width.is_none()
                 && constraints.available.width.definite() == Some(Px(0.0))
             {
                 constraints.available.width = AvailableSpace::MaxContent;
             }
-            if props.axis.scroll_y()
-                && constraints.known.height.is_none()
+            if constraints.known.height.is_none()
                 && constraints.available.height.definite() == Some(Px(0.0))
             {
                 constraints.available.height = AvailableSpace::MaxContent;

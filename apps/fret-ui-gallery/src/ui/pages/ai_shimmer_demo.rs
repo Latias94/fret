@@ -18,7 +18,7 @@ pub(super) fn preview_ai_shimmer_demo(
             "Animated shimmer sweep aligned with AI Elements Shimmer.",
             "Configurable `duration_secs` and `spread` (defaults: 2s / 2).",
             "Theme-aware: uses `muted-foreground` as the base text and `background` as the highlight.",
-            "Typography override via `text_style` for heading/inline variants.",
+            "Supports both explicit `text_style` overrides and inherited subtree typography via `use_resolved_passive_text`.",
             "A11y role mapping via `role` (rough equivalent of upstream `as`).",
         ],
     )
@@ -40,6 +40,9 @@ pub(super) fn preview_ai_shimmer_demo(
                 .test_id_prefix("ui-gallery-ai-shimmer-duration")
                 .code_rust_from_file_region(snippets::shimmer_duration_demo::SOURCE, "example"),
             DocSection::new("Custom Elements", elements)
+                .description(
+                    "Default, explicit, inline, and inherited subtree-typography compositions.",
+                )
                 .test_id_prefix("ui-gallery-ai-shimmer-elements")
                 .code_rust_from_file_region(snippets::shimmer_elements_demo::SOURCE, "example"),
             DocSection::new("Props", props)
@@ -111,7 +114,14 @@ fn shimmer_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 "text_style",
                 "TextStyle",
                 "None",
-                "Override the typography used for both base text and highlight band.",
+                "Explicitly override the typography used for both base text and highlight band.",
+            ),
+            row(
+                cx,
+                "use_resolved_passive_text",
+                "flag",
+                "false",
+                "Resolve typography from inherited subtree text-style / foreground; explicit `text_style` still wins if provided.",
             ),
             row(
                 cx,

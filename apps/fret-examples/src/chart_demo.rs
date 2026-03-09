@@ -285,7 +285,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<ChartDemoDriver, ChartDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         ChartDemoDriver::default(),
         create_window_state,

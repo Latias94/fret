@@ -70,6 +70,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 out
             })
             .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
             let scroll = shadcn::ScrollArea::new([content])
@@ -81,6 +82,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ui::v_flex(|_cx| [bar, scroll])
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N4)
+                .test_id(test_prefix)
                 .into_element(cx)
         })
     };
@@ -187,6 +189,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ),
         ]
     })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N4)
     .into_element(cx)
 }

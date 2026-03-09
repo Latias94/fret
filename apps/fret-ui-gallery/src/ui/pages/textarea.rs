@@ -59,7 +59,8 @@ pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-textarea-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-textarea-notes"),
         ],
     );
 

@@ -85,7 +85,9 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("RTL", rtl)
                 .description("Input + Field composition under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-input-notes")
+                .description("API reference pointers and caveats."),
         ],
     );
 

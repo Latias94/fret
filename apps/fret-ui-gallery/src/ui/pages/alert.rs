@@ -6,8 +6,10 @@ use crate::ui::snippets::alert as snippets;
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
+    let rich_title = snippets::rich_title::render(cx);
     let destructive = snippets::destructive::render(cx);
     let action = snippets::action::render(cx);
+    let interactive_links = snippets::interactive_links::render(cx);
     let custom_colors = snippets::custom_colors::render(cx);
     let rtl = snippets::rtl::render(cx);
 
@@ -15,7 +17,11 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
+            "Modern upstream reference: `repo-ref/ui/apps/v4/registry/radix-vega/examples/alert-example.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx`.",
             "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
+            "Prefer `AlertTitle::new_children(...)` when the title needs attributed text or a precomposed child subtree.",
+            "Prefer `AlertDescription::new_children(...)` when the description needs multiple paragraphs, lists, or rich text.",
+            "Use selectable-text spans for diagnosable inline links when you need deterministic activation evidence.",
             "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
             "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
         ],
@@ -24,29 +30,39 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Alert docs order: Demo, Basic (docs example), Destructive, Action, Custom Colors, RTL.",
+            "Preview follows the modern shadcn/Radix example grouping first—Basic, With Icons, Destructive, With Actions—then adds Fret-specific copy-paste surfaces.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("A small set of inline alerts for different message tones.")
+            DocSection::new("Basic", basic)
+                .description("Modern upstream basic patterns: title-only, title + description, and description-only.")
+                .test_id_prefix("ui-gallery-alert-basic")
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
+            DocSection::new("With Icons", demo)
+                .description("Modern upstream icon patterns, including rich title/description content and long-text wrapping.")
                 .test_id_prefix("ui-gallery-alert")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .description("Upstream shadcn docs example (icon + title + description).")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
-                .description("Destructive variant for critical errors.")
+                .description("Modern upstream destructive patterns: simple failure state plus multi-paragraph recovery guidance.")
                 .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
-            DocSection::new("Action", action)
-                .description("Use `AlertAction` to pin a top-right action inside the alert.")
+            DocSection::new("With Actions", action)
+                .description("Modern upstream action-slot patterns: inline button and inline badge action.")
                 .code_rust_from_file_region(snippets::action::SOURCE, "example"),
+            DocSection::new("Rich Title", rich_title)
+                .description("Composable title content using `AlertTitle::new_children(...)`.")
+                .test_id_prefix("ui-gallery-alert-rich-title")
+                .code_rust_from_file_region(snippets::rich_title::SOURCE, "example"),
+            DocSection::new("Interactive Links", interactive_links)
+                .description("A Fret-specific link-span pattern with deterministic activation evidence for diagnostics.")
+                .code_rust_from_file_region(snippets::interactive_links::SOURCE, "example"),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
                 .code_rust_from_file_region(snippets::custom_colors::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and caveats.")
+                .test_id_prefix("ui-gallery-alert-notes"),
         ],
     );
 

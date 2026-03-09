@@ -1,6 +1,145 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::*;
+use fret_core::FontId;
+
+#[test]
+fn canvas_resolves_passive_text_style_and_foreground_from_current_scope() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let captured_style: Rc<RefCell<Option<TextStyle>>> = Rc::new(RefCell::new(None));
+    let captured_fg: Rc<RefCell<Option<Color>>> = Rc::new(RefCell::new(None));
+
+    let inherited = fret_core::TextStyleRefinement {
+        size: Some(Px(17.0)),
+        line_height: Some(Px(25.0)),
+        weight: Some(fret_core::FontWeight::SEMIBOLD),
+        ..Default::default()
+    };
+    let inherited_fg = Color {
+        r: 0.25,
+        g: 0.5,
+        b: 0.75,
+        a: 1.0,
+    };
+
+    let paint = {
+        let captured_style = Rc::clone(&captured_style);
+        let captured_fg = Rc::clone(&captured_fg);
+        move |p: &mut crate::canvas::CanvasPainter<'_>| {
+            *captured_style.borrow_mut() = Some(p.resolved_passive_text_style(None));
+            *captured_fg.borrow_mut() = p.inherited_foreground();
+        }
+    };
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-resolved-passive-text-style",
+        |cx| {
+            vec![
+                cx.canvas(crate::element::CanvasProps::default(), paint)
+                    .inherit_text_style(inherited.clone())
+                    .inherit_foreground(inherited_fg),
+            ]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let resolved = captured_style
+        .borrow()
+        .clone()
+        .expect("expected canvas paint to capture a resolved style");
+    assert_eq!(resolved.size, Px(17.0));
+    assert_eq!(resolved.line_height, Some(Px(25.0)));
+    assert_eq!(resolved.weight, fret_core::FontWeight::SEMIBOLD);
+    assert_eq!(*captured_fg.borrow(), Some(inherited_fg));
+}
+
+#[test]
+fn canvas_resolved_passive_text_style_prefers_explicit_over_inherited() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let captured_style: Rc<RefCell<Option<TextStyle>>> = Rc::new(RefCell::new(None));
+    let explicit = TextStyle {
+        font: FontId::default(),
+        size: Px(21.0),
+        line_height: Some(Px(29.0)),
+        weight: fret_core::FontWeight::MEDIUM,
+        ..Default::default()
+    };
+    let inherited = fret_core::TextStyleRefinement {
+        size: Some(Px(17.0)),
+        line_height: Some(Px(25.0)),
+        weight: Some(fret_core::FontWeight::SEMIBOLD),
+        ..Default::default()
+    };
+
+    let paint = {
+        let captured_style = Rc::clone(&captured_style);
+        let explicit = explicit.clone();
+        move |p: &mut crate::canvas::CanvasPainter<'_>| {
+            *captured_style.borrow_mut() =
+                Some(p.resolved_passive_text_style(Some(explicit.clone())));
+        }
+    };
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-resolved-passive-text-style-explicit-wins",
+        |cx| {
+            vec![
+                cx.canvas(crate::element::CanvasProps::default(), paint)
+                    .inherit_text_style(inherited.clone()),
+            ]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let resolved = captured_style
+        .borrow()
+        .clone()
+        .expect("expected canvas paint to capture a resolved style");
+    assert_eq!(resolved.size, Px(21.0));
+    assert_eq!(resolved.line_height, Some(Px(29.0)));
+    assert_eq!(resolved.weight, fret_core::FontWeight::MEDIUM);
+}
 
 #[test]
 fn canvas_hosts_text_and_releases_on_cleanup() {

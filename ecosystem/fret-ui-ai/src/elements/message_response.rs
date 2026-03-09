@@ -48,11 +48,11 @@ impl MessageResponse {
     pub fn new(source: impl Into<Arc<str>>) -> Self {
         Self {
             source: source.into(),
-            // Message responses are expected to participate in the transcript's flow layout and
-            // wrap text to the available message width (AI Elements / shadcn style). Leaving the
-            // width unconstrained can collapse to ~0px inside stacks, which in turn explodes
-            // vertical wrapping and breaks scroll/semantics geometry.
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            // Message responses should inherit the message column width without forcing fill.
+            // `max_w_full` matches the upstream DOM outcome better than unconditional fill: it
+            // keeps assistant responses constrained to the available column width while allowing
+            // user bubbles to remain content-sized instead of collapsing into one-character wraps.
+            layout: LayoutRefinement::default().min_w_0().max_w_full(),
             padding: Space::N0,
             streaming: true,
             finalized: true,
@@ -295,5 +295,49 @@ impl MessageResponse {
             },
             move |_cx| vec![content],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    #[test]
+    fn message_response_defaults_to_max_width_without_forcing_fill() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "message-response",
+            |cx| {
+                MessageResponse::new("Hello")
+                    .streaming(false)
+                    .into_element(cx)
+            },
+        );
+
+        let fret_ui::element::ElementKind::Container(props) = &el.kind else {
+            panic!("expected MessageResponse to render a container root");
+        };
+
+        assert_ne!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.max_width,
+            Some(fret_ui::element::Length::Fill)
+        );
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
     }
 }

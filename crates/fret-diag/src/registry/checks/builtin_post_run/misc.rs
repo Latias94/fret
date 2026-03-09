@@ -3,6 +3,13 @@ use crate::diag_run::RunChecks;
 
 pub(super) const ENTRIES: &[PostRunCheckEntry] = &[
     PostRunCheckEntry {
+        id: "hello_world_compare_idle_present_max_delta",
+        requires_bundle_artifact: false,
+        requires_screenshots: false,
+        should_run: should_run_hello_world_compare_idle_present_max_delta,
+        run: run_hello_world_compare_idle_present_max_delta,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -31,6 +38,25 @@ pub(super) const ENTRIES: &[PostRunCheckEntry] = &[
         run: run_pixels_unchanged_test_id,
     },
 ];
+
+fn should_run_hello_world_compare_idle_present_max_delta(checks: &RunChecks) -> bool {
+    checks
+        .check_hello_world_compare_idle_present_max_delta
+        .is_some()
+}
+
+fn run_hello_world_compare_idle_present_max_delta(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let Some(max_delta) = checks.check_hello_world_compare_idle_present_max_delta else {
+        return Ok(());
+    };
+    crate::stats::check_out_dir_for_hello_world_compare_idle_present_max_delta(
+        ctx.out_dir,
+        max_delta,
+    )
+}
 
 fn should_run_notify_hotspot_file_max(checks: &RunChecks) -> bool {
     !checks.check_notify_hotspot_file_max.is_empty()

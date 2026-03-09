@@ -102,7 +102,8 @@ pub(super) fn preview_command_palette(
                     snippets::loading::SOURCE,
                     "example",
                 ),
-            DocSection::new("Notes", notes_stack),
+            DocSection::new("Notes", notes_stack)
+                .test_id_prefix("ui-gallery-command-notes"),
         ],
     );
 

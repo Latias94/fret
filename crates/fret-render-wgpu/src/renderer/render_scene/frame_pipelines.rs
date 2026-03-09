@@ -6,7 +6,7 @@ impl Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         format: wgpu::TextureFormat,
-        viewport_size: (u32, u32),
+        _viewport_size: (u32, u32),
         perf_enabled: bool,
         trace_enabled: bool,
         frame_perf: &mut RenderPerfStats,
@@ -39,7 +39,6 @@ impl Renderer {
                 if path_samples > 1 {
                     self.ensure_composite_pipeline(device, format);
                     self.ensure_path_msaa_pipeline(device, format, path_samples);
-                    self.ensure_path_intermediate(device, viewport_size, format, path_samples);
                 }
                 path_samples
             },

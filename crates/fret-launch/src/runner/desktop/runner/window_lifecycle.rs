@@ -448,6 +448,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 id,
                 &Event::WindowScaleFactorChanged(state.window.scale_factor() as f32),
             );
+            let surface_record = state.surface.as_ref().map(|surface| {
+                super::render::capture_surface_config_diagnostics_record(&surface.config)
+            });
+            let _ = state;
+            if let Some(surface_record) = surface_record {
+                self.record_surface_config_snapshot(id, surface_record);
+            }
         }
         let window_ref = self.windows.get(id).map(|s| s.window.clone());
         if let Some(window_ref) = window_ref
@@ -487,6 +494,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // redraw can be dropped and the window may appear blank until another event arrives.
         if let Some(state) = self.windows.get(id) {
             state.window.request_redraw();
+            self.app.with_global_mut_untracked(
+                fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+                |store, _app| {
+                    store.record(
+                        id,
+                        self.frame_id,
+                        fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
+                    );
+                },
+            );
             // `request_redraw()` alone may not wake the event loop on some platforms; schedule a
             // one-shot RAF so the initial frame presents without requiring any user input.
             self.raf_windows.insert(id);
@@ -602,6 +619,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
             |svc, _app| {
                 svc.record_window_close(window);
+            },
+        );
+        self.app.with_global_mut_untracked(
+            fret_runtime::RunnerPresentDiagnosticsStore::default,
+            |svc, _app| {
+                svc.clear_window(window);
+            },
+        );
+        self.app.with_global_mut_untracked(
+            fret_runtime::RunnerFrameDriveDiagnosticsStore::default,
+            |svc, _app| {
+                svc.clear_window(window);
+            },
+        );
+        self.app.with_global_mut_untracked(
+            fret_runtime::WindowRedrawRequestDiagnosticsStore::default,
+            |svc, _app| {
+                svc.clear_window(window);
+            },
+        );
+        self.app.with_global_mut_untracked(
+            fret_runtime::WindowGlobalChangeDiagnosticsStore::default,
+            |svc, _app| {
+                svc.clear_window(window);
+            },
+        );
+        self.app.with_global_mut_untracked(
+            fret_runtime::RunnerSurfaceConfigDiagnosticsStore::default,
+            |svc, _app| {
+                svc.clear_window(window);
             },
         );
 

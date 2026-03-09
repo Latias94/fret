@@ -89,8 +89,13 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 ),
             );
 
+            let inherited_text_style =
+                crate::declarative::frame::inherited_text_style_for_node(cx.app, window, cx.node);
             let vertical_placement = props
-                .resolved_text_style(cx.theme().snapshot())
+                .resolved_text_style_with_inherited(
+                    cx.theme().snapshot(),
+                    inherited_text_style.as_ref(),
+                )
                 .vertical_placement;
             let (mapping, _, _) =
                 crate::text::coords::compute_text_box_mapping_for_vertical_placement(

@@ -33,7 +33,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .aspect_ratio(16.0 / 9.0),
         )
         .into_element(cx, |cx| {
-            ui::v_flex(|cx| {
+            let body = ui::v_flex(|cx| {
                 vec![
                     shadcn::ChartTooltip::new(
                         shadcn::ChartTooltipContent::new().label("January").items([
@@ -58,8 +58,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .gap(Space::N4)
             .items_start()
             .justify_center()
-            .layout(LayoutRefinement::default().w_full().h_full().p(Space::N4))
-            .into_element(cx)
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx);
+
+            let theme = cx.theme().snapshot();
+            let props = shadcn::decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().p(Space::N4),
+                LayoutRefinement::default().w_full().h_full(),
+            );
+            cx.container(props, move |_cx| vec![body])
         })
 }
 // endregion: example
