@@ -14,7 +14,11 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/breadcrumb.mdx`
+There is no standalone `components/breadcrumb.mdx` page in the current v4 repo snapshot. Use
+these sources instead:
+
+- Base docs: `repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx`
+- Radix docs: `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx`
 
 ## Fret implementation
@@ -40,6 +44,12 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   (about `16px`), matching `BreadcrumbEllipsis`.
 - Pass: Link items can attach `SemanticsRole::Link` + `value=href` when configured, and can fall back to
   `Effect::OpenUrl` when no explicit `on_activate` hook is provided.
+- Pass: Root/list/item semantics now better approximate upstream `nav/ol/li` structure: `Breadcrumb`
+  emits `Region + label("breadcrumb")`, `BreadcrumbList` emits `List`, and primitives `BreadcrumbItem`
+  emits `ListItem` without changing layout defaults.
+- Pass: Current-page and purely visual affordances now expose more accurate semantics outcomes:
+  `BreadcrumbPage` approximates a disabled current-page link, while separators/ellipsis are hidden from
+  the semantics tree like upstream `role="presentation" aria-hidden`.
 - Pass: Responsive truncation (`max-w-20 truncate md:max-w-none`) is representable via
   `BreadcrumbLink::truncate(true)` / `BreadcrumbPage::truncate(true)` combined with a `max_w` layout
   refinement (tests gate the mobile outcome).
@@ -47,6 +57,8 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   default gap is aligned to the `sm` outcome (`gap-2.5`) for 1:1 geometry conformance.
 
 ## Validation
+
+- Focused semantics gates: `cargo nextest run -p fret-ui-shadcn --lib breadcrumb_builder_root_and_current_page_emit_expected_semantics breadcrumb_primitives_emit_list_item_and_hidden_affordance_semantics --status-level fail`
 
 - Web layout gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - `web_vs_fret_layout_breadcrumb_separator_geometry`
@@ -80,3 +92,9 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web_dark`
   - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web`
   - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web_dark`
+
+## Conclusion
+
+- Result: Default-style ownership already matched upstream: wrap/gap/truncation lived in the right layer.
+- Result: The actionable drift was semantics parity (`nav/ol/li`, current page, presentation-only affordances), not layout policy.
+- Result: A future dedicated `Navigation` landmark role in `fret-core` would allow an even tighter match than today's `Region + label("breadcrumb")` approximation.

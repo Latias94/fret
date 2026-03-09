@@ -22,6 +22,7 @@ pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
             "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
             "Dropdown and router-link samples use typed pressables/links (ADR 0115 avoids general Slot/`asChild` prop merging).",
+            "The root/list/current-page semantics now approximate upstream `nav/ol/li` more closely; separators and ellipsis stay presentation-only in the semantics tree.",
             "Validate RTL with long labels to ensure truncation and separator spacing remain stable.",
         ],
     );

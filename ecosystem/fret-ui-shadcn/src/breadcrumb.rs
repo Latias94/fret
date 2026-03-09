@@ -170,19 +170,27 @@ fn breadcrumb_with_patch<H: UiHost>(
     }
 
     cx.container(props, move |cx| {
-        vec![cx.flex(
-            FlexProps {
-                layout: Default::default(),
-                direction: fret_core::Axis::Horizontal,
-                gap: gap.into(),
-                padding: fret_core::Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: true,
-            },
-            move |_cx| children,
-        )]
+        vec![
+            cx.flex(
+                FlexProps {
+                    layout: Default::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: gap.into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: true,
+                },
+                move |_cx| children,
+            )
+            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List)),
+        ]
     })
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Region)
+            .label("breadcrumb"),
+    )
 }
 
 #[derive(Clone)]
@@ -299,9 +307,15 @@ impl BreadcrumbItem {
         let truncate = self.truncate;
         let layout = self.layout;
         match self.kind {
-            BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
+            BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted)
+                .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListItem)),
             BreadcrumbItemKind::Page => {
-                breadcrumb_text(cx, self.label, base_style, fg, truncate, layout)
+                breadcrumb_text(cx, self.label, base_style, fg, truncate, layout).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Link)
+                        .disabled(true)
+                        .read_only(true),
+                )
             }
             BreadcrumbItemKind::Link => {
                 let disabled = self.disabled
@@ -424,7 +438,7 @@ fn breadcrumb_separator<H: UiHost>(
     separator: &BreadcrumbSeparator,
 ) -> AnyElement {
     let dir = use_direction(cx, None);
-    match separator {
+    let separator_el = match separator {
         BreadcrumbSeparator::ChevronRight => {
             // shadcn defaults to a right-pointing chevron; in RTL we mirror the visual separator
             // direction to match the reading flow.
@@ -449,7 +463,9 @@ fn breadcrumb_separator<H: UiHost>(
             false,
             LayoutRefinement::default(),
         ),
-    }
+    };
+
+    separator_el.attach_semantics(SemanticsDecoration::default().hidden(true))
 }
 
 fn breadcrumb_ellipsis<H: UiHost>(cx: &mut ElementContext<'_, H>, muted: Color) -> AnyElement {
@@ -479,6 +495,7 @@ fn breadcrumb_ellipsis<H: UiHost>(cx: &mut ElementContext<'_, H>, muted: Color) 
             Some(fret_ui_kit::ColorRef::Color(muted)),
         )]
     })
+    .attach_semantics(SemanticsDecoration::default().hidden(true).label("More"))
 }
 
 /// Upstream-shaped Breadcrumb primitives (`Breadcrumb`/`BreadcrumbList`/`BreadcrumbItem`/...).
@@ -546,6 +563,11 @@ pub mod primitives {
                 decl_style::container_props(theme, self.chrome, self.layout)
             };
             cx.container(props, move |cx| children(cx))
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Region)
+                        .label("breadcrumb"),
+                )
         }
     }
 
@@ -593,34 +615,37 @@ pub mod primitives {
             };
 
             cx.container(props, move |cx| {
-                vec![cx.flex(
-                    FlexProps {
-                        layout: Default::default(),
-                        direction: fret_core::Axis::Horizontal,
-                        gap: gap.into(),
-                        padding: fret_core::Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: true,
-                    },
-                    move |cx| {
-                        // Apply the list-level muted foreground by default; individual children
-                        // (BreadcrumbLink/Page) can override it.
-                        let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
-                        for el in &mut out {
-                            // Best-effort: only text nodes support local color overrides.
-                            if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
-                                if props.color.is_none() {
-                                    props.color = Some(muted);
-                                }
-                                if props.style.is_none() {
-                                    props.style = Some(style.clone());
+                vec![
+                    cx.flex(
+                        FlexProps {
+                            layout: Default::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: gap.into(),
+                            padding: fret_core::Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: true,
+                        },
+                        move |cx| {
+                            // Apply the list-level muted foreground by default; individual children
+                            // (BreadcrumbLink/Page) can override it.
+                            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+                            for el in &mut out {
+                                // Best-effort: only text nodes support local color overrides.
+                                if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
+                                    if props.color.is_none() {
+                                        props.color = Some(muted);
+                                    }
+                                    if props.style.is_none() {
+                                        props.style = Some(style.clone());
+                                    }
                                 }
                             }
-                        }
-                        out
-                    },
-                )]
+                            out
+                        },
+                    )
+                    .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List)),
+                ]
             })
         }
     }
@@ -678,6 +703,7 @@ pub mod primitives {
                     move |cx| children(cx),
                 )]
             })
+            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListItem))
         }
     }
 
@@ -966,6 +992,12 @@ pub mod primitives {
 
                 vec![text.into_element(cx)]
             })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Link)
+                    .disabled(true)
+                    .read_only(true),
+            )
         }
     }
 
@@ -1050,6 +1082,7 @@ pub mod primitives {
 
             // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
             cx.container(props, move |_cx| vec![icon_el])
+                .attach_semantics(SemanticsDecoration::default().hidden(true))
         }
     }
 
@@ -1116,6 +1149,7 @@ pub mod primitives {
             cx.container(wrapper_props, move |cx| {
                 vec![cx.flex(props, move |_cx| vec![icon])]
             })
+            .attach_semantics(SemanticsDecoration::default().hidden(true).label("More"))
         }
     }
 }
@@ -1244,6 +1278,135 @@ mod tests {
             .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Home"))
             .expect("expected Home breadcrumb link semantics node");
         assert_eq!(node.value.as_deref(), Some("https://example.com"));
+    }
+
+    #[test]
+    fn breadcrumb_builder_root_and_current_page_emit_expected_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-breadcrumb-builder-semantics",
+            |cx| {
+                vec![
+                    Breadcrumb::new()
+                        .items([
+                            BreadcrumbItem::new("Home").href("/"),
+                            BreadcrumbItem::new("Components"),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Region && n.label.as_deref() == Some("breadcrumb")
+            }),
+            "expected breadcrumb root region semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| { n.role == SemanticsRole::List && n.parent.is_some() }),
+            "expected breadcrumb list semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::Link && n.flags.disabled),
+            "expected current page to approximate upstream disabled current-page link semantics"
+        );
+    }
+
+    #[test]
+    fn breadcrumb_primitives_emit_list_item_and_hidden_affordance_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-breadcrumb-primitives-semantics",
+            |cx| {
+                vec![primitives::Breadcrumb::new().into_element(cx, |cx| {
+                    vec![primitives::BreadcrumbList::new().into_element(cx, |cx| {
+                        vec![
+                            primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+                                vec![primitives::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                            }),
+                            primitives::BreadcrumbSeparator::new().into_element(cx),
+                            primitives::BreadcrumbEllipsis::new().into_element(cx),
+                        ]
+                    })]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::List),
+            "expected primitives::BreadcrumbList to emit list semantics"
+        );
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::ListItem),
+            "expected primitives::BreadcrumbItem to emit listitem semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::Link && n.flags.disabled && n.flags.read_only),
+            "expected primitives::BreadcrumbPage to approximate upstream disabled current-page link semantics"
+        );
+        assert!(
+            snap.nodes.iter().any(|n| n.flags.hidden),
+            "expected breadcrumb separator/ellipsis affordances to be hidden from semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.flags.hidden && n.label.as_deref() == Some("More")),
+            "expected breadcrumb ellipsis to expose the upstream fallback label while remaining hidden"
+        );
     }
 
     fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {

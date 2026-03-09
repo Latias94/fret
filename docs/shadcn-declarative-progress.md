@@ -355,7 +355,7 @@ canonical for breadth/presence/audit state; this queue adds priority, risk class
 | Input Group | `input_group` | P1 | Slot stretch + icon/affordance sizing | shadcn docs/examples + Base UI | `fret-ui-shadcn` | Mixed | Root-width override unit test + gallery page-alignment evidence | Reviewed 2026-03: root `w-full min-w-0` is recipe-owned because upstream source defines it, but caller layout refinements must still override explicit width choices |
 | Table | `table` | P1 | Caller-owned width/overflow + semantics | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Existing width-override unit test + gallery page evidence | Reviewed 2026-03: root recipe correctly owns `w-full overflow-x-auto`, while page/container sizing and data-table policy remain caller-owned |
 | Pagination | `pagination` | P1 | Inline layout + truncation + responsive ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Focused semantics + layout invariant tests | Reviewed 2026-03: root `w-full justify-center` ownership already matched upstream, while `PaginationContent/Item` needed explicit list semantics and navigation landmark is approximated with `Region + label` until a dedicated role exists |
-| Breadcrumb | `breadcrumb` | P1 | Inline overflow + separator ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Layout/truncation invariant | Similar risk profile to Pagination; good low-cost cleanup after P0 |
+| Breadcrumb | `breadcrumb` | P1 | Inline overflow + separator ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Focused semantics + existing layout/web gates | Reviewed 2026-03: default wrap/gap/truncation ownership already matched upstream, while breadcrumb landmark/list/current-page semantics needed explicit alignment and presentation-only affordances are now hidden |
 
 Queue policy:
 
@@ -381,7 +381,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | aspect-ratio | `aspect_ratio` | Present | In review | Audit: `docs/audits/radix-aspect-ratio.md`; layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`aspect-ratio-demo`); docs page: `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` |
 | avatar | `avatar` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`avatar-demo`) |
 | badge | `badge` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
-| breadcrumb | `breadcrumb` | Present | Unreviewed |  |
+| breadcrumb | `breadcrumb` | Present | In review | Semantics alignment landed for root/list/current-page/presentation affordances; audit: `docs/audits/shadcn-breadcrumb.md`; gates: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` |
 | button | `button` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`button-demo`) |
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Present | In review | Audit: `docs/audits/shadcn-calendar.md`; headless month grid lives in `fret-ui-kit` (`headless::calendar`); caller owns `rounded/border` and page width, recipe owns inner chrome |
