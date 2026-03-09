@@ -152,6 +152,8 @@ mod event_pointer_wheel_route;
 mod event_pointer_wheel_state;
 mod event_router;
 mod event_router_pointer;
+mod event_router_pointer_button;
+mod event_router_pointer_wheel;
 mod event_router_system;
 mod event_router_system_input;
 mod event_router_system_lifecycle;
