@@ -24,6 +24,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 ## M1 — Runtime and tooling seam cleanup
 
+- [ ] Execute the current near-term seam order:
+  - [ ] finish only the remaining reviewable tail in `commands::artifacts`,
+  - [x] extract presentation-surface reuse over the aggregate artifact model once the artifact/materialization seams settle,
+  - [ ] keep `commands::resolve` parked unless another clearly reviewable small seam appears.
 - [ ] Audit the main runtime/export modules and list remaining monolith hotspots.
 - [ ] Audit `crates/fret-diag` orchestration entry points and list duplication hotspots.
 - [x] Write a phased implementation roadmap that maps design docs to code landing order:
@@ -116,6 +120,30 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - latest landing: `commands::artifacts` now routes meta parse/resolve/out preparation through a dedicated helper, so `cmd_meta` no longer mixes request parsing, canonical-path resolution, and default-vs-custom out selection inline before materialize/emit and the prepare-stage behavior gains direct regression coverage
     - latest landing: `commands::artifacts` now routes lint report write + exit decision through a dedicated helper, so `cmd_lint` no longer mixes JSON artifact emission with exit-policy computation inline after lint execution and report-output / exit-required behavior gains direct regression coverage
     - latest landing: `commands::artifacts` now routes pack ai.packet path resolution, best-effort ensure, and `--ai-only` directory validation through dedicated helpers, so `cmd_pack` no longer repeats ai.packet path joins and preflight branches inline before zip emission and pack preflight behavior gains direct regression coverage
+    - latest landing: `commands::artifacts` now routes generated artifact materialize-plus-emit handoff through a shared helper reused by `cmd_test_ids` and `cmd_meta`, while path/json mode selection now also routes through a dedicated helper, so the existing-output reuse vs canonical-materialize tail no longer lives inline in each command and helper-level regression coverage now locks reuse and copy behavior directly
+    - latest landing: `commands::artifacts` now routes `cmd_pack` zip execution through a dedicated plan plus execution helper, so ai-only vs full-bundle zip dispatch, default sort normalization, and final zip handoff no longer stay in one command-level branch block and helper-level regression coverage now locks ai-only mode plus bundle default-sort planning directly
+    - latest landing: `commands::artifacts` now routes `meta_report_lines` through dedicated summary/window presentation helpers, so the report surface no longer mixes headline rendering with per-window truncation/formatting in one function and helper-level regression coverage now locks semantics summary, missing considered-frame fallback, and truncation behavior directly
+    - latest landing: `commands::artifacts` now routes triage payload selection/finalize through dedicated mode and finalize helpers, so lite-vs-full selection, full-sort defaulting, and tooling-warning handoff no longer stay interleaved in one builder and helper-level regression coverage now locks lite metric selection, full default sort, and finalize no-op behavior directly
+    - latest landing: `commands::artifacts` now routes path/json/meta-report emission through a shared `ArtifactOutputPresentation` surface plus dedicated builder helpers, so file-write output, emitted-artifact display, and meta-report line printing no longer each own their own terminal rendering path and helper-level regression coverage now locks JSON text/path projection and meta-report line projection directly
+    - latest landing: `commands::artifacts` now routes lint report file-write plus output projection through a dedicated `LintReportOutput` seam built on the shared JSON-write presentation surface, so lint payload persistence and exit-required bookkeeping no longer stay interleaved in one helper and helper-level regression coverage now locks path presentation plus exit-flag shaping directly
+    - latest landing: `diag_summarize` now routes aggregate command output through a dedicated `SummarizeOutputPresentation` seam plus failed-count and success-line helpers, so JSON-vs-human summarize projection no longer lives inline in `cmd_summarize` and helper-level regression coverage now locks aggregate failed-count accounting and output text shaping directly
+    - latest landing: `diag_dashboard` now routes dashboard CLI output through a dedicated `DashboardOutputPresentation` seam plus counter/reason/failing-summary line builders, so JSON-vs-human dashboard projection no longer lives inline in `cmd_dashboard` and helper-level regression coverage now locks counter sections, aggregate summary lines, and failing-summary row shaping directly
+    - latest landing: `diag_campaign` now routes campaign-run CLI output through a dedicated `CampaignRunOutputPresentation` seam, so JSON-vs-human output selection no longer lives inline in `print_campaign_run_output` and helper-level regression coverage now locks both JSON text projection and single-run human line shaping directly
+    - latest landing: `apps/fret-devtools-mcp` now reuses shared aggregate dashboard projection and human-summary helpers exported from `fret-diag`, so MCP no longer owns a parallel dashboard counter/reason/failing-summary parser or text assembly path and CLI/MCP now share one aggregate presentation vocabulary
+    - latest landing: `apps/fret-devtools` now also reuses shared aggregate dashboard projection, human-summary lines, and failing-summary row parsing exported from `fret-diag`, so the GUI regression tab no longer owns another parallel dashboard text assembly path and CLI/MCP/GUI now share one aggregate dashboard vocabulary
+    - latest landing: `commands::artifacts` now routes `cmd_triage` through a dedicated `TriageCommandOutput` seam built on the shared JSON-write presentation helper, so triage payload generation and terminal emission no longer stay interleaved in the command entry and helper-level regression coverage now locks both path and JSON text projection directly
+    - latest landing: `commands::artifacts` now routes `cmd_triage` through a dedicated `TriageExecutionPlan`, so payload mode selection, stats-top/warmup shaping, and JSON-vs-path output projection no longer stay spread across the command entry and helper signatures and helper-level regression coverage now locks lite metric carry-through plus full-sort defaulting directly
+    - latest landing: `commands::artifacts` now routes ensured-artifact commands through a dedicated `EnsuredBundleArtifactOutput` seam, so `ensure + display-mode projection + emit` no longer stay interleaved in one helper and helper-level regression coverage now locks both path and JSON text projection for `cmd_test_ids_index` / `cmd_frames_index`
+    - latest landing: `commands::artifacts` now routes ensured-artifact commands through a dedicated `EnsuredBundleArtifactPlan`, so required-input resolution, warmup/display shaping, and ensure-output projection no longer stay mixed in one helper and helper-level regression coverage now locks plan shaping separately from execution
+    - latest landing: `commands::artifacts` now routes required-bundle ensured-artifact commands through a dedicated `build_required_bundle_artifact_output` seam, so `resolve input + ensure output + presentation build` no longer stay interleaved inside `cmd_test_ids_index` / `cmd_frames_index` and helper-level regression coverage now locks missing-hint propagation plus resolved-input handoff directly
+    - latest landing: `commands::artifacts` now routes repeated `bundle input + optional custom out + default out` setup through shared prepare helpers, so `cmd_lint`, `cmd_test_ids`, `cmd_triage`, and `cmd_meta` no longer each inline their own custom-vs-default out resolution and helper-level regression coverage now locks both default and custom-out handoff directly
+    - latest landing: `commands::artifacts` now routes generated-artifact materialization through a dedicated `GeneratedArtifactOutput` seam, so `cmd_test_ids` / `cmd_meta` no longer rely on a monolithic materialize-and-emit helper and helper-level regression coverage now locks reuse-existing vs copy-missing materialization directly
+    - latest landing: `commands::artifacts` now routes generated-artifact copy/no-op/reuse decisions through a dedicated `ArtifactMaterializationPlan`, so existing-out reuse, canonical-path no-op, and copy-to-custom-out execution no longer stay hidden inside one helper body and helper-level regression coverage now locks each branch directly
+    - latest landing: `commands::artifacts` now routes `cmd_test_ids` through a dedicated `TestIdsExecutionPlan`, so generated-artifact display mode, `warmup_frames`, and `max_test_ids` shaping no longer stay coupled to the command tail and helper-level regression coverage now locks prepared-field carry-through plus output projection directly
+    - latest landing: `commands::artifacts` now routes `cmd_meta` through a dedicated `MetaExecutionPlan`, so canonical-path handoff, output target, and display-mode projection no longer stay coupled to the command tail and helper-level regression coverage now locks prepared-field carry-through plus path-presentation materialization directly
+    - latest landing: `commands::artifacts` now routes `cmd_pack` through a dedicated `PackCommandOutput` seam, so plan execution and terminal path presentation no longer stay coupled to a one-off `println!` tail and helper-level regression coverage now locks pack output projection directly
+    - latest landing: `commands::artifacts` now lets `cmd_lint` consume `build_lint_report_output` directly, so lint report write, output presentation, and exit-policy handoff now follow the same build-then-emit pattern as the rest of the command family instead of going through a dedicated side-effect helper
+    - latest landing: `commands::artifacts` now routes meta-sidecar validity checks and bundle-dir sidecar preference through dedicated helpers, so direct-vs-`_root` selection and existing-sidecar reuse no longer stay open-coded across both meta resolution branches and helper-level regression coverage now locks the preference order directly
   - [x] transport dispatch.
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Define “no new blob growth” guardrails for follow-up work.
@@ -147,15 +175,75 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] `nightly/full`
   - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - [ ] Write a single vocabulary for regression lanes:
-  - [ ] smoke,
-  - [ ] correctness,
-  - [ ] matrix,
-  - [ ] perf,
-  - [ ] nightly/full.
+  - [x] first repo-level contract drafted in `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] smoke,
+  - [x] correctness,
+  - [x] matrix,
+  - [x] perf,
+  - [x] nightly/full,
+  - [x] persisted artifacts now prefer `nightly` while keeping `full` as a readable legacy alias,
+  - [x] first persisted-field normalization map is now documented in
+    `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] writer/reader alias lifecycle is now documented in
+    `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] first repo-level adoption order is now documented in
+    `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] first bounded implementation audit captured in
+    `M3_VOCABULARY_ADOPTION_AUDIT.md`,
+  - [ ] remaining persisted residual names still need additive adoption review,
+    - [x] campaign metadata now has additive `requires_capabilities` / `flake_policy` adoption in
+      the campaign manifest/registry contract and CLI presentation,
+    - [x] `RegressionArtifactsV1.index_json` / `perf_summary_json` / `compare_json` now have
+      explicit canonical-vs-projection classification in the M3 and artifact-model notes.
 - [ ] Define suite metadata needed for scalable execution:
   - [x] first-pass campaign metadata is now present (`tier`, `owner`, `platforms`, `expected_duration_ms`, `tags`),
-  - [ ] flake policy,
-  - [ ] capability/feature tags.
+  - [x] first-pass flake policy vocabulary documented in `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] first-pass capability-tag naming rules documented in `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+  - [x] bounded execution-adoption audit captured in
+    `CAMPAIGN_METADATA_EXECUTION_ADOPTION_AUDIT.md`,
+  - [x] first-pass campaign capability preflight design captured in
+    `CAMPAIGN_CAPABILITY_PREFLIGHT_V1.md`,
+  - [~] keep `requires_capabilities` / `flake_policy` passive until campaign-level preflight or
+    retry orchestration has a concrete consumer.
+    - [x] campaign-level capability preflight is now partially landed,
+    - [x] campaign policy skips now surface as `skipped_policy` + `capability.missing`,
+    - [x] batch counters now expose `campaigns_skipped_policy`,
+    - [x] capability-source resolution is now shared between campaign preflight and
+      `diag doctor`,
+    - [ ] `flake_policy` still remains passive metadata.
+- [x] Record the DevTools/MCP raw-JSON defer boundary in
+  `DEVTOOLS_MCP_RAW_JSON_DEFER_AUDIT.md`.
+- [x] Tighten the M3 orchestration vocabulary before more tooling grows around it:
+  - [x] stable reason-code naming and bucket rules,
+  - [x] one repo-level artifact/evidence path vocabulary,
+  - [x] flake policy wording aligned with campaign/suite outputs,
+  - [x] capability tags and lane naming kept consistent at the contract level across CLI, docs, and aggregate artifacts,
+  - [x] shared summary serialization now writes canonical lane/evidence vocabulary while accepting
+    legacy aliases,
+  - [x] summarize/dashboard human wording now uses canonical lane/counter wording,
+  - [x] campaign share payload and run-manifest `paths` now start adopting canonical artifact field
+    names additively,
+  - [ ] residual manifest/consumer naming still needs one explicit pass,
+    - [x] run-manifest `files[].id` now writes canonical `script_result` while retaining legacy read
+      compatibility for `script_result_json`,
+    - [x] Layer B `bundle_artifact` additive adoption is now landed in `diag_repro`,
+      `diag_repeat`, and the first two stats payload batches,
+    - [x] `stats/ui_gallery_code_editor.rs` now also uses the shared helper for canonical-first
+      `bundle_artifact` + legacy `bundle_json` dual-write,
+    - [x] `stats/ui_gallery_markdown_editor.rs` now also uses the shared helper for canonical-first
+      `bundle_artifact` + legacy `bundle_json` dual-write,
+    - [x] the remaining direct `stats/stale.rs` tail now also uses the shared helper, so the
+      `crates/fret-diag/src/stats` tree no longer bypasses canonical-first helper-based dual-write,
+    - [x] `evidence_index.rs` now reads `selected_bundle_artifact` / `packed_bundle_artifact`
+      first while retaining legacy `selected_bundle_json` / `packed_bundle_json` fallback,
+    - [x] a follow-up scan now shows no other obvious small reader-side canonical-first patch left
+      inside `crates/fret-diag` outside deferred Layer A surfaces or intentional dual-write
+      producers,
+    - [ ] remaining Layer B payload families outside the `stats` tree still need review before any
+      Layer A manifest chunk-index contract change is considered,
+    - [x] DevTools/MCP residual `*json` names are now explicitly classified in the audit as mostly
+      raw JSON text holders rather than artifact-path contract drift, so they are deferred by
+      default unless those modules are already being changed for another reason.
 - [x] Decide whether to introduce a first-class “campaign” orchestration layer.
   - [x] Land a minimal aggregation/index consumer first via `fretboard diag summarize`.
   - [x] Land a first `fretboard diag campaign` surface that composes existing `suite` + `summarize` flows.
@@ -165,14 +253,21 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
     - implementation: `diag suite`, `diag repeat`, `diag perf`, and `diag matrix`
       now emit `regression.summary.json`
-  - [ ] stable reason codes,
+  - [x] stable reason-code contract documented at the repo level,
+    - in progress: adoption is now partially landed in shared summary/dashboard/campaign wording,
+      but residual consumer/path naming still needs one review pass
   - [ ] evidence bundle/artifact paths,
     - in progress: current summary emitters already attach bounded artifact/evidence paths,
-      but the path vocabulary still needs one explicit repo-level contract
+      the repo-level path vocabulary is now documented, and run-manifest `paths` plus artifact lint
+      already adopt canonical names additively
   - [ ] optional compact pack for sharing.
 
 ## M4 — DevTools GUI alignment
 
+- [ ] Keep DevTools GUI follow-up behind artifact/model stabilization:
+  - [ ] avoid locking UI polish to unstable artifact/materialization shapes,
+  - [ ] prefer shared presentation helpers before new GUI-only projections,
+  - [ ] resume GUI alignment after the aggregate artifact model and output surfaces settle.
 - [ ] Define which GUI features belong in this workstream now:
   - [ ] artifact browser,
   - [ ] gate runner UX,
@@ -189,6 +284,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] the `Regression` tab now lists `failing_summaries` from `regression.index.json`,
   - [x] selecting a row loads the corresponding `regression.summary.json`,
   - [x] selected summary path, first bundle dir, and bundle dir list can be copied for evidence follow-up.
+  - [x] selected non-passing summaries can now also surface and copy `capabilities_check_path`
+    evidence when the row is `skipped_policy`.
   - [x] selected summary evidence can now be packed directly from the first failing bundle dir.
 - [x] Add a thin GUI summarize trigger over the shared aggregate artifacts:
   - [x] the `Regression` tab now includes a `Summarize` action next to `Refresh`,
@@ -197,7 +294,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [x] Expose aggregate summary/index artifacts through the MCP consumer lane:
   - [x] `apps/fret-devtools-mcp` now exposes `regression.summary.json`,
   - [x] `apps/fret-devtools-mcp` now exposes `regression.index.json`,
-  - [x] resources reuse the existing artifacts-root contract instead of defining a new store.
+  - [x] resources reuse the existing artifacts-root contract instead of defining a new store,
+  - [x] the shared dashboard projection/human-summary path now also keeps `skipped_policy`
+    counters and `non-passing summaries` wording aligned with CLI/GUI.
 - [x] Add one end-to-end “dogfood” workflow that proves alignment:
   - [x] pick selector,
   - [x] patch or choose script,
@@ -254,9 +353,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 ## M5 — Documentation consolidation
 
-- [ ] Add a concise navigation note that tells contributors where to start for diag work.
-- [ ] Cross-link existing v1/v1-architecture docs to this v2 umbrella where appropriate.
-- [ ] Record migration intent for large existing diag docs rather than duplicating content forever.
+- [x] Add a concise navigation note that tells contributors where to start for diag work.
+  - [x] documented in `docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`.
+- [x] Cross-link existing v1/v1-architecture docs to this v2 umbrella where appropriate.
+- [x] Record migration intent for large existing diag docs rather than duplicating content forever.
+  - [x] documented in `docs/workstreams/diag-fearless-refactor-v2/DOCUMENT_MIGRATION_INTENT.md`.
 - [x] Document the first aggregate dashboard/index fields for consumers:
   - [x] counters by lane/status/tool/reason,
   - [x] top reason codes,
@@ -265,15 +366,24 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] `fretboard diag dashboard` reads `regression.index.json`,
   - [x] default output gives a first-open human summary,
   - [x] `--json` preserves machine-readable access to the full index.
-- [ ] Add a short maintainer checklist for new diagnostics features:
-  - [ ] which layer changes,
-  - [ ] what gate must be added,
-  - [ ] what evidence should be left behind,
-  - [ ] what docs must be updated.
+- [x] Add a short maintainer checklist for new diagnostics features:
+  - [x] which layer changes,
+  - [x] what gate must be added,
+  - [x] what evidence should be left behind,
+  - [x] what docs must be updated.
+  - [x] documented in `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`.
 
 ## M6 — Debt removal and enforcement
 
 - [ ] Identify duplicated logic that should be removed only after seam adoption is proven.
 - [ ] Add at least one regression gate or lint/test expectation for each major seam migration.
-- [ ] Define “done” criteria for retiring older diag notes or compatibility shims.
-- [ ] Keep a visible debt list so future refactors stay incremental instead of reverting to ad-hoc growth.
+  - [x] initial seam-to-gate mapping documented in
+    `docs/workstreams/diag-fearless-refactor-v2/SEAM_GATE_MATRIX.md`.
+  - [x] first concrete protecting anchors now named for `diag suite`, `diag_campaign`, and
+    doctor/lint compatibility seams.
+  - [x] legacy manifest compatibility seam now has a named reader-compat test.
+  - [x] legacy artifact alias seam now has named `artifact_lint` reader/compat anchors.
+- [x] Define “done” criteria for retiring older diag notes or compatibility shims.
+  - [x] documented in `docs/workstreams/diag-fearless-refactor-v2/RETIREMENT_CRITERIA.md`.
+- [x] Keep a visible debt list so future refactors stay incremental instead of reverting to ad-hoc growth.
+  - [x] documented in `docs/workstreams/diag-fearless-refactor-v2/DEBT_RETIREMENT_TRACKER.md`.

@@ -2,6 +2,11 @@
 
 Status: Active (workstream note; not a contract)
 
+For the newer umbrella framing that consolidates transport, artifacts, regression orchestration, and
+consumer lanes under one diagnostics workstream, see:
+
+- `docs/workstreams/diag-fearless-refactor-v2/README.md`
+
 This note closes the M0 exit criteria for `docs/workstreams/diag-simplification-v1.md` by documenting:
 
 - a filesystem vs DevTools WS **behavior/capability matrix** (what to expect, where artifacts live),

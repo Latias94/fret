@@ -13,11 +13,21 @@ Tracking files:
 
 - `docs/workstreams/diag-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`
 - `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
 - `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DOCUMENT_MIGRATION_INTENT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DEBT_RETIREMENT_TRACKER.md`
+- `docs/workstreams/diag-fearless-refactor-v2/SEAM_GATE_MATRIX.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RETIREMENT_CRITERIA.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RESIDUAL_NAMING_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/BUNDLE_ARTIFACT_ALIAS_AUDIT.md`
 
 Related workstreams and context:
 
