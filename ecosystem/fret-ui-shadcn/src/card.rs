@@ -175,12 +175,11 @@ impl Card {
             let props = {
                 let theme = Theme::global(&*cx.app);
                 let chrome = card_chrome(theme, size).merge(self.chrome);
-                // shadcn/ui Cards are authored as block-ish surfaces; in practice, most compositions
-                // expect the card to fill the available inline size unless explicitly constrained.
-                //
-                // We model that by defaulting to `w_full()` here (and still allowing explicit
-                // overrides via `refine_layout`).
-                let layout = LayoutRefinement::default().w_full().merge(self.layout);
+                // Keep the root width caller-owned so the recipe matches upstream shadcn/ui
+                // semantics more closely: examples opt into widths like `w-full max-w-sm` at the
+                // call site, while the card sections themselves still fill the card's resolved
+                // inner width.
+                let layout = LayoutRefinement::default().merge(self.layout);
                 decl_style::container_props(theme, chrome, layout)
             };
 
@@ -306,6 +305,50 @@ where
     }
 }
 
+pub fn card_header<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    CardHeader::new(f(cx)).into_element(cx)
+}
+
+pub fn card_action<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    CardAction::new(f(cx)).into_element(cx)
+}
+
+pub fn card_title<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    CardTitle::new(text).into_element(cx)
+}
+
+pub fn card_description<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    CardDescription::new(text).into_element(cx)
+}
+
+pub fn card_description_children<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    CardDescription::new_children(f(cx)).into_element(cx)
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -316,6 +359,16 @@ where
     with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
         CardContent::new(f(cx)).into_element(cx)
     })
+}
+
+pub fn card_footer<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    CardFooter::new(f(cx)).into_element(cx)
 }
 
 fn collect_built_card_children<H: UiHost>(
@@ -694,6 +747,39 @@ mod tests {
     }
 
     #[test]
+    fn card_free_helpers_render_expected_structure() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Card::build(|cx, out| {
+                out.extend([
+                    card_header(cx, |cx| {
+                        vec![
+                            card_title(cx, "Card Title"),
+                            card_description(cx, "Card Description"),
+                            card_action(cx, |cx| vec![cx.text("Card Action")]),
+                        ]
+                    }),
+                    card_content(cx, |cx| vec![cx.text("Card Content")]),
+                    card_footer(cx, |cx| vec![cx.text("Card Footer")]),
+                ]);
+            })
+            .into_element(cx)
+        });
+
+        assert!(find_text(&element, "Card Title").is_some());
+        assert!(find_text(&element, "Card Description").is_some());
+        assert!(find_text(&element, "Card Action").is_some());
+        assert!(find_text(&element, "Card Content").is_some());
+        assert!(find_text(&element, "Card Footer").is_some());
+    }
+
+    #[test]
     fn card_description_scopes_inherited_text_style() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -787,7 +873,7 @@ mod tests {
             };
 
             assert_eq!(layout.overflow, Overflow::Visible);
-            assert_eq!(layout.size.width, Length::Fill);
+            assert_eq!(layout.size.width, Length::Auto);
             assert_eq!(padding.top, py.into());
             assert_eq!(padding.right, Px(0.0).into());
             assert_eq!(padding.bottom, py.into());

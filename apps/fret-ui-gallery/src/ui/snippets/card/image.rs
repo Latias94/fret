@@ -6,13 +6,8 @@ use fret_core::{Color as CoreColor, ImageId};
 use fret_ui::Theme;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::{ModelWatchExt as _, style as decl_style};
-use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
-
-fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-}
 
 pub fn render(
     cx: &mut ElementContext<'_, App>,
@@ -68,8 +63,9 @@ pub fn render(
             let (event_cover, event_cover_state, event_cover_path_exists) = {
                 static EVENT_COVER_TEST_JPG: OnceLock<fret_ui_assets::ImageSource> =
                     OnceLock::new();
-                let source = EVENT_COVER_TEST_JPG
-                    .get_or_init(|| fret_ui_assets::ImageSource::from_url(Arc::<str>::from("textures/test.jpg")));
+                let source = EVENT_COVER_TEST_JPG.get_or_init(|| {
+                    fret_ui_assets::ImageSource::from_url(Arc::<str>::from("textures/test.jpg"))
+                });
                 let state = cx.use_image_source_state(source);
                 let image = state.image;
                 (image.or(event_cover_fallback), Some(state), true)
@@ -151,54 +147,31 @@ pub fn render(
         .into_element(cx)
         .test_id("ui-gallery-card-image-event-cover");
 
-    let badge = |cx: &mut ElementContext<'_, App>, icon_id: &'static str, text: &'static str| {
-        shadcn::Badge::new("")
-            .variant(shadcn::BadgeVariant::Outline)
-            .children([
-                icon(cx, icon_id),
-                ui::text(text)
-                    .nowrap()
-                    .into_element(cx)
-                    .test_id(format!("ui-gallery-card-image-badge-{text}")),
-            ])
-            .into_element(cx)
-    };
-
-    let footer = ui::h_flex(|cx| {
-        let badges = ui::h_row(|cx| {
-            vec![
-                badge(cx, "lucide.bed", "4"),
-                badge(cx, "lucide.bath", "2"),
-                badge(cx, "lucide.land-plot", "350m²"),
-            ]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
-        let price = ui::text("$200,000")
-            .font_medium()
-            .into_element(cx)
-            .test_id("ui-gallery-card-image-price");
-
-        vec![badges, price]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .items_center()
-    .justify_between()
-    .into_element(cx)
-    .test_id("ui-gallery-card-image-footer");
+    let featured = shadcn::Badge::new("Featured")
+        .variant(shadcn::BadgeVariant::Secondary)
+        .into_element(cx)
+        .test_id("ui-gallery-card-image-featured");
 
     shadcn::Card::new(vec![
+        cover,
         shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Is this an image?").into_element(cx),
-            shadcn::CardDescription::new("This is a card with an image.").into_element(cx),
+            shadcn::CardAction::new([featured]).into_element(cx),
+            shadcn::CardTitle::new("Design systems meetup").into_element(cx),
+            shadcn::CardDescription::new(
+                "A practical talk on component APIs, accessibility, and shipping faster.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![cover])
-            .refine_style(ChromeRefinement::default().px(Space::N0))
-            .into_element(cx),
-        shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        shadcn::CardFooter::new(vec![
+            shadcn::Button::new("View Event")
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .test_id("ui-gallery-card-image-view-event"),
+        ])
+        .into_element(cx),
     ])
+    .refine_style(ChromeRefinement::default().pt(Space::N0))
     .refine_layout(max_w_sm.relative())
     .into_element(cx)
     .test_id("ui-gallery-card-image")

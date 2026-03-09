@@ -334,6 +334,36 @@ Additional pass-through subcomponents also opt into `ui()` (not tracked individu
 - Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
 - Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor/DrawerTrigger`.
 
+
+## Alignment Queue (2026-03)
+
+Use this table to sequence **which component to align next**. The registry-status tables below remain
+canonical for breadth/presence/audit state; this queue adds priority, risk class, and the
+"default-style ownership" lens so we do not mistake page/container constraints for recipe defaults.
+
+| Component | Rust module | Priority | Risk class | Primary upstream truth | Likely owner layer | Default style owner | Recommended first gate | Why now |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Calendar | `calendar` | P0 | Field-family grid + selection + responsive layout | shadcn docs/examples + Base UI + APG | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Focused layout/a11y test + gallery evidence | Still `Unreviewed`; likely to surface width ownership and keyboard-grid drift |
+| Date Picker | `date_picker` | P0 | Popover + field + calendar composition | shadcn docs/examples + Radix + Base UI | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Gallery/diag repro + focused geometry test | High-risk composition surface; likely to repeat Calendar and Popover mismatches |
+| Navigation Menu | `navigation_menu` | P0 | Overlay viewport + responsive sizing + focus routing | Radix + shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Overlay placement/scripted open-state gate | Already complex; easy to regress viewport-owned vs caller-owned sizing |
+| Sidebar | `sidebar` | P0 | Container negotiation + responsive layout ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery geometry invariant | Most likely to accidentally bake page width/flex defaults into the recipe |
+| Drawer | `drawer` | P0 | Sheet-like overlay policy + responsive presentation | Radix semantics + shadcn composition | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Overlay open/close gate + geometry invariant | Defaults likely to drift between mobile/full-height container concerns |
+| Resizable | `resizable` | P0 | Drag routing + layout + a11y | shadcn examples + Base UI | `fret-ui` + `fret-ui-shadcn` | Caller-heavy | Focused drag/layout test | Runtime/layout boundary is easy to misplace; still `Unreviewed` |
+| Input OTP | `input_otp` | P0 | Text engine + slot metrics + focus choreography | shadcn docs/examples + Base UI | `fret-ui-shadcn` + runtime text surfaces | Recipe-heavy | Focus/input invariant test | High chance of a11y/focus drift and per-slot geometry regressions |
+| Form | `form` | P1 | Public-surface drift + field ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery usage anchor + focused unit test | Often reveals helper/API weight issues more than mechanism bugs |
+| Field | `field` | P1 | Description/error ownership + width negotiation | shadcn docs/examples | `fret-ui-shadcn` + `fret-ui-kit` | Mixed | Layout invariant test | Already present/in-review; likely next place width defaults get over-baked |
+| Input Group | `input_group` | P1 | Slot stretch + icon/affordance sizing | shadcn docs/examples + Base UI | `fret-ui-shadcn` | Mixed | Geometry invariant test | Common place for `min-w-0` / `items-stretch` mistakes |
+| Table | `table` | P1 | Caller-owned width/overflow + semantics | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Gallery layout invariant | Easy to conflate table shell constraints with recipe defaults |
+| Pagination | `pagination` | P1 | Inline layout + truncation + responsive ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Geometry/truncation invariant | Likely small but repetitive width/ellipsis ownership decisions |
+| Breadcrumb | `breadcrumb` | P1 | Inline overflow + separator ownership | shadcn docs/examples | `fret-ui-shadcn` | Caller-heavy | Layout/truncation invariant | Similar risk profile to Pagination; good low-cost cleanup after P0 |
+
+Queue policy:
+
+- `P0`: likely to expose mechanism-vs-recipe mistakes or default-style ownership mistakes.
+- `P1`: likely to expose public-surface drift or repeated layout-policy footguns.
+- `Default style owner` means where we should *start* the investigation, not a hard-coded answer for every slot.
+- When a component is pulled into active work, update both this queue and the breadth table below.
+
 ## shadcn/ui v4 Registry Baseline
 
 The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).

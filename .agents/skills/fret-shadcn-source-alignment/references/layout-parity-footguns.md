@@ -44,6 +44,23 @@ Ask: does this slot use `flex`, `grid`, `gap-*`, or is it just padding/typograph
 - If the issue is “hit-testing / routing / transforms / clipping”, it might be mechanism
   (`crates/fret-ui`) — confirm via the mechanism parity checklist.
 
+## Default-style ownership (recipe vs call site)
+
+Before changing a default, inspect *where upstream applies the class*: 
+
+- If the class lives on the upstream component source, it is a candidate recipe default in Fret.
+  - Typical examples: border, radius, shadow, slot padding, title typography, header/action alignment.
+- If the class lives on the upstream example call site, keep it caller-owned in Fret.
+  - Typical examples: `w-full`, `max-w-sm`, `min-w-0`, `flex-1`, centering, page/grid-specific wrappers.
+
+Heuristic:
+
+- recipe default = intrinsic to the component across most uses
+- caller-owned = negotiated with the surrounding page/container
+
+When in doubt, prefer caller-owned for width/flex/grid negotiation. It is much easier to opt in at
+the call site than to unwind an overly opinionated default later.
+
 ## Gate patterns that work well
 
 ### Unit test (preferred for layout defaults)
@@ -98,3 +115,29 @@ Regression protection:
 - Unit test that checks `ColumnProps.align == CrossAlign::Start`.
 - UI gallery demo that places an inline-sized button directly under `CardContent`.
 - Diag script that gates `bounds_max_size` on that button.
+
+
+## Case study: Card root width “should Card default to w-full?”
+
+Upstream shadcn/ui v4:
+
+- `Card` source owns border/radius/shadow/vertical padding.
+- Example files opt into widths like `w-full max-w-sm` at the call site.
+
+Failure mode in Fret:
+
+- The recipe bakes `w_full()` into the `Card` root because a gallery/doc page looked too narrow.
+- This fixes one page, but makes the recipe more opinionated than upstream and hides the real page
+  layout problem.
+
+Fix pattern:
+
+- Keep root width caller-owned.
+- Keep section internals fill-width where that is part of the recipe outcome.
+- Put `w_full`, `min_w_0`, and `max_w(...)` on the page/grid/flex wrapper that actually negotiates
+  width.
+
+Regression protection:
+
+- Unit test for the recipe default (`Card` root width remains `Auto`).
+- UI gallery invariant test that relevant card examples keep the intended shared width.

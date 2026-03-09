@@ -19,6 +19,29 @@ Use this ordering unless the component clearly demands a different one:
 
 If sources disagree, document the chosen ordering in the change and keep the disagreement local to the component.
 
+
+## 1.5) Default-style ownership (recipe vs call site)
+
+Before turning a visual/style mismatch into a new default, inspect *where upstream applies it*: 
+
+- If the behavior or styling is encoded in the upstream component implementation or default API, it is a candidate recipe default in Fret.
+  - Typical examples: intrinsic container height, shape, elevation, outline/filled chrome, active indicator, default content padding, state layer / ripple behavior.
+- If the behavior or styling is encoded in the upstream sample/container code, keep it caller-owned in Fret.
+  - Typical examples: `fillMaxWidth`, `widthIn`, `maxWidth`, page centering, surrounding `Box` / `Row` / `Column` constraints, grid placement, doc/demo wrappers.
+
+Source-specific hints:
+
+- **Compose Material3**: `Modifier.fillMaxWidth()` or surrounding `Box/Row/Column` layout code is usually caller-owned unless the composable itself applies it internally.
+- **MUI Material UI**: `sx`, wrapper `Box`, layout grid props, and demo container classes are usually caller-owned unless the component default props/style overrides own them.
+- **Base UI**: layout wrappers in examples are caller-owned; headless parts/semantics belong closer to the recipe/policy layer.
+
+Heuristic:
+
+- recipe default = intrinsic to the component across most placements
+- caller-owned = negotiated by the page/container composition
+
+When in doubt, prefer caller-owned for width/flex/grid negotiation. It is easier to opt in locally than to unwind an over-opinionated default later.
+
 ## 2) What each source is best at
 
 ### Material spec

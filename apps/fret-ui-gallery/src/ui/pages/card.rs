@@ -11,7 +11,7 @@ use crate::spec::{
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::card as snippets;
 
-const CARD_PAGE_INTRO: &str = "Preview follows the shadcn Card docs core flow (Demo + Usage), plus extra regression-focused sections (Size, Image, RTL).";
+const CARD_PAGE_INTRO: &str = "Displays a card with header, content, and footer. This page follows the upstream shadcn Card doc flow first (Demo, Usage, Size, Image, RTL), then adds Fret-specific regression sections.";
 const CARD_CODE_REGION: &str = "example";
 
 struct CardDocSectionDiagnostics {
@@ -76,9 +76,30 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         },
         CardDocSectionDiagnostics {
             title: "Size",
-            description: "Use `CardSize::Sm` for a more compact spacing preset.",
+            description: "Compact small-card example aligned with the upstream docs.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_SIZE,
             code_source: Some(snippets::size::SOURCE),
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
+            title: "Image",
+            description: "Media-first card with a featured badge and footer action.",
+            disable_flag: BISECT_DISABLE_CARD_SECTION_IMAGE,
+            code_source: Some(snippets::image::SOURCE),
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
+            title: "RTL",
+            description: "RTL login card aligned with the upstream translated example.",
+            disable_flag: BISECT_DISABLE_CARD_SECTION_RTL,
+            code_source: Some(snippets::rtl::SOURCE),
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
+            title: "Compositions",
+            description: "Spot-check slot combinations: header/content/footer permutations.",
+            disable_flag: BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
+            code_source: Some(snippets::compositions::SOURCE),
             shell: false,
         },
         CardDocSectionDiagnostics {
@@ -93,27 +114,6 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
             description: "Card with text content and a footer stack.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_MEETING_NOTES,
             code_source: Some(snippets::meeting_notes::SOURCE),
-            shell: false,
-        },
-        CardDocSectionDiagnostics {
-            title: "Image",
-            description: "Card with a media cover and a richer footer row.",
-            disable_flag: BISECT_DISABLE_CARD_SECTION_IMAGE,
-            code_source: Some(snippets::image::SOURCE),
-            shell: false,
-        },
-        CardDocSectionDiagnostics {
-            title: "RTL",
-            description: "Card should respect right-to-left direction context.",
-            disable_flag: BISECT_DISABLE_CARD_SECTION_RTL,
-            code_source: Some(snippets::rtl::SOURCE),
-            shell: false,
-        },
-        CardDocSectionDiagnostics {
-            title: "Compositions",
-            description: "Spot-check slot combinations: header/content/footer permutations.",
-            disable_flag: BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
-            code_source: Some(snippets::compositions::SOURCE),
             shell: false,
         },
         CardDocSectionDiagnostics {
@@ -216,8 +216,38 @@ pub(super) fn preview_card(
             .test_id_prefix("ui-gallery-card-section-size")
             .no_shell()
             .max_w(Px(980.0))
-            .description("Use `CardSize::Sm` for a more compact spacing preset.");
+            .description("Compact small-card example aligned with the upstream docs.");
         sections.push(with_card_code(section, snippets::size::SOURCE));
+    }
+    if (bisect & BISECT_DISABLE_CARD_SECTION_IMAGE) == 0 {
+        let image = snippets::image::render(cx, event_cover_image.clone());
+        let section = DocSection::new("Image", image)
+            .test_id_root("ui-gallery-card-section-image")
+            .test_id_prefix("ui-gallery-card-section-image")
+            .no_shell()
+            .max_w(Px(980.0))
+            .description("Media-first card with a featured badge and footer action.");
+        sections.push(with_card_code(section, snippets::image::SOURCE));
+    }
+    if (bisect & BISECT_DISABLE_CARD_SECTION_RTL) == 0 {
+        let rtl = snippets::rtl::render(cx);
+        let section = DocSection::new("RTL", rtl)
+            .test_id_root("ui-gallery-card-section-rtl")
+            .test_id_prefix("ui-gallery-card-section-rtl")
+            .no_shell()
+            .max_w(Px(980.0))
+            .description("RTL login card aligned with the upstream translated example.");
+        sections.push(with_card_code(section, snippets::rtl::SOURCE));
+    }
+    if (bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) == 0 {
+        let compositions = snippets::compositions::render(cx);
+        let section = DocSection::new("Compositions", compositions)
+            .test_id_root("ui-gallery-card-section-compositions")
+            .test_id_prefix("ui-gallery-card-section-compositions")
+            .no_shell()
+            .max_w(Px(980.0))
+            .description("Spot-check slot combinations: header/content/footer permutations.");
+        sections.push(with_card_code(section, snippets::compositions::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_CARD_CONTENT) == 0 {
         let card_content_inline_button = snippets::card_content::render(cx);
@@ -239,42 +269,13 @@ pub(super) fn preview_card(
             .description("Card with text content and a footer stack.");
         sections.push(with_card_code(section, snippets::meeting_notes::SOURCE));
     }
-    if (bisect & BISECT_DISABLE_CARD_SECTION_IMAGE) == 0 {
-        let image = snippets::image::render(cx, event_cover_image.clone());
-        let section = DocSection::new("Image", image)
-            .test_id_root("ui-gallery-card-section-image")
-            .test_id_prefix("ui-gallery-card-section-image")
-            .no_shell()
-            .max_w(Px(980.0))
-            .description("Card with a media cover and a richer footer row.");
-        sections.push(with_card_code(section, snippets::image::SOURCE));
-    }
-    if (bisect & BISECT_DISABLE_CARD_SECTION_RTL) == 0 {
-        let rtl = snippets::rtl::render(cx);
-        let section = DocSection::new("RTL", rtl)
-            .test_id_root("ui-gallery-card-section-rtl")
-            .test_id_prefix("ui-gallery-card-section-rtl")
-            .no_shell()
-            .max_w(Px(980.0))
-            .description("Card should respect right-to-left direction context.");
-        sections.push(with_card_code(section, snippets::rtl::SOURCE));
-    }
-    if (bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) == 0 {
-        let compositions = snippets::compositions::render(cx);
-        let section = DocSection::new("Compositions", compositions)
-            .test_id_root("ui-gallery-card-section-compositions")
-            .test_id_prefix("ui-gallery-card-section-compositions")
-            .no_shell()
-            .max_w(Px(980.0))
-            .description("Spot-check slot combinations: header/content/footer permutations.");
-        sections.push(with_card_code(section, snippets::compositions::SOURCE));
-    }
     if (bisect & BISECT_DISABLE_CARD_SECTION_NOTES) == 0 {
         let notes = doc_layout::notes(
             cx,
             [
-                "Card provides structure (header/content/footer) but leaves layout decisions to composition.",
-                "Prefer consistent max widths for card-based forms to avoid layout jumps across pages.",
+                "Card root width is caller-owned; express upstream `w-full max-w-sm` at the call site with `refine_layout(...)`.",
+                "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
+                "If you prefer builder-style composition, use `Card::build(...)` or `card(cx, ...)`; slot types also expose `build(...)` variants.",
                 "MediaImage demos use `ImageSourceElementContextExt` to resolve local/URL image sources into `ImageId`.",
             ],
         );

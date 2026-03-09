@@ -158,7 +158,8 @@ pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection, CardHeader,
-    CardSize, CardTitle,
+    CardSize, CardTitle, card, card_action, card_content, card_description,
+    card_description_children, card_footer, card_header, card_sized, card_title,
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayApi,

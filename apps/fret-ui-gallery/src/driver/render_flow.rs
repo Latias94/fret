@@ -1534,6 +1534,62 @@ mod tests {
         }
     }
 
+    #[test]
+    fn gallery_card_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-demo-title",
+            "ui-gallery-card-demo-sign-up",
+            "ui-gallery-card-demo-login",
+            "ui-gallery-card-demo-login-google",
+            "ui-gallery-card-size-sm-action",
+            "ui-gallery-card-image-featured",
+            "ui-gallery-card-image-view-event",
+            "ui-gallery-card-rtl-login",
+            "ui-gallery-card-rtl-login-with-google",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Card page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_card_compositions_keep_consistent_card_widths() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-card-compositions-footer-only",
+        );
+
+        let content_only =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-content-only");
+        let header_only =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-only");
+        let footer_only =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-footer-only");
+        let header_content =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-content");
+
+        let expected_width = content_only.size.width.0;
+        for (name, bounds) in [
+            ("header_only", header_only),
+            ("footer_only", footer_only),
+            ("header_content", header_content),
+        ] {
+            assert!(
+                (bounds.size.width.0 - expected_width).abs() <= 1.0,
+                "expected Card compositions sample '{name}' to keep the shared card width: expected≈{expected_width} actual={} content_only={content_only:?} header_only={header_only:?} footer_only={footer_only:?} header_content={header_content:?}",
+                bounds.size.width.0,
+            );
+        }
+    }
+
     fn assert_notes_section_keeps_stable_height_while_scrolling_into_view(
         page: &str,
         notes_test_id: &str,
