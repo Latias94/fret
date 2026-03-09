@@ -131,6 +131,11 @@ Keep explicit `notify()` for:
 - host/runtime callbacks that mutate state outside the first-class authoring hooks
 - render-time query/client invalidation flows where state is only a trigger and the real effect lives outside the tracked local write
 
+Practical boundary: `use_local*` is the default local-state path for this phase, but it is still a
+model-backed handle rather than a plain-Rust/self-owned state slot. Treat `clone_model()` and other
+explicit widget/runtime bridges as intentional boundary markers, not as proof that the repo still
+needs another layer of default local-state sugar.
+
 ## Current distance to the north-star
 
 As of 2026-03-08, the biggest remaining ergonomics gap is no longer text inputs. The narrow text
@@ -138,6 +143,7 @@ bridge already lets `Input` / `Textarea` consume `&LocalState<String>` directly.
 
 The clearest remaining gaps are now narrower:
 
+- local state is now stable as a default teaching path, but `LocalState<T>` is still model-backed rather than the fully plain-Rust/self-owned north-star,
 - keyed-list / payload-row flows now have one narrow helper for local collection mutation, but the root action table still remains visible by design,
 - builder-first `.child(...)` composition is largely in maintenance mode now; `ui::children!` remains common in some medium surfaces, but the remaining pressure is mostly adoption or advanced/runtime-owned seams rather than a missing generic builder family,
 - product-facing docs/templates still need a sharper default/comparison/advanced taxonomy so users do

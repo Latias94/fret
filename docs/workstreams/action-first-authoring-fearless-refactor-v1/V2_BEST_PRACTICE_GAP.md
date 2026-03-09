@@ -148,6 +148,7 @@ In short:
 | App entry | `view::<V>()` is already the only default path | same | Low | Hold docs/gates; wait out deprecation window for old entries |
 | Action naming | default-facing widget families already expose `action(...)` and teaching surfaces prefer it | same | Low | Maintenance only; reopen only if a new default-facing leak appears |
 | Local state reads | `use_local*` + `value_*` path is coherent | same | Low | Keep stable |
+| Local state storage model | `use_local*` is the default path, but `LocalState<T>` is still model-backed and some widget/runtime seams still bridge through `clone_model()` | plain-Rust/self-owned local state with the same runtime guarantees | Medium | Treat as an architectural/runtime question, not as another helper-expansion pass |
 | Local state writes / invalidation | coordinated writes still often route through `on_action_notify_models::<A>(...)`; tracked writes are better but not yet boring enough everywhere | tracked writes should usually feel implicit and lighter | Medium | Productize write guidance before adding more helpers |
 | Medium-surface composition density | builder-first exists and the last clearly repeated medium families are closed; remaining density is mostly adoption or advanced/runtime-owned seams | more fluent builder-first composition on common surfaces | Low | Keep existing builders stable; reopen only if a new cross-surface seam repeats |
 | Handler placement for keyed collections / payload rows | a narrow local payload-row helper now covers the current todo-like evidence slice, while root handler tables remain visible by design | slightly narrower, still explicit action identity | Low | Keep the current helper; reopen only if another medium surface shows the same row-local pressure |
@@ -185,14 +186,25 @@ It is more often:
 - when should the default path stay on `on_action_notify_models::<A>(...)`,
 - and how much explicit invalidation burden still leaks into medium demos.
 
-### 2. Productized onboarding taxonomy
+### 2. Local-state storage semantics
+
+The remaining local-state gap is no longer “how do I read/write it ergonomically”.
+
+It is:
+
+- `LocalState<T>` is still model-backed,
+- some widget/runtime seams still require explicit bridge points such as `clone_model()`,
+- moving closer to a plain-Rust/self-owned story would now require a runtime-level decision rather
+  than another round of small helpers.
+
+### 3. Productized onboarding taxonomy
 
 The code surface is now narrower than the docs surface.
 Users can still over-read advanced/reference examples as if they were the default path.
 
 That is a documentation/product problem more than an API problem.
 
-### 3. Medium-surface builder density
+### 4. Medium-surface builder density
 
 The repo has already closed many hard composition cliffs.
 The remaining question is narrower:

@@ -87,6 +87,11 @@ Adoption note (as of 2026-03-07):
   `on_action_notify_models::<A>(...)` surfaces are now explicitly grouped as coordinated-write
   ownership, command/keymap ownership, and cross-field form ownership, which keeps them from being
   misread as a single generic invalidation-helper gap.
+- Local-state boundary update (as of 2026-03-09): `use_local*` is now stable as the default
+  teaching path, but `AFA-postv1-001` remains open as an architectural gap rather than a helper
+  backlog item. The remaining north-star distance is that `LocalState<T>` is still model-backed
+  rather than plain-Rust/self-owned state, and some widget/runtime seams still intentionally bridge
+  through `clone_model()` or explicit host/model boundaries.
 - Invalidation review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses
   `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`,
   `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`
@@ -207,6 +212,7 @@ Post-v1 direction (recommended):
 - Close v1 as successful on architecture and default-path convergence; do not keep the migration phase open solely to chase the final authoring-density target.
 - Track the remaining ergonomics pressure separately:
   - direct local-state ergonomics beyond `Model<T>`, with the next step being to turn the new todo-like `LocalState<Vec<_>>` comparison path into a boring default rather than a special evidence example; render-side `value_*`, store-side `value_in*`, and handled-aware `update_in_if` now cover the common read/write boilerplate, so the remaining pressure is concentrated on higher-level tracked-write ownership/invalidation defaults rather than syntax noise,
+  - local-state follow-up update (as of 2026-03-09): after the default path converged on `use_local*`, the remaining gap is now explicitly framed as architectural rather than surface-level: whether the repo ever wants to move beyond model-backed `LocalState<T>` toward a stronger plain-Rust/self-owned state story without weakening shared-model interop, diagnostics, and dirty/notify determinism.
   - the new tracked-write inventory note confirms that the remaining noisy cases mostly live at explicit-model/shared coordination boundaries, so the next milestone step should evaluate those boundaries directly before adding more default action helpers,
   - business-table `DataTable` authoring is now classified separately from primitive `Table` builder cleanup; any future work here should be a curated recipe/productization decision, not another generic builder-helper expansion,
   - the explicit-model collection inventory now records that both `apps/fret-examples/src/todo_demo.rs` and the scaffold simple-todo template have moved onto the v2 local-state keyed-list path, so remaining explicit collection surfaces are comparison-only or intentionally advanced,
