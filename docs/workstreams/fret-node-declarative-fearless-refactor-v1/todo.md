@@ -825,6 +825,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     selection preview/commit reducers through the private `paint_only/transactions.rs` and
     `paint_only/selection.rs` seams, so declarative paint-only orchestration no longer keeps
     transaction plumbing and selection-state writes embedded in the main surface file.
+  - Progress: `paint_only.rs` now also routes left-pointer down snapshot/arming logic through the
+    private `paint_only/pointer_down.rs` seam, so declarative paint-only pointer-entry handling no
+    longer keeps pan arming, hit snapshot reads, and selection/marquee arming embedded inline.
 
 ## M5 - Compatibility retained convergence
 
