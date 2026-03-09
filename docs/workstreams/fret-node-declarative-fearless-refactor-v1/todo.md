@@ -1131,6 +1131,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/context_menu/connection_execution_insert.rs` and
     `ui/canvas/widget/context_menu/connection_execution_conversion.rs` seams, so
     `context_menu/connection_execution.rs` now mainly keeps the plan enums and focused tests.
+  - Progress: edge marker-path planning and wire/highlight replay helpers now also route through the
+    private `ui/canvas/widget/paint_edges/markers_support.rs` seam, so
+    `paint_edges/markers.rs` now mainly keeps the regular-vs-custom marker orchestration explicit.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

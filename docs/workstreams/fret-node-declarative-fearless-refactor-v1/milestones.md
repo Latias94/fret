@@ -721,6 +721,9 @@ real editors.
   `ui/canvas/widget/context_menu/connection_execution_insert.rs` and
   `ui/canvas/widget/context_menu/connection_execution_conversion.rs` seams, so
   `context_menu/connection_execution.rs` now mainly keeps the plan enums and focused tests.
+- edge marker-path planning and wire/highlight replay helpers now also route through the private
+  `ui/canvas/widget/paint_edges/markers_support.rs` seam, so `paint_edges/markers.rs` now mainly
+  keeps the regular-vs-custom marker orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,7 +1,11 @@
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::PaintBindingV1;
-use fret_core::scene::PaintEvalSpaceV1;
+
+use super::markers_support::{
+    custom_marker_paths_budgeted, custom_wire_path, marker_paint_binding_for_wire,
+    push_marker_path, push_wire_highlight_path, route_marker_paths_budgeted, route_wire_path,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct WireHighlightPaint {
@@ -10,17 +14,6 @@ pub(super) struct WireHighlightPaint {
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    fn marker_paint_binding_for_wire(paint: PaintBindingV1, color: Color) -> PaintBindingV1 {
-        // Marker paths are independent vector paths; when the wire uses `StrokeS01` evaluation,
-        // the marker's stroke arclength parameter is unrelated to the wire's. Conservatively
-        // fall back to the resolved solid color so markers remain visually stable.
-        if paint.eval_space == PaintEvalSpaceV1::StrokeS01 {
-            color.into()
-        } else {
-            paint
-        }
-    }
-
     pub(super) fn push_edge_wire_and_markers_budgeted(
         &mut self,
         scene: &mut fret_core::Scene,
@@ -45,161 +38,52 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return (true, 0);
         }
 
-        let marker_paint = Self::marker_paint_binding_for_wire(paint, color);
-
-        let mut marker_skipped: u32 = 0;
-
-        let end_path = if stop_on_marker_skip {
-            if let Some(marker) = end_marker {
-                let (path, skipped_by_budget) = self.paint_cache.edge_end_marker_path_budgeted(
-                    services,
-                    route,
-                    from,
-                    to,
-                    zoom,
-                    scale_factor,
-                    marker,
-                    self.style.geometry.pin_radius,
-                    marker_budget,
-                );
-                if skipped_by_budget {
-                    return (true, 1);
-                }
-                path
-            } else {
-                None
-            }
-        } else {
-            None
+        let marker_paint = marker_paint_binding_for_wire(paint, color);
+        let (start_path, end_path, marker_skipped) = match route_marker_paths_budgeted(
+            self,
+            services,
+            route,
+            from,
+            to,
+            zoom,
+            scale_factor,
+            start_marker,
+            end_marker,
+            marker_budget,
+            stop_on_marker_skip,
+        ) {
+            Ok(result) => result,
+            Err(skipped) => return (true, skipped),
         };
 
-        let start_path = if stop_on_marker_skip {
-            if let Some(marker) = start_marker {
-                let (path, skipped_by_budget) = self.paint_cache.edge_start_marker_path_budgeted(
-                    services,
-                    route,
-                    from,
-                    to,
-                    zoom,
-                    scale_factor,
-                    marker,
-                    self.style.geometry.pin_radius,
-                    marker_budget,
-                );
-                if skipped_by_budget {
-                    return (true, 1);
-                }
-                path
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some(path) =
-            self.paint_cache
-                .wire_path(services, route, from, to, zoom, scale_factor, width, dash)
-        {
-            scene.push(SceneOp::Path {
-                order: DrawOrder(2),
-                origin: Point::new(Px(0.0), Px(0.0)),
-                path,
-                paint,
-            });
-        }
-
-        if let Some(highlight) = highlight
-            && highlight.width.is_finite()
-            && highlight.width > 1.0e-3
-            && highlight.color.a > 0.0
-            && let Some(path) = self.paint_cache.wire_path(
+        let wire_path = route_wire_path(
+            self,
+            services,
+            route,
+            from,
+            to,
+            zoom,
+            scale_factor,
+            width,
+            dash,
+        );
+        push_marker_path(scene, wire_path, paint);
+        let highlight_path = highlight.and_then(|value| {
+            route_wire_path(
+                self,
                 services,
                 route,
                 from,
                 to,
                 zoom,
                 scale_factor,
-                highlight.width,
+                value.width,
                 dash,
             )
-        {
-            scene.push(SceneOp::Path {
-                order: DrawOrder(2),
-                origin: Point::new(Px(0.0), Px(0.0)),
-                path,
-                paint: highlight.color.into(),
-            });
-        }
-
-        if stop_on_marker_skip {
-            if let Some(path) = end_path {
-                scene.push(SceneOp::Path {
-                    order: DrawOrder(2),
-                    origin: Point::new(Px(0.0), Px(0.0)),
-                    path,
-                    paint: marker_paint,
-                });
-            }
-            if let Some(path) = start_path {
-                scene.push(SceneOp::Path {
-                    order: DrawOrder(2),
-                    origin: Point::new(Px(0.0), Px(0.0)),
-                    path,
-                    paint: marker_paint,
-                });
-            }
-        } else {
-            if let Some(marker) = end_marker {
-                let (path, skipped_by_budget) = self.paint_cache.edge_end_marker_path_budgeted(
-                    services,
-                    route,
-                    from,
-                    to,
-                    zoom,
-                    scale_factor,
-                    marker,
-                    self.style.geometry.pin_radius,
-                    marker_budget,
-                );
-                if skipped_by_budget {
-                    marker_skipped = marker_skipped.saturating_add(1);
-                }
-                if let Some(path) = path {
-                    scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: marker_paint,
-                    });
-                }
-            }
-
-            if let Some(marker) = start_marker {
-                let (path, skipped_by_budget) = self.paint_cache.edge_start_marker_path_budgeted(
-                    services,
-                    route,
-                    from,
-                    to,
-                    zoom,
-                    scale_factor,
-                    marker,
-                    self.style.geometry.pin_radius,
-                    marker_budget,
-                );
-                if skipped_by_budget {
-                    marker_skipped = marker_skipped.saturating_add(1);
-                }
-                if let Some(path) = path {
-                    scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: marker_paint,
-                    });
-                }
-            }
-        }
+        });
+        push_wire_highlight_path(scene, highlight_path, highlight);
+        push_marker_path(scene, end_path, marker_paint);
+        push_marker_path(scene, start_path, marker_paint);
 
         (false, marker_skipped)
     }
@@ -231,60 +115,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return (true, 0);
         }
 
-        let marker_paint = Self::marker_paint_binding_for_wire(paint, color);
-
-        let mut marker_skipped: u32 = 0;
-
-        let end_path = if stop_on_marker_skip {
-            if let Some(marker) = end_marker {
-                let (path, skipped_by_budget) =
-                    self.paint_cache.edge_end_marker_path_budgeted_with_tangent(
-                        services,
-                        to,
-                        end_tangent,
-                        zoom,
-                        scale_factor,
-                        marker,
-                        self.style.geometry.pin_radius,
-                        marker_budget,
-                    );
-                if skipped_by_budget {
-                    return (true, 1);
-                }
-                path
-            } else {
-                None
-            }
-        } else {
-            None
+        let marker_paint = marker_paint_binding_for_wire(paint, color);
+        let (start_path, end_path, marker_skipped) = match custom_marker_paths_budgeted(
+            self,
+            services,
+            from,
+            to,
+            start_tangent,
+            end_tangent,
+            zoom,
+            scale_factor,
+            start_marker,
+            end_marker,
+            marker_budget,
+            stop_on_marker_skip,
+        ) {
+            Ok(result) => result,
+            Err(skipped) => return (true, skipped),
         };
 
-        let start_path = if stop_on_marker_skip {
-            if let Some(marker) = start_marker {
-                let (path, skipped_by_budget) = self
-                    .paint_cache
-                    .edge_start_marker_path_budgeted_with_tangent(
-                        services,
-                        from,
-                        start_tangent,
-                        zoom,
-                        scale_factor,
-                        marker,
-                        self.style.geometry.pin_radius,
-                        marker_budget,
-                    );
-                if skipped_by_budget {
-                    return (true, 1);
-                }
-                path
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some(path) = self.paint_cache.wire_path_from_commands(
+        let wire_path = custom_wire_path(
+            self,
             services,
             cache_key,
             commands,
@@ -292,106 +143,23 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scale_factor,
             width,
             dash,
-        ) {
-            scene.push(SceneOp::Path {
-                order: DrawOrder(2),
-                origin: Point::new(Px(0.0), Px(0.0)),
-                path,
-                paint,
-            });
-        }
-
-        if let Some(highlight) = highlight
-            && highlight.width.is_finite()
-            && highlight.width > 1.0e-3
-            && highlight.color.a > 0.0
-            && let Some(path) = self.paint_cache.wire_path_from_commands(
+        );
+        push_marker_path(scene, wire_path, paint);
+        let highlight_path = highlight.and_then(|value| {
+            custom_wire_path(
+                self,
                 services,
                 cache_key,
                 commands,
                 zoom,
                 scale_factor,
-                highlight.width,
+                value.width,
                 dash,
             )
-        {
-            scene.push(SceneOp::Path {
-                order: DrawOrder(2),
-                origin: Point::new(Px(0.0), Px(0.0)),
-                path,
-                paint: highlight.color.into(),
-            });
-        }
-
-        if stop_on_marker_skip {
-            if let Some(path) = end_path {
-                scene.push(SceneOp::Path {
-                    order: DrawOrder(2),
-                    origin: Point::new(Px(0.0), Px(0.0)),
-                    path,
-                    paint: marker_paint,
-                });
-            }
-            if let Some(path) = start_path {
-                scene.push(SceneOp::Path {
-                    order: DrawOrder(2),
-                    origin: Point::new(Px(0.0), Px(0.0)),
-                    path,
-                    paint: marker_paint,
-                });
-            }
-        } else {
-            if let Some(marker) = end_marker {
-                let (path, skipped_by_budget) =
-                    self.paint_cache.edge_end_marker_path_budgeted_with_tangent(
-                        services,
-                        to,
-                        end_tangent,
-                        zoom,
-                        scale_factor,
-                        marker,
-                        self.style.geometry.pin_radius,
-                        marker_budget,
-                    );
-                if skipped_by_budget {
-                    marker_skipped = marker_skipped.saturating_add(1);
-                }
-                if let Some(path) = path {
-                    scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: marker_paint,
-                    });
-                }
-            }
-
-            if let Some(marker) = start_marker {
-                let (path, skipped_by_budget) = self
-                    .paint_cache
-                    .edge_start_marker_path_budgeted_with_tangent(
-                        services,
-                        from,
-                        start_tangent,
-                        zoom,
-                        scale_factor,
-                        marker,
-                        self.style.geometry.pin_radius,
-                        marker_budget,
-                    );
-                if skipped_by_budget {
-                    marker_skipped = marker_skipped.saturating_add(1);
-                }
-                if let Some(path) = path {
-                    scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: marker_paint,
-                    });
-                }
-            }
-        }
+        });
+        push_wire_highlight_path(scene, highlight_path, highlight);
+        push_marker_path(scene, end_path, marker_paint);
+        push_marker_path(scene, start_path, marker_paint);
 
         (false, marker_skipped)
     }
