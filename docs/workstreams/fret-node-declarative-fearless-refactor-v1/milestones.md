@@ -601,6 +601,12 @@ real editors.
   node/group projection no longer stay embedded in the retained drag router.
 - `node_drag.rs` now also routes anchor clamp / extent union / multi-drag
   extent clamp math through the private `canvas/widget/node_drag_constraints.rs` seam,
+- `retained_widget_command_availability.rs` now routes focus/clipboard gating and
+  graph/view-state availability queries through the private
+  `canvas/widget/retained_widget_command_availability_gate.rs` and
+  `canvas/widget/retained_widget_command_availability_query.rs` seams, so retained edit
+  command availability no longer keeps capability checks and selection/content reads
+  embedded in one surface.
   so node/group constraint math no longer stays embedded in the retained drag router.
 - `paint_grid.rs` now routes tile scene-op generation through the private
   `canvas/widget/paint_grid_tiles.rs` seam, so grid line/dot/cross emission and
@@ -1025,6 +1031,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_plan.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_stats.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid_tiles.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_gate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_command_availability_query.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_menu.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_overlay_guides.rs`

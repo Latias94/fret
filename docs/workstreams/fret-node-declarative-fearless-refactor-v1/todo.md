@@ -529,6 +529,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     node/group projection no longer stay embedded in the retained drag router.
   - Progress: `node_drag.rs` now also routes anchor clamp / extent union /
     multi-drag extent clamp math through the private
+  - Progress: `retained_widget_command_availability.rs` now routes focus/clipboard gating
+    and graph/view-state availability queries through the private
+    `canvas/widget/retained_widget_command_availability_gate.rs` and
+    `canvas/widget/retained_widget_command_availability_query.rs` seams, so retained edit
+    command availability no longer keeps capability checks and selection/content reads
+    embedded in one surface.
     `canvas/widget/node_drag_constraints.rs` seam, so node/group constraint math no longer
     stays embedded in the retained drag router.
   - Progress: `paint_grid.rs` now routes tile scene-op generation through the
