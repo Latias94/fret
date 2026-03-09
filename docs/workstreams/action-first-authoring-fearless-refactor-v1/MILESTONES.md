@@ -11,6 +11,7 @@ Related:
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
+- Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -92,6 +93,10 @@ Adoption note (as of 2026-03-07):
   `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` now records that `App::ui*`, compat runner, `use_state`,
   and command-first retained seams are source-aligned, and the missing compat-runner default-path
   gate is now closed by `tools/gate_compat_runner_default_surface.py`.
+- Author-surface audit update (as of 2026-03-09):
+  `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md` now records that `docs/component-author-guide.md`
+  and `ecosystem/fret-ui-shadcn/README.md` already align with the action-first story, and
+  `ecosystem/fret-ui-material3/README.md` now closes the last obvious crate-entry gap.
 - `use_state` cleanup update (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records the
   future keep-vs-deprecate execution path for the explicit raw-model seam, so the repo can shrink
   that surface later without reopening the already-closed default-path migration question.

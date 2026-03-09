@@ -19,6 +19,7 @@ Related:
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
+- Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
@@ -575,6 +576,9 @@ Current sequencing note (as of 2026-03-09):
   records that the remaining hard-delete / retained-seam decisions are source-aligned, and the
   missing compat-runner default-path gate is now closed by
   `tools/gate_compat_runner_default_surface.py`.
+- author-surface audit note (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
+  now records that the remaining author-entry docs already align with the action-first story, and
+  `ecosystem/fret-ui-material3/README.md` now closes the last missing crate-entry surface.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -780,6 +784,15 @@ Current sequencing note (as of 2026-03-09):
   - Status (as of 2026-03-09): `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records that
     split, and the hard-delete index/status/checklist/endgame summary docs all point to it as the
     current boundary rule for the command-first retained-seam lane.
+
+- [x] AFA-postv1-021c Audit component-author surfaces against the current action-first story.
+  - Goal: verify that crate-entry docs and top-level component author guidance do not still leak an
+    outdated command-first/default-path mental model.
+  - Evidence target: one short audit note plus any minimal README alignment needed to close a real
+    author-entry gap.
+  - Status (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md` now records the
+    audit result, and `ecosystem/fret-ui-material3/README.md` now gives Material3 the same kind of
+    author-facing entrypoint that shadcn already had.
 
 - [x] AFA-postv1-022 Audit `DataTable` authoring as a separate post-v1 surface instead of treating it as more primitive `Table` builder cleanup.
   - Goal: determine whether the remaining density pressure is really another `build(...)` / `into_element(cx)` problem or a higher-level business-table recipe/productization problem.
