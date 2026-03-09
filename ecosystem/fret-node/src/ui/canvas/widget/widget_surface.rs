@@ -2,6 +2,8 @@ use super::*;
 
 #[path = "widget_surface/builders.rs"]
 mod builders;
+#[path = "widget_surface/construct.rs"]
+mod construct;
 #[path = "widget_surface/fit_view.rs"]
 mod fit_view;
 #[path = "widget_surface/sync.rs"]
@@ -160,71 +162,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .edge_custom_path(graph, edge_id, hint, from, to, zoom)
     }
 
-    pub fn new_with_middleware(
-        graph: Model<Graph>,
-        view_state: Model<NodeGraphViewState>,
-        middleware: M,
-    ) -> Self {
-        let auto_measured = Arc::new(MeasuredGeometryStore::new());
-        Self {
-            graph,
-            view_state,
-            store: None,
-            store_rev: None,
-            presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(
-                DefaultNodeGraphPresenter::default(),
-                auto_measured.clone(),
-            )),
-            edge_types: None,
-            callbacks: None,
-            middleware,
-            style: NodeGraphStyle::default(),
-            background_override: None,
-            color_mode: None,
-            color_mode_last: None,
-            color_mode_theme_rev: None,
-            skin: None,
-            skin_last_rev: None,
-            geometry_overrides: None,
-            paint_overrides: None,
-            paint_overrides_last_rev: None,
-            close_command: None,
-            auto_measured,
-            auto_measured_key: None,
-            edit_queue: None,
-            edit_queue_key: None,
-            view_queue: None,
-            view_queue_key: None,
-            overlays: None,
-            fit_view_on_mount: None,
-            did_fit_view_on_mount: false,
-            measured_output: None,
-            measured_output_key: None,
-            internals: None,
-            internals_key: None,
-            diagnostics_anchor_ports: None,
-            cached_pan: CanvasPoint::default(),
-            cached_zoom: 1.0,
-            last_cull_window_key: None,
-            history: GraphHistory::default(),
-            geometry: GeometryCache::default(),
-            paint_cache: CanvasPaintCache::default(),
-            grid_scene_cache: SceneOpTileCache::default(),
-            grid_tiles_scratch: Vec::new(),
-            edges_tiles_scratch: Vec::new(),
-            edges_tile_keys_scratch: Vec::new(),
-            edge_labels_tile_keys_scratch: Vec::new(),
-            groups_scene_cache: SceneOpTileCache::default(),
-            nodes_scene_cache: SceneOpTileCache::default(),
-            edges_scene_cache: SceneOpTileCache::default(),
-            edge_labels_scene_cache: SceneOpTileCache::default(),
-            edges_build_states: HashMap::new(),
-            edge_labels_build_states: HashMap::new(),
-            edge_labels_build_state: None,
-            interaction: InteractionState::default(),
-        }
-    }
-
     pub fn with_presenter(mut self, presenter: impl NodeGraphPresenter + 'static) -> Self {
         self.presenter = Box::new(FallbackMeasuredNodeGraphPresenter::new(
             presenter,
@@ -253,66 +190,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub fn with_callbacks(mut self, callbacks: impl NodeGraphCallbacks) -> Self {
         self.callbacks = Some(Box::new(callbacks));
         self
-    }
-
-    pub fn with_middleware<M2: NodeGraphCanvasMiddleware>(
-        self,
-        middleware: M2,
-    ) -> NodeGraphCanvasWith<M2> {
-        NodeGraphCanvasWith {
-            graph: self.graph,
-            view_state: self.view_state,
-            store: self.store,
-            store_rev: self.store_rev,
-            presenter: self.presenter,
-            edge_types: self.edge_types,
-            callbacks: self.callbacks,
-            middleware,
-            style: self.style,
-            background_override: self.background_override,
-            color_mode: self.color_mode,
-            color_mode_last: self.color_mode_last,
-            color_mode_theme_rev: self.color_mode_theme_rev,
-            skin: self.skin,
-            skin_last_rev: self.skin_last_rev,
-            geometry_overrides: self.geometry_overrides,
-            paint_overrides: self.paint_overrides,
-            paint_overrides_last_rev: self.paint_overrides_last_rev,
-            close_command: self.close_command,
-            auto_measured: self.auto_measured,
-            auto_measured_key: self.auto_measured_key,
-            edit_queue: self.edit_queue,
-            edit_queue_key: self.edit_queue_key,
-            view_queue: self.view_queue,
-            view_queue_key: self.view_queue_key,
-            overlays: self.overlays,
-            fit_view_on_mount: self.fit_view_on_mount,
-            did_fit_view_on_mount: self.did_fit_view_on_mount,
-            measured_output: self.measured_output,
-            measured_output_key: self.measured_output_key,
-            internals: self.internals,
-            internals_key: self.internals_key,
-            diagnostics_anchor_ports: self.diagnostics_anchor_ports,
-            cached_pan: self.cached_pan,
-            cached_zoom: self.cached_zoom,
-            last_cull_window_key: self.last_cull_window_key,
-            history: self.history,
-            geometry: self.geometry,
-            paint_cache: self.paint_cache,
-            grid_scene_cache: self.grid_scene_cache,
-            grid_tiles_scratch: self.grid_tiles_scratch,
-            edges_tiles_scratch: self.edges_tiles_scratch,
-            edges_tile_keys_scratch: self.edges_tile_keys_scratch,
-            edge_labels_tile_keys_scratch: self.edge_labels_tile_keys_scratch,
-            groups_scene_cache: self.groups_scene_cache,
-            nodes_scene_cache: self.nodes_scene_cache,
-            edges_scene_cache: self.edges_scene_cache,
-            edge_labels_scene_cache: self.edge_labels_scene_cache,
-            edges_build_states: self.edges_build_states,
-            edge_labels_build_states: self.edge_labels_build_states,
-            edge_labels_build_state: self.edge_labels_build_state,
-            interaction: self.interaction,
-        }
     }
 
     pub fn with_measured_output_store(mut self, store: Arc<MeasuredGeometryStore>) -> Self {
