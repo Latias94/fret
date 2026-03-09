@@ -848,6 +848,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: `paint_only.rs` now also routes marquee overlay append and final overlay-layer
     wrapping through the same private `paint_only/overlays.rs` seam, so declarative paint-only
     surface assembly no longer keeps overlay child flush/wrap plumbing embedded inline.
+  - Progress: `paint_only.rs` now also routes edge/portal diagnostics aggregation and semantics
+    value assembly through the private `paint_only/semantics.rs` seam, so declarative paint-only
+    surface assembly no longer keeps observability counters and long semantics formatting embedded
+    inline.
 
 ## M5 - Compatibility retained convergence
 
