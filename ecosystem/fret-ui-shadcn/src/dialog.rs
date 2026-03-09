@@ -24,7 +24,8 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, UiChildIntoElement, UiHostBoundIntoElement, ui,
+    Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -866,6 +867,15 @@ impl<H: UiHost, TTrigger> DialogComposition<H, TTrigger> {
     }
 }
 
+fn collect_built_dialog_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 /// shadcn/ui `DialogContent` (v4).
 #[derive(Debug)]
 pub struct DialogContent {
@@ -883,6 +893,20 @@ impl DialogContent {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             a11y_label: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DialogContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogContentBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            a11y_label: None,
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -948,6 +972,99 @@ impl DialogContent {
             described_by_element,
             ..Default::default()
         })
+    }
+}
+
+pub struct DialogContentBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog content build closure"),
+        );
+        let mut content = DialogContent::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+        if let Some(label) = self.a11y_label {
+            content = content.a11y_label(label);
+        }
+        let content = content.into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogContentBuild::into_element(self, cx)
     }
 }
 
@@ -1124,6 +1241,16 @@ impl DialogHeader {
         Self { children }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> DialogHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogHeaderBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         use fret_ui_kit::declarative::ViewportQueryHysteresis;
@@ -1198,6 +1325,54 @@ impl DialogHeader {
     }
 }
 
+pub struct DialogHeaderBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeader::new(collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog header build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DialogFooter` (v4).
 #[derive(Debug)]
 pub struct DialogFooter {
@@ -1208,6 +1383,16 @@ impl DialogFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DialogFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -1252,6 +1437,54 @@ impl DialogFooter {
                 children,
             )
         }
+    }
+}
+
+pub struct DialogFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooter::new(collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog footer build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooterBuild::into_element(self, cx)
     }
 }
 
@@ -1361,6 +1594,8 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
+    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
+    use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
@@ -1381,6 +1616,29 @@ mod tests {
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
             assert!(out[0].inherited_foreground.is_some());
         });
+    }
+
+    #[allow(dead_code)]
+    fn dialog_content_build_accepts_builder_first_sections<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        DialogContent::build(|cx, out| {
+            out.push_ui(
+                cx,
+                DialogHeader::build(|cx, out| {
+                    out.push_ui(cx, DialogTitle::new("Title"));
+                }),
+            );
+            out.push_ui(
+                cx,
+                DialogFooter::build(|cx, out| {
+                    out.push_ui(cx, crate::Button::new("Close"));
+                }),
+            );
+        })
+        .ui()
+        .test_id("content")
+        .into_element(cx)
     }
 
     #[test]

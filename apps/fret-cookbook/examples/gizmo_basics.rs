@@ -335,7 +335,7 @@ fn paint_gizmo(
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> ViewElements {
-    let model = cx.watch_model(&st.model).paint().cloned_or_default();
+    let model = cx.watch_model(&st.model).paint().value_or_default();
 
     let pos = model.transform.translation;
     let pos_len = pos.length() as f64;
@@ -350,15 +350,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
                 "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
             ),
         );
-    })
-    .into_element(cx);
+    });
 
-    let pos_badges = ui::h_flex(|cx| {
-        let mut badge = |label: String, test_id: &'static str, value: f64| {
+    let pos_badges = ui::h_flex(|_cx| {
+        let badge = |label: String, test_id: &'static str, value: f64| {
             shadcn::Badge::new(label)
                 .variant(shadcn::BadgeVariant::Secondary)
-                .into_element(cx)
-                .attach_semantics(
+                .a11y(
                     SemanticsDecoration::default()
                         .role(SemanticsRole::Meter)
                         .test_id(test_id)
@@ -378,8 +376,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let toolbar = ui::h_flex(|cx| {
         ui::children![
@@ -396,8 +393,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let hint = shadcn::Alert::new(ui::children![
         cx;
@@ -406,8 +402,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
             "Left-drag inside the viewport. Dragging from the center should pick the view-plane translation handle, which is easy to script for regression gates.",
         ),
     ])
-    .ui()
-    .into_element(cx);
+    .ui();
 
     let viewport = {
         let model_handle = st.model.clone();
@@ -659,21 +654,20 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     let viewport = ui::container(|_cx| vec![viewport])
         .w_full()
         .h_full()
-        .min_h(Px(480.0))
-        .into_element(cx);
+        .min_h(Px(480.0));
 
     let card = shadcn::Card::build(|cx, out| {
-        out.push(header);
+        out.push_ui(cx, header);
         out.push_ui(
             cx,
             shadcn::CardContent::build(|cx, out| {
-                out.push(
+                out.push_ui(
+                    cx,
                     ui::v_flex(|cx| ui::children![cx; toolbar, hint, viewport])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
-                        .min_w_0()
-                        .into_element(cx),
+                        .min_w_0(),
                 );
             }),
         );
@@ -681,10 +675,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

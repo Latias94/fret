@@ -103,6 +103,7 @@ pub mod switch;
 pub mod table;
 pub mod tabs;
 mod text_edit_context_menu;
+pub mod text_value_model;
 pub mod textarea;
 pub mod toast;
 pub mod toggle;
@@ -339,6 +340,7 @@ pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
     TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
 };
+pub use text_value_model::IntoTextValueModel;
 pub use textarea::{Textarea, textarea};
 pub use toggle::{
     Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,

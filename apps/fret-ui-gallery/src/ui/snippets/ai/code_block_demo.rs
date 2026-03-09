@@ -53,7 +53,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let language_value = cx
         .watch_model(&language)
         .paint()
-        .cloned_or_else(|| Some(Arc::<str>::from("typescript")))
+        .value_or_else(|| Some(Arc::<str>::from("typescript")))
         .unwrap_or_else(|| Arc::<str>::from("typescript"));
 
     let (code, filename) = match language_value.as_ref() {

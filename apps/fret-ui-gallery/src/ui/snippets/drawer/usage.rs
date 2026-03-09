@@ -23,31 +23,33 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
 
-    let trigger = shadcn::DrawerTrigger::new(
-        shadcn::Button::new("Open")
-            .variant(shadcn::ButtonVariant::Outline)
-            .into_element(cx),
-    );
-
     shadcn::Drawer::new(open)
         .compose()
-        .trigger(trigger)
+        .trigger(shadcn::DrawerTrigger::build(
+            shadcn::Button::new("Open").variant(shadcn::ButtonVariant::Outline),
+        ))
         .portal(shadcn::DrawerPortal::new())
         .overlay(shadcn::DrawerOverlay::new())
         .content_with(move |cx| {
-            shadcn::DrawerContent::new([
-                shadcn::DrawerHeader::new([
-                    shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                    shadcn::DrawerDescription::new("Set your daily activity goal.")
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::DrawerFooter::new([
-                    shadcn::Button::new("Submit").into_element(cx),
-                    shadcn::DrawerClose::from_scope().into_element(cx),
-                ])
-                .into_element(cx),
-            ])
+            shadcn::DrawerContent::build(|cx, out| {
+                out.push(
+                    shadcn::DrawerHeader::build(|cx, out| {
+                        out.push(shadcn::DrawerTitle::new("Move Goal").into_element(cx));
+                        out.push(
+                            shadcn::DrawerDescription::new("Set your daily activity goal.")
+                                .into_element(cx),
+                        );
+                    })
+                    .into_element(cx),
+                );
+                out.push(
+                    shadcn::DrawerFooter::build(|cx, out| {
+                        out.push(shadcn::Button::new("Submit").into_element(cx));
+                        out.push(shadcn::DrawerClose::from_scope().into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            })
             .into_element(cx)
         })
         .into_element(cx)

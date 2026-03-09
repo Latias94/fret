@@ -32,8 +32,8 @@ impl View for ActionFirstViewRuntimeDemo {
             .expect("expected snippet to inject `last_action` model");
 
         let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().copied_or(0);
-        let last_action_value = cx.watch_model(&last_action).layout().cloned_or_default();
+        let count_value = cx.watch_model(&count).layout().value_or(0);
+        let last_action_value = cx.watch_model(&last_action).layout().value_or_default();
 
         cx.on_action_notify_models::<act::Ping>({
             let count = count.clone();

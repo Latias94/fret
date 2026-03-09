@@ -293,14 +293,14 @@ fn view(
     let clicks = cx
         .watch_model(&embedded_models.clicks)
         .paint()
-        .copied_or_default();
-    let uv_x = cx.watch_model(&diag.uv_x).paint().copied_or_default();
-    let uv_y = cx.watch_model(&diag.uv_y).paint().copied_or_default();
-    let target_w = cx.watch_model(&diag.target_w).paint().copied_or_default();
-    let target_h = cx.watch_model(&diag.target_h).paint().copied_or_default();
-    let kind = cx.watch_model(&diag.kind).paint().copied_or_default();
+        .value_or_default();
+    let uv_x = cx.watch_model(&diag.uv_x).paint().value_or_default();
+    let uv_y = cx.watch_model(&diag.uv_y).paint().value_or_default();
+    let target_w = cx.watch_model(&diag.target_w).paint().value_or_default();
+    let target_h = cx.watch_model(&diag.target_h).paint().value_or_default();
+    let kind = cx.watch_model(&diag.kind).paint().value_or_default();
 
-    let preset = cx.watch_model(&st.size_preset).paint().copied_or_default();
+    let preset = cx.watch_model(&st.size_preset).paint().value_or_default();
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
         2 => ((1280, 720), "1280×720"),
@@ -311,7 +311,7 @@ fn view(
     let fit = cx
         .watch_model(&st.fit)
         .paint()
-        .copied_or(ViewportFit::Contain);
+        .value_or(ViewportFit::Contain);
 
     let header = ui::v_flex(|cx| {
         ui::children![
@@ -366,8 +366,7 @@ fn view(
 
     let clicks_badge = shadcn::Badge::new(format!("Clicks: {clicks}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_CLICKS)
@@ -376,8 +375,7 @@ fn view(
 
     let uv_x_badge = shadcn::Badge::new(format!("uv.x: {:.3}", uv_x))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_UV_X)
@@ -386,8 +384,7 @@ fn view(
         );
     let uv_y_badge = shadcn::Badge::new(format!("uv.y: {:.3}", uv_y))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_UV_Y)
@@ -397,8 +394,7 @@ fn view(
 
     let target_w_badge = shadcn::Badge::new(format!("target.w: {:.0}", target_w))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_W)
@@ -406,8 +402,7 @@ fn view(
         );
     let target_h_badge = shadcn::Badge::new(format!("target.h: {:.0}", target_h))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_H)
@@ -416,8 +411,7 @@ fn view(
 
     let kind_badge = shadcn::Badge::new(format!("kind: {kind:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_KIND)
@@ -488,10 +482,9 @@ fn view(
     })
     .ui()
     .w_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }

@@ -63,9 +63,8 @@ fn build_snapshot(cx: &mut ElementContext<'_, App>, st: &TodoState) -> TodoSnaps
         fetch_tip().await
     });
 
-    let tip_state = cx
-        .watch_model(tip_handle.model())
-        .layout()
+    let tip_state = tip_handle
+        .layout_query(cx)
         .cloned()
         .unwrap_or_default();
 

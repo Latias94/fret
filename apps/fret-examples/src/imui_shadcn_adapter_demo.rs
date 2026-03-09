@@ -36,11 +36,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiShadcnAdapterState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiShadcnAdapterState) -> ViewElements {
-    let count = cx.watch_model(&st.count).layout().copied_or_default();
-    let enabled = cx.watch_model(&st.enabled).paint().copied_or_default();
-    let value = cx.watch_model(&st.value).paint().copied_or_default();
-    let mode = cx.watch_model(&st.mode).paint().cloned_or_default();
-    let draft = cx.watch_model(&st.draft).paint().cloned_or_default();
+    let count = cx.watch_model(&st.count).layout().value_or_default();
+    let enabled = cx.watch_model(&st.enabled).paint().value_or_default();
+    let value = cx.watch_model(&st.value).paint().value_or_default();
+    let mode = cx.watch_model(&st.mode).paint().value_or_default();
+    let draft = cx.watch_model(&st.draft).paint().value_or_default();
 
     let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 

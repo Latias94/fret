@@ -62,12 +62,12 @@ impl SimpleTodoDriver {
 
                     let theme = cx.theme_snapshot();
 
-                    let todos = cx.watch_model(&todos_model).layout().cloned_or_default();
-                    let draft_value = cx.watch_model(&draft_model).paint().cloned_or_default();
+                    let todos = cx.watch_model(&todos_model).layout().value_or_default();
+                    let draft_value = cx.watch_model(&draft_model).paint().value_or_default();
 
                     let mut done_count = 0usize;
                     for t in &todos {
-                        if cx.watch_model(&t.done).paint().copied_or_default() {
+                        if cx.watch_model(&t.done).paint().value_or_default() {
                             done_count += 1;
                         }
                     }
@@ -243,7 +243,7 @@ fn todo_row(
     item: &TodoItem,
     remove_cmd: CommandId,
 ) -> fret_ui::element::AnyElement {
-    let done = cx.watch_model(&item.done).paint().copied_or_default();
+    let done = cx.watch_model(&item.done).paint().value_or_default();
 
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 

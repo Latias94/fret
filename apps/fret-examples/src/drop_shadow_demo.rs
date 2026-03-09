@@ -137,11 +137,8 @@ impl View for DropShadowDemoView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let enabled = cx
-            .watch_model(&self.st.enabled)
-            .layout()
-            .copied_or_default();
-        let stress = cx.watch_model(&self.st.stress).layout().copied_or_default();
+        let enabled = cx.watch_model(&self.st.enabled).layout().value_or_default();
+        let stress = cx.watch_model(&self.st.stress).layout().value_or_default();
 
         let stage = cx.container(
             ContainerProps {

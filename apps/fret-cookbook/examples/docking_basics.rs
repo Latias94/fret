@@ -326,8 +326,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
 
         let active_left_badge = shadcn::Badge::new(format!("Left: {active_left}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_ACTIVE_LEFT)
@@ -337,8 +336,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
 
         let active_right_badge = shadcn::Badge::new(format!("Right: {active_right}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_ACTIVE_RIGHT)
@@ -373,8 +371,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let dock_host =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -410,13 +407,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
         out.push_ui(
             cx,
             shadcn::CardContent::build(|cx, out| {
-                out.push(
+                out.push_ui(
+                    cx,
                     ui::v_flex(|cx| ui::children![cx; toolbar, dock_host])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
-                        .min_w_0()
-                        .into_element(cx),
+                        .min_w_0(),
                 );
             }),
         );
@@ -424,10 +421,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

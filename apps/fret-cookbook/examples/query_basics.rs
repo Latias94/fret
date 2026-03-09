@@ -41,14 +41,14 @@ impl View for QueryBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let fail_mode = cx.use_state::<bool>();
-        let invalidate_requested = cx.use_state::<bool>();
-        let invalidate_namespace_requested = cx.use_state::<bool>();
+        let fail_mode = cx.use_local::<bool>();
+        let invalidate_requested = cx.use_local::<bool>();
+        let invalidate_namespace_requested = cx.use_local::<bool>();
 
-        cx.on_action_notify_toggle_bool::<act::ToggleErrorMode>(fail_mode.clone());
-        cx.on_action_notify_model_set::<act::Invalidate, bool>(invalidate_requested.clone(), true);
-        cx.on_action_notify_model_set::<act::InvalidateNamespace, bool>(
-            invalidate_namespace_requested.clone(),
+        cx.on_action_notify_toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
+        cx.on_action_notify_local_set::<act::Invalidate, bool>(&invalidate_requested, true);
+        cx.on_action_notify_local_set::<act::InvalidateNamespace, bool>(
+            &invalidate_namespace_requested,
             true,
         );
         cx.on_action_availability::<act::ToggleErrorMode>(|_host, _acx| {
@@ -59,15 +59,9 @@ impl View for QueryBasicsView {
             CommandAvailability::Available
         });
 
-        let fail_mode_enabled = cx.watch_model(&fail_mode).layout().copied_or(false);
-        let do_invalidate = cx
-            .watch_model(&invalidate_requested)
-            .layout()
-            .copied_or(false);
-        let do_invalidate_namespace = cx
-            .watch_model(&invalidate_namespace_requested)
-            .layout()
-            .copied_or(false);
+        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
+        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
+        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
         let window = cx.window;
 
         if do_invalidate {
@@ -75,20 +69,14 @@ impl View for QueryBasicsView {
             let _ = with_query_client(cx.app, |client, app| {
                 client.invalidate(app, key);
             });
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&invalidate_requested, |v| *v = false);
+            let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
             cx.app.request_redraw(window);
         }
         if do_invalidate_namespace {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(QUERY_NS);
             });
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&invalidate_namespace_requested, |v| *v = false);
+            let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
             cx.app.request_redraw(window);
         }
 
@@ -109,10 +97,9 @@ impl View for QueryBasicsView {
             })
         });
 
-        let state = cx
-            .watch_model(handle.model())
-            .layout()
-            .cloned_or_else(QueryState::<DemoData>::default);
+        let state = handle
+            .layout(cx)
+            .value_or_else(QueryState::<DemoData>::default);
 
         let status_label = match state.status {
             QueryStatus::Idle => "Idle",
@@ -204,10 +191,9 @@ impl View for QueryBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(560.0))
-        .into_element(cx);
+        .max_w(Px(560.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

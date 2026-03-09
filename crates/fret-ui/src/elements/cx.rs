@@ -415,6 +415,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     #[track_caller]
     pub fn keyed<K: Hash, R>(&mut self, key: K, f: impl FnOnce(&mut Self) -> R) -> R {
         let loc = Location::caller();
+        self.keyed_at(loc, key, f)
+    }
+
+    #[doc(hidden)]
+    pub fn keyed_at<K: Hash, R>(
+        &mut self,
+        loc: &'static Location<'static>,
+        key: K,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
         let caller = callsite_hash(loc);
         let key_hash = stable_hash(&key);
         self.enter_with_callsite(loc, caller, Some(key_hash), None, f)

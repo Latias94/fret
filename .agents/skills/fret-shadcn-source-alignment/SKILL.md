@@ -25,6 +25,7 @@ Ask these to keep the work scoped and landable:
 - Which component + mismatch class (dismiss/focus/keyboard nav/placement/style)?
 - Which mechanism axis is likely involved (overlay dismissal/focus restore/hit-testing/transform/clipping/breakpoints)?
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
+- Is this actually a public-surface drift (upstream prop-driven API vs Fret model-only authoring surface)?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
 - Do we need a new stable `test_id` surface for automation?
@@ -61,9 +62,10 @@ Rule of thumb: treat “fill/grow/shrink/truncate” as **recipe policy** (shadc
 
 ## Quick start
 
-1. Identify the layer (mechanism vs policy vs recipe) before touching code.
+1. Identify whether the mismatch is layout policy, mechanism, or public-surface parity before touching code.
 2. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
-3. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
+3. If app code is paying for per-row `Model<T>` or surrogate buttons just to keep the intended widget, run `references/public-surface-parity.md` before widening helpers.
+4. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
 
 ## Workflow
 
@@ -76,6 +78,16 @@ renderer.
 Before doing token tweaks or adding goldens, consult:
 
 - `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
+
+### 0.5) Audit public surface parity before inventing helpers
+
+When the app authoring surface feels heavier than upstream, the problem may not be layout or
+mechanism at all — it may be a **public-surface drift** where a prop-driven shadcn/Radix widget
+was ported as a model-only Fret authoring surface.
+
+Run this check before adding app-side helpers or broad `IntoModel<T>` conversions:
+
+- `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md`
 
 ### 0) Run the mechanism checklist first (don’t chase pixels yet)
 
@@ -379,6 +391,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Mechanism checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/mechanism-parity-checklist.md`
 - Style checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/style-parity-checklist.md`
 - Layout footguns checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
+- Public-surface parity checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md`
 - Action hooks (component-owned policy): `docs/action-hooks.md`
 - Overlay ADRs:
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -409,6 +422,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.
 - Treating Base UI as a 1:1 “implementation port”: use it as a headless reference, then translate to Fret’s GPU-first renderer (semantics/hit-testing/focus routing).
+- Porting a prop-driven upstream widget as model-only in Fret, then normalizing the resulting per-row `Model<T>` or surrogate-button boilerplate in app code.
 - Deriving `Clone` on types that store `AnyElement` (move-only by contract); prefer move-only builders or store inputs (models/ids) rather than elements.
 
 ## Troubleshooting

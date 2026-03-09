@@ -29,8 +29,8 @@ pub fn centered_page<H: UiHost>(
     .bg(ColorRef::Color(theme.color_token(background_token)))
     .p(Space::N6)
     .size_full()
-    .into_element(cx)
     .test_id(root_test_id)
+    .into_element(cx)
 }
 
 /// Uses the theme `background` token for the page background.
@@ -51,4 +51,46 @@ pub fn centered_page_muted<H: UiHost>(
     surface: AnyElement,
 ) -> AnyElement {
     centered_page(cx, root_test_id, "muted", surface)
+}
+
+/// Host-bound builder variant of `centered_page` for cookbook surfaces that still need
+/// `ElementContext` at the final landing step (for example `shadcn::Card::build(...).ui()`).
+#[track_caller]
+pub fn centered_page_ui<H: UiHost, T>(
+    cx: &mut ElementContext<'_, H>,
+    root_test_id: &'static str,
+    background_token: &'static str,
+    surface: UiBuilder<T>,
+) -> AnyElement
+where
+    T: UiPatchTarget + UiHostBoundIntoElement<H>,
+{
+    let surface = surface.into_element(cx);
+    centered_page(cx, root_test_id, background_token, surface)
+}
+
+/// Host-bound builder variant using the theme `background` token for the page background.
+#[track_caller]
+pub fn centered_page_background_ui<H: UiHost, T>(
+    cx: &mut ElementContext<'_, H>,
+    root_test_id: &'static str,
+    surface: UiBuilder<T>,
+) -> AnyElement
+where
+    T: UiPatchTarget + UiHostBoundIntoElement<H>,
+{
+    centered_page_ui(cx, root_test_id, "background", surface)
+}
+
+/// Host-bound builder variant using the theme `muted` token for the page background.
+#[track_caller]
+pub fn centered_page_muted_ui<H: UiHost, T>(
+    cx: &mut ElementContext<'_, H>,
+    root_test_id: &'static str,
+    surface: UiBuilder<T>,
+) -> AnyElement
+where
+    T: UiPatchTarget + UiHostBoundIntoElement<H>,
+{
+    centered_page_ui(cx, root_test_id, "muted", surface)
 }

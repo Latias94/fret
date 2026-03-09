@@ -288,8 +288,8 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     .bg(ColorRef::Color(root_background))
     .p(Space::N6)
     .size_full()
-    .into_element(cx)
     .test_id(TEST_ID_ROOT)
+    .into_element(cx)
     .into()
 }
 

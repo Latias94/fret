@@ -188,11 +188,11 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let always_on_top = cx.watch_model(&st.always_on_top).layout().copied_or(false);
+    let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);
     let status = cx
         .watch_model(&st.status)
         .layout()
-        .cloned_or_else(|| Arc::from("Idle"));
+        .value_or_else(|| Arc::from("Idle"));
 
     let effective_style = cx
         .app
@@ -314,8 +314,8 @@ fn view(
                 ui::text(style_text)
                     .font_monospace()
                     .text_sm()
-                    .into_element(cx)
-                    .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT)),
+                    .test_id(TEST_ID_STYLE_TEXT)
+                    .into_element(cx),
                 ui::text(status)
                     .text_sm()
                     .text_color(ColorRef::Color(color_muted_foreground))

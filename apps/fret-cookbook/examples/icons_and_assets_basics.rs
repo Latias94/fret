@@ -52,7 +52,6 @@ fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
 
 struct IconsAndAssetsBasicsView {
     window: AppWindowId,
-    assets_reload_bumps: Model<u64>,
     applied_assets_reload_bumps: u64,
     file_image: fret_ui_assets::ImageSource,
     memory_image: fret_ui_assets::ImageSource,
@@ -88,7 +87,6 @@ impl View for IconsAndAssetsBasicsView {
 
         Self {
             window,
-            assets_reload_bumps: app.models_mut().insert(0),
             applied_assets_reload_bumps: 0,
             file_image,
             memory_image,
@@ -98,22 +96,16 @@ impl View for IconsAndAssetsBasicsView {
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
+        let assets_reload_bumps_state = cx.use_local::<u64>();
 
-        cx.on_action_notify_models::<act::BumpReload>({
-            let bumps_model = self.assets_reload_bumps.clone();
-            move |models| {
-                models
-                    .update(&bumps_model, |v| {
-                        *v = v.wrapping_add(1);
-                    })
-                    .is_ok()
-            }
-        });
+        cx.on_action_notify_local_update::<act::BumpReload, u64>(
+            &assets_reload_bumps_state,
+            |value| {
+                *value = value.wrapping_add(1);
+            },
+        );
 
-        let bumps = cx
-            .watch_model(&self.assets_reload_bumps)
-            .layout()
-            .copied_or(0);
+        let bumps = assets_reload_bumps_state.watch(cx).layout().value_or(0);
         if bumps != self.applied_assets_reload_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_assets_reload_bumps = bumps;
@@ -149,33 +141,31 @@ impl View for IconsAndAssetsBasicsView {
         .justify_center()
         .w_full();
 
-        let icon_row =
-            |cx: &mut ElementContext<'_, App>, title: &str, ids: [IconId; 3]| -> AnyElement {
-                let buttons = ui::h_flex(|cx| {
-                    ui::children![cx;
-                        shadcn::Button::new("Search")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[0].clone()),
-                        shadcn::Button::new("Close")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[1].clone()),
-                        shadcn::Button::new("Copy")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .leading_icon(ids[2].clone()),
-                    ]
-                })
-                .gap(Space::N2)
-                .items_center()
-                .w_full();
+        let icon_row = |title: &'static str, ids: [IconId; 3]| {
+            let buttons = ui::h_flex(move |cx| {
+                ui::children![cx;
+                    shadcn::Button::new("Search")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .leading_icon(ids[0].clone()),
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .leading_icon(ids[1].clone()),
+                    shadcn::Button::new("Copy")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .leading_icon(ids[2].clone()),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .w_full();
 
-                ui::v_flex(|cx| ui::children![cx; shadcn::Label::new(title), buttons])
-                    .gap(Space::N2)
-                    .w_full()
-                    .into_element(cx)
-            };
+            ui::v_flex(move |cx| ui::children![cx; shadcn::Label::new(title), buttons])
+                .gap(Space::N2)
+                .w_full()
+        };
 
         let icons_panel = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -222,7 +212,6 @@ impl View for IconsAndAssetsBasicsView {
                                 .gap(Space::N2)
                                 .items_center(),
                                 icon_row(
-                                    cx,
                                     "Semantic ids (ui.*)",
                                     [
                                         IconId::new_static("ui.search"),
@@ -231,7 +220,6 @@ impl View for IconsAndAssetsBasicsView {
                                     ],
                                 ),
                                 icon_row(
-                                    cx,
                                     "Vendor ids (lucide.*)",
                                     [
                                         IconId::new_static("lucide.search"),
@@ -240,7 +228,6 @@ impl View for IconsAndAssetsBasicsView {
                                     ],
                                 ),
                                 icon_row(
-                                    cx,
                                     "Vendor ids (lucide.*)",
                                     [
                                         IconId::new_static("lucide.search"),
@@ -364,10 +351,10 @@ impl View for IconsAndAssetsBasicsView {
 
         let svg_box = ui::container(|cx| {
             if let Some(err) = svg_file_state.error.clone() {
-                let el = ui::text(format!("Failed to read SVG: {err}"))
-                    .text_color(ColorRef::Color(theme.color_token("destructive")))
-                    .into_element(cx);
-                [el]
+                ui::children![cx;
+                    ui::text(format!("Failed to read SVG: {err}"))
+                        .text_color(ColorRef::Color(theme.color_token("destructive")))
+                ]
             } else if let Some(bytes) = svg_file_state.bytes.clone() {
                 let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
                 props.layout = style::layout_style(
@@ -376,9 +363,9 @@ impl View for IconsAndAssetsBasicsView {
                 );
                 props.fit = fret_core::SvgFit::Contain;
                 props.color = theme.color_token("foreground");
-                [cx.svg_icon_props(props)]
+                ui::children![cx; cx.svg_icon_props(props)]
             } else {
-                [cx.spinner()]
+                ui::children![cx; cx.spinner()]
             }
         })
         .border_1()
@@ -449,10 +436,9 @@ impl View for IconsAndAssetsBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(900.0))
-        .into_element(cx);
+        .max_w(Px(900.0));
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

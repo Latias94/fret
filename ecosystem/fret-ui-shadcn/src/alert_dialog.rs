@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
@@ -13,8 +14,9 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
+    UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -249,6 +251,21 @@ impl AlertDialog {
     /// lower-level mechanism still routes through [`AlertDialog::into_element_parts`].
     pub fn compose<H: UiHost>(self) -> AlertDialogComposition<H> {
         AlertDialogComposition::new(self)
+    }
+
+    /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.into_element(
+            cx,
+            move |cx| trigger.into_child_element(cx),
+            move |cx| content.into_child_element(cx),
+        )
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
@@ -501,15 +518,15 @@ enum AlertDialogCompositionContent<H: UiHost> {
     Deferred(AlertDialogDeferredContent<H>),
 }
 
-pub struct AlertDialogComposition<H: UiHost> {
+pub struct AlertDialogComposition<H: UiHost, TTrigger = AlertDialogTrigger> {
     dialog: AlertDialog,
-    trigger: Option<AlertDialogTrigger>,
+    trigger: Option<TTrigger>,
     portal: AlertDialogPortal,
     overlay: AlertDialogOverlay,
     content: Option<AlertDialogCompositionContent<H>>,
 }
 
-impl<H: UiHost> std::fmt::Debug for AlertDialogComposition<H> {
+impl<H: UiHost, TTrigger> std::fmt::Debug for AlertDialogComposition<H, TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AlertDialogComposition")
             .field("dialog", &self.dialog)
@@ -531,10 +548,20 @@ impl<H: UiHost> AlertDialogComposition<H> {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: AlertDialogTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<H: UiHost, TTrigger> AlertDialogComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> AlertDialogComposition<H, TNextTrigger> {
+        AlertDialogComposition {
+            dialog: self.dialog,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: AlertDialogPortal) -> Self {
@@ -561,10 +588,14 @@ impl<H: UiHost> AlertDialogComposition<H> {
     }
 
     #[track_caller]
-    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: AlertDialogCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("AlertDialog::compose().trigger(...) must be provided before into_element()");
+            .expect("AlertDialog::compose().trigger(...) must be provided before into_element()")
+            .into_alert_dialog_trigger(cx);
         let content = self
             .content
             .expect("AlertDialog::compose().content(...) must be provided before into_element()");
@@ -597,15 +628,99 @@ pub struct AlertDialogTrigger {
     child: AnyElement,
 }
 
+pub struct AlertDialogTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl AlertDialogTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> AlertDialogTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        AlertDialogTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
+}
+
+impl<H: UiHost, T> AlertDialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogTrigger::new(
+            self.child
+                .expect("expected alert dialog trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for AlertDialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for AlertDialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait AlertDialogCompositionTriggerArg<H: UiHost> {
+    fn into_alert_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger;
+}
+
+impl<H: UiHost> AlertDialogCompositionTriggerArg<H> for AlertDialogTrigger {
+    fn into_alert_dialog_trigger(self, _cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> AlertDialogCompositionTriggerArg<H> for AlertDialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_alert_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger {
+        AlertDialogTrigger::new(
+            self.child
+                .expect("expected alert dialog trigger child")
+                .into_child_element(cx),
+        )
+    }
+}
+
+fn collect_built_alert_dialog_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 /// shadcn/ui `AlertDialogContent` (v4).
@@ -632,6 +747,20 @@ impl AlertDialogContent {
             size: AlertDialogContentSize::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> AlertDialogContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertDialogContentBuild {
+            build: Some(build),
+            size: AlertDialogContentSize::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -716,6 +845,97 @@ impl AlertDialogContent {
     }
 }
 
+pub struct AlertDialogContentBuild<H, B> {
+    build: Option<B>,
+    size: AlertDialogContentSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertDialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: AlertDialogContentSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let content = AlertDialogContent::new(collect_built_alert_dialog_children(
+            cx,
+            self.build
+                .expect("expected alert dialog content build closure"),
+        ))
+        .size(self.size)
+        .refine_style(self.chrome)
+        .refine_layout(self.layout)
+        .into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertDialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for AlertDialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for AlertDialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogContentBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `AlertDialogHeader` (v4).
 #[derive(Debug)]
 pub struct AlertDialogHeader {
@@ -729,6 +949,17 @@ impl AlertDialogHeader {
         Self {
             media: None,
             children,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> AlertDialogHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertDialogHeaderBuild {
+            build: Some(build),
+            media: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -816,6 +1047,64 @@ impl AlertDialogHeader {
     }
 }
 
+pub struct AlertDialogHeaderBuild<H, B> {
+    build: Option<B>,
+    media: Option<AnyElement>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertDialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn media(mut self, media: AnyElement) -> Self {
+        self.media = Some(media);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut header = AlertDialogHeader::new(collect_built_alert_dialog_children(
+            cx,
+            self.build
+                .expect("expected alert dialog header build closure"),
+        ));
+        if let Some(media) = self.media {
+            header = header.media(media);
+        }
+        header.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertDialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `AlertDialogMedia` (v4).
 #[derive(Debug)]
 pub struct AlertDialogMedia {
@@ -885,6 +1174,16 @@ impl AlertDialogFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> AlertDialogFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertDialogFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -962,6 +1261,55 @@ impl AlertDialogFooter {
                 children,
             )
         }
+    }
+}
+
+pub struct AlertDialogFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertDialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogFooter::new(collect_built_alert_dialog_children(
+            cx,
+            self.build
+                .expect("expected alert dialog footer build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertDialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertDialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertDialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogFooterBuild::into_element(self, cx)
     }
 }
 
@@ -1239,18 +1587,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -1473,21 +1821,23 @@ mod tests {
             |cx| {
                 let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
 
-                vec![AlertDialog::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(AlertDialogPortal::new())
-                    .overlay(AlertDialogOverlay::new())
-                    .content_with(|cx| {
-                        let footer = AlertDialogFooter::new(vec![
-                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                            AlertDialogAction::from_scope("Continue").into_element(cx),
-                        ])
-                        .into_element(cx);
+                vec![
+                    AlertDialog::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(AlertDialogPortal::new())
+                        .overlay(AlertDialogOverlay::new())
+                        .content_with(|cx| {
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                                AlertDialogAction::from_scope("Continue").into_element(cx),
+                            ])
+                            .into_element(cx);
 
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                            AlertDialogContent::new(vec![footer]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

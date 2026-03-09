@@ -37,31 +37,29 @@ fn shadow_chain() -> EffectChain {
     EffectChain::from_steps(&[EffectStep::DropShadowV1(shadow)]).sanitize()
 }
 
-struct DropShadowBasicsView {
-    enabled: Model<bool>,
-    stress: Model<bool>,
-}
+struct DropShadowBasicsView;
 
 impl View for DropShadowBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            enabled: app.models_mut().insert(true),
-            stress: app.models_mut().insert(false),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let enabled = cx.watch_model(&self.enabled).layout().copied_or(true);
-        let stress = cx.watch_model(&self.stress).layout().copied_or(false);
+        let enabled_state = cx.use_local_with(|| true);
+        let stress_state = cx.use_local_with(|| false);
+
+        let enabled = enabled_state.watch(cx).layout().value_or(true);
+        let stress = stress_state.watch(cx).layout().value_or(false);
 
         let toolbar = ui::v_flex(|cx| {
             let row_shadow = ui::h_flex(|cx| {
                 ui::children![
                     cx;
                     shadcn::Label::new("Enable DropShadowV1:"),
-                    shadcn::Switch::new(self.enabled.clone()).test_id(TEST_ID_SWITCH_SHADOW),
+                    shadcn::Switch::new(enabled_state.clone_model())
+                        .test_id(TEST_ID_SWITCH_SHADOW),
                 ]
             })
             .gap(Space::N2)
@@ -71,7 +69,8 @@ impl View for DropShadowBasicsView {
                 ui::children![
                     cx;
                     shadcn::Label::new("Stress grid:"),
-                    shadcn::Switch::new(self.stress.clone()).test_id(TEST_ID_SWITCH_STRESS),
+                    shadcn::Switch::new(stress_state.clone_model())
+                        .test_id(TEST_ID_SWITCH_STRESS),
                 ]
             })
             .gap(Space::N2)
@@ -119,13 +118,15 @@ impl View for DropShadowBasicsView {
                 .h_px(Px(160.0))
                 .overflow_hidden()
                 .bg(ColorRef::Color(theme.color_token("muted")))
-                .rounded_md()
-                .into_element(cx);
+                .rounded_md();
 
             if enabled {
-                cx.effect_layer(EffectMode::FilterContent, chain, move |_cx| [bounds])
+                ui::effect_layer(EffectMode::FilterContent, chain.clone(), move |_cx| {
+                    [bounds]
+                })
+                .into_element(cx)
             } else {
-                bounds
+                bounds.into_element(cx)
             }
         };
 
@@ -152,8 +153,7 @@ impl View for DropShadowBasicsView {
         })
         .gap(Space::N4)
         .items_center()
-        .test_id(TEST_ID_STAGE)
-        .into_element(cx);
+        .test_id(TEST_ID_STAGE);
 
         let header = shadcn::CardHeader::build(|cx, out| {
             out.push_ui(cx, shadcn::CardTitle::new("Drop shadow basics"));
@@ -178,10 +178,9 @@ impl View for DropShadowBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(1180.0))
-        .into_element(cx);
+        .max_w(Px(1180.0));
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

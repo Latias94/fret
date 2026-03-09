@@ -96,7 +96,7 @@ impl View for ImUiActionBasicsView {
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().copied_or(0);
+        let count_value = cx.watch_model(&count).layout().value_or(0);
 
         cx.on_action_notify_model_update::<act::Inc, u32>(count.clone(), |v| {
             *v = v.saturating_add(1);
@@ -141,14 +141,14 @@ impl View for ImUiActionBasicsView {
                 })
             });
 
-            [
-                shadcn::Label::new("Cross-frontend action dispatch").into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Label::new("Cross-frontend action dispatch"),
                 cx.text(format!("Count: {count_value}"))
                     .test_id(TEST_ID_COUNT),
                 shadcn::Button::new("Increment (declarative)")
                     .action(act::Inc)
-                    .into_element(cx)
-                    .role(SemanticsRole::Button)
+                    .a11y_role(SemanticsRole::Button)
                     .test_id(TEST_ID_BUTTON_DECL),
                 genui_panel,
                 imui_panel,
@@ -156,8 +156,8 @@ impl View for ImUiActionBasicsView {
         })
         .size_full()
         .gap(Space::N4)
-        .into_element(cx)
         .test_id(TEST_ID_ROOT)
+        .into_element(cx)
         .into()
     }
 }

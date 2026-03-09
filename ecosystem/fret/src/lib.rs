@@ -4,6 +4,8 @@
 //! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface,
 //! - it enables a practical desktop-first default stack,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
+//! - it is **not** the repository?s canonical example host; runnable lessons stay in app-owned
+//!   surfaces such as `apps/fret-cookbook`, `apps/fret-ui-gallery`, and other app shells.
 //!
 //! ## Choosing a native entry path
 //!
@@ -179,6 +181,7 @@ pub use fret_framework as kernel;
 /// Recommended: `use fret::prelude::*;`
 pub mod prelude {
     pub use fret_ui_kit::prelude::*;
+    pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::AppBuilder;
@@ -198,7 +201,7 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::ViewElements;
-    pub use crate::view::{LocalState, View, ViewCx};
+    pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
     pub use fret_app::{App, Effect};
     pub use fret_core::{Event, SemanticsRole};
     pub use fret_ui::ThemeSnapshot;

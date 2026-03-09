@@ -199,7 +199,7 @@ impl View for RouterBasicsView {
         let snapshot = cx
             .get_model_cloned(&snapshot_model, Invalidation::Layout)
             .expect("router snapshot should be readable");
-        let intents = cx.watch_model(&intents_model).layout().cloned_or_default();
+        let intents = cx.watch_model(&intents_model).layout().value_or_default();
 
         let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
         let can_back = self.store.can_navigate(cx.app, NavigationAction::Back);
@@ -314,12 +314,13 @@ impl View for RouterBasicsView {
 
         let outlet = RouterOutlet::new(snapshot_model.clone())
             .test_id(TEST_ID_OUTLET)
-            .into_element_by_leaf(
+            .into_element_by_leaf_ui(
                 cx,
-                |cx, route, snap| {
+                |_cx, route, snap| {
                     let leaf = snap.leaf_match().expect("leaf match should exist");
                     let matched_path = leaf.matched_path.clone();
                     let params = leaf.params.clone();
+                    let depth = snap.match_depth();
 
                     let title = match route {
                         RouteId::Home => "Home",
@@ -333,7 +334,7 @@ impl View for RouterBasicsView {
                         Arc::from(format!("params={params:?}"))
                     };
 
-                    shadcn::Card::build(|cx, out| {
+                    shadcn::Card::build(move |cx, out| {
                         out.push_ui(
                             cx,
                             shadcn::CardHeader::build(|cx, out| {
@@ -349,34 +350,29 @@ impl View for RouterBasicsView {
                         out.push_ui(
                             cx,
                             shadcn::CardContent::build(|cx, out| {
-                                out.push(cx.text(params_line));
-                                out.push(cx.text(format!("depth={}", snap.match_depth())));
+                                out.push_ui(cx, ui::text(params_line));
+                                out.push_ui(cx, ui::text(format!("depth={depth}")));
                             }),
                         );
                     })
-                    .ui()
-                    .w_full()
-                    .into_element(cx)
+                    .refine_layout(LayoutRefinement::default().w_full())
                 },
-                |cx, snap| {
-                    shadcn::Card::build(|cx, out| {
+                |_cx, snap| {
+                    let location = snap.location.to_url();
+
+                    shadcn::Card::build(move |cx, out| {
                         out.push_ui(
                             cx,
                             shadcn::CardHeader::build(|cx, out| {
                                 out.push_ui(cx, shadcn::CardTitle::new("Not found"));
                                 out.push_ui(
                                     cx,
-                                    shadcn::CardDescription::new(format!(
-                                        "location={}",
-                                        snap.location.to_url()
-                                    )),
+                                    shadcn::CardDescription::new(format!("location={}", location)),
                                 );
                             }),
                         );
                     })
-                    .ui()
-                    .w_full()
-                    .into_element(cx)
+                    .refine_layout(LayoutRefinement::default().w_full())
                 },
             );
 
@@ -461,10 +457,9 @@ impl View for RouterBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(980.0))
-        .into_element(cx);
+        .max_w(Px(980.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

@@ -17,11 +17,7 @@ const TEST_ID_VALID: &str = "cookbook.form_basics.valid";
 const TEST_ID_SUBMIT: &str = "cookbook.form_basics.submit";
 const TEST_ID_RESET: &str = "cookbook.form_basics.reset";
 
-struct FormBasicsView {
-    name: Model<String>,
-    email: Model<String>,
-    error: Model<Option<String>>,
-}
+struct FormBasicsView;
 
 impl FormBasicsView {
     fn validate(name: &str, email: &str) -> Option<String> {
@@ -36,65 +32,66 @@ impl FormBasicsView {
         }
         None
     }
+
+    fn validate_in(
+        models: &mut fret_runtime::ModelStore,
+        name: &LocalState<String>,
+        email: &LocalState<String>,
+    ) -> Option<String> {
+        let name = name.read_in(models, Clone::clone).ok().unwrap_or_default();
+        let email = email.read_in(models, Clone::clone).ok().unwrap_or_default();
+        Self::validate(&name, &email)
+    }
 }
 
 impl View for FormBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            name: app.models_mut().insert(String::new()),
-            email: app.models_mut().insert(String::new()),
-            error: app.models_mut().insert(None::<String>),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let name = cx
-            .watch_model(&self.name)
-            .layout()
-            .cloned_or_else(String::new);
-        let email = cx
-            .watch_model(&self.email)
-            .layout()
-            .cloned_or_else(String::new);
-        let error = cx.watch_model(&self.error).layout().cloned_or_default();
+        let name_state = cx.use_local::<String>();
+        let email_state = cx.use_local::<String>();
+        let error_state = cx.use_local::<Option<String>>();
+
+        let name = name_state.watch(cx).layout().value_or_else(String::new);
+        let email = email_state.watch(cx).layout().value_or_else(String::new);
+        let error = error_state.watch(cx).layout().value_or_default();
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
         cx.on_action_notify_models::<act::Submit>({
-            let name_model = self.name.clone();
-            let email_model = self.email.clone();
-            let error_model = self.error.clone();
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            let error_state = error_state.clone();
             move |models| {
-                let name = models
-                    .read(&name_model, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
-                let email = models
-                    .read(&email_model, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
-                let err = FormBasicsView::validate(&name, &email);
-                models.update(&error_model, |v| *v = err).is_ok()
+                let err = FormBasicsView::validate_in(models, &name_state, &email_state);
+                error_state.set_in(models, err)
             }
         });
 
         cx.on_action_notify_models::<act::Reset>({
-            let name_model = self.name.clone();
-            let email_model = self.email.clone();
-            let error_model = self.error.clone();
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            let error_state = error_state.clone();
             move |models| {
-                let ok = models.update(&name_model, String::clear).is_ok();
-                let ok = models.update(&email_model, String::clear).is_ok() && ok;
-                let ok = models.update(&error_model, |v| *v = None).is_ok() && ok;
-                ok
+                let ok = name_state.set_in(models, String::new());
+                let ok = email_state.set_in(models, String::new()) && ok;
+                error_state.set_in(models, None) && ok
             }
         });
 
-        cx.on_action_availability::<act::Submit>(move |_host, _acx| {
-            if can_submit {
-                CommandAvailability::Available
-            } else {
-                CommandAvailability::Blocked
+        cx.on_action_availability::<act::Submit>({
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            move |host, _acx| {
+                if FormBasicsView::validate_in(host.models_mut(), &name_state, &email_state)
+                    .is_none()
+                {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
             }
         });
         cx.on_action_availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
@@ -102,7 +99,7 @@ impl View for FormBasicsView {
         let name_input = ui::v_flex(|cx| {
             ui::children![cx;
                 shadcn::Label::new("Name"),
-                shadcn::Input::new(self.name.clone())
+                shadcn::Input::new(&name_state)
                     .a11y_label("Name")
                     .placeholder("Jane Doe")
                     .test_id(TEST_ID_NAME),
@@ -113,7 +110,7 @@ impl View for FormBasicsView {
         let email_input = ui::v_flex(|cx| {
             ui::children![cx;
                 shadcn::Label::new("Email"),
-                shadcn::Input::new(self.email.clone())
+                shadcn::Input::new(&email_state)
                     .a11y_label("Email")
                     .placeholder("jane@example.com")
                     .submit_command(act::Submit.into())
@@ -194,10 +191,9 @@ impl View for FormBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(640.0))
-        .into_element(cx);
+        .max_w(Px(640.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

@@ -27,7 +27,6 @@ fn repo_path(rel: &str) -> Arc<PathBuf> {
 
 struct AssetsReloadEpochBasicsView {
     window: AppWindowId,
-    bumps: Model<u64>,
     applied_bumps: u64,
     file_image: fret_ui_assets::ImageSource,
     svg_file: fret_ui_assets::SvgFileSource,
@@ -45,7 +44,6 @@ impl View for AssetsReloadEpochBasicsView {
 
         Self {
             window,
-            bumps: app.models_mut().insert(0),
             applied_bumps: 0,
             file_image,
             svg_file,
@@ -54,19 +52,13 @@ impl View for AssetsReloadEpochBasicsView {
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
+        let bumps_state = cx.use_local::<u64>();
 
-        cx.on_action_notify_models::<act::BumpReload>({
-            let bumps = self.bumps.clone();
-            move |models| {
-                models
-                    .update(&bumps, |v| {
-                        *v = v.wrapping_add(1);
-                    })
-                    .is_ok()
-            }
+        cx.on_action_notify_local_update::<act::BumpReload, u64>(&bumps_state, |value| {
+            *value = value.wrapping_add(1);
         });
 
-        let bumps = cx.watch_model(&self.bumps).layout().copied_or(0);
+        let bumps = bumps_state.watch(cx).layout().value_or(0);
         if bumps != self.applied_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_bumps = bumps;
@@ -150,10 +142,9 @@ impl View for AssetsReloadEpochBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(900.0))
-        .into_element(cx);
+        .max_w(Px(900.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 
@@ -213,9 +204,8 @@ fn render_image_panel(
                 shadcn::AlertTitle::new("Image decode/upload failed"),
                 shadcn::AlertDescription::new(msg),
             ])
-            .variant(shadcn::AlertVariant::Destructive)
-            .into_element(cx);
-            out.push(alert);
+            .variant(shadcn::AlertVariant::Destructive);
+            out.push_ui(cx, alert);
         }
     })
     .gap(Space::N3)
@@ -261,9 +251,9 @@ fn render_svg_panel(
 
     let box_el = ui::container(|cx| {
         if let Some(err) = st.error.clone() {
-            [ui::text(format!("Failed to read SVG: {err}"))
-                .text_color(ColorRef::Color(theme.color_token("destructive")))
-                .into_element(cx)]
+            ui::children![cx;
+                ui::text(format!("Failed to read SVG: {err}"))
+                    .text_color(ColorRef::Color(theme.color_token("destructive")))]
         } else if let Some(bytes) = st.bytes.clone() {
             let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
             props.layout = LayoutStyle {
@@ -276,9 +266,9 @@ fn render_svg_panel(
             };
             props.fit = fret_core::SvgFit::Contain;
             props.color = theme.color_token("foreground");
-            [cx.svg_icon_props(props)]
+            ui::children![cx; cx.svg_icon_props(props)]
         } else {
-            [cx.spinner()]
+            ui::children![cx; cx.spinner()]
         }
     })
     .border_1()

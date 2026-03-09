@@ -45,7 +45,7 @@ app = [
 # Derived + async state helpers used by `ViewCx`.
 state = ["state-selector", "state-query"]
 state-selector = ["dep:fret-selector", "fret-selector/ui"]
-state-query = ["dep:fret-query", "fret-query/ui"]
+state-query = ["dep:fret-query", "fret-query/ui", "fret-ui-kit/state-query"]
 
 # Load layered config files by default (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`).
 # Disable for embedding/minimal builds that must not touch the filesystem.

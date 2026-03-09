@@ -21,6 +21,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size};
 
 use crate::overlay_motion;
+use crate::text_value_model::IntoTextValueModel;
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -109,9 +110,9 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             a11y_label: None,
             a11y_role: None,
             labelled_by_element: None,
@@ -318,7 +319,7 @@ impl Input {
 
 pub fn input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<String>,
+    model: impl IntoTextValueModel,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
@@ -329,7 +330,7 @@ pub fn input<H: UiHost>(
 ) -> AnyElement {
     input_with_style_and_submit(
         cx,
-        model,
+        model.into_text_value_model(),
         a11y_label,
         a11y_role,
         None,

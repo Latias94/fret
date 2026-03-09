@@ -25,35 +25,37 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let trigger_open = open.clone();
     let close_open = open.clone();
 
-    shadcn::Drawer::new(open).into_element(
+    shadcn::Drawer::new(open).build(
         cx,
-        move |cx| {
-            shadcn::Button::new("Open Drawer")
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(trigger_open.clone())
-                .test_id("ui-gallery-drawer-demo-trigger")
-                .into_element(cx)
-        },
-        move |cx| {
-            shadcn::DrawerContent::new([
-                shadcn::DrawerHeader::new([
-                    shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                    shadcn::DrawerDescription::new("Set your daily activity goal.")
-                        .into_element(cx),
-                ])
+        shadcn::Button::new("Open Drawer")
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(trigger_open.clone())
+            .test_id("ui-gallery-drawer-demo-trigger"),
+        shadcn::DrawerContent::build(|cx, out| {
+            out.push(
+                shadcn::DrawerHeader::build(|cx, out| {
+                    out.push(shadcn::DrawerTitle::new("Move Goal").into_element(cx));
+                    out.push(
+                        shadcn::DrawerDescription::new("Set your daily activity goal.")
+                            .into_element(cx),
+                    );
+                })
                 .into_element(cx),
-                shadcn::DrawerFooter::new([
-                    shadcn::Button::new("Submit").into_element(cx),
-                    shadcn::Button::new("Cancel")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(close_open.clone())
-                        .into_element(cx),
-                ])
+            );
+            out.push(
+                shadcn::DrawerFooter::build(|cx, out| {
+                    out.push(shadcn::Button::new("Submit").into_element(cx));
+                    out.push(
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                    );
+                })
                 .into_element(cx),
-            ])
-            .into_element(cx)
-            .test_id("ui-gallery-drawer-demo-content")
-        },
+            );
+        })
+        .test_id("ui-gallery-drawer-demo-content"),
     )
 }
 // endregion: example

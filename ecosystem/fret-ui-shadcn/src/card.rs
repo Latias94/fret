@@ -1635,6 +1635,24 @@ impl CardFooter {
         }
     }
 
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardFooterBuild {
+            build: Some(build),
+            size: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            border_top: false,
+            direction: CardFooterDirection::Row,
+            gap: Space::N0.into(),
+            wrap: false,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Explicitly set the card size for this section.
     ///
     /// See `CardContent::size(...)` for why some call sites need this.
@@ -1760,6 +1778,116 @@ impl CardFooter {
 
         let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_FOOTER_MARKER_PREFIX, el.id.0));
         attach_test_id(el, marker)
+    }
+}
+
+pub struct CardFooterBuild<H, B> {
+    build: Option<B>,
+    size: Option<CardSize>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    border_top: bool,
+    direction: CardFooterDirection,
+    gap: Space,
+    wrap: bool,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn border_top(mut self, value: bool) -> Self {
+        self.border_top = value;
+        self
+    }
+
+    pub fn direction(mut self, direction: CardFooterDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub fn wrap(mut self, value: bool) -> Self {
+        self.wrap = value;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_card_children(
+            cx,
+            self.build.expect("expected card footer build closure"),
+        );
+        let mut footer = CardFooter::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .border_top(self.border_top)
+            .direction(self.direction)
+            .gap(self.gap)
+            .wrap(self.wrap);
+        if let Some(size) = self.size {
+            footer = footer.size(size);
+        }
+        footer.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardFooterBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardFooterBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardFooterBuild::into_element(self, cx)
     }
 }
 

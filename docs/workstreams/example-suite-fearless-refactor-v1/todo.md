@@ -89,6 +89,10 @@ Goal: avoid duplicated demo lists across native/web/tooling.
 - [x] Add cookbook discovery + runner commands:
   - [x] `fretboard list cookbook-examples`
   - [x] `fretboard dev native --example <name>`
+- [x] Clarify the repository-shape decision:
+  - [x] borrow Bevy-style discoverability via `examples/README.md`
+  - [x] keep the workspace root out of the Cargo `examples/` execution path
+  - [x] keep `ecosystem/fret` as the golden-path facade, not the canonical example host
 - [ ] Reduce or eliminate hand-maintained demo lists where practical:
   - [ ] native: prefer scanning `apps/fret-demo/src/bin` and cookbook `examples/`
   - [ ] web: keep a curated list but generate docs from it
@@ -140,6 +144,10 @@ Reference apps (app-scale):
   - [x] diagnostics bundles/scripts
 - [x] Add a GitHub-friendly `examples/` portal (Bevy-style index):
   - [`examples/README.md`](../../../examples/README.md)
+- [x] Document canonical ownership for example surfaces:
+  - [x] `examples/README.md` is the GitHub-friendly portal
+  - [x] `docs/examples/README.md` is the canonical docs index
+  - [x] cookbook/gallery/app crates remain the owning runnable surfaces
 - [ ] Ensure `README.md` only links the *canonical* path (avoid scattering run commands).
 - [ ] Add contribution rules:
   - [ ] how to add a new official example

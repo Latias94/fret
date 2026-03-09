@@ -30,19 +30,15 @@ fn install_commands(app: &mut App) {
     app.commands_mut().register(clear, clear_meta);
 }
 
-struct TextInputBasicsView {
-    text: Model<String>,
-    submitted_count: Model<u32>,
-}
+struct TextInputBasicsView;
 
 impl TextInputBasicsView {
     fn has_text(
         host: &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-        text: &Model<String>,
+        text: &LocalState<String>,
     ) -> bool {
-        let text = host
-            .models_mut()
-            .read(text, Clone::clone)
+        let text = text
+            .read_in(host.models_mut(), Clone::clone)
             .ok()
             .unwrap_or_default();
         !text.trim().is_empty()
@@ -50,27 +46,24 @@ impl TextInputBasicsView {
 
     fn has_text_for_action_model_store(
         models: &mut fret_runtime::ModelStore,
-        text: &Model<String>,
+        text: &LocalState<String>,
     ) -> bool {
-        let text = models.read(text, Clone::clone).ok().unwrap_or_default();
+        let text = text.read_in(models, Clone::clone).ok().unwrap_or_default();
         !text.trim().is_empty()
     }
 }
 
 impl View for TextInputBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            text: app.models_mut().insert(String::new()),
-            submitted_count: app.models_mut().insert(0),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let text = cx
-            .watch_model(&self.text)
-            .layout()
-            .cloned_or_else(String::new);
-        let submitted_count = cx.watch_model(&self.submitted_count).layout().copied_or(0);
+        let text_state = cx.use_local::<String>();
+        let submitted_count_state = cx.use_local::<u32>();
+
+        let text = text_state.watch(cx).layout().value_or_else(String::new);
+        let submitted_count = submitted_count_state.watch(cx).layout().value_or(0);
 
         let text_len_chars = text.chars().count() as u32;
         let text_len = text_len_chars as f64;
@@ -79,8 +72,7 @@ impl View for TextInputBasicsView {
 
         let len_badge = shadcn::Badge::new(format!("Length: {text_len_chars} chars"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_LEN)
@@ -90,8 +82,7 @@ impl View for TextInputBasicsView {
 
         let submitted_badge = shadcn::Badge::new(format!("Submitted: {submitted_count_u32}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_SUBMITTED_COUNT)
@@ -99,44 +90,43 @@ impl View for TextInputBasicsView {
                     .numeric_range(0.0, 1024.0),
             );
 
-        let input = shadcn::Input::new(self.text.clone())
+        let input = shadcn::Input::new(&text_state)
             .a11y_label("Message")
             .placeholder("Type something, then press Enter (Escape clears).")
             .submit_command(act::Submit.into())
             .cancel_command(act::Clear.into())
-            .test_id(TEST_ID_INPUT)
-            .into_element(cx);
+            .test_id(TEST_ID_INPUT);
 
         cx.on_action_notify_models::<act::Submit>({
-            let text = self.text.clone();
-            let submitted_count = self.submitted_count.clone();
+            let text_state = text_state.clone();
+            let submitted_count_state = submitted_count_state.clone();
             move |models| {
-                if !TextInputBasicsView::has_text_for_action_model_store(models, &text) {
+                if !TextInputBasicsView::has_text_for_action_model_store(models, &text_state) {
                     return false;
                 }
 
-                let _ = models.update(&submitted_count, |v| *v = v.saturating_add(1));
-                let _ = models.update(&text, String::clear);
-                true
+                let _ = submitted_count_state.update_in(models, |value| {
+                    *value = value.saturating_add(1);
+                });
+                text_state.set_in(models, String::new())
             }
         });
 
         cx.on_action_notify_models::<act::Clear>({
-            let text = self.text.clone();
+            let text_state = text_state.clone();
             move |models| {
-                if !TextInputBasicsView::has_text_for_action_model_store(models, &text) {
+                if !TextInputBasicsView::has_text_for_action_model_store(models, &text_state) {
                     return false;
                 }
 
-                let _ = models.update(&text, String::clear);
-                true
+                text_state.set_in(models, String::new())
             }
         });
 
         cx.on_action_availability::<act::Submit>({
-            let text = self.text.clone();
+            let text_state = text_state.clone();
             move |host, _acx| {
-                if TextInputBasicsView::has_text(host, &text) {
+                if TextInputBasicsView::has_text(host, &text_state) {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
@@ -145,9 +135,9 @@ impl View for TextInputBasicsView {
         });
 
         cx.on_action_availability::<act::Clear>({
-            let text = self.text.clone();
+            let text_state = text_state.clone();
             move |host, _acx| {
-                if TextInputBasicsView::has_text(host, &text) {
+                if TextInputBasicsView::has_text(host, &text_state) {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
@@ -166,13 +156,11 @@ impl View for TextInputBasicsView {
                     .action(act::Clear),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
         let stats = ui::h_flex(|cx| ui::children![cx; len_badge, submitted_badge])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -190,20 +178,18 @@ impl View for TextInputBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
-                        ui::v_flex(|cx| ui::children![cx; input, buttons, stats])
-                            .gap(Space::N3)
-                            .into_element(cx),
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; input, buttons, stats]).gap(Space::N3),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .max_w(Px(560.0))
-        .into_element(cx);
+        .max_w(Px(560.0));
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

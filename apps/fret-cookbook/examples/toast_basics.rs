@@ -87,8 +87,7 @@ impl View for ToastBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -105,24 +104,23 @@ impl View for ToastBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(buttons);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, buttons);
                 }),
             );
         })
         .ui()
         .w_full()
-        .max_w(Px(720.0))
-        .into_element(cx);
+        .max_w(Px(720.0));
 
-        let toaster = shadcn::Toaster::new().into_element(cx);
+        let page = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
+        let toaster = shadcn::Toaster::new();
 
         // `Toaster` is layout-neutral but must be in the tree so toast layer + store are installed.
-        let body = ui::v_flex(|_cx| [card, toaster])
-            .gap(Space::N4)
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, body).into()
+        ui::stack(|cx| ui::children![cx; page, toaster])
+            .size_full()
+            .into_element(cx)
+            .into()
     }
 }
 

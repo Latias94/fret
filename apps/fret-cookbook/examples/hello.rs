@@ -34,7 +34,7 @@ impl View for HelloView {
         };
 
         let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().copied_or(0);
+        let count_value = cx.watch_model(&count).layout().value_or(0);
 
         cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
             *v = v.saturating_add(1);
@@ -43,7 +43,7 @@ impl View for HelloView {
 
         cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        ui::v_flex(|cx| {
+        let root = ui::v_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
@@ -58,9 +58,9 @@ impl View for HelloView {
         .gap(Space::N4)
         .items_center()
         .justify_center()
-        .test_id(TEST_ID_ROOT)
-        .into_element(cx)
-        .into()
+        .test_id(TEST_ID_ROOT);
+
+        root.into_element(cx).into()
     }
 }
 

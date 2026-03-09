@@ -385,7 +385,7 @@ struct MyView {
 
 impl View for MyView {
     fn render(&mut self, cx: &mut ViewCx<'_, App>) -> Elements {
-        let st = cx.watch_model(&self.st).layout().cloned_or_default();
+        let st = cx.watch_model(&self.st).layout().value_or_default();
 
         let derived = cx.use_selector(
             |cx| DepsBuilder::new(cx).model_rev(&self.st).finish(),

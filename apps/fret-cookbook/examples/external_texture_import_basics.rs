@@ -174,14 +174,14 @@ fn view(
 ) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let preset = cx.watch_model(&st.preset).paint().copied_or_default();
+    let preset = cx.watch_model(&st.preset).paint().value_or_default();
     let fit = cx
         .watch_model(&st.fit)
         .paint()
-        .copied_or(ViewportFit::Contain);
-    let target_w = cx.watch_model(&st.target_w).paint().copied_or_default();
-    let target_h = cx.watch_model(&st.target_h).paint().copied_or_default();
-    let ingest = cx.watch_model(&st.ingest).paint().copied_or_default();
+        .value_or(ViewportFit::Contain);
+    let target_w = cx.watch_model(&st.target_w).paint().value_or_default();
+    let target_h = cx.watch_model(&st.target_h).paint().value_or_default();
+    let ingest = cx.watch_model(&st.ingest).paint().value_or_default();
 
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
@@ -245,8 +245,7 @@ fn view(
 
     let target_w_badge = shadcn::Badge::new(format!("target.w: {target_w:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_W)
@@ -254,8 +253,7 @@ fn view(
         );
     let target_h_badge = shadcn::Badge::new(format!("target.h: {target_h:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_H)
@@ -263,8 +261,7 @@ fn view(
         );
     let fit_badge = shadcn::Badge::new(format!("fit: {:.0}", fit_code(fit)))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_FIT_CODE)
@@ -272,8 +269,7 @@ fn view(
         );
     let ingest_badge = shadcn::Badge::new(format!("ingest: {ingest:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_INGEST_CODE)
@@ -339,10 +335,9 @@ fn view(
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }

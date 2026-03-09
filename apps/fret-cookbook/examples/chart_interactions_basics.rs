@@ -317,8 +317,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
     let toolbar = ui::h_flex(|cx| {
         let x_span_badge = shadcn::Badge::new(format!("X span: {x_span:.2}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_X_SPAN)
@@ -328,8 +327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
 
         let hover_badge = shadcn::Badge::new(format!("Hover index: {hover_index:.0}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_HOVER_INDEX)
@@ -340,8 +338,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         let selected_index = st.selected.map(|v| v as f64).unwrap_or(-1.0);
         let selected_badge = shadcn::Badge::new(format!("Selected index: {selected_index:.0}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_SELECTED_INDEX)
@@ -375,8 +372,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let canvas = chart_canvas(cx, st);
 
@@ -387,8 +383,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         .p(Space::N2)
         .w_full()
         .h_full()
-        .min_h(Px(420.0))
-        .into_element(cx);
+        .min_h(Px(420.0));
 
     let card = shadcn::Card::build(|cx, out| {
         out.push_ui(
@@ -406,13 +401,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         out.push_ui(
             cx,
             shadcn::CardContent::build(|cx, out| {
-                out.push(
+                out.push_ui(
+                    cx,
                     ui::v_flex(|cx| ui::children![cx; toolbar, canvas_shell])
                         .gap(Space::N3)
                         .w_full()
                         .h_full()
-                        .min_w_0()
-                        .into_element(cx),
+                        .min_w_0(),
                 );
             }),
         );
@@ -420,10 +415,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

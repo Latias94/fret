@@ -274,6 +274,9 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = CardHeader::new(Vec::new()).ui().build();
     let _ = CardContent::new(Vec::new()).ui().build();
     let _ = CardFooter::new(Vec::new()).ui().build();
+    let _ = CardFooter::build::<fret_ui_app::App, _>(|_cx, _out| {})
+        .ui()
+        .build();
     let _ = CardTitle::new("x").ui().build();
     let _ = CardDescription::new("x").ui().build();
 

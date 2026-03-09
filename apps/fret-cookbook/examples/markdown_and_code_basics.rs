@@ -41,30 +41,25 @@ mod act {
     fret::actions!([Reset = "cookbook.markdown_and_code_basics.reset.v1"]);
 }
 
-struct MarkdownAndCodeBasicsView {
-    source: Model<String>,
-    wrap: Model<Option<Arc<str>>>,
-    cap_height: Model<bool>,
-}
+struct MarkdownAndCodeBasicsView;
 
 impl View for MarkdownAndCodeBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            source: app.models_mut().insert(SAMPLE_MARKDOWN.to_string()),
-            wrap: app.models_mut().insert(Some(Arc::from(WRAP_SCROLL_X))),
-            cap_height: app.models_mut().insert(true),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let source = cx.watch_model(&self.source).layout().cloned_or_default();
-        let wrap = self
-            .wrap
-            .read(&mut *cx.app, |_host, v| v.clone())
-            .ok()
-            .flatten()
+        let source_state = cx.use_local_with(|| SAMPLE_MARKDOWN.to_string());
+        let wrap_state = cx.use_local_with(|| Some(Arc::from(WRAP_SCROLL_X)));
+        let cap_height_state = cx.use_local_with(|| true);
+
+        let source = source_state.watch(cx).layout().value_or_default();
+        let wrap: Arc<str> = wrap_state
+            .watch(cx)
+            .layout()
+            .value_or_else(|| Some(Arc::from(WRAP_SCROLL_X)))
             .unwrap_or_else(|| Arc::from(WRAP_SCROLL_X));
-        let cap_height = cx.watch_model(&self.cap_height).layout().copied_or(true);
+        let cap_height = cap_height_state.watch(cx).layout().value_or(true);
 
         let wrap_mode = match wrap.as_ref() {
             WRAP_WORD => CodeBlockWrap::Word,
@@ -88,10 +83,9 @@ impl View for MarkdownAndCodeBasicsView {
                     "Markdown rendering + fenced code blocks (copy button, wrap mode, max height).",
                 ),
             );
-        })
-        .into_element(cx);
+        });
 
-        let wrap_toggle = shadcn::ToggleGroup::single(self.wrap.clone())
+        let wrap_toggle = shadcn::ToggleGroup::single(wrap_state.clone_model())
             .items([
                 shadcn::ToggleGroupItem::new(WRAP_SCROLL_X, [cx.text("Scroll X")])
                     .a11y_label("Scroll horizontally")
@@ -101,10 +95,10 @@ impl View for MarkdownAndCodeBasicsView {
                     .test_id(TEST_ID_WRAP_WORD),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .into_element(cx)
             .test_id(TEST_ID_WRAP);
 
-        let cap_switch = shadcn::Switch::new(self.cap_height.clone()).test_id(TEST_ID_CAP_HEIGHT);
+        let cap_switch =
+            shadcn::Switch::new(cap_height_state.clone_model()).test_id(TEST_ID_CAP_HEIGHT);
 
         let reset = shadcn::Button::new("Reset sample")
             .variant(shadcn::ButtonVariant::Secondary)
@@ -137,10 +131,9 @@ impl View for MarkdownAndCodeBasicsView {
                 .items_center(),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
-        let editor = shadcn::Textarea::new(self.source.clone())
+        let editor = shadcn::Textarea::new(&source_state)
             .a11y_label("Markdown source")
             .placeholder("Markdown…")
             .min_height(Px(420.0))
@@ -154,50 +147,44 @@ impl View for MarkdownAndCodeBasicsView {
                     .w_full()
                     .h_px(MetricRef::Px(Px(420.0))),
             )
-            .into_element(cx)
             .test_id(TEST_ID_PREVIEW_SCROLL);
 
         let left = ui::v_flex(|cx| ui::children![cx; editor])
             .gap(Space::N2)
             .flex_1()
-            .min_w_0()
-            .into_element(cx);
+            .min_w_0();
         let right = ui::v_flex(|cx| ui::children![cx; preview_scroll])
             .gap(Space::N2)
             .flex_1()
-            .min_w_0()
-            .into_element(cx);
+            .min_w_0();
 
         let panels = ui::h_flex(|cx| ui::children![cx; left, right])
             .gap(Space::N4)
             .items_stretch()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let body = ui::v_flex(|cx| ui::children![cx; controls, shadcn::Separator::new(), panels])
-            .gap(Space::N3)
-            .into_element(cx);
+            .gap(Space::N3);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(header);
+            out.push_ui(cx, header);
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })
         .ui()
         .w_full()
-        .max_w(Px(980.0))
-        .into_element(cx);
+        .max_w(Px(980.0));
 
-        cx.on_action_notify_model_set::<act::Reset, String>(
-            self.source.clone(),
+        cx.on_action_notify_local_set::<act::Reset, String>(
+            &source_state,
             SAMPLE_MARKDOWN.to_string(),
         );
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

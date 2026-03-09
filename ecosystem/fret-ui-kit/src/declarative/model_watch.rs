@@ -1,6 +1,8 @@
 use std::any::Any;
 
 use fret_runtime::{Model, ModelUpdateError};
+#[cfg(feature = "state-query")]
+use fret_query::{QueryHandle, QueryState};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 /// Ergonomic helpers for observing-and-reading models during declarative rendering.
@@ -119,11 +121,85 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
         self.cloned().unwrap_or_default()
     }
 
+    /// Default post-v1 read path: clone/copy the tracked value without choosing between
+    /// `copied_*` and `cloned_*` at every call site.
+    pub fn value(self) -> Option<T>
+    where
+        T: Clone,
+    {
+        self.cloned()
+    }
+
+    pub fn value_or(self, default: T) -> T
+    where
+        T: Clone,
+    {
+        self.value().unwrap_or(default)
+    }
+
+    pub fn value_or_else(self, f: impl FnOnce() -> T) -> T
+    where
+        T: Clone,
+    {
+        self.value().unwrap_or_else(f)
+    }
+
+    pub fn value_or_default(self) -> T
+    where
+        T: Clone + Default,
+    {
+        self.value().unwrap_or_default()
+    }
+
     pub fn read_ref<R>(self, f: impl FnOnce(&T) -> R) -> Result<R, ModelUpdateError> {
         self.cx.read_model_ref(self.model, self.invalidation, f)
     }
 
     pub fn read<R>(self, f: impl FnOnce(&mut H, &T) -> R) -> Result<R, ModelUpdateError> {
         self.cx.read_model(self.model, self.invalidation, f)
+    }
+}
+
+
+#[cfg(feature = "state-query")]
+pub trait QueryHandleWatchExt<T: 'static> {
+    fn watch_query<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>>;
+
+    fn paint_query<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
+        self.watch_query(cx).paint()
+    }
+
+    fn layout_query<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
+        self.watch_query(cx).layout()
+    }
+
+    fn hit_test_query<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
+        self.watch_query(cx).hit_test()
+    }
+}
+
+#[cfg(feature = "state-query")]
+impl<T: 'static> QueryHandleWatchExt<T> for QueryHandle<T> {
+    fn watch_query<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
+        WatchedModel {
+            cx,
+            model: self.model(),
+            invalidation: Invalidation::Paint,
+        }
     }
 }

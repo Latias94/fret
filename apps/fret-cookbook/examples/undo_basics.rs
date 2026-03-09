@@ -170,8 +170,8 @@ impl View for UndoBasicsView {
         let undo_cmd: CommandId = act::Undo.into();
         let redo_cmd: CommandId = act::Redo.into();
 
-        let value = cx.watch_model(&self.value).paint().copied_or_default();
-        let history = cx.watch_model(&self.history).paint().cloned_or_default();
+        let value = cx.watch_model(&self.value).paint().value_or_default();
+        let history = cx.watch_model(&self.history).paint().value_or_default();
         let can_undo = history.can_undo();
         let can_redo = history.can_redo();
 
@@ -184,7 +184,7 @@ impl View for UndoBasicsView {
             .and_then(|rec| rec.label.as_deref())
             .unwrap_or("None");
 
-        let coalesce = cx.watch_model(&self.coalesce).paint().copied_or_default();
+        let coalesce = cx.watch_model(&self.coalesce).paint().value_or_default();
         let coalesce_label = if coalesce { "On" } else { "Off" };
 
         let undo_shortcut = cx
@@ -237,8 +237,7 @@ impl View for UndoBasicsView {
             .text_base()
             .tabular_nums()
             .font_weight(FontWeight::SEMIBOLD)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::SpinButton)
                     .test_id(TEST_ID_VALUE)
@@ -336,8 +335,7 @@ impl View for UndoBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(760.0))
-        .into_element(cx);
+        .max_w(Px(760.0));
 
         cx.on_action_notify_models::<act::Inc>({
             let value = self.value.clone();
@@ -480,7 +478,7 @@ impl View for UndoBasicsView {
             }
         });
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

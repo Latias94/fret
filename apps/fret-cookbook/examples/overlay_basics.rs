@@ -84,7 +84,7 @@ impl View for OverlayBasicsView {
         let dialog_open_for_footer = dialog_open.clone();
         let dialog_open_for_close = dialog_open.clone();
 
-        let bumps = cx.watch_model(&underlay_bumps).layout().copied_or(0);
+        let bumps = cx.watch_model(&underlay_bumps).layout().value_or(0);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"
@@ -128,13 +128,11 @@ impl View for OverlayBasicsView {
                                     .test_id(TEST_ID_UNDERLAY_BUMP),
                             ]
                         })
-                        .gap(Space::N2)
-                        .into_element(cx),
+                        .gap(Space::N2),
                     ]
                 })
                 .gap(Space::N3)
-                .items_center()
-                .into_element(cx);
+                .items_center();
 
                 shadcn::Card::build(|cx, out| {
                     out.push_ui(
@@ -151,8 +149,8 @@ impl View for OverlayBasicsView {
                     );
                     out.push_ui(
                         cx,
-                        shadcn::CardContent::build(|_cx, out| {
-                            out.push(content);
+                        shadcn::CardContent::build(|cx, out| {
+                            out.push_ui(cx, content);
                         }),
                     );
                 })
@@ -162,26 +160,39 @@ impl View for OverlayBasicsView {
                 .into_element(cx)
             },
             move |cx| {
-                shadcn::DialogContent::new(ui::children![
-                    cx;
-                    shadcn::DialogHeader::new(ui::children![
-                        cx;
-                        shadcn::DialogTitle::new("Hello overlays"),
-                        shadcn::DialogDescription::new(
-                            "This is a minimal dialog example with stable test IDs.",
-                        ),
-                    ]),
-                    shadcn::DialogFooter::new(ui::children![
-                        cx;
-                        shadcn::Button::new("Close")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(dialog_open_for_footer.clone()),
-                    ]),
+                shadcn::DialogContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::DialogHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DialogTitle::new("Hello overlays"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DialogDescription::new(
+                                    "This is a minimal dialog example with stable test IDs.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push_ui(
+                        cx,
+                        shadcn::DialogFooter::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .toggle_model(dialog_open_for_footer.clone()),
+                            );
+                        }),
+                    );
                     // Order matters: `DialogClose` is absolutely-positioned and should be the last
                     // child so it stays above the Dialog content in hit testing.
-                    shadcn::DialogClose::new(dialog_open_for_close.clone())
-                        .test_id(TEST_ID_DIALOG_CLOSE),
-                ])
+                    out.push_ui(
+                        cx,
+                        shadcn::DialogClose::new(dialog_open_for_close.clone())
+                            .test_id(TEST_ID_DIALOG_CLOSE),
+                    );
+                })
+                .ui()
                 .test_id(TEST_ID_DIALOG_CONTENT)
                 .into_element(cx)
             },

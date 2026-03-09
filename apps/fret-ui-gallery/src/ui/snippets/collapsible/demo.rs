@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_ui_kit::declarative::controllable_state;
 use fret_ui_shadcn::collapsible_primitives as shadcn_col;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -9,11 +8,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with
     // `Trigger(asChild)` in the header and `Content` later in the tree.
     cx.scope(|cx| {
-        let open =
-            controllable_state::use_controllable_model(cx, None::<Model<bool>>, || false).model();
 
         shadcn_col::Collapsible::new()
-            .open(open)
+            .default_open(false)
             .gap(Space::N2)
             .refine_layout(LayoutRefinement::default().w_px(Px(350.0)))
             .into_element(cx, move |cx| {

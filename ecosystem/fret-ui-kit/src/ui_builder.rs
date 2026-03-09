@@ -1455,11 +1455,134 @@ where
     }
 }
 
+impl<H: UiHost, B> UiBuilder<crate::ui::ContainerPropsBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let UiBuilder {
+            inner,
+            patch: _,
+            semantics,
+            key_context,
+        } = self;
+        let el = inner.into_element(cx);
+        let el = match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
+            None => el,
+        }
+    }
+}
+
+impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerPropsBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: crate::ui::UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let UiBuilder {
+            inner,
+            patch: _,
+            semantics,
+            key_context,
+        } = self;
+        let el = inner.into_element(cx);
+        let el = match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
+            None => el,
+        }
+    }
+}
+
 impl<H: UiHost, F, I> UiBuilder<crate::ui::StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
     I::Item: crate::ui::UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+            key_context,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+            key_context: None,
+        };
+        let el = builder.build().into_element(cx);
+        let el = match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
+            None => el,
+        }
+    }
+}
+
+impl<H: UiHost, K: std::hash::Hash, F, T> UiBuilder<crate::ui::KeyedBox<H, K, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> T,
+    T: crate::ui::UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        finalize_ui_builder_element(self, cx, |built, cx| built.into_element(cx))
+    }
+}
+
+impl<H: UiHost, F, I> UiBuilder<crate::ui::EffectLayerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: crate::ui::UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+            key_context,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+            key_context: None,
+        };
+        let el = builder.build().into_element(cx);
+        let el = match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
+            None => el,
+        }
+    }
+}
+
+impl<H: UiHost, B> UiBuilder<crate::ui::EffectLayerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

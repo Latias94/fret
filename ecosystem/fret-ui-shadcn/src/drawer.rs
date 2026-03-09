@@ -34,7 +34,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, UiChildIntoElement,
-    UiHostBoundIntoElement, ui,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -147,6 +147,15 @@ fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSid
     drawer_height
 }
 
+fn collect_built_drawer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 /// shadcn/ui `DrawerContent` (v4).
 #[derive(Debug)]
 pub struct DrawerContent {
@@ -164,6 +173,20 @@ impl DrawerContent {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             drag_handle_test_id: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DrawerContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerContentBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            drag_handle_test_id: None,
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -341,6 +364,98 @@ impl DrawerContent {
     }
 }
 
+pub struct DrawerContentBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    drag_handle_test_id: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn drag_handle_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.drag_handle_test_id = Some(id.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut content = DrawerContent::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer content build closure"),
+        ))
+        .refine_style(self.chrome)
+        .refine_layout(self.layout);
+        if let Some(id) = self.drag_handle_test_id {
+            content = content.drag_handle_test_id(id);
+        }
+        let content = content.into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DrawerContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DrawerContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerContentBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DrawerHeader` (v4).
 #[derive(Debug)]
 pub struct DrawerHeader {
@@ -351,6 +466,16 @@ impl DrawerHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DrawerHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerHeaderBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -378,6 +503,54 @@ impl DrawerHeader {
     }
 }
 
+pub struct DrawerHeaderBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeader::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer header build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DrawerFooter` (v4).
 #[derive(Debug)]
 pub struct DrawerFooter {
@@ -390,6 +563,16 @@ impl DrawerFooter {
         Self { children }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> DrawerFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
@@ -399,6 +582,54 @@ impl DrawerFooter {
         );
         let children = self.children;
         shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+    }
+}
+
+pub struct DrawerFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooter::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer footer build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooterBuild::into_element(self, cx)
     }
 }
 
@@ -471,6 +702,21 @@ impl Drawer {
     /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
     pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
         DrawerComposition::new(self)
+    }
+
+    /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.into_element(
+            cx,
+            move |cx| trigger.into_child_element(cx),
+            move |cx| content.into_child_element(cx),
+        )
     }
 
     pub fn overlay_component(mut self, overlay: DrawerOverlay) -> Self {
@@ -986,15 +1232,15 @@ enum DrawerCompositionContent<H: UiHost> {
     Deferred(DrawerDeferredContent<H>),
 }
 
-pub struct DrawerComposition<H: UiHost> {
+pub struct DrawerComposition<H: UiHost, TTrigger = DrawerTrigger> {
     drawer: Drawer,
-    trigger: Option<DrawerTrigger>,
+    trigger: Option<TTrigger>,
     portal: DrawerPortal,
     overlay: DrawerOverlay,
     content: Option<DrawerCompositionContent<H>>,
 }
 
-impl<H: UiHost> std::fmt::Debug for DrawerComposition<H> {
+impl<H: UiHost, TTrigger> std::fmt::Debug for DrawerComposition<H, TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DrawerComposition")
             .field("drawer", &self.drawer)
@@ -1016,10 +1262,20 @@ impl<H: UiHost> DrawerComposition<H> {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: DrawerTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<H: UiHost, TTrigger> DrawerComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> DrawerComposition<H, TNextTrigger> {
+        DrawerComposition {
+            drawer: self.drawer,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: DrawerPortal) -> Self {
@@ -1046,10 +1302,14 @@ impl<H: UiHost> DrawerComposition<H> {
     }
 
     #[track_caller]
-    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: DrawerCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("Drawer::compose().trigger(...) must be provided before into_element()");
+            .expect("Drawer::compose().trigger(...) must be provided before into_element()")
+            .into_drawer_trigger(cx);
         let content = self
             .content
             .expect("Drawer::compose().content(...) must be provided before into_element()");
@@ -1240,6 +1500,30 @@ where
     #[track_caller]
     fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait DrawerCompositionTriggerArg<H: UiHost> {
+    fn into_drawer_trigger(self, cx: &mut ElementContext<'_, H>) -> DrawerTrigger;
+}
+
+impl<H: UiHost> DrawerCompositionTriggerArg<H> for DrawerTrigger {
+    fn into_drawer_trigger(self, _cx: &mut ElementContext<'_, H>) -> DrawerTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> DrawerCompositionTriggerArg<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_drawer_trigger(self, cx: &mut ElementContext<'_, H>) -> DrawerTrigger {
+        DrawerTrigger::new(
+            self.child
+                .expect("expected drawer trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -1591,16 +1875,18 @@ mod tests {
             |cx| {
                 let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
 
-                vec![Drawer::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(DrawerPortal::new())
-                    .overlay(DrawerOverlay::new())
-                    .content_with(|cx| {
-                        let close = DrawerClose::from_scope().into_element(cx);
-                        DrawerContent::new(vec![close]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                vec![
+                    Drawer::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(DrawerPortal::new())
+                        .overlay(DrawerOverlay::new())
+                        .content_with(|cx| {
+                            let close = DrawerClose::from_scope().into_element(cx);
+                            DrawerContent::new(vec![close]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

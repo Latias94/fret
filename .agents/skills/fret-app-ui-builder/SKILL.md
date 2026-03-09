@@ -36,6 +36,7 @@ It is intentionally **self-contained**: it includes theming, recipes, and the mo
 - Primary modality: keyboard-first / mouse-first / mixed.
 - Must-have flows: command palette, settings, navigation sidebar, data table, docking workspace.
 - Evidence needs: diag script gate only, or screenshots/pixel checks too?
+- State ownership: plain local snapshot, narrow bridge, or shared `Model<T>`?
 
 Defaults if unclear:
 
@@ -74,6 +75,11 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
 2) Apply the baseline preset + overrides (keep it small: density + ring first).
    - Token cheat sheet: `references/theme/token-groups.md`
    - Starter presets: `references/theme/editor-presets.md`
+
+2.5) Run a widget-state sanity check before freezing the app-side state shape:
+
+- `references/mind-models/mm-widget-state-surfaces.md`
+- If a simple local list needs per-row `Model<T>` just to satisfy a widget recipe, stop and audit component parity before adding app helpers.
 
 3) Compose one “app surface” recipe and keep it minimal (start from the in-skill references):
 
@@ -169,6 +175,18 @@ Rule: `crates/fret-ui` is mechanism-only; policy belongs in components via actio
 - While composing, IME gets first refusal on Tab/Escape/arrows/etc.
 - Provide caret rect feedback for candidate window placement.
 
+### Widget state surfaces (don’t pay shared-state cost by accident)
+
+- For small view-owned collections, prefer plain local snapshots plus typed actions when the widget
+  surface allows it.
+- For text widgets with model-backed internals, use the narrow bridge (`Input::new(&local_text)`,
+  `Textarea::new(&local_text)`) instead of widening to a generic `IntoModel<T>` story.
+- Use explicit `Model<T>` when state is intentionally shared, externally synchronized, or
+  runtime-owned.
+- If app code only introduces per-row `Model<T>` because a shadcn widget contract demands it,
+  escalate to `fret-shadcn-source-alignment` before adding more helper sugar.
+- Reference: `references/mind-models/mm-widget-state-surfaces.md`
+
 ### Virtualized lists (stable identity is non-negotiable)
 
 - Use keyed virtualization; keys must come from the model (never the row index).
@@ -197,6 +215,7 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Style catalog (used by `stylegen.py`): `.agents/skills/fret-app-ui-builder/references/style_catalog.json`
 - Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
 - Design direction mind model: `.agents/skills/fret-app-ui-builder/references/mind-models/mm-design-direction.md`
+- Widget state surface mind model: `.agents/skills/fret-app-ui-builder/references/mind-models/mm-widget-state-surfaces.md`
 - Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
@@ -221,6 +240,7 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Building overlay state machines without leaving a diag script gate.
 - Missing `test_id` targets (scripts rot immediately).
 - Mixing parity work with new design work without gates.
+- Accepting per-row `Model<T>` boilerplate in a small local list as “normal app code” when the real issue may be widget contract drift.
 
 ## Troubleshooting
 
@@ -228,6 +248,8 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
   - Fix: push changes into tokens/recipes; avoid one-off per-widget overrides.
 - Symptom: you cannot script the new UI reliably.
   - Fix: add `test_id` and use `fret-diag-workflow` to lock the flow with a script.
+- Symptom: a simple todo-like list explodes into per-row models just to keep checkbox/switch/toggle rows.
+  - Fix: re-run `references/mind-models/mm-widget-state-surfaces.md`; if the widget surface is the blocker, escalate to `fret-shadcn-source-alignment` instead of adding more app-level helpers.
 
 ## Related skills
 

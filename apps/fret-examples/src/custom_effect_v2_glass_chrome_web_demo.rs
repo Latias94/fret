@@ -330,7 +330,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
+        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
@@ -341,7 +341,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let radius = Px(24.0);
 
@@ -502,7 +502,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("CustomV2 (Glass/Chrome)").into_element(cx),

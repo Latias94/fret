@@ -23,33 +23,38 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
 
-    let trigger = shadcn::AlertDialogTrigger::new(
-        shadcn::Button::new("Open")
-            .variant(shadcn::ButtonVariant::Outline)
-            .into_element(cx),
-    );
-
     shadcn::AlertDialog::new(open)
         .compose()
-        .trigger(trigger)
+        .trigger(shadcn::AlertDialogTrigger::build(
+            shadcn::Button::new("Open").variant(shadcn::ButtonVariant::Outline),
+        ))
         .portal(shadcn::AlertDialogPortal::new())
         .overlay(shadcn::AlertDialogOverlay::new())
         .content_with(move |cx| {
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
-                shadcn::AlertDialogDescription::new(
-                    "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx);
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                shadcn::AlertDialogAction::from_scope("Continue").into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer]).into_element(cx)
+            shadcn::AlertDialogContent::build(|cx, out| {
+                out.push(
+                    shadcn::AlertDialogHeader::build(|cx, out| {
+                        out.push(
+                            shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                        );
+                        out.push(
+                            shadcn::AlertDialogDescription::new(
+                                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                            )
+                            .into_element(cx),
+                        );
+                    })
+                    .into_element(cx),
+                );
+                out.push(
+                    shadcn::AlertDialogFooter::build(|cx, out| {
+                        out.push(shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx));
+                        out.push(shadcn::AlertDialogAction::from_scope("Continue").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            })
+            .into_element(cx)
         })
         .into_element(cx)
 }

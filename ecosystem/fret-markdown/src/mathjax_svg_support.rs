@@ -12,7 +12,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, Length, ScrollAxis, ScrollProps, SvgIconProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::typography;
 
 use super::{InlineMathInfo, MarkdownTheme};
@@ -292,9 +292,8 @@ fn mathjax_svg_entry<H: UiHost>(
         }
     });
 
-    let state = cx
-        .watch_model(handle.model())
-        .layout()
+    let state = handle
+        .layout_query(cx)
         .cloned()
         .unwrap_or_default();
 

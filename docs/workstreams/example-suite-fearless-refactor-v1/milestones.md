@@ -50,10 +50,14 @@ Deliverables:
   - native demo bins,
   - cookbook `examples/`,
   - web demo selection.
+- A documented ownership split:
+  - `examples/README.md` is the Bevy-style portal,
+  - runnable examples stay owned by cookbook/gallery/app crates rather than a root package.
 
 Exit criteria:
 
 - Adding a new official example requires updating a single “catalog surface” (or is auto-discovered).
+- Discoverability does not depend on turning the workspace root into a single-package `cargo run --example` story.
 
 ## Milestone 3 — High ceiling tracks (interop + renderer labs)
 

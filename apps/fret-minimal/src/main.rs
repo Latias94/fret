@@ -85,7 +85,7 @@ fn view<'a>(
     let count = if flags.no_text {
         0
     } else {
-        cx.watch_model(&st.count).layout().copied_or_default()
+        cx.watch_model(&st.count).layout().value_or_default()
     };
     let theme = Theme::global(&*cx.app);
     let surface_bg = theme.colors.surface_background;

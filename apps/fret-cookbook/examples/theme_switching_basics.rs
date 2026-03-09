@@ -24,7 +24,6 @@ fn apply_scheme(app: &mut App, scheme: &str) {
 
 struct ThemeSwitchingBasicsView {
     window: AppWindowId,
-    scheme: Model<Option<Arc<str>>>,
     applied_scheme: Option<Arc<str>>,
 }
 
@@ -34,16 +33,16 @@ impl View for ThemeSwitchingBasicsView {
 
         Self {
             window,
-            scheme: app.models_mut().insert(Some(Arc::from(SCHEME_LIGHT))),
             applied_scheme: Some(Arc::from(SCHEME_LIGHT)),
         }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let scheme = cx
-            .watch_model(&self.scheme)
+        let scheme_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
+        let scheme: Arc<str> = scheme_state
+            .watch(cx)
             .layout()
-            .cloned_or_default()
+            .value_or_default()
             .unwrap_or_else(|| Arc::from(SCHEME_LIGHT));
 
         let applied_mismatch = match self.applied_scheme.as_ref() {
@@ -71,8 +70,7 @@ impl View for ThemeSwitchingBasicsView {
                     "A minimal example that toggles between shadcn New York v4 Light/Dark.",
                 ),
             );
-        })
-        .into_element(cx);
+        });
 
         let scheme_row = ui::h_flex(|cx| {
             ui::children![
@@ -82,10 +80,9 @@ impl View for ThemeSwitchingBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let scheme_toggle = shadcn::ToggleGroup::single(self.scheme.clone())
+        let scheme_toggle = shadcn::ToggleGroup::single(scheme_state.clone_model())
             .items([
                 shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [cx.text("Light")])
                     .a11y_label("Light")
@@ -95,15 +92,11 @@ impl View for ThemeSwitchingBasicsView {
                     .test_id(TEST_ID_TOGGLE_DARK),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .test_id(TEST_ID_TOGGLE)
-            .into_element(cx);
+            .test_id(TEST_ID_TOGGLE);
 
         // Avoid `ui::h_flex` here: its internal flex sizing forces `width: fill` by default, which
         // can cause children to get a much larger hit box than intended.
-        let toggle_row = ui::h_row(|_cx| [scheme_toggle])
-            .justify_center()
-            .w_full()
-            .into_element(cx);
+        let toggle_row = ui::h_row(|_cx| [scheme_toggle]).justify_center().w_full();
 
         let sample = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -121,7 +114,8 @@ impl View for ThemeSwitchingBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::h_flex(|cx| {
                             ui::children![
                                 cx;
@@ -132,37 +126,34 @@ impl View for ThemeSwitchingBasicsView {
                                     .variant(shadcn::ButtonVariant::Secondary),
                             ]
                         })
-                        .gap(Space::N2)
-                        .into_element(cx),
+                        .gap(Space::N2),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .test_id(TEST_ID_SAMPLE_CARD)
-        .into_element(cx);
+        .test_id(TEST_ID_SAMPLE_CARD);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(header);
+            out.push_ui(cx, header);
             out.push_ui(
                 cx,
                 shadcn::CardContent::build(|cx, out| {
-                    out.push(
+                    out.push_ui(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; scheme_row, toggle_row, sample])
                             .gap(Space::N5)
-                            .w_full()
-                            .into_element(cx),
+                            .w_full(),
                     );
                 }),
             );
         })
         .ui()
         .w_full()
-        .max_w(Px(560.0))
-        .into_element(cx);
+        .max_w(Px(560.0));
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

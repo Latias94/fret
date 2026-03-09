@@ -89,6 +89,7 @@ use std::time::Duration;
 
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
 fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
     let key = QueryKey::<String>::new("my_app.http.user.v1", &123u64);
@@ -112,17 +113,19 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
         Ok(text)
     });
 
-    let state = cx.read_model(handle.model(), fret_ui::Invalidation::Paint, |_app, st| st.clone());
-    if let Some(state) = state {
-        match state.status {
-            QueryStatus::Loading => { /* render loading */ }
-            QueryStatus::Success => { /* render data */ }
-            QueryStatus::Error => { /* render error */ }
-            QueryStatus::Idle => {}
-        }
+    let state = handle.paint_query(cx).value_or_default();
+    match state.status {
+        QueryStatus::Loading => { /* render loading */ }
+        QueryStatus::Success => { /* render data */ }
+        QueryStatus::Error => { /* render error */ }
+        QueryStatus::Idle => {}
     }
 }
 ```
+
+For `ElementContext`-based declarative surfaces, prefer keeping query reads on the handle side via
+`QueryHandleWatchExt` (`handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
+instead of reopening `handle.model()`.
 
 ### wasm local futures
 

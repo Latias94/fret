@@ -5,25 +5,23 @@ const TEST_ID_ROOT: &str = "cookbook.date_picker_basics.root";
 const TEST_ID_PICKER: &str = "cookbook.date_picker_basics.picker";
 const TEST_ID_SELECTED: &str = "cookbook.date_picker_basics.selected";
 
-struct DatePickerBasicsView {
-    open: Model<bool>,
-    selected: Model<Option<time::Date>>,
-}
+struct DatePickerBasicsView;
 
 impl View for DatePickerBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        let open = app.models_mut().insert(false);
-        let default_selected =
-            Date::from_calendar_date(2026, Month::January, 15).expect("valid date");
-        let selected = app.models_mut().insert(Some(default_selected));
-        Self { open, selected }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let selected = cx
-            .watch_model(&self.selected)
+        let open_state = cx.use_local_with(|| false);
+        let selected_state = cx.use_local_with(|| {
+            Some(Date::from_calendar_date(2026, Month::January, 15).expect("valid date"))
+        });
+
+        let selected = selected_state
+            .watch(cx)
             .layout()
-            .copied_or_default()
+            .value_or_default()
             .map(|d| d.to_string())
             .unwrap_or_else(|| "<none>".to_string());
 
@@ -32,16 +30,16 @@ impl View for DatePickerBasicsView {
             out.push_ui(
                 cx,
                 shadcn::CardDescription::new(
-                    "A minimal DatePicker example (controlled models: open/month/selected).",
+                    "A minimal DatePicker example (local state bridged into the controlled DatePicker surface).",
                 ),
             );
         });
 
         let picker = shadcn::DatePicker::new_controllable(
             cx.elements(),
-            Some(self.selected.clone()),
+            Some(selected_state.clone_model()),
             None,
-            Some(self.open.clone()),
+            Some(open_state.clone_model()),
             false,
         )
         .format_selected_iso()
@@ -78,10 +76,9 @@ impl View for DatePickerBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(720.0))
-        .into_element(cx);
+        .max_w(Px(720.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

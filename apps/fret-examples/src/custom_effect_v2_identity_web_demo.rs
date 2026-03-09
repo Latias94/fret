@@ -324,7 +324,7 @@ impl CustomEffectV2IdentityWebDriver {
         let effect = pack.and_then(|p| p.effect);
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
+        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
@@ -333,7 +333,7 @@ impl CustomEffectV2IdentityWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let radius = Px(24.0);
 

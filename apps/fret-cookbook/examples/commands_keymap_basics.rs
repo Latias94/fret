@@ -1,13 +1,16 @@
 use fret::prelude::*;
 use fret_app::{
-    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
-    PlatformFilter, format_sequence,
+    format_sequence, CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord,
+    KeymapService, Platform, PlatformFilter,
 };
 use fret_core::{KeyCode, Modifiers};
 use fret_ui::CommandAvailability;
 
 mod act {
-    fret::actions!([TogglePanel = "cookbook.commands.toggle_panel.v1"]);
+    fret::actions!([
+        TogglePanel = "cookbook.commands.toggle_panel.v1",
+        ToggleAllowCommand = "cookbook.commands.toggle_allow_command.v1",
+    ]);
 }
 
 const TEST_ID_ROOT: &str = "cookbook.commands_keymap_basics.root";
@@ -57,23 +60,21 @@ fn install_commands(app: &mut App) {
     fret_app::install_command_default_keybindings_into_keymap(app);
 }
 
-struct CommandsKeymapBasicsView {
-    panel_open: Model<bool>,
-    allow_command: Model<bool>,
-}
+struct CommandsKeymapBasicsView;
 
 impl View for CommandsKeymapBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            panel_open: app.models_mut().insert(false),
-            allow_command: app.models_mut().insert(true),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let panel_open_state = cx.use_local_with(|| false);
+        let allow_command_state = cx.use_local_with(|| true);
+
         let cmd: CommandId = act::TogglePanel.into();
 
-        let panel_open = cx.watch_model(&self.panel_open).layout().copied_or(false);
+        let panel_open = panel_open_state.watch(cx).layout().value_or(false);
+        let allow_command = allow_command_state.watch(cx).layout().value_or(true);
 
         let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
@@ -97,8 +98,7 @@ impl View for CommandsKeymapBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let row_enabled = ui::h_flex(|cx| {
             ui::children![cx;
@@ -118,7 +118,8 @@ impl View for CommandsKeymapBasicsView {
         let row_allow = ui::h_flex(|cx| {
             ui::children![cx;
                 shadcn::Label::new("Allow command:"),
-                shadcn::Switch::new(self.allow_command.clone())
+                shadcn::Switch::from_checked(allow_command)
+                    .action(act::ToggleAllowCommand)
                     .test_id(TEST_ID_ALLOW),
             ]
         })
@@ -138,8 +139,7 @@ impl View for CommandsKeymapBasicsView {
             out.push_ui(cx, dispatch_button);
         })
         .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
         let panel_state_text = cx
             .text(format!(
@@ -147,7 +147,7 @@ impl View for CommandsKeymapBasicsView {
                 if panel_open { "Open" } else { "Closed" }
             ))
             .test_id(TEST_ID_PANEL_STATE);
-        let panel_open_indicator = shadcn::Switch::new(self.panel_open.clone())
+        let panel_open_indicator = shadcn::Switch::from_checked(panel_open)
             .disabled(true)
             .test_id(TEST_ID_PANEL_OPEN);
 
@@ -157,15 +157,15 @@ impl View for CommandsKeymapBasicsView {
             } else {
                 "Press the shortcut or the button to open it."
             };
-            [
+            ui::children![
+                cx;
                 panel_state_text,
                 ui::h_flex(
                     |cx| ui::children![cx; shadcn::Label::new("Open:"), panel_open_indicator],
                 )
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                shadcn::Separator::new().into_element(cx),
+                .items_center(),
+                shadcn::Separator::new(),
                 cx.text(desc),
             ]
         })
@@ -220,26 +220,31 @@ impl View for CommandsKeymapBasicsView {
         .ui()
         .w_full()
         .max_w(Px(860.0))
-        .key_context("cookbook.commands_keymap_basics")
-        .into_element(cx);
+        .key_context("cookbook.commands_keymap_basics");
+
+        cx.on_action_notify_toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
 
         cx.on_action_notify_models::<act::TogglePanel>({
-            let panel_open = self.panel_open.clone();
-            let allow = self.allow_command.clone();
+            let panel_open_state = panel_open_state.clone();
+            let allow_command_state = allow_command_state.clone();
             move |models| {
-                let allowed = models.get_copied(&allow).unwrap_or(true);
+                let allowed = allow_command_state
+                    .read_in(models, |value| *value)
+                    .unwrap_or(true);
                 if !allowed {
                     return false;
                 }
 
-                models.update(&panel_open, |v| *v = !*v).is_ok()
+                panel_open_state.update_in(models, |value| *value = !*value)
             }
         });
 
         cx.on_action_availability::<act::TogglePanel>({
-            let allow = self.allow_command.clone();
+            let allow_command_state = allow_command_state.clone();
             move |host, _acx| {
-                let allowed = host.models_mut().get_copied(&allow).unwrap_or(true);
+                let allowed = allow_command_state
+                    .read_in(host.models_mut(), |value| *value)
+                    .unwrap_or(true);
                 if allowed {
                     CommandAvailability::Available
                 } else {
@@ -248,7 +253,7 @@ impl View for CommandsKeymapBasicsView {
             }
         });
 
-        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+        let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
 
         root.into()
     }

@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-06
+Last updated: 2026-03-08
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -51,7 +51,9 @@ Fretboard scaffolding templates (teaching surface):
     `on_action_notify_transient`, and local `on_activate*`; advanced helpers are documented as
     cookbook/reference-only host-side categories.
 - `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py`
-  - Keeps the default demo surfaces on `on_action_notify_models` / `on_action_notify_transient` and prevents single-model helper aliases from drifting back into `fret-examples` or ui-gallery teaching pages/snippets; scaffold templates keep equivalent unit-test assertions in `apps/fretboard/src/scaffold/templates.rs`.
+  - Keeps the default demo surfaces on `on_action_notify_models` / `on_action_notify_transient`, while `embedded_viewport_demo` now uses local-state-specific write helpers only for its view-local size preset and still keeps runtime/interop effects explicit; `hello_counter_demo` now also uses the direct text-value bridge for its step input, and the gate continues preventing single-model helper aliases from drifting back into `fret-examples` or ui-gallery teaching pages/snippets, while scaffold templates keep equivalent unit-test assertions in `apps/fretboard/src/scaffold/templates.rs`.
+- `ecosystem/fret-ui-shadcn/src/text_value_model.rs`, `ecosystem/fret/src/view.rs`, `apps/fret-cookbook/examples/text_input_basics.rs`, `apps/fret-cookbook/examples/markdown_and_code_basics.rs`, `apps/fret-cookbook/examples/virtual_list_basics.rs`, `apps/fretboard/src/scaffold/templates.rs`
+  - Narrow text-value bridge evidence: `Input` / `Textarea` stay model-backed internally, but post-v1 `LocalState<String>` views now pass local text state directly without reopening `clone_model()` at the teaching surface.
 
 Editor-grade adoption (workspace shell demo):
 

@@ -203,8 +203,8 @@ impl View for AsyncInboxBasicsView {
             .read_ref(|v| Arc::clone(v))
             .ok()
             .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let running = cx.watch_model(&self.st.running).layout().copied_or(false);
-        let progress = cx.watch_model(&self.st.progress).layout().copied_or(0.0);
+        let running = cx.watch_model(&self.st.running).layout().value_or(false);
+        let progress = cx.watch_model(&self.st.progress).layout().value_or(0.0);
         let inbox_stats = self.st.inbox.stats();
 
         let start_button = shadcn::Button::new("Start background job")
@@ -252,8 +252,8 @@ impl View for AsyncInboxBasicsView {
         let progress_el = shadcn::Progress::new(self.st.progress.clone())
             .a11y_label("Background job progress")
             .range(0.0, 100.0)
-            .into_element(cx)
-            .test_id(TEST_ID_PROGRESS);
+            .test_id(TEST_ID_PROGRESS)
+            .into_element(cx);
 
         let progress_label = cx.text(format!("{progress:.0}%"));
         let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
@@ -296,8 +296,7 @@ impl View for AsyncInboxBasicsView {
         })
         .ui()
         .w_full()
-        .max_w(Px(720.0))
-        .into_element(cx);
+        .max_w(Px(720.0));
 
         cx.on_action_notify_model_update::<act::ClearLog, String>(
             self.st.log.clone(),
@@ -412,7 +411,7 @@ impl View for AsyncInboxBasicsView {
             }
         });
 
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

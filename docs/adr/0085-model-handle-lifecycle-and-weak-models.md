@@ -147,8 +147,8 @@ API that lets you choose invalidation once and then read:
 ```rust
 use fret_ui_kit::declarative::model_watch::ModelWatchExt;
 
-let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-let label = cx.watch_model(&label).layout().cloned_or_default();
+let is_open = cx.watch_model(&open).value_or(false);
+let label = cx.watch_model(&label).layout().value_or_default();
 ```
 
 ### Long-lived callbacks: prefer `WeakModel<T>`

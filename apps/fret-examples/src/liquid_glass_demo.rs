@@ -634,18 +634,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
     let use_backdrop_model = st.use_backdrop.clone();
     let use_dither_model = st.use_dither.clone();
 
-    let show_fake = cx.watch_model(&st.show_fake).layout().copied_or(true);
-    let show_warp = cx.watch_model(&st.show_warp).layout().copied_or(true);
-    let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().copied_or(false);
-    let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().copied_or(false);
-    let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().copied_or(false);
-    let custom_v3_pair = cx.watch_model(&st.custom_v3_pair).layout().copied_or(false);
+    let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);
+    let show_warp = cx.watch_model(&st.show_warp).layout().value_or(true);
+    let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().value_or(false);
+    let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().value_or(false);
+    let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().value_or(false);
+    let custom_v3_pair = cx.watch_model(&st.custom_v3_pair).layout().value_or(false);
     let custom_v3_source_group = cx
         .watch_model(&st.custom_v3_source_group)
         .layout()
-        .copied_or(false);
-    let show_inspector = cx.watch_model(&st.show_inspector).layout().copied_or(true);
-    let animate = cx.watch_model(&st.animate).layout().copied_or(true);
+        .value_or(false);
+    let show_inspector = cx.watch_model(&st.show_inspector).layout().value_or(true);
+    let animate = cx.watch_model(&st.animate).layout().value_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
 
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 16.0);
@@ -674,8 +674,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
     let custom_v3_bevel_angle_deg = watch_first_f32(cx, &st.custom_v3_bevel_angle_deg, 45.0);
     let custom_v3_bevel_secondary = watch_first_f32(cx, &st.custom_v3_bevel_secondary, 1.0);
 
-    let use_backdrop = cx.watch_model(&st.use_backdrop).layout().copied_or(true);
-    let use_dither = cx.watch_model(&st.use_dither).layout().copied_or(true);
+    let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);
+    let use_dither = cx.watch_model(&st.use_dither).layout().value_or(true);
     let mode = if use_backdrop {
         EffectMode::Backdrop
     } else {
