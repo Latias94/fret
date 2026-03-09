@@ -895,6 +895,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
     `canvas/paint/paint_text.rs` seams, so the root paint module now mainly holds cache state,
     shared key types, and lifecycle/prune orchestration.
+  - Progress: `ui/canvas/spatial.rs` now routes coarse index construction, port-edge adjacency,
+    and derived spatial wrapper helpers through the private `canvas/spatial/spatial_index.rs`,
+    `canvas/spatial/spatial_adjacency.rs`, and `canvas/spatial/spatial_derived.rs` seams, so the
+    root spatial module now mainly holds shared type definitions plus tests.
 
 ## M5 - Compatibility retained convergence
 

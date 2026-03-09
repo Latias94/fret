@@ -480,6 +480,11 @@ real editors.
   `canvas/paint/paint_text.rs` seams, so the root paint module stops re-embedding path-factory and
   text-cache implementation blocks inline while keeping the same cache contract and lifecycle
   surface.
+- `ui/canvas/spatial.rs` now also routes coarse index construction, port-edge adjacency, and
+  derived spatial wrapper helpers through the private `canvas/spatial/spatial_index.rs`,
+  `canvas/spatial/spatial_adjacency.rs`, and `canvas/spatial/spatial_derived.rs` seams, so the
+  root spatial module stops re-embedding index/adjacency/derived implementation blocks inline while
+  keeping the same spatial cache contract and test surface.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1156,6 +1161,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_markers.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_text.rs`
+- `ecosystem/fret-node/src/ui/canvas/spatial.rs`
+- `ecosystem/fret-node/src/ui/canvas/spatial/spatial_index.rs`
+- `ecosystem/fret-node/src/ui/canvas/spatial/spatial_adjacency.rs`
+- `ecosystem/fret-node/src/ui/canvas/spatial/spatial_derived.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
