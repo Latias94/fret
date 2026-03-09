@@ -2,7 +2,7 @@ use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn install_searcher_overlay(&mut self, searcher: SearcherState) {
-        self.interaction.context_menu = None;
+        super::context_menu::clear_context_menu(&mut self.interaction);
         self.interaction.searcher = Some(searcher);
     }
 

@@ -153,8 +153,7 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
                 let invoked_at = Point::new(Px(convert_at.x), Px(convert_at.y));
 
-                canvas.interaction.context_menu = None;
-                canvas.interaction.searcher = Some(super::super::super::build_searcher_state(
+                canvas.install_searcher_overlay(super::super::super::build_searcher_state(
                     canvas,
                     invoked_at,
                     bounds,

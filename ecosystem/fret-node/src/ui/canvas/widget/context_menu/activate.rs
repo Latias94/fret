@@ -10,7 +10,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         match (target, item.action) {
             (_, NodeGraphContextMenuAction::Command(command)) => {
-                self.interaction.context_menu = None;
+                super::clear_context_menu(&mut self.interaction);
                 if let ContextMenuTarget::Group(group_id) = target {
                     self.select_group_context_target(cx.app, *group_id);
                 }

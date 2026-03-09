@@ -525,6 +525,10 @@ real editors.
 - cancel gesture cleanup for insert-node drag now also routes through the private
   `canvas/widget/insert_node_drag/session.rs` seam, so `cancel_gesture_state.rs` stops
   re-embedding pending-insert and preview-slot clearing inline while keeping the same behavior.
+- context-menu close/restore state now also routes through the private
+  `canvas/widget/context_menu/ui.rs` seam, so `command_ui.rs`, `searcher_ui.rs`,
+  `context_menu/activate.rs`, and conversion-picker handoff in `wire_drag/commit/new_wire.rs`
+  stop re-embedding the same context-menu slot clearing inline while keeping the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

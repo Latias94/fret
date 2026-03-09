@@ -14,6 +14,12 @@ mod target_hit;
 mod target_selection;
 mod ui;
 
+pub(super) fn clear_context_menu(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> bool {
+    ui::clear_context_menu(interaction)
+}
+
 pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
