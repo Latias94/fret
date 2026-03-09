@@ -497,6 +497,11 @@ real editors.
   private `canvas/searcher/searcher_score.rs` and `canvas/searcher/searcher_build.rs` seams, so the
   root searcher module stops re-embedding scoring/catalog assembly helpers inline while keeping the
   same row types, constants, and root exports.
+- `ui/canvas/middleware.rs` now also routes middleware chaining and transaction validation adapters
+  through the private `canvas/middleware/middleware_chain.rs` and
+  `canvas/middleware/middleware_validation.rs` seams, so the root middleware module stops
+  re-embedding chain/validation implementations inline while keeping the same trait/context
+  contracts and root exports.
 - Compat-retained screen-space overlay placement now also has a shared private seam,
   `ui/screen_space_placement.rs`, so panel / toolbar / rename / blackboard / controls / minimap
   geometry all reuse the same clamp and anchor-placement math while higher-level policy stays in
@@ -1186,6 +1191,9 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/searcher.rs`
 - `ecosystem/fret-node/src/ui/canvas/searcher/searcher_score.rs`
 - `ecosystem/fret-node/src/ui/canvas/searcher/searcher_build.rs`
+- `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+- `ecosystem/fret-node/src/ui/canvas/middleware/middleware_chain.rs`
+- `ecosystem/fret-node/src/ui/canvas/middleware/middleware_validation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

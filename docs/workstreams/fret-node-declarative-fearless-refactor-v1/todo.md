@@ -910,6 +910,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     through the private `canvas/searcher/searcher_score.rs` and
     `canvas/searcher/searcher_build.rs` seams, so the root searcher module now mainly holds shared
     row types, constants, and root re-exports.
+  - Progress: `ui/canvas/middleware.rs` now routes middleware chaining and transaction validation
+    adapters through the private `canvas/middleware/middleware_chain.rs` and
+    `canvas/middleware/middleware_validation.rs` seams, so the root middleware module now mainly
+    holds shared trait/context/outcome types plus root re-exports.
 
 ## M5 - Compatibility retained convergence
 
