@@ -688,6 +688,13 @@ Current sequencing note (as of 2026-03-09):
   - Evidence update (as of 2026-03-09): `apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs` and `apps/fret-ui-gallery/src/ui/pages/data_table.rs` now provide the first curated default-recipe gallery slice aligned with that note.
   - Gate update (as of 2026-03-09): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json --dir target/fret-diag/ui-gallery-data-table-default-recipe --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery` passes locally and emits bounded artifacts for the curated recipe slice.
 
+- [x] AFA-postv1-024 Write a “current best practice vs v2 target” note.
+  - Goal: make the repo’s current recommended writing style explicit, and separate real remaining ergonomics gaps from already-closed migration tracks.
+  - Status (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now states that v1 migration is effectively complete, command-first residue is in maintenance mode, and the next high-value work is productization + tracked-write/invalidation ergonomics rather than more broad API churn.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+
 - [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
   - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
   - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.

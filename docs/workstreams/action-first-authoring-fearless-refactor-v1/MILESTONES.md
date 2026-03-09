@@ -211,6 +211,7 @@ Post-v1 direction (recommended):
   - Menu gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now protects the primary ui-gallery dropdown-menu / context-menu / menubar snippets plus overlay preview menu surfaces from drifting back to `.on_select(...)`, and `tools/pre_release.py` runs that gate with the rest of the teaching-surface policy suite.
   - Curated internal menu follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` now uses `DropdownMenuItem::action(...)` / `trailing_action(...)`, `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now lowers stable unit action ids through `DropdownMenuItem::action(...)`, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit post-v1 residue slice from drifting back to `.on_select(...)`.
   - Intentional command-surface inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now marks command palette/catalog, `DataTable` business-table wiring, compat/conformance tests, and callback-style non-menu widgets as intentional retained surfaces rather than the next generic migration target, so this track is now in maintenance mode unless a new default-facing leak appears.
+  - Current-vs-target v2 note (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now makes the next-stage framing explicit: v1 migration is effectively complete, action/menu residue is no longer the main work item, and the highest-value remaining gap is productization plus tracked-write/invalidation ergonomics.
 
 ---
 
