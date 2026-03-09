@@ -4177,6 +4177,153 @@ fn scroll_axis_both_shrinks_width_when_only_descendant_dirty_at_edge() {
 }
 
 #[test]
+fn outer_y_scroll_does_not_count_nested_both_scroll_descendant_overflow() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "outer-y-scroll-does-not-count-nested-both-scroll-descendant-overflow",
+        {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+            move |cx| {
+                let mut outer_layout = crate::element::LayoutStyle::default();
+                outer_layout.size.width = crate::element::Length::Fill;
+                outer_layout.size.height = crate::element::Length::Fill;
+                outer_layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: outer_layout,
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(outer_handle.clone()),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.column(
+                            crate::element::ColumnProps {
+                                gap: Px(0.0).into(),
+                                ..Default::default()
+                            },
+                            {
+                                let inner_handle = inner_handle.clone();
+                                move |cx| {
+                                    let top = cx.container(
+                                        crate::element::ContainerProps {
+                                            layout: crate::element::LayoutStyle {
+                                                size: crate::element::SizeStyle {
+                                                    width: crate::element::Length::Fill,
+                                                    height: crate::element::Length::Px(Px(200.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    );
+
+                                    let mut inner_layout = crate::element::LayoutStyle::default();
+                                    inner_layout.size.width = crate::element::Length::Fill;
+                                    inner_layout.size.height =
+                                        crate::element::Length::Px(Px(400.0));
+                                    inner_layout.overflow = crate::element::Overflow::Clip;
+
+                                    let inner = cx.scroll(
+                                        crate::element::ScrollProps {
+                                            layout: inner_layout,
+                                            axis: crate::element::ScrollAxis::Both,
+                                            scroll_handle: Some(inner_handle.clone()),
+                                            probe_unbounded: true,
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.container(
+                                                crate::element::ContainerProps {
+                                                    layout: crate::element::LayoutStyle {
+                                                        size: crate::element::SizeStyle {
+                                                            width: crate::element::Length::Px(Px(
+                                                                320.0,
+                                                            )),
+                                                            height: crate::element::Length::Px(Px(
+                                                                1100.0,
+                                                            )),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                |_cx| Vec::new(),
+                                            )]
+                                        },
+                                    );
+
+                                    let bottom = cx.container(
+                                        crate::element::ContainerProps {
+                                            layout: crate::element::LayoutStyle {
+                                                size: crate::element::SizeStyle {
+                                                    width: crate::element::Length::Fill,
+                                                    height: crate::element::Length::Px(Px(232.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    );
+
+                                    vec![top, inner, bottom]
+                                }
+                            },
+                        )]
+                    },
+                )]
+            }
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let inner_content = inner_handle.content_size();
+    assert!(
+        (inner_content.height.0 - 1100.0).abs() <= 0.5,
+        "expected inner scroll content height to track its tall child: inner_content={inner_content:?}"
+    );
+
+    let outer_content = outer_handle.content_size();
+    assert!(
+        (outer_content.height.0 - 832.0).abs() <= 0.5,
+        "expected outer scroll content height to use the nested viewport height (200 + 400 + 232), not the nested scroll's internal 1100px content: outer_content={outer_content:?} inner_content={inner_content:?}"
+    );
+    assert!(
+        (outer_handle.max_offset().y.0 - 632.0).abs() <= 0.5,
+        "expected outer max offset to match the clipped nested viewport contribution: outer_content={outer_content:?} viewport={:?} max_offset={:?}",
+        outer_handle.viewport_size(),
+        outer_handle.max_offset(),
+    );
+}
+
+#[test]
 fn scroll_axis_both_mixed_child_invalidation_keeps_descendant_only_growth_authoritative_at_edge() {
     struct FixedLeaf {
         size: Size,

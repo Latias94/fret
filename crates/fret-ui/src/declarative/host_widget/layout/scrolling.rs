@@ -126,6 +126,7 @@ trait ScrollOverflowTree {
     fn children_ref(&self, node: NodeId) -> &[NodeId];
     fn node_bounds(&self, node: NodeId) -> Option<Rect>;
     fn node_is_absolute(&mut self, node: NodeId) -> bool;
+    fn node_clips_descendant_scroll_overflow(&mut self, node: NodeId) -> bool;
 }
 
 struct UiTreeScrollOverflowTree<'a, 'b, H: UiHost> {
@@ -146,6 +147,19 @@ impl<H: UiHost> ScrollOverflowTree for UiTreeScrollOverflowTree<'_, '_, H> {
     fn node_is_absolute(&mut self, node: NodeId) -> bool {
         crate::declarative::frame::layout_style_for_node(self.app, self.window, node).position
             == crate::element::PositionStyle::Absolute
+    }
+
+    fn node_clips_descendant_scroll_overflow(&mut self, node: NodeId) -> bool {
+        crate::declarative::frame::element_record_for_node(self.app, self.window, node).is_some_and(
+            |record| {
+                matches!(
+                    record.instance,
+                    crate::declarative::frame::ElementInstance::Scroll(_)
+                        | crate::declarative::frame::ElementInstance::ViewportSurface(_)
+                        | crate::declarative::frame::ElementInstance::VirtualList(_)
+                )
+            },
+        )
     }
 }
 
@@ -472,13 +486,21 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 root_loose.height = Px(root_loose.height.0.max(bottom));
 
                 let mut children: Vec<NodeId> = Vec::new();
-                let child_ids: Vec<NodeId> = tree.children_ref(id).to_vec();
-                for child in child_ids {
-                    if tree.node_is_absolute(child) {
-                        deep_scan_skipped_absolute = deep_scan_skipped_absolute.saturating_add(1);
-                        continue;
+                // Nested scroll/viewport roots clip their own content frontier, so an ancestor
+                // overflow scan must trust the nested viewport bounds and stop before its
+                // descendants reintroduce the inner scroll content extent.
+                let stop_at_nested_scroll_boundary =
+                    id != observe_root && tree.node_clips_descendant_scroll_overflow(id);
+                if !stop_at_nested_scroll_boundary {
+                    let child_ids: Vec<NodeId> = tree.children_ref(id).to_vec();
+                    for child in child_ids {
+                        if tree.node_is_absolute(child) {
+                            deep_scan_skipped_absolute =
+                                deep_scan_skipped_absolute.saturating_add(1);
+                            continue;
+                        }
+                        children.push(child);
                     }
-                    children.push(child);
                 }
                 for &child in children.iter().rev() {
                     stack.push(child);
@@ -2650,6 +2672,10 @@ mod tests {
 
         fn node_is_absolute(&mut self, node: NodeId) -> bool {
             self.absolute.contains(&node)
+        }
+
+        fn node_clips_descendant_scroll_overflow(&mut self, _node: NodeId) -> bool {
+            false
         }
     }
 
