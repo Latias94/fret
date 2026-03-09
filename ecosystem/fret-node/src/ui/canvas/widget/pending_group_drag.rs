@@ -3,7 +3,7 @@ use fret_ui::UiHost;
 
 use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{GroupDrag, ViewSnapshot};
+use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -37,16 +37,11 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddle
         .ok()
         .unwrap_or_default();
 
-    canvas.interaction.pending_group_drag = None;
-    canvas.interaction.group_drag = Some(GroupDrag {
-        group: pending.group,
-        start_pos: pending.start_pos,
-        start_rect: pending.start_rect,
-        nodes: nodes.clone(),
-        current_rect: pending.start_rect,
-        current_nodes: nodes,
-        preview_rev: 0,
-    });
+    super::pending_drag_session::activate_pending_group_drag(
+        &mut canvas.interaction,
+        pending,
+        nodes,
+    );
 
     false
 }

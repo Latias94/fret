@@ -5,7 +5,7 @@ use crate::core::NodeId as GraphNodeId;
 
 use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use crate::ui::canvas::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
+use crate::ui::canvas::state::{PendingNodeSelectAction, ViewSnapshot};
 
 pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -27,11 +27,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     }
 
     if !pending.drag_enabled {
-        canvas.interaction.pending_node_drag = None;
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+        return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     }
 
     let primary_draggable = canvas
@@ -42,14 +38,8 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
         .ok()
         .unwrap_or(false);
     if !primary_draggable {
-        canvas.interaction.pending_node_drag = None;
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+        return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     }
-
-    canvas.interaction.pending_node_drag = None;
 
     if pending.select_action != PendingNodeSelectAction::None {
         let node = pending.primary;
@@ -80,23 +70,17 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
         .ok()
         .unwrap_or_default();
     if start_nodes.is_empty() {
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
+        return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     }
     let drag_nodes: Vec<GraphNodeId> = start_nodes.iter().map(|(id, _)| *id).collect();
-    canvas.interaction.node_drag = Some(NodeDrag {
-        primary: pending.primary,
-        node_ids: drag_nodes.clone(),
-        nodes: start_nodes.clone(),
-        current_nodes: start_nodes,
-        current_groups: Vec::new(),
-        preview_rev: 0,
-        grab_offset: pending.grab_offset,
-        start_pos: pending.start_pos,
-    });
-    canvas.emit_node_drag_start(pending.primary, &drag_nodes);
+    let primary = pending.primary;
+    super::pending_drag_session::activate_pending_node_drag(
+        &mut canvas.interaction,
+        pending,
+        drag_nodes.clone(),
+        start_nodes,
+    );
+    canvas.emit_node_drag_start(primary, &drag_nodes);
 
     false
 }
