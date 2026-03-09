@@ -123,7 +123,8 @@ Progress:
   - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 - Current findings are now explicit:
   - `fret-ui-editor` already owns explicit `editor.*` keys and an opt-in preset patch path,
-  - `fret-workspace` has partial `workspace.*` readers but no seeding entrypoint yet,
+  - `fret-workspace` has partial `workspace.*` readers and now has adapter-side shell seeding for
+    the first shadcn proof path,
   - `fret-docking` already owns `component.docking.*` drag/drop chrome and that seeding path is
     already proven in `fret-ui-shadcn`.
 - The current naming drift is now recorded:
@@ -138,6 +139,12 @@ Progress:
   `workspace.frame.*`, `workspace.top_bar.*`, and `workspace.status_bar.*` with generic fallback
   preserved, and shell tabstrip chrome now resolves canonical `workspace.tabstrip.*` keys before
   legacy `workspace.tab_strip.*` compatibility spellings.
+- `fret-ui-shadcn` now seeds shell-level `workspace.frame.*`, `workspace.top_bar.*`,
+  `workspace.status_bar.*`, and `workspace.tabstrip.*` families in its new-york presets.
+- `ui_gallery` is now the first end-to-end workspace shell proof surface for this path via
+  `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`.
+- The current shell seeding closure is intentionally small:
+  it does not seed `workspace.tab.*` yet.
 - Focused unit coverage now locks the ADR 0270 fallback story for these workspace namespaces in
   `ecosystem/fret-workspace/src/theme_tokens.rs`.
 
@@ -156,3 +163,14 @@ Exit gates:
 - The docs point to one boring recommended path for new editor ecosystem work.
 
 Status: In progress
+
+Progress:
+
+- `imui_editor_proof_demo` remains the promoted proof for authoring convergence.
+- `ui_gallery` is now the promoted workspace-shell proof surface for shadcn shell seeding:
+  it exercises `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar`, and
+  `WorkspaceTabStrip` together under an explicit preset switch.
+- The current proof/gate set now includes:
+  - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
+  - `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`
+  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`

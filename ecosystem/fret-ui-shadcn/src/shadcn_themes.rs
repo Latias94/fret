@@ -803,6 +803,7 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
         }
     }
 
+    seed_workspace_shell_colors(&mut colors);
     seed_syntax_colors(&mut colors);
 
     let mut cfg = ThemeConfig {
@@ -891,6 +892,63 @@ fn seed_syntax_colors(colors: &mut HashMap<String, String>) {
         colors,
         "color.syntax.variable",
         pick(colors, &["foreground"]),
+    );
+}
+
+fn seed_workspace_shell_colors(colors: &mut HashMap<String, String>) {
+    fn pick(colors: &HashMap<String, String>, keys: &[&str]) -> Option<String> {
+        for &key in keys {
+            if let Some(value) = colors.get(key) {
+                return Some(value.clone());
+            }
+        }
+        None
+    }
+
+    fn insert_if_missing(colors: &mut HashMap<String, String>, key: &str, value: Option<String>) {
+        if colors.contains_key(key) {
+            return;
+        }
+        if let Some(value) = value {
+            colors.insert(key.to_string(), value);
+        }
+    }
+
+    insert_if_missing(colors, "workspace.frame.bg", pick(colors, &["background"]));
+    insert_if_missing(
+        colors,
+        "workspace.top_bar.bg",
+        pick(colors, &["muted", "background"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.top_bar.border",
+        pick(colors, &["border"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.status_bar.bg",
+        pick(colors, &["muted", "background"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.status_bar.border",
+        pick(colors, &["border"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.tabstrip.bg",
+        pick(colors, &["muted", "background"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.tabstrip.border",
+        pick(colors, &["border"]),
+    );
+    insert_if_missing(
+        colors,
+        "workspace.tabstrip.scroll_fg",
+        pick(colors, &["muted-foreground", "foreground"]),
     );
 }
 
@@ -1597,6 +1655,75 @@ mod tests {
             theme.metric_by_key("component.navigation_menu.viewport.side_offset"),
             Some(fret_core::Px(6.0))
         );
+    }
+
+    #[test]
+    fn new_york_v4_seeds_workspace_shell_tokens() {
+        for &base in ShadcnBaseColor::ALL {
+            for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
+                let cfg = shadcn_new_york_config(base, scheme);
+
+                assert_eq!(
+                    cfg.colors.get("workspace.frame.bg").cloned(),
+                    cfg.colors.get("background").cloned(),
+                    "expected workspace.frame.bg to alias background for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.top_bar.bg").cloned(),
+                    cfg.colors.get("muted").cloned(),
+                    "expected workspace.top_bar.bg to alias muted for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.top_bar.border").cloned(),
+                    cfg.colors.get("border").cloned(),
+                    "expected workspace.top_bar.border to alias border for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.status_bar.bg").cloned(),
+                    cfg.colors.get("muted").cloned(),
+                    "expected workspace.status_bar.bg to alias muted for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.status_bar.border").cloned(),
+                    cfg.colors.get("border").cloned(),
+                    "expected workspace.status_bar.border to alias border for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.tabstrip.bg").cloned(),
+                    cfg.colors.get("muted").cloned(),
+                    "expected workspace.tabstrip.bg to alias muted for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.tabstrip.border").cloned(),
+                    cfg.colors.get("border").cloned(),
+                    "expected workspace.tabstrip.border to alias border for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    cfg.colors.get("workspace.tabstrip.scroll_fg").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected workspace.tabstrip.scroll_fg to alias muted-foreground for {base:?}/{scheme:?}"
+                );
+
+                let mut app = fret_app::App::new();
+                apply_shadcn_new_york(&mut app, base, scheme);
+                let theme = Theme::global(&app);
+                assert_eq!(
+                    theme.color_by_key("workspace.frame.bg"),
+                    theme.color_by_key("background"),
+                    "expected applied workspace.frame.bg to resolve for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    theme.color_by_key("workspace.top_bar.bg"),
+                    theme.color_by_key("muted"),
+                    "expected applied workspace.top_bar.bg to resolve for {base:?}/{scheme:?}"
+                );
+                assert_eq!(
+                    theme.color_by_key("workspace.tabstrip.scroll_fg"),
+                    theme.color_by_key("muted-foreground"),
+                    "expected applied workspace.tabstrip.scroll_fg to resolve for {base:?}/{scheme:?}"
+                );
+            }
+        }
     }
 
     #[test]

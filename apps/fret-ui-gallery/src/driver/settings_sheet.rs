@@ -97,6 +97,7 @@ pub(super) fn push_settings_sheet(
                         chrome_show_workspace_tab_strip.clone(),
                     )
                     .a11y_label("Show workspace tab strip")
+                    .test_id("ui-gallery-settings-workspace-tab-strip")
                     .into_element(cx);
                     let edit_can_undo_switch = shadcn::Switch::new(settings_edit_can_undo.clone())
                         .a11y_label("Can Undo")

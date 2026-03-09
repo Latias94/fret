@@ -34,9 +34,9 @@ It also records where stable seeding already exists today in adjacent crates suc
 | Crate | Current token posture | Key evidence |
 | --- | --- | --- |
 | `fret-ui-editor` | Has explicit `editor.*` token keys and an opt-in preset patch entrypoint. Still reads and seeds shared `component.*` and generic semantic palette keys for compatibility. | `ecosystem/fret-ui-editor/src/primitives/tokens.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-ui-editor/src/primitives/chrome.rs` |
-| `fret-workspace` | Has partial `workspace.*` reads for panes, shell frame/top bar/status bar, and tab strip. A small internal token resolver now centralizes shell fallback order, but no preset or seeding entrypoint exists yet. | `ecosystem/fret-workspace/src/theme_tokens.rs`, `ecosystem/fret-workspace/src/panes.rs`, `ecosystem/fret-workspace/src/tab_strip/theme.rs`, `ecosystem/fret-workspace/src/frame.rs` |
+| `fret-workspace` | Has partial `workspace.*` reads for panes, shell frame/top bar/status bar, and tab strip. A small internal token resolver now centralizes shell fallback order, and shadcn adapter-side seeding now exists for the shell-level families. | `ecosystem/fret-workspace/src/theme_tokens.rs`, `ecosystem/fret-workspace/src/panes.rs`, `ecosystem/fret-workspace/src/tab_strip/theme.rs`, `ecosystem/fret-workspace/src/frame.rs`, `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` |
 | `fret-docking` | Owns docking-specific drag/drop chrome through `component.docking.*` reads. Tab chrome still mainly rides generic tokens. | `ecosystem/fret-docking/src/dock/paint.rs`, `ecosystem/fret-docking/src/dock/space.rs` |
-| `fret-ui-shadcn` | Already seeds docking-owned `component.docking.*` keys, which proves the one-way skinning direction is viable. | `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`, `docs/workstreams/theme-token-alignment-v1/todo.md` |
+| `fret-ui-shadcn` | Already seeds docking-owned `component.docking.*` keys and now seeds shell-level `workspace.*` families for shadcn new-york presets. The current shell seeding intentionally stops at `workspace.frame.*`, `workspace.top_bar.*`, `workspace.status_bar.*`, and `workspace.tabstrip.*`. | `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`, `docs/workstreams/theme-token-alignment-v1/todo.md` |
 
 ## Crate Inventory
 
@@ -65,7 +65,7 @@ editor skinning.
 | Workspace-owned reads already present | `workspace.frame.*`, `workspace.top_bar.*`, `workspace.status_bar.*`, `workspace.pane.*`, `workspace.tab.*`, canonical `workspace.tabstrip.*`, legacy compatibility `workspace.tab_strip.*` | Shell chrome and pane/tabstrip chrome now resolve through one crate-local ownership surface. |
 | Generic semantic fallbacks still read | `background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring` | These remain the safe ADR 0270 fallback tier for shell and tabstrip chrome. |
 | Token resolver surface | `theme_tokens.rs` | `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar`, and `WorkspaceTabStripTheme` now share one fallback order instead of scattering raw string lookups. |
-| Seeding / preset entrypoint | none | This is the largest current gap in workspace-specific skinning. |
+| Seeding / preset entrypoint | none in the owner crate | Shell families are now seeded from `fret-ui-shadcn`, while `fret-workspace` itself still intentionally has no design-system preset module. |
 
 Important observation:
 
@@ -73,7 +73,9 @@ Important observation:
   override points,
 - so apps can start restyling shell chrome independently while still falling back safely to the
   generic app theme.
-- The remaining gap is not token reading; it is adapter-side seeding and preset distribution.
+- The remaining gap is no longer shell-level token reading.
+  It is broader preset distribution beyond the current shadcn shell seeding, plus deciding whether
+  any owner-local proof preset is still necessary.
 
 ### `ecosystem/fret-docking`
 
@@ -95,11 +97,11 @@ Important observation:
 | Issue | Current evidence | Why it matters | v1 plan |
 | --- | --- | --- | --- |
 | `workspace.tab_strip.*` vs `workspace.tabstrip.*` naming drift | `theme_tokens.rs` now resolves canonical `workspace.tabstrip.*` first and falls back to legacy `workspace.tab_strip.*` for compatibility. | Presets can migrate toward the canonical family without breaking older theme payloads immediately. | Keep `workspace.tabstrip.*` as the canonical family and retire legacy underscore spellings only after adapter/theme surfaces converge. |
-| Workspace shell readers exist, but seeding is still absent | `WorkspaceFrame`, `WorkspaceTopBar`, and `WorkspaceStatusBar` now read namespaced keys through `theme_tokens.rs`, but there is still no `ThemeConfig` patch/preset entrypoint in `fret-workspace`. | Reading is no longer the blocker; distribution and adapter ownership are. | Keep reader/fallback logic local to `fret-workspace`, and add stable seeding from adapter crates first. |
+| Workspace owner crate still has no local seeding entrypoint | `WorkspaceFrame`, `WorkspaceTopBar`, and `WorkspaceStatusBar` now read namespaced keys through `theme_tokens.rs`, while `fret-ui-shadcn` seeds shell families in `shadcn_themes.rs`. | Reading is no longer the blocker; the remaining question is where preset distribution should live. | Keep reader/fallback logic local to `fret-workspace`, and treat adapter-side seeding as the stable v1 path. |
 | Editor preset still mutates shared component and palette keys | `fret-ui-editor/src/theme.rs` writes `component.text_field.*` and generic palette keys like `card`, `muted`, `border`, `accent`. | An editor preset can bleed into non-editor widgets in the same app. | Keep this path for proof/demo use, but move toward editor-owned alias families before calling the seeding surface stable. |
 | Pane drop preview and docking drop overlay are visually adjacent but semantically different | `workspace.pane.drop_preview_*` in workspace and `component.docking.drop_overlay.*` in docking. | Without an ownership note, future contributors may merge or duplicate them incorrectly. | Keep pane-local split preview in `fret-workspace`; keep dock-graph-aware overlay and tab insert visuals in `fret-docking`. |
 | Docking tab chrome and workspace tabstrip chrome can visually diverge | Workspace owns shell tabstrip reads; docking still mostly uses generic tab chrome. | Editor shells can feel inconsistent even when ownership is correct. | Align by preset aliasing / seeding in adapter crates, not by moving dock-aware chrome into `fret-workspace`. |
-| Workspace has readers but no seeding entrypoint | `fret-workspace` now has `theme_tokens.rs`, but still has no `ThemeConfig` patch or preset module of its own. | `workspace.*` is easier to consume than before, but still harder to seed systematically than `editor.*`. | Keep the new resolver surface small and add adapter-side seeding before considering a bigger workspace theme API. |
+| Current shadcn shell seeding stops short of `workspace.tab.*` | `fret-ui-shadcn` now seeds `workspace.frame.*`, `workspace.top_bar.*`, `workspace.status_bar.*`, and `workspace.tabstrip.*`, but not `workspace.tab.*`. | This keeps the current closure small, but tab-item visuals can still drift until a stronger reason appears. | Keep `workspace.tab.*` out of v1 seeding until repeated pressure or a proof surface shows the need. |
 
 ## Initial Namespace Plan
 
@@ -115,12 +117,12 @@ Important observation:
 | `editor.color.*` | `fret-ui-editor` | Partial | Swatch/popup metrics exist; broader color-edit chrome still falls back to shared component tokens | Expand only if repeated pressure appears. |
 | `editor.slider.*` | `fret-ui-editor` | Implemented | Track/thumb metrics exist; color styling still falls back to shared component/palette keys | Acceptable for v1. |
 | Shared `component.text_field.*`, `component.checkbox.*`, `component.slider.*`, `component.input.*` | shared component layer, not editor-owned | Implemented elsewhere | Read by editor widgets as compatibility fallback; some are also seeded by the editor proof preset | Do not promote these as editor ownership. |
-| `workspace.frame.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceFrame` with generic fallback | No seeding entrypoint yet. |
-| `workspace.top_bar.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceTopBar` with generic fallback | No seeding entrypoint yet. |
-| `workspace.status_bar.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceStatusBar` with generic fallback | No seeding entrypoint yet. |
+| `workspace.frame.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceFrame` with generic fallback; shadcn new-york now seeds shell-level frame chrome in `fret-ui-shadcn` | Owner-local seeding is still intentionally absent. |
+| `workspace.top_bar.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceTopBar` with generic fallback; shadcn new-york now seeds shell-level top-bar chrome in `fret-ui-shadcn` | Owner-local seeding is still intentionally absent. |
+| `workspace.status_bar.*` | `fret-workspace` | Partial | Read via `theme_tokens.rs` and consumed by `WorkspaceStatusBar` with generic fallback; shadcn new-york now seeds shell-level status-bar chrome in `fret-ui-shadcn` | Owner-local seeding is still intentionally absent. |
 | `workspace.pane.*` | `fret-workspace` | Partial | Active border, bg, radius, and drop-preview metrics/colors exist | Good starting point; continue here rather than inventing app-local pane families. |
 | `workspace.tab.*` | `fret-workspace` | Partial | Active bg, dirty fg, hover bg, drop indicator, max width exist | Keep tab-item state under `workspace.tab.*`. |
-| `workspace.tabstrip.*` | `fret-workspace` | Partial | Canonical reads now exist in `theme_tokens.rs`; compatibility reads keep legacy `workspace.tab_strip.*` alive during migration | Keep canonical family in docs and new theme payloads. |
+| `workspace.tabstrip.*` | `fret-workspace` | Partial | Canonical reads now exist in `theme_tokens.rs`; compatibility reads keep legacy `workspace.tab_strip.*` alive during migration; shadcn new-york now seeds shell-level tabstrip chrome in `fret-ui-shadcn` | Keep canonical family in docs and new theme payloads. |
 | `component.docking.drop_overlay.*` | `fret-docking` | Implemented | Read in docking, seeded in `fret-ui-shadcn` | Keep name and owner; no workspace alias needed. |
 | `component.docking.tab_insert.*` | `fret-docking` | Implemented | Read in docking, seeded in `fret-ui-shadcn` | Keep name and owner; no workspace alias needed. |
 
@@ -143,6 +145,15 @@ Important observation:
    crate.
 3. A dedicated adapter crate before namespace cleanup would lock in current naming drift too early.
 
+### Update after the first shell seeding slice
+
+- `fret-ui-shadcn` now seeds `workspace.frame.*`, `workspace.top_bar.*`,
+  `workspace.status_bar.*`, and `workspace.tabstrip.*` in `shadcn_new_york_config(...)`.
+- `apps/fret-ui-gallery` plus
+  `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`
+  now provide the end-to-end proof surface for this shell-level seeding.
+- This intentionally does not seed `workspace.tab.*` yet.
+
 ## Rule for Future Skins
 
 The rule for future shadcn / Material / custom-app skins is:
@@ -156,13 +167,12 @@ This is consistent with ADR 0316 and is the recommended standing rule for future
 
 ## Recommended Next Implementation Slice
 
-1. Add adapter-side seeding/aliasing for `workspace.frame.*`, `workspace.top_bar.*`,
-   `workspace.status_bar.*`, and `workspace.tabstrip.*` in `fret-ui-shadcn` or another recipe
-   crate.
+1. Decide whether `workspace.tab.*` needs adapter-side seeding as well, or can remain
+   generic-fallback-first for v1.
 2. Decide whether `fret-workspace` should keep only its small resolver surface or also gain an
    opt-in local preset helper for proof/demo use.
-3. Add a scripted diagnostics proof that exercises workspace shell token overrides end-to-end, not
-   only unit-level fallback behavior.
+3. Decide whether the current `ui_gallery` workspace-shell diagnostics proof should be promoted
+   into a recurring suite membership.
 4. Audit the editor proof preset so more of its visual intent lands in editor-owned namespaces and
    less in shared palette mutation.
 
@@ -177,4 +187,9 @@ This is consistent with ADR 0316 and is the recommended standing rule for future
 - `ecosystem/fret-workspace/src/tab_strip/theme.rs`
 - `ecosystem/fret-docking/src/dock/paint.rs`
 - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- `apps/fret-ui-gallery/src/driver/chrome.rs`
+- `apps/fret-ui-gallery/src/driver/render_flow.rs`
+- `apps/fret-ui-gallery/src/driver/settings_sheet.rs`
+- `apps/fret-ui-gallery/src/driver/status_bar.rs`
+- `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`
 - `docs/workstreams/theme-token-alignment-v1/todo.md`

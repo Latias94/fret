@@ -27,7 +27,13 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       `inspector_protocol`, `property_edit`, `viewport_tools`, `viewport_overlays`, or none.
 - [x] `EER-LAYER-012` Write an extraction rubric:
       second consumer, app-model independence, stable ownership, proof surface.
-- [ ] `EER-WORKSPACE-013` Reconcile `fret-workspace` vs `fret-docking` ownership for tabstrip/shell chrome.
+- [x] `EER-WORKSPACE-013` Reconcile `fret-workspace` vs `fret-docking` ownership for tabstrip/shell chrome.
+      Decision: keep shell-owned `workspace.tabstrip.*` for non-dock-aware shell chrome, keep
+      dock-aware drop/tab-insert visuals in `component.docking.*`, and align them by adapter-side
+      seeding rather than crate coupling.
+      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`,
+      `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`, and
+      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`.
 - [x] `EER-LAYER-014` Confirm which editor-facing protocols stay deliberately app-owned even after the refactor.
 
 ## M2 - Authoring convergence (`imui` vs declarative)
@@ -79,6 +85,8 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       Current decision: keep stable namespace seeding in adapter crates such as
       `fret-ui-shadcn`; keep owner-local proof presets optional; do not create a dedicated
       editor/workspace adapter crate yet.
+      Latest evidence: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` now seeds the first
+      workspace shell families directly from the adapter side.
 - [x] `EER-THEME-043` Define the adapter rule for future Material-style skins:
       one-way seeding/aliasing only, no reverse dependency.
       Evidence: ADR 0316 plus
@@ -96,8 +104,9 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
 
 - [~] `EER-PROOF-050` Choose the canonical proof surfaces for this workstream:
       `imui_editor_proof_demo`, a workspace shell demo, and `apps/fret-editor`.
-      Current status: `imui_editor_proof_demo` is now the first promoted proof surface; the
-      workspace shell demo and `apps/fret-editor` proof path are still pending.
+      Current status: `imui_editor_proof_demo` remains the authoring proof surface, `ui_gallery`
+      is now the promoted workspace-shell proof surface for shadcn shell chrome, and the
+      `apps/fret-editor` proof path is still pending.
 - [~] `EER-PROOF-051` Add focused gates for:
       edit session commit/cancel,
       workspace shell focus/command scope,
@@ -105,18 +114,23 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       Current status: authoring parity is now covered by
       `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs` and the promoted diagnostics script,
       workspace token fallback is now covered by
-      `ecosystem/fret-workspace/src/theme_tokens.rs` unit tests, while workspace-shell
-      focus/command-scope gates remain open.
+      `ecosystem/fret-workspace/src/theme_tokens.rs` unit tests, workspace shell shadcn chrome now
+      has a screenshot gate in
+      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`,
+      while workspace-shell focus/command-scope gates remain open.
 - [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
-      Current status: the `imui` proof surface now has anchored code + gate evidence, but the
-      rest of the workstream still needs the same crate-to-proof mapping.
+      Current status: the `imui` proof surface and the `ui_gallery` workspace-shell proof surface
+      now both have anchored code + gate evidence, but the `apps/fret-editor` side still needs the
+      same crate-to-proof mapping.
 - [ ] `EER-MIGRATE-053` Write a short migration guide for moving app-local editor widgets into ecosystem crates.
 - [ ] `EER-CLEANUP-054` Delete or quarantine any duplicated editor widget implementations left after convergence.
 
 ## Open questions
 
-- [ ] `EER-Q-060` Should shadcn/editor adapters live inside `fret-ui-shadcn` first, or in a dedicated
+- [x] `EER-Q-060` Should shadcn/editor adapters live inside `fret-ui-shadcn` first, or in a dedicated
       `fret-ui-editor-*` adapter crate once the surface stabilizes?
+      Decision: start inside `fret-ui-shadcn` for v1 and only revisit a dedicated adapter crate
+      after the namespace surface stabilizes and a second adapter consumer justifies the split.
 - [ ] `EER-Q-061` Which `apps/fret-editor` protocols are reusable enough to extract now, and which still encode
       product-specific assumptions?
 - [x] `EER-Q-062` Do workspace shell token families need a stable `workspace.tabstrip.*` namespace, or should

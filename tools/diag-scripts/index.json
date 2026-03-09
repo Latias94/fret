@@ -7141,6 +7141,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-workspace-shell-chrome-shadcn-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "screenshots",
+        "shadcn",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Sets the theme preset to zinc/dark explicitly.",
+        "Opens Settings, enables the workspace tab strip, and waits for the shell chrome surfaces.",
+        "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
       "required_capabilities": [],
