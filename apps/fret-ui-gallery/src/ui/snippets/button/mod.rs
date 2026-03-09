@@ -7,11 +7,19 @@
 //! Keep `ui-gallery-button-*` `test_id`s stable: diag scripts depend on them.
 
 pub mod button_group;
+pub mod default;
+pub mod demo;
+pub mod destructive;
+pub mod ghost;
 pub mod icon;
+pub mod link;
 pub mod link_render;
 pub mod loading;
+pub mod outline;
 pub mod rounded;
 pub mod rtl;
+pub mod secondary;
 pub mod size;
+pub mod usage;
 pub mod variants;
 pub mod with_icon;

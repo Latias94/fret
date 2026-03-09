@@ -18,15 +18,28 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![
-            // Upstream: `registry/new-york-v4/examples/button-loading.tsx`.
-            shadcn::Button::new("Submit")
+            shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
                 .disabled(true)
                 .test_id("ui-gallery-button-loading-submit")
                 .children([
                     shadcn::Spinner::new().into_element(cx),
-                    ui::text("Submit").font_medium().nowrap().into_element(cx),
+                    ui::text("Generating")
+                        .font_medium()
+                        .nowrap()
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .disabled(true)
+                .test_id("ui-gallery-button-loading-download")
+                .children([
+                    ui::text("Downloading")
+                        .font_medium()
+                        .nowrap()
+                        .into_element(cx),
+                    shadcn::Spinner::new().into_element(cx),
                 ])
                 .into_element(cx),
         ]

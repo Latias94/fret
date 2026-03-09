@@ -9,14 +9,14 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Card` against the upstream shadcn/ui v4 docs and the
-`new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Card` against the upstream shadcn/ui v4 docs and base
+example implementations in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page (radix): `repo-ref/ui/apps/v4/content/docs/components/radix/card.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/examples/radix/card-demo.tsx`, `repo-ref/ui/apps/v4/examples/radix/card-small.tsx`, `repo-ref/ui/apps/v4/examples/radix/card-image.tsx`, `repo-ref/ui/apps/v4/examples/radix/card-rtl.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/card.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/card-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/card-image.tsx`, `repo-ref/ui/apps/v4/examples/base/card-rtl.tsx`
 
 ## Fret implementation
 
@@ -39,8 +39,16 @@ This audit compares Fret's shadcn-aligned `Card` against the upstream shadcn/ui 
 - Pass: Default recipe styles stay limited to intrinsic card chrome/slot spacing. Page- or container-negotiated constraints such as `w-full`, `min-w-0`, `max-w-*`, or `flex-1` stay at the call site unless the upstream recipe itself owns them.
 - Pass: `CardHeader` keeps title/description/action alignment compatible with the upstream two-row grid outcome.
 - Pass: `CardContent` and `CardFooter` preserve the expected horizontal padding and allow richer compositions without collapsing intrinsic child sizes.
+- Pass: `CardFooter` row/column roots now request `w_full().min_w_0()` so footer-only or narrow-card text wraps against the card's inner width instead of collapsing into one word per line.
+
+### Gallery / docs parity
+
+- Pass: the gallery already mirrors the upstream docs path first: `Demo`, `Usage`, `Size`, `Image`, and `RTL`.
+- Pass: `Compositions`, `CardContent`, and `Meeting Notes` remain explicit Fret follow-ups after the upstream path, because they lock regression coverage for slot permutations and intrinsic-size behavior.
+- Pass: the `footer only` drift was a recipe-owned `CardFooter` width-budget issue, not a page-level `w-full` / `min-w-0` problem in the gallery composition.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib card`
-- `cargo check -p fret-ui-gallery`
+- `cargo nextest run -p fret-ui-shadcn card_footer_row_requests_fill_width_and_min_w_0 --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn card --status-level fail`
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`

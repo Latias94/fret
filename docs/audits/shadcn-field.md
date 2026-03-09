@@ -9,21 +9,14 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned Field primitives against the upstream shadcn/ui v4
-`new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret’s shadcn-aligned Field primitives against the upstream shadcn/ui v4 base
+docs and example implementations in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-input.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-group.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-fieldset.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-choice-card.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-switch.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-select.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-radio.tsx`
-- Example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-textarea.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/field.tsx`
+- Examples: `repo-ref/ui/apps/v4/examples/base/field-input.tsx`, `repo-ref/ui/apps/v4/examples/base/field-checkbox.tsx`, `repo-ref/ui/apps/v4/examples/base/field-group.tsx`, `repo-ref/ui/apps/v4/examples/base/field-fieldset.tsx`, `repo-ref/ui/apps/v4/examples/base/field-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/field-switch.tsx`, `repo-ref/ui/apps/v4/examples/base/field-select.tsx`, `repo-ref/ui/apps/v4/examples/base/field-radio.tsx`, `repo-ref/ui/apps/v4/examples/base/field-textarea.tsx`, `repo-ref/ui/apps/v4/examples/base/field-responsive.tsx`, `repo-ref/ui/apps/v4/examples/base/field-rtl.tsx`
 
 ## Fret implementation
 
@@ -31,6 +24,12 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 - Theme tokens: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
 
 ## Audit checklist
+
+### Authoring surface
+
+- Pass: `Field`, `FieldSet`, `FieldGroup`, `FieldLegend`, `FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, `FieldSeparator`, and `FieldError` cover the documented base Field family.
+- Pass: `FieldLabel::for_control(...)` and `FieldLabel::wrap(...)` cover the upstream `htmlFor` and choice-card label-wrapping paths without requiring a generic `compose()` API.
+- Pass: the current public surface already matches the main upstream authoring outcomes; no mechanism-layer expansion is indicated here.
 
 ### Layout & geometry (shadcn parity)
 
@@ -56,8 +55,15 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
   - Applies `w-auto` to direct children when in row layout; for `<input>/<textarea>`, approximates
     the browser default `cols=20` intrinsic width (so the input does not expand to the widest sibling).
 
+### Gallery / docs parity
+
+- Pass: the gallery now mirrors the upstream base Field docs path first: `Usage`, `Anatomy`, `Form`, the example set through `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.
+- Pass: the previous docs drift was mostly page/public-surface parity and source-of-truth staleness (`new-york-v4` references), not a recipe default-style bug.
+- Pass: ownership notes now stay explicit: `FieldDescription` remains recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` remain intrinsic-width by default unless the enclosing `Field` orientation or call site expands them.
+
 ## Validation
 
+- Gallery compile: `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - Web layout gate:
   `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_field_input_geometry`, `web_vs_fret_layout_field_checkbox_geometry`,

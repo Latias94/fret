@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("rounded.rs");
+pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -18,20 +18,19 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![
-            shadcn::Button::new("Get Started")
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .test_id("ui-gallery-button-rounded")
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-button-demo-text")
                 .into_element(cx),
             shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Icon)
-                .a11y_label("Scroll to top")
+                .a11y_label("Submit")
                 .icon(IconId::new_static("lucide.arrow-up"))
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .test_id("ui-gallery-button-rounded-icon")
+                .test_id("ui-gallery-button-demo-icon")
                 .into_element(cx),
         ]
     })
-    .test_id("ui-gallery-button-rounded-row")
+    .test_id("ui-gallery-button-demo")
 }
 // endregion: example

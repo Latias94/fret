@@ -1660,6 +1660,69 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn card_footer_row_requests_fill_width_and_min_w_0() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardFooter::new([cx.text("Footer only.")]).into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                layout: root_layout,
+                ..
+            }) = &el.kind
+            else {
+                panic!("expected CardFooter root to be a container element");
+            };
+
+            fn find_flex<'a>(el: &'a AnyElement) -> &'a FlexProps {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Flex(props) = &node.kind {
+                        return props;
+                    }
+                    for child in node.children.iter().rev() {
+                        stack.push(child);
+                    }
+                }
+                panic!("expected CardFooter subtree to contain a flex root");
+            }
+
+            let FlexProps {
+                align,
+                direction,
+                layout,
+                ..
+            } = find_flex(&el);
+
+            assert_eq!(
+                *direction,
+                Axis::Horizontal,
+                "expected CardFooter(direction=Row) to emit a horizontal flex node"
+            );
+            assert_eq!(
+                *align,
+                CrossAlign::Center,
+                "expected CardFooter row to keep the upstream `items-center` outcome"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardFooter row to request fill width so footer-only text resolves against the card's inner width"
+            );
+            assert_eq!(
+                root_layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardFooter root to opt into min-w-0 so wrapped text can shrink without collapsing to per-word lines"
+            );
+        });
+    }
 }
 
 #[derive(Debug)]
@@ -1958,7 +2021,7 @@ impl CardFooter {
             decl_style::container_props(
                 theme,
                 base.merge(chrome),
-                LayoutRefinement::default().w_full().merge(layout),
+                LayoutRefinement::default().w_full().min_w_0().merge(layout),
             )
         };
 
@@ -1973,9 +2036,15 @@ impl CardFooter {
                         ui::h_flex(move |_cx| children)
                             .wrap()
                             .gap(gap)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full())
                             .into_element(cx)
                     } else {
-                        ui::h_flex(move |_cx| children).gap(gap).into_element(cx)
+                        ui::h_flex(move |_cx| children)
+                            .gap(gap)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx)
                     }
                 }
                 CardFooterDirection::Column => {
@@ -1983,7 +2052,10 @@ impl CardFooter {
                         .take()
                         .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
                     // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
-                    ui::v_flex(move |_cx| children).gap(gap).into_element(cx)
+                    ui::v_flex(move |_cx| children)
+                        .gap(gap)
+                        .layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)
                 }
             }]
         });

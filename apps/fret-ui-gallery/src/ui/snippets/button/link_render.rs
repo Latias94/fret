@@ -19,9 +19,11 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![
-            shadcn::Button::new("Dashboard")
+            shadcn::Button::new("Login")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .render(shadcn::ButtonRender::Link {
-                    href: Arc::<str>::from("https://example.com/dashboard"),
+                    href: Arc::<str>::from("https://example.com/login"),
                     target: None,
                     rel: None,
                 })
