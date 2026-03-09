@@ -566,6 +566,11 @@ real editors.
   `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
   internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
   embedded in one retained event router surface.
+- `event_router_system.rs` now routes lifecycle/system events and keyboard input
+  dispatch through the private `canvas/widget/event_router_system_lifecycle.rs` and
+  `canvas/widget/event_router_system_input.rs` seams, so retained non-pointer routing no
+  longer keeps clipboard/focus/timer/internal-drag handling and keyboard dispatch in
+  one surface.
 - `event_clipboard.rs` now routes pending-paste token resolution and clipboard
   feedback side effects through the private
   `canvas/widget/event_clipboard_pending.rs` and
@@ -1012,6 +1017,8 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_system.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_input.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_system_lifecycle.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`

@@ -502,6 +502,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/event_router_pointer.rs` seams, so clipboard/focus cancel,
     internal-drag/timer/keyboard routing, and pointer-variant branching no longer stay
     embedded in one retained event router surface.
+  - Progress: `event_router_system.rs` now routes lifecycle/system events and keyboard
+    input dispatch through the private
+    `canvas/widget/event_router_system_lifecycle.rs` and
+    `canvas/widget/event_router_system_input.rs` seams, so retained non-pointer routing no
+    longer keeps clipboard/focus/timer/internal-drag handling and keyboard dispatch in
+    one surface.
   - Progress: `event_clipboard.rs` now routes pending-paste token resolution and
     clipboard feedback side effects through the private
     `canvas/widget/event_clipboard_pending.rs` and
