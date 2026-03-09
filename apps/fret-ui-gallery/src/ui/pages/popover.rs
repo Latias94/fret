@@ -14,16 +14,18 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn Popover demo (new-york-v4).",
-            "Popover keeps an anchor-aware content path (`into_element_with_anchor(...)`), so Fret currently keeps closure-based authoring as the primary API instead of forcing a generic compose builder.",
-            "Keep content width explicit (e.g. 320px) for predictable layout.",
-            "For dense input rows, prefer `Field`/`FieldGroup` recipes to keep spacing consistent with other form surfaces.",
+            "Gallery sections mirror shadcn Popover docs directly: Demo, Usage, Basic, Align, With Form, RTL.",
+            "Popover keeps an anchor-aware content path (`into_element_with_anchor(...)`), so Fret intentionally keeps closure-based authoring as the primary API instead of forcing a generic compose builder.",
+            "Keep content width explicit (for example `w-72` / 288px in default content, or 320px in the form demo) for predictable layout.",
+            "For dense input rows, prefer `Field` / `FieldGroup` recipes to keep spacing consistent with other form surfaces.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Popover demo: Dimensions form (w=320px)."),
+        Some(
+            "Preview follows shadcn Popover docs order directly, using the dimensions form demo as the lead example.",
+        ),
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-popover-demo")
