@@ -70,15 +70,24 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
 
 ## M4 - Theme/token and skinning adapters
 
-- [ ] `EER-THEME-040` Inventory current editor/workspace/docking token families and identify collisions or overlaps.
-- [ ] `EER-THEME-041` Publish the initial namespace plan for `editor.*`, `workspace.*`, and docking-owned tokens.
-- [ ] `EER-THEME-042` Decide where shadcn-aligned seeding lives:
+- [x] `EER-THEME-040` Inventory current editor/workspace/docking token families and identify collisions or overlaps.
+      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
+- [x] `EER-THEME-041` Publish the initial namespace plan for `editor.*`, `workspace.*`, and docking-owned tokens.
+      Evidence: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
+- [x] `EER-THEME-042` Decide where shadcn-aligned seeding lives:
       in `fret-ui-shadcn`, a dedicated adapter crate, or a small preset module.
-- [ ] `EER-THEME-043` Define the adapter rule for future Material-style skins:
+      Current decision: keep stable namespace seeding in adapter crates such as
+      `fret-ui-shadcn`; keep owner-local proof presets optional; do not create a dedicated
+      editor/workspace adapter crate yet.
+- [x] `EER-THEME-043` Define the adapter rule for future Material-style skins:
       one-way seeding/aliasing only, no reverse dependency.
+      Evidence: ADR 0316 plus
+      `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`.
 - [ ] `EER-THEME-044` Add missing-token fallback and diagnostics checks for the new namespaces per ADR 0270.
-- [ ] `EER-THEME-045` Document whether workspace shell and docking should share visual presets via aliasing,
+- [x] `EER-THEME-045` Document whether workspace shell and docking should share visual presets via aliasing,
       not via crate coupling.
+      Current decision: align shell and docking visuals by adapter aliasing/seeding, not by moving
+      docking-owned chrome into `fret-workspace`.
 
 ## M5 - Proof harnesses, gates, and migration evidence
 
@@ -105,5 +114,8 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       `fret-ui-editor-*` adapter crate once the surface stabilizes?
 - [ ] `EER-Q-061` Which `apps/fret-editor` protocols are reusable enough to extract now, and which still encode
       product-specific assumptions?
-- [ ] `EER-Q-062` Do workspace shell token families need a stable `workspace.tabstrip.*` namespace, or should
+- [x] `EER-Q-062` Do workspace shell token families need a stable `workspace.tabstrip.*` namespace, or should
       dock-aware tabstrip chrome remain docking-owned with aliasing from presets?
+      Decision: keep a stable shell-owned `workspace.tabstrip.*` family for non-dock-aware
+      tabstrip chrome, keep dock-graph-aware tab/drop chrome docking-owned, and align the two by
+      preset aliasing/seeding rather than crate coupling.

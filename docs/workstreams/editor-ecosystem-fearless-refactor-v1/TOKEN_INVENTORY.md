@@ -1,0 +1,178 @@
+# Editor Ecosystem Token Inventory and Namespace Plan v1
+
+Tracking doc: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`  
+Related ADR: `docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md`
+
+Status: Draft  
+Last updated: 2026-03-09
+
+## Purpose
+
+This note closes the first documentation pass for:
+
+- `EER-THEME-040` current token inventory,
+- `EER-THEME-041` initial namespace plan,
+- and the related seeding/aliasing decisions needed to keep `editor.*`, `workspace.*`, and
+  docking-owned chrome from drifting across crates.
+
+This is an ownership and migration note, not a new runtime contract.
+ADR 0316 remains the normative boundary decision.
+
+## Scope
+
+This inventory covers the three crates that matter for editor ecosystem skinning ownership:
+
+- `ecosystem/fret-ui-editor`
+- `ecosystem/fret-workspace`
+- `ecosystem/fret-docking`
+
+It also records where stable seeding already exists today in adjacent crates such as
+`ecosystem/fret-ui-shadcn`.
+
+## Snapshot
+
+| Crate | Current token posture | Key evidence |
+| --- | --- | --- |
+| `fret-ui-editor` | Has explicit `editor.*` token keys and an opt-in preset patch entrypoint. Still reads and seeds shared `component.*` and generic semantic palette keys for compatibility. | `ecosystem/fret-ui-editor/src/primitives/tokens.rs`, `ecosystem/fret-ui-editor/src/theme.rs`, `ecosystem/fret-ui-editor/src/primitives/chrome.rs` |
+| `fret-workspace` | Has partial `workspace.*` reads for panes and tab strip, but shell frame/top bar/status bar still read only generic tokens. No preset or seeding entrypoint exists yet. | `ecosystem/fret-workspace/src/panes.rs`, `ecosystem/fret-workspace/src/tab_strip/theme.rs`, `ecosystem/fret-workspace/src/frame.rs` |
+| `fret-docking` | Owns docking-specific drag/drop chrome through `component.docking.*` reads. Tab chrome still mainly rides generic tokens. | `ecosystem/fret-docking/src/dock/paint.rs`, `ecosystem/fret-docking/src/dock/space.rs` |
+| `fret-ui-shadcn` | Already seeds docking-owned `component.docking.*` keys, which proves the one-way skinning direction is viable. | `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`, `docs/workstreams/theme-token-alignment-v1/todo.md` |
+
+## Crate Inventory
+
+### `ecosystem/fret-ui-editor`
+
+| Category | Current families / keys | Notes |
+| --- | --- | --- |
+| Canonical editor-owned keys already modeled as constants | `editor.density.*`, `editor.numeric.*`, `editor.property.*`, `editor.checkbox.*`, `editor.enum_select.*`, `editor.axis.*`, `editor.vec.*`, `editor.color.*`, `editor.slider.*` | This is the clearest and healthiest namespace posture in the current editor ecosystem. |
+| Shared component compatibility keys still read | `component.text_field.*`, `component.checkbox.*`, `component.input.*`, `component.slider.*`, `component.card.*` | These are compatibility / reuse bridges, not editor-owned namespaces. |
+| Generic semantic palette fallbacks still read | `background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring`, `primary`, `card`, `popover`, `destructive`, `secondary` | These are expected as safe fallbacks, but they should not be treated as editor ownership. |
+| Seeding / preset entrypoint | `apply_editor_theme_preset_v1`, `EditorThemePresetV1::{Default, ImguiLikeDense}` | Today this is the only editor ecosystem crate with an explicit preset patch path. |
+
+Important observation:
+
+- `fret-ui-editor` already owns real `editor.*` keys,
+- but the current preset still patches shared `component.text_field.*` keys and generic palette
+  keys like `card`, `muted`, `border`, `foreground`, `accent`, and `ring`.
+
+That is acceptable for a proof preset, but it is not the final clean ownership seam for reusable
+editor skinning.
+
+### `ecosystem/fret-workspace`
+
+| Category | Current families / keys | Notes |
+| --- | --- | --- |
+| Workspace-owned reads already present | `workspace.pane.*`, `workspace.tab.*`, legacy `workspace.tab_strip.*` | Pane chrome and tab-strip-level chrome have started to move into `workspace.*`. |
+| Generic semantic fallbacks still read | `background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring` | These dominate `WorkspaceFrame`, `WorkspaceTopBar`, and `WorkspaceStatusBar` today. |
+| Missing but planned shell families | `workspace.frame.*`, `workspace.top_bar.*`, `workspace.status_bar.*` | These families are named in workstream docs but are not read by code yet. |
+| Seeding / preset entrypoint | none | This is the largest current gap in workspace-specific skinning. |
+
+Important observation:
+
+- `WorkspaceFrame`, `WorkspaceTopBar`, and `WorkspaceStatusBar` are still effectively generic-theme
+  consumers,
+- so apps cannot currently restyle shell chrome independently without also perturbing broader app
+  surfaces.
+
+### `ecosystem/fret-docking`
+
+| Category | Current families / keys | Notes |
+| --- | --- | --- |
+| Docking-owned reads already present | `component.docking.drop_overlay.*`, `component.docking.tab_insert.*` | These are already real, targeted docking-specific chrome tokens. |
+| Generic semantic fallbacks still read | `background`, `foreground`, `muted-foreground`, `accent`, `border`, `primary`, `card`, `popover` | Dock tab chrome and menus still lean heavily on shared palette tokens. |
+| Seeding / preset entrypoint inside docking | none | Docking relies on app or design-system seeding. |
+| Seeding path already proven elsewhere | `fret-ui-shadcn` seeds the `component.docking.*` families today | This matters for the adapter decision below. |
+
+Important observation:
+
+- `fret-docking` already has stable docking-specific families for drag/drop affordances,
+- and those families should stay docking-owned,
+- but generic tab chrome still needs visual alignment work via adapter aliasing or seeding.
+
+## Collisions, Drift, and Gaps
+
+| Issue | Current evidence | Why it matters | v1 plan |
+| --- | --- | --- | --- |
+| `workspace.tab_strip.*` vs `workspace.tabstrip.*` naming drift | Code reads `workspace.tab_strip.bg` / `workspace.tab_strip.scroll_fg`, while ADR/workstream docs prefer `workspace.tabstrip.*`. | Adapter crates and theme files will drift if both spellings proliferate. | Treat `workspace.tabstrip.*` as the canonical family. Keep `workspace.tab_strip.*` only as a temporary compatibility spelling during migration. |
+| Workspace shell frame/top/status bar still use generic tokens | `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar` read `background` / `muted` / `border` directly. | Shell chrome cannot be skinned independently from the app baseline. | Add `workspace.frame.*`, `workspace.top_bar.*`, and `workspace.status_bar.*` reads with generic fallback. |
+| Editor preset still mutates shared component and palette keys | `fret-ui-editor/src/theme.rs` writes `component.text_field.*` and generic palette keys like `card`, `muted`, `border`, `accent`. | An editor preset can bleed into non-editor widgets in the same app. | Keep this path for proof/demo use, but move toward editor-owned alias families before calling the seeding surface stable. |
+| Pane drop preview and docking drop overlay are visually adjacent but semantically different | `workspace.pane.drop_preview_*` in workspace and `component.docking.drop_overlay.*` in docking. | Without an ownership note, future contributors may merge or duplicate them incorrectly. | Keep pane-local split preview in `fret-workspace`; keep dock-graph-aware overlay and tab insert visuals in `fret-docking`. |
+| Docking tab chrome and workspace tabstrip chrome can visually diverge | Workspace owns shell tabstrip reads; docking still mostly uses generic tab chrome. | Editor shells can feel inconsistent even when ownership is correct. | Align by preset aliasing / seeding in adapter crates, not by moving dock-aware chrome into `fret-workspace`. |
+| Workspace has readers but no seeding entrypoint | No `ThemeConfig` patch or token helper module exists in `fret-workspace`. | `workspace.*` remains harder to adopt than `editor.*`. | Add a small workspace token/resolver surface before introducing a bigger adapter crate. |
+
+## Initial Namespace Plan
+
+| Canonical family | Owner | Status | Current read / seed posture | Notes |
+| --- | --- | --- | --- | --- |
+| `editor.density.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in `fret-ui-editor/src/theme.rs` | Stable for v1 use. |
+| `editor.numeric.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
+| `editor.property.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
+| `editor.checkbox.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
+| `editor.enum_select.*` | `fret-ui-editor` | Partial | Only `editor.enum_select.max_list_height` exists today | Good enough for current proof work. |
+| `editor.axis.*` | `fret-ui-editor` | Implemented | Read via `VecEdit` axis color resolution | Stable for v1 use. |
+| `editor.vec.*` | `fret-ui-editor` | Implemented | Read via `EditorTokenKeys`, seeded in preset patch | Stable for v1 use. |
+| `editor.color.*` | `fret-ui-editor` | Partial | Swatch/popup metrics exist; broader color-edit chrome still falls back to shared component tokens | Expand only if repeated pressure appears. |
+| `editor.slider.*` | `fret-ui-editor` | Implemented | Track/thumb metrics exist; color styling still falls back to shared component/palette keys | Acceptable for v1. |
+| Shared `component.text_field.*`, `component.checkbox.*`, `component.slider.*`, `component.input.*` | shared component layer, not editor-owned | Implemented elsewhere | Read by editor widgets as compatibility fallback; some are also seeded by the editor proof preset | Do not promote these as editor ownership. |
+| `workspace.frame.*` | `fret-workspace` | Planned | No code reads yet | Add before calling workspace shell skinning complete. |
+| `workspace.top_bar.*` | `fret-workspace` | Planned | No code reads yet | Add with generic fallback. |
+| `workspace.status_bar.*` | `fret-workspace` | Planned | No code reads yet | Add with generic fallback. |
+| `workspace.pane.*` | `fret-workspace` | Partial | Active border, bg, radius, and drop-preview metrics/colors exist | Good starting point; continue here rather than inventing app-local pane families. |
+| `workspace.tab.*` | `fret-workspace` | Partial | Active bg, dirty fg, hover bg, drop indicator, max width exist | Keep tab-item state under `workspace.tab.*`. |
+| `workspace.tabstrip.*` | `fret-workspace` | Planned canonical / partial legacy | Code currently reads `workspace.tab_strip.*` | Canonicalize to `workspace.tabstrip.*`; add compatibility reads for legacy underscore spelling during migration. |
+| `component.docking.drop_overlay.*` | `fret-docking` | Implemented | Read in docking, seeded in `fret-ui-shadcn` | Keep name and owner; no workspace alias needed. |
+| `component.docking.tab_insert.*` | `fret-docking` | Implemented | Read in docking, seeded in `fret-ui-shadcn` | Keep name and owner; no workspace alias needed. |
+
+## Seeding and Adapter Decision
+
+### v1 decision
+
+- Stable design-system seeding for editor/workspace/docking namespaces should live in adapter or
+  recipe crates such as `fret-ui-shadcn`, not in `fret-ui-editor` or `fret-workspace`.
+- `fret-ui-editor` may keep local proof-oriented preset modules while a surface is still being
+  validated, but that is not a reverse dependency on shadcn/material and should remain optional.
+- We do not need a dedicated `fret-ui-editor-shadcn` or `fret-workspace-shadcn` crate yet.
+  The current evidence does not justify the extra surface area.
+
+### Why this is the recommended v1 path
+
+1. `fret-ui-shadcn` already proves the one-way seeding path for docking-owned chrome through
+   `component.docking.*`.
+2. `fret-workspace` does not yet have a stable enough token reader surface to justify a new adapter
+   crate.
+3. A dedicated adapter crate before namespace cleanup would lock in current naming drift too early.
+
+## Rule for Future Skins
+
+The rule for future shadcn / Material / custom-app skins is:
+
+- seed or alias `editor.*`, `workspace.*`, and docking-owned families from the adapter layer,
+- never add reverse dependencies from `fret-ui-editor` or `fret-workspace` back into design-system
+  crates,
+- and keep generic palette / `component.*` fallbacks as compatibility only, not ownership.
+
+This is consistent with ADR 0316 and is the recommended standing rule for future token work.
+
+## Recommended Next Implementation Slice
+
+1. Add a small workspace token constants / resolver surface in `fret-workspace` so shell chrome is
+   not scattered across raw string literals.
+2. Introduce `workspace.frame.*`, `workspace.top_bar.*`, and `workspace.status_bar.*` reads with
+   current generic-token fallback behavior preserved.
+3. Migrate `workspace.tab_strip.*` toward canonical `workspace.tabstrip.*` with compatibility reads
+   during the transition.
+4. Add at least one focused fallback gate for missing `workspace.*` tokens per ADR 0270.
+5. Audit the editor proof preset so more of its visual intent lands in editor-owned namespaces and
+   less in shared palette mutation.
+
+## Evidence Anchors
+
+- `ecosystem/fret-ui-editor/src/primitives/tokens.rs`
+- `ecosystem/fret-ui-editor/src/theme.rs`
+- `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+- `ecosystem/fret-workspace/src/frame.rs`
+- `ecosystem/fret-workspace/src/panes.rs`
+- `ecosystem/fret-workspace/src/tab_strip/theme.rs`
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- `docs/workstreams/theme-token-alignment-v1/todo.md`

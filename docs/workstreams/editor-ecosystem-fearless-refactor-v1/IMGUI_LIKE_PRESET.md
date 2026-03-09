@@ -2,6 +2,7 @@
 
 Tracking doc: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`
 Related matrix: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/PARITY_MATRIX.md`
+Token inventory: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 
 Status: Draft
 Last updated: 2026-03-09
@@ -198,6 +199,8 @@ Current implementation note:
 - the current `imui` enum-select proof path uses per-item `test_id`s and `click_stable` with
   `stable_frames: 1`, because the popup item can stop being hit-testable after an extra
   stabilization frame in this proof surface
+- the current namespace inventory and v1 ownership plan now live in
+  `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 
 ### Phase 2
 

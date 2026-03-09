@@ -117,6 +117,22 @@ Exit gates:
 
 Status: In progress
 
+Progress:
+
+- Token inventory and the first namespace plan now live in:
+  - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
+- Current findings are now explicit:
+  - `fret-ui-editor` already owns explicit `editor.*` keys and an opt-in preset patch path,
+  - `fret-workspace` has partial `workspace.*` readers but no seeding entrypoint yet,
+  - `fret-docking` already owns `component.docking.*` drag/drop chrome and that seeding path is
+    already proven in `fret-ui-shadcn`.
+- The current naming drift is now recorded:
+  canonical `workspace.tabstrip.*`, with current code still reading legacy
+  `workspace.tab_strip.*`.
+- The current adapter recommendation is now explicit:
+  keep stable seeding in adapter crates such as `fret-ui-shadcn`, keep owner-local proof presets
+  optional, and avoid creating a dedicated editor/workspace adapter crate before namespace cleanup.
+
 ## M5 - Proofs, gates, and cleanup
 
 Goal:
