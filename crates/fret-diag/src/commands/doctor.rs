@@ -1008,6 +1008,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "script_result_path": script_result_path.as_ref().map(|p| p.display().to_string()),
         "script_result": script_result,
         "capabilities_path": capabilities_path.as_ref().map(|p| p.display().to_string()),
+        "capability_source": capabilities_source.to_json_value(),
         "capabilities": capabilities,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,

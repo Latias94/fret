@@ -75,6 +75,7 @@ struct CampaignExecutionOutcome {
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
+    capability_source: Option<crate::CapabilitySource>,
 }
 
 #[derive(Debug, Clone)]
@@ -97,6 +98,7 @@ struct CampaignSummaryArtifacts {
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
+    capability_source: Option<crate::CapabilitySource>,
 }
 
 #[derive(Debug, Clone)]
@@ -184,6 +186,7 @@ struct CampaignAggregateArtifacts {
     index_path: PathBuf,
     share_manifest_path: Option<PathBuf>,
     capabilities_check_path: Option<PathBuf>,
+    capability_source: Option<crate::CapabilitySource>,
     summarize_error: Option<String>,
     share_error: Option<String>,
 }
@@ -1349,6 +1352,7 @@ fn normalize_campaign_execution_outcome(
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
+            capability_source: None,
         },
     }
 }
@@ -1364,6 +1368,7 @@ fn build_campaign_execution_report(
         share_manifest_path,
         share_error,
         capabilities_check_path,
+        capability_source,
     } = outcome;
     CampaignExecutionReport {
         campaign_id: campaign.id.clone(),
@@ -1373,6 +1378,7 @@ fn build_campaign_execution_report(
             share_manifest_path,
             share_error,
             capabilities_check_path,
+            capability_source,
         ),
         items_total: campaign.items.len(),
         items_failed,
@@ -1388,12 +1394,14 @@ fn build_campaign_report_aggregate_artifacts(
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
+    capability_source: Option<crate::CapabilitySource>,
 ) -> CampaignAggregateArtifacts {
     CampaignAggregateArtifacts {
         summary_path: plan.summary_path.clone(),
         index_path: plan.index_path.clone(),
         share_manifest_path,
         capabilities_check_path,
+        capability_source,
         summarize_error: None,
         share_error,
     }
@@ -1488,7 +1496,7 @@ fn maybe_execute_campaign_capability_preflight(
         &start_plan.execution,
         &ctx.workspace_root,
         &check_path,
-        capability_source.source_path(),
+        &capability_source,
         &available,
         &missing,
     )?;
@@ -1502,6 +1510,7 @@ fn maybe_execute_campaign_capability_preflight(
     };
     let mut summary_artifacts = finalize_campaign_summary_artifacts(&summary_finalize, ctx);
     summary_artifacts.capabilities_check_path = Some(check_path.clone());
+    summary_artifacts.capability_source = Some(capability_source.clone());
     write_campaign_result(
         &start_plan.execution,
         campaign,
@@ -1521,6 +1530,7 @@ fn maybe_execute_campaign_capability_preflight(
         share_manifest_path: summary_artifacts.share_manifest_path,
         share_error: summary_artifacts.share_error,
         capabilities_check_path: Some(check_path),
+        capability_source: Some(capability_source),
     }))
 }
 
@@ -1565,7 +1575,7 @@ fn write_campaign_capability_preflight_summary(
     plan: &CampaignExecutionPlan,
     workspace_root: &Path,
     check_path: &Path,
-    capabilities_source_path: Option<&Path>,
+    capability_source: &crate::CapabilitySource,
     available: &[String],
     missing: &[String],
 ) -> Result<(), String> {
@@ -1603,7 +1613,8 @@ fn write_campaign_capability_preflight_summary(
             compare_json: None,
             extra: Some(serde_json::json!({
                 "capabilities_check_path": check_path.display().to_string(),
-                "capabilities_source_path": capabilities_source_path.map(|path| path.display().to_string()),
+                "capabilities_source_path": capability_source.source_path().map(|path| path.display().to_string()),
+                "capability_source": capability_source.to_json_value(),
                 "required_capabilities": &campaign.requires_capabilities,
                 "available_capabilities": available,
                 "missing_capabilities": missing,
@@ -1614,7 +1625,8 @@ fn write_campaign_capability_preflight_summary(
             suite: None,
             campaign_case: Some("capability_preflight".to_string()),
             metadata: Some(serde_json::json!({
-                "capabilities_source_path": capabilities_source_path.map(|path| path.display().to_string()),
+                "capabilities_source_path": capability_source.source_path().map(|path| path.display().to_string()),
+                "capability_source": capability_source.to_json_value(),
                 "required_capabilities": &campaign.requires_capabilities,
                 "available_capabilities": available,
                 "missing_capabilities": missing,
@@ -1693,6 +1705,7 @@ fn build_campaign_execution_outcome(
         index_path: _,
         share_manifest_path,
         capabilities_check_path,
+        capability_source,
         summarize_error,
         share_error,
     } = aggregate;
@@ -1704,6 +1717,7 @@ fn build_campaign_execution_outcome(
         share_manifest_path,
         share_error,
         capabilities_check_path,
+        capability_source,
     }
 }
 
@@ -1869,6 +1883,7 @@ fn build_campaign_summary_artifacts(
         share_manifest_path: outcome.share_manifest_path,
         share_error: outcome.share_error,
         capabilities_check_path: None,
+        capability_source: None,
     }
 }
 
@@ -2875,6 +2890,16 @@ fn campaign_batch_paths_json(
         "capabilities_check_path".to_string(),
         serde_json::json!(paths.capabilities_check_path),
     );
+    payload.insert(
+        "capability_source".to_string(),
+        serde_json::json!(
+            batch
+                .aggregate
+                .capability_source
+                .as_ref()
+                .map(|source| source.to_json_value())
+        ),
+    );
     payload
 }
 
@@ -3048,6 +3073,7 @@ fn build_campaign_aggregate_artifacts(
         index_path: index_path.to_path_buf(),
         share_manifest_path: summary_artifacts.share_manifest_path.clone(),
         capabilities_check_path: summary_artifacts.capabilities_check_path.clone(),
+        capability_source: summary_artifacts.capability_source.clone(),
         summarize_error: summary_artifacts.summarize_error.clone(),
         share_error: summary_artifacts.share_error.clone(),
     }
@@ -3059,6 +3085,7 @@ fn campaign_aggregate_json(aggregate: &CampaignAggregateArtifacts) -> serde_json
         "index_path": aggregate.index_path.is_file().then(|| aggregate.index_path.display().to_string()),
         "share_manifest_path": aggregate.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "capabilities_check_path": aggregate.capabilities_check_path.as_ref().map(|path| path.display().to_string()),
+        "capability_source": aggregate.capability_source.as_ref().map(|source| source.to_json_value()),
         "summarize_error": aggregate.summarize_error.clone(),
         "share_error": aggregate.share_error.clone(),
     })
@@ -3294,6 +3321,16 @@ fn campaign_report_paths_json(
     payload.insert(
         "capabilities_check_path".to_string(),
         serde_json::json!(paths.capabilities_check_path),
+    );
+    payload.insert(
+        "capability_source".to_string(),
+        serde_json::json!(
+            report
+                .aggregate
+                .capability_source
+                .as_ref()
+                .map(|source| source.to_json_value())
+        ),
     );
     payload
 }
@@ -3804,6 +3841,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let report = build_campaign_execution_report(&campaign, &plan, outcome);
@@ -4835,6 +4873,7 @@ mod tests {
                 index_path: PathBuf::from(format!("runs/{campaign_id}/regression.index.json")),
                 share_manifest_path: None,
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: None,
                 share_error: None,
             },
@@ -4922,6 +4961,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: None,
                 share_error: None,
             },
@@ -5201,6 +5241,7 @@ mod tests {
             index_path: PathBuf::from("runs/ui-gallery-smoke/regression.index.json"),
             share_manifest_path: Some(PathBuf::from("runs/ui-gallery-smoke/share.manifest.json")),
             capabilities_check_path: None,
+            capability_source: None,
             summarize_error: None,
             share_error: Some("share failed".to_string()),
         };
@@ -5239,6 +5280,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5287,6 +5329,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5320,6 +5363,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: None,
                 share_error: None,
             },
@@ -5358,6 +5402,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5435,6 +5480,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let payload =
@@ -5499,6 +5545,7 @@ mod tests {
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let write_plan = build_campaign_result_write_plan(
@@ -5547,6 +5594,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let sections =
@@ -5593,6 +5641,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let payload =
@@ -5660,6 +5709,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let sections = build_campaign_batch_result_payload_sections(
@@ -5718,6 +5768,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: None,
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let write_plan = build_campaign_batch_result_write_plan(
@@ -5781,6 +5832,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let root = PathBuf::from("diag-root");
@@ -5870,6 +5922,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let batch = build_campaign_batch_artifacts(&plan, summary_artifacts);
@@ -6007,6 +6060,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: Some(PathBuf::from("batch/check.capabilities.json")),
+            capability_source: None,
         };
 
         let aggregate = build_campaign_aggregate_artifacts(
@@ -6043,6 +6097,7 @@ mod tests {
             Some(PathBuf::from("share/manifest.json")),
             Some("share failed".to_string()),
             None,
+            None,
         );
 
         assert_eq!(aggregate.summary_path, plan.summary_path);
@@ -6066,6 +6121,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: None,
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -6283,6 +6339,7 @@ mod tests {
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let run = campaign_result_run_json(
@@ -6315,6 +6372,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
+            capability_source: None,
         };
 
         let aggregate = campaign_result_aggregate_json(
@@ -6450,6 +6508,7 @@ mod tests {
                 index_path: PathBuf::from("batch/root/regression.index.json"),
                 share_manifest_path: None,
                 capabilities_check_path: None,
+                capability_source: None,
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -6513,6 +6572,7 @@ mod tests {
                 summarize_error: Some("summary boom".to_string()),
                 share_manifest_path: Some(PathBuf::from("share/manifest.json")),
                 capabilities_check_path: None,
+                capability_source: None,
                 share_error: Some("share boom".to_string()),
             },
         };
@@ -6751,6 +6811,26 @@ mod tests {
                 .and_then(|value| value.as_str()),
             Some(expected_capabilities_source_path.as_str())
         );
+        assert_eq!(
+            summary.items[0]
+                .evidence
+                .as_ref()
+                .and_then(|evidence| evidence.extra.as_ref())
+                .and_then(|extra| extra.get("capability_source"))
+                .and_then(|value| value.get("kind"))
+                .and_then(|value| value.as_str()),
+            Some("filesystem")
+        );
+        assert_eq!(
+            summary.items[0]
+                .source
+                .as_ref()
+                .and_then(|source| source.metadata.as_ref())
+                .and_then(|metadata| metadata.get("capability_source"))
+                .and_then(|value| value.get("path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_source_path.as_str())
+        );
 
         let result_json =
             serde_json::from_slice::<serde_json::Value>(&std::fs::read(&result_path).unwrap())
@@ -6762,6 +6842,14 @@ mod tests {
                 .and_then(|value| value.get("capabilities_check_path"))
                 .and_then(|value| value.as_str()),
             Some(expected_check_path.as_str())
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("capability_source"))
+                .and_then(|value| value.get("path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_source_path.as_str())
         );
     }
 

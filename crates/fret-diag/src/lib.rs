@@ -3873,6 +3873,15 @@ pub(crate) struct CapabilitySource {
 }
 
 impl CapabilitySource {
+    fn kind_str(&self) -> &'static str {
+        match self.kind {
+            CapabilitySourceKind::Filesystem => "filesystem",
+            CapabilitySourceKind::TransportSession => "transport_session",
+            CapabilitySourceKind::Inline => "inline",
+            CapabilitySourceKind::Unknown => "unknown",
+        }
+    }
+
     pub(crate) fn filesystem(path: Option<&Path>) -> Self {
         Self {
             kind: CapabilitySourceKind::Filesystem,
@@ -3929,6 +3938,16 @@ impl CapabilitySource {
             CapabilitySourceKind::Inline => "inline".to_string(),
             CapabilitySourceKind::Unknown => "unknown".to_string(),
         }
+    }
+
+    pub(crate) fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "kind": self.kind_str(),
+            "path": self.path.as_ref().map(|path| path.display().to_string()),
+            "label": self.label.clone().or_else(|| Some(self.legacy_label())),
+            "transport": self.transport.clone(),
+            "session_id": self.session_id.clone(),
+        })
     }
 }
 
@@ -4235,6 +4254,20 @@ mod capability_tests {
         assert_eq!(
             report
                 .get("capabilities_path")
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_path_str.as_str())
+        );
+        assert_eq!(
+            report
+                .get("capability_source")
+                .and_then(|value| value.get("kind"))
+                .and_then(|value| value.as_str()),
+            Some("filesystem")
+        );
+        assert_eq!(
+            report
+                .get("capability_source")
+                .and_then(|value| value.get("path"))
                 .and_then(|value| value.as_str()),
             Some(expected_capabilities_path_str.as_str())
         );
