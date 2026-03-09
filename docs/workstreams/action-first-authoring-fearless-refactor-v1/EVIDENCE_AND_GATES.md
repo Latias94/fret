@@ -84,7 +84,7 @@ Teaching-surface ergonomics gates:
   reasoned cookbook allowlist, while also keeping `fret-examples` and ui-gallery pages/snippets
   at zero advanced `on_action_notify` occurrences: imperative Sonner host integration, router
   availability sync, dispatcher/inbox scheduling, and undo/redo RAF effects).
-- `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
+- `tools/pre_release.py` is the canonical cross-platform pre-release policy suite and runs the teaching-surface gates as part of that aggregate entrypoint.
 
 Examples adoption (authoring-noise reduction):
 

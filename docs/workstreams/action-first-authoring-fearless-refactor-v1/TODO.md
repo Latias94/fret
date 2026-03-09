@@ -612,7 +612,7 @@ Current sequencing note (as of 2026-03-08):
 - [x] AFA-postv1-018 Add a narrow default-path gate against reintroducing `use_state::<T>()`.
   - Goal: keep first-contact docs/templates/examples on `use_local*` after the current cleanup lands, without banning explicit raw-model usage in advanced/runtime code.
   - Evidence target: one narrow source/docs/template gate or equivalent repo-local assertion that fails if the approved first-contact surfaces drift back to `use_state`.
-  - Status (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference files (`hello`, `overlay_basics`, `imui_action_basics`, the gallery action-first snippet, and `docs/examples/todo-app-golden-path.md`), `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and `tools/pre_release.ps1` now runs the new gate alongside the other teaching-surface policy checks.
+  - Status (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference files (`hello`, `overlay_basics`, `imui_action_basics`, the gallery action-first snippet, and `docs/examples/todo-app-golden-path.md`), `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and the canonical cross-platform runner `tools/pre_release.py` now runs the new gate alongside the other teaching-surface policy checks.
 
 - [x] AFA-postv1-019 Publish a command-first widget contract audit for the remaining post-v1 blocker families.
   - Goal: replace vague “public `CommandId`-first widget contracts still remain” language with a concrete family split and a landable migration order.
@@ -623,7 +623,7 @@ Current sequencing note (as of 2026-03-08):
   - Goal: prove that public builder naming can converge on the action-first story without rewriting command-centric internals.
   - Evidence target: at least one low-risk family (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) gains an action-first alias and docs/examples prefer it.
   - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `Snackbar::action_command(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) plus the Material3 snackbar gallery snippet now prefer the action-first spelling, and the first navigation-menu/material3 coverage uses the aliases as the default public path.
-  - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and both `tools/pre_release.ps1` plus `tools/pre_release.py` run that narrow policy check.
+  - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs that narrow policy check.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.

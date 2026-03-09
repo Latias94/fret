@@ -28,16 +28,14 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 if (-not $SkipPreRelease) {
   $preReleaseArgs = @(
-    "-NoProfile",
-    "-File",
-    (Join-Path $repoRoot "tools/pre_release.ps1")
+    (Join-Path $repoRoot "tools/pre_release.py")
   )
 
   if (-not $WithIcons) {
-    $preReleaseArgs += "-SkipIcons"
+    $preReleaseArgs += "--skip-icons"
   }
 
-  Invoke-Checked "pre_release.ps1 (workspace policies + fmt + clippy + nextest)" "pwsh" $preReleaseArgs
+  Invoke-Checked "pre_release.py (workspace policies + fmt + clippy + nextest)" "python" $preReleaseArgs
 }
 
 if (-not $SkipWebGoldens) {
