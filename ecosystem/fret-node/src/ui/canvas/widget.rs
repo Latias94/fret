@@ -177,6 +177,7 @@ mod focus_port_direction_apply;
 mod focus_port_direction_candidate;
 mod focus_port_direction_rank;
 mod focus_port_direction_wire;
+mod focus_session;
 mod graph_construction;
 mod group_drag;
 mod group_draw_order;

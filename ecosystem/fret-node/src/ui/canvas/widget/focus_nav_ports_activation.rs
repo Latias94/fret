@@ -57,12 +57,8 @@ fn arm_click_connect_wire_drag<M: NodeGraphCanvasMiddleware>(
     canvas.interaction.sticky_wire_ignore_next_up = false;
     canvas.interaction.focused_edge = None;
     canvas.interaction.focused_port = None;
-    canvas.interaction.focused_port_valid = false;
-    canvas.interaction.focused_port_convertible = false;
-    canvas.interaction.hover_port = None;
-    canvas.interaction.hover_port_valid = false;
-    canvas.interaction.hover_port_convertible = false;
-    canvas.interaction.hover_port_diagnostic = None;
+    super::focus_session::clear_focused_port_hints(&mut canvas.interaction);
+    super::focus_session::clear_hover_port_hints(&mut canvas.interaction);
 }
 
 fn sync_wire_drag_position<M: NodeGraphCanvasMiddleware>(

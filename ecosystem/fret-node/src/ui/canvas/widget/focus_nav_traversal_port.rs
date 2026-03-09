@@ -88,15 +88,10 @@ pub(super) fn focus_next_port<H: UiHost, M: NodeGraphCanvasMiddleware>(
         }
     };
 
-    canvas.interaction.focused_node = Some(focused_node);
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.focused_port = Some(next);
+    super::focus_session::focus_port(&mut canvas.interaction, focused_node, next);
     canvas.refresh_focused_port_hints(host);
     canvas.update_view_state(host, |s| {
-        s.selected_edges.clear();
-        s.selected_groups.clear();
-        s.selected_nodes.clear();
-        s.selected_nodes.push(focused_node);
+        super::focus_session::select_only_node(s, focused_node, false);
     });
     true
 }

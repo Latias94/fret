@@ -9,17 +9,10 @@ pub(super) fn apply_directional_port_focus<H: UiHost, M: NodeGraphCanvasMiddlewa
         return false;
     };
 
-    canvas.interaction.focused_node = Some(owner);
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.focused_port = Some(next_port);
+    super::focus_session::focus_port(&mut canvas.interaction, owner, next_port);
     canvas.refresh_focused_port_hints(host);
     canvas.update_view_state(host, |state| {
-        state.selected_edges.clear();
-        state.selected_groups.clear();
-        state.selected_nodes.clear();
-        state.selected_nodes.push(owner);
-        state.draw_order.retain(|id| *id != owner);
-        state.draw_order.push(owner);
+        super::focus_session::select_only_node(state, owner, true);
     });
 
     let snapshot = canvas.sync_view_state(host);

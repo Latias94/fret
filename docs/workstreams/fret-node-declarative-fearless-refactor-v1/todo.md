@@ -893,6 +893,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: repeated `InteractionState` gate predicates for cursor/hover/edge-cache/pan-inertia
     now route through the private `canvas/widget/interaction_gate.rs` seam, so widget submodules no
     longer duplicate the same busy/idle interaction checks inline.
+  - Progress: repeated focus-session mutations for focused edge/node/port transitions and
+    selection-only sync now route through the private `canvas/widget/focus_session.rs` seam, so
+    focus navigation helpers no longer duplicate the same focus-reset and selection-update blocks.
   - Progress: `ui/canvas/paint.rs` now routes wire-path prep, port-shape factories, edge-marker
     factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
     `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and

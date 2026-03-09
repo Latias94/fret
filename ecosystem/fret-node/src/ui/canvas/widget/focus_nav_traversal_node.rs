@@ -70,18 +70,9 @@ pub(super) fn focus_next_node<H: UiHost, M: NodeGraphCanvasMiddleware>(
         }
     };
 
-    canvas.interaction.focused_node = Some(next);
-    canvas.interaction.focused_edge = None;
-    canvas.interaction.focused_port = None;
-    canvas.interaction.focused_port_valid = false;
-    canvas.interaction.focused_port_convertible = false;
+    super::focus_session::focus_node(&mut canvas.interaction, next);
     canvas.update_view_state(host, |s| {
-        s.selected_edges.clear();
-        s.selected_groups.clear();
-        s.selected_nodes.clear();
-        s.selected_nodes.push(next);
-        s.draw_order.retain(|id| *id != next);
-        s.draw_order.push(next);
+        super::focus_session::select_only_node(s, next, true);
     });
 
     let snapshot = canvas.sync_view_state(host);

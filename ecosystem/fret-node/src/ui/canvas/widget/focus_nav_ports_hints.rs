@@ -4,8 +4,7 @@ pub(super) fn refresh_focused_port_hints<H: UiHost, M: NodeGraphCanvasMiddleware
     canvas: &mut NodeGraphCanvasWith<M>,
     host: &mut H,
 ) {
-    canvas.interaction.focused_port_valid = false;
-    canvas.interaction.focused_port_convertible = false;
+    super::focus_session::clear_focused_port_hints(&mut canvas.interaction);
 
     let snapshot = canvas.sync_view_state(host);
     let mode = snapshot.interaction.connection_mode;

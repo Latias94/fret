@@ -477,6 +477,10 @@ real editors.
 - repeated `InteractionState` gate predicates for cursor/hover/edge-cache/pan-inertia now also
   route through the private `canvas/widget/interaction_gate.rs` seam, so widget submodules stop
   re-embedding the same busy/idle interaction checks inline while keeping the same behavior.
+- repeated focus-session mutations for focused edge/node/port transitions and selection-only sync
+  now also route through the private `canvas/widget/focus_session.rs` seam, so focus navigation
+  helpers stop re-embedding the same focus-reset and selection-update blocks inline while keeping
+  the same behavior.
 - `ui/canvas/paint.rs` now also routes wire-path prep, port-shape factories, edge-marker
   factories, and text cache helpers through the private `canvas/paint/paint_wire.rs`,
   `canvas/paint/paint_ports.rs`, `canvas/paint/paint_markers.rs`, and
@@ -1195,6 +1199,7 @@ real editors.
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/interaction_gate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/focus_session.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_wire.rs`
 - `ecosystem/fret-node/src/ui/canvas/paint/paint_ports.rs`
