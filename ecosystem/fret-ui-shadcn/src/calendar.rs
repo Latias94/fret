@@ -2541,6 +2541,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ContainerProps, ElementKind, Length};
     #[test]
     fn calendar_new_controllable_uses_controlled_model_when_provided() {
         let window = AppWindowId::default();
@@ -2591,6 +2592,56 @@ mod tests {
 
             assert_eq!(selected, Some(default_selected));
             assert_eq!(month, CalendarMonth::from_date(default_selected));
+        });
+    }
+
+    #[test]
+    fn calendar_root_width_is_intrinsic_unless_caller_overrides_it() {
+        fn find_calendar_root_container(root: &AnyElement) -> &ContainerProps {
+            let mut stack = vec![root];
+            while let Some(node) = stack.pop() {
+                if let ElementKind::Container(props) = &node.kind
+                    && props.background.is_some()
+                {
+                    return props;
+                }
+                stack.extend(node.children.iter());
+            }
+            panic!("expected Calendar root to contain a background-bearing container");
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::March));
+            let selected = cx.app.models_mut().insert(None::<Date>);
+
+            let intrinsic = Calendar::new(month.clone(), selected.clone()).into_element(cx);
+            let fill = Calendar::new(month, selected)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
+
+            let intrinsic_layout = &find_calendar_root_container(&intrinsic).layout;
+            let fill_layout = &find_calendar_root_container(&fill).layout;
+
+            assert!(
+                matches!(intrinsic_layout.size.width, Length::Px(px) if px.0 > 0.0),
+                "expected Calendar root to resolve to an intrinsic pixel width by default, got={:?}",
+                intrinsic_layout.size.width
+            );
+            assert_eq!(
+                fill_layout.size.width,
+                Length::Fill,
+                "expected caller-owned refine_layout(.w_full()) to override the intrinsic width"
+            );
         });
     }
 

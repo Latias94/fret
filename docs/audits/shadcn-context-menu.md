@@ -15,7 +15,7 @@ and Base UI context-menu behavior contracts.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx`
 - Reference implementation (`new-york-v4`):
   `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx`
 - Reference example (`new-york-v4`):
@@ -54,6 +54,9 @@ Key upstream behaviors/surfaces:
 - Pass: Keyboard-open fallback anchors at the trigger bounds origin when no pointer position is
   available.
 - Pass: Placement uses `anchored_panel_bounds_sized` and clamps to an inset viewport rect.
+- Note: Default-style ownership remains split on purpose: the trigger surface stays caller-owned,
+  while menu panel chrome / placement defaults remain recipe-owned and explicit panel width
+  overrides belong on `ContextMenuContent::min_width(...)`.
 
 ### Dismissal & focus
 

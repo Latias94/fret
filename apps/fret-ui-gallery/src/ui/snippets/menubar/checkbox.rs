@@ -74,18 +74,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let view = shadcn::MenubarMenu::new("View").entries([
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            view_bookmarks_bar.clone(),
-            "Always Show Bookmarks Bar",
-        )
-        .action(CommandId::new(
-            "ui_gallery.menubar.checkbox.view_bookmarks_bar",
-        ))),
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            view_full_urls.clone(),
-            "Always Show Full URLs",
-        )
-        .action(CommandId::new("ui_gallery.menubar.checkbox.view_full_urls"))),
+        shadcn::MenubarEntry::CheckboxItem(
+            shadcn::MenubarCheckboxItem::new(
+                view_bookmarks_bar.clone(),
+                "Always Show Bookmarks Bar",
+            )
+            .action(CommandId::new(
+                "ui_gallery.menubar.checkbox.view_bookmarks_bar",
+            )),
+        ),
+        shadcn::MenubarEntry::CheckboxItem(
+            shadcn::MenubarCheckboxItem::new(view_full_urls.clone(), "Always Show Full URLs")
+                .action(CommandId::new("ui_gallery.menubar.checkbox.view_full_urls")),
+        ),
         shadcn::MenubarEntry::Separator,
         shadcn::MenubarEntry::Item(
             shadcn::MenubarItem::new("Reload")
@@ -103,25 +104,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ]);
 
     let format = shadcn::MenubarMenu::new("Format").entries([
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            format_strikethrough.clone(),
-            "Strikethrough",
-        )
-        .action(CommandId::new(
-            "ui_gallery.menubar.checkbox.format_strikethrough",
-        ))),
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            format_code.clone(),
-            "Code",
-        )
-        .action(CommandId::new("ui_gallery.menubar.checkbox.format_code"))),
-        shadcn::MenubarEntry::CheckboxItem(shadcn::MenubarCheckboxItem::new(
-            format_superscript.clone(),
-            "Superscript",
-        )
-        .action(CommandId::new(
-            "ui_gallery.menubar.checkbox.format_superscript",
-        ))),
+        shadcn::MenubarEntry::CheckboxItem(
+            shadcn::MenubarCheckboxItem::new(format_strikethrough.clone(), "Strikethrough").action(
+                CommandId::new("ui_gallery.menubar.checkbox.format_strikethrough"),
+            ),
+        ),
+        shadcn::MenubarEntry::CheckboxItem(
+            shadcn::MenubarCheckboxItem::new(format_code.clone(), "Code")
+                .action(CommandId::new("ui_gallery.menubar.checkbox.format_code")),
+        ),
+        shadcn::MenubarEntry::CheckboxItem(
+            shadcn::MenubarCheckboxItem::new(format_superscript.clone(), "Superscript").action(
+                CommandId::new("ui_gallery.menubar.checkbox.format_superscript"),
+            ),
+        ),
     ]);
 
     shadcn::Menubar::new([view, format])

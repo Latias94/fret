@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_core::Px;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
@@ -60,18 +59,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Calendar::new(month, selected)
         .test_id_prefix("ui-gallery.calendar.demo")
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-        .refine_style(
-            ChromeRefinement::default()
-                .border_1()
-                .rounded(Radius::Md)
-                .shadow_sm(),
-        )
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .max_w(Px(980.0)),
-        )
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx)
 }
 // endregion: example

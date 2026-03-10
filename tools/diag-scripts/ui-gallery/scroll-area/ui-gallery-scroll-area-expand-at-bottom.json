@@ -3,9 +3,6 @@
   "meta": {
     "name": "ui-gallery-scroll-area-expand-at-bottom",
     "required_capabilities": ["diag.script_v2"],
-    "env_defaults": {
-      "FRET_UI_SCROLL_EXTENTS_POST_LAYOUT": 1
-    },
     "tags": ["scroll", "extents", "ui_gallery", "regression_pack"]
   },
   "steps": [
@@ -110,6 +107,17 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+      },
+      "field": "y_max",
+      "stable_frames": 3,
+      "max_delta": 1.0,
+      "timeout_frames": 600
+    },
+    {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
@@ -130,7 +138,28 @@
       },
       "delta_y": -240.0
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+      },
+      "field": "y_max",
+      "stable_frames": 3,
+      "max_delta": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+      },
+      "field": "y",
+      "stable_frames": 3,
+      "max_delta": 1.0,
+      "timeout_frames": 600
+    },
     {
       "type": "assert",
       "predicate": {

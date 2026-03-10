@@ -26,34 +26,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::AlertDialog::new(open)
         .compose()
         .trigger(shadcn::AlertDialogTrigger::build(
-            shadcn::Button::new("Open").variant(shadcn::ButtonVariant::Outline),
+            shadcn::Button::new("Show Dialog").variant(shadcn::ButtonVariant::Outline),
         ))
-        .portal(shadcn::AlertDialogPortal::new())
-        .overlay(shadcn::AlertDialogOverlay::new())
         .content_with(move |cx| {
-            shadcn::AlertDialogContent::build(|cx, out| {
-                out.push(
-                    shadcn::AlertDialogHeader::build(|cx, out| {
-                        out.push(
-                            shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
-                        );
-                        out.push(
-                            shadcn::AlertDialogDescription::new(
-                                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
-                            )
-                            .into_element(cx),
-                        );
-                    })
+            shadcn::AlertDialogContent::new([
+                shadcn::AlertDialogHeader::new([
+                    shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                    shadcn::AlertDialogDescription::new(
+                        "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                    )
                     .into_element(cx),
-                );
-                out.push(
-                    shadcn::AlertDialogFooter::build(|cx, out| {
-                        out.push(shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx));
-                        out.push(shadcn::AlertDialogAction::from_scope("Continue").into_element(cx));
-                    })
-                    .into_element(cx),
-                );
-            })
+                ])
+                .into_element(cx),
+                shadcn::AlertDialogFooter::new([
+                    shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                    shadcn::AlertDialogAction::from_scope("Continue").into_element(cx),
+                ])
+                .into_element(cx),
+            ])
             .into_element(cx)
         })
         .into_element(cx)

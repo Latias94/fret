@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit — Toggle Group
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -9,14 +8,15 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `ToggleGroup` against the upstream shadcn/ui v4 docs and
-the `new-york-v4` implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `ToggleGroup` against the upstream shadcn/ui v4 base docs,
+base examples, and the current gallery/docs surface.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/toggle-group.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx`
-- Underlying primitive: Radix `@radix-ui/react-toggle-group`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/toggle-group.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/toggle-group-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-outline.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-sizes.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-spacing.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-vertical.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-font-weight-selector.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-rtl.tsx`
+- Underlying primitives: Base UI `@base-ui/react/toggle-group` + `@base-ui/react/toggle`
 
 ## Fret implementation
 
@@ -24,34 +24,35 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 - Related surfaces:
   - Toggle tokens: `ecosystem/fret-ui-shadcn/src/toggle.rs`
   - Roving focus policy: `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`
 
 ## Audit checklist
 
 ### Composition surface
 
 - Pass: Supports `single` (`Model<Option<Arc<str>>>`) and `multiple` (`Model<Vec<Arc<str>>>`) modes.
-- Pass: Supports uncontrolled `defaultValue` (internal selection model).
-- Pass: Supports `orientation` and `loop_navigation` (Radix `orientation` / `loop` outcomes).
-- Pass: Supports `variant` (`default` / `outline`) and size (`sm` / `default` / `lg`).
-- Pass: Supports `spacing(...)` (gap between items).
+- Pass: Supports uncontrolled default selection for both modes.
+- Pass: Supports `orientation`, `loop_navigation`, `variant`, `size`, and `spacing(...)`.
+- Pass: `ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` are sufficient for source-aligned item content composition; no extra generic `compose()` API is needed here.
+- Pass: `ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding for card-like toggle items.
+- Pass: `control_id(...)` and `test_id_prefix(...)` remain focused Fret follow-up surfaces rather than upstream docs-path requirements.
 
 ### Selection behavior
 
-- Pass: Single mode deactivates when clicking the selected item (Radix single-toggle outcome).
+- Pass: Single mode deactivates when clicking the selected item (Base UI / shadcn single-toggle outcome).
 - Pass: Multiple mode toggles membership per item value.
+- Pass: Existing roving-focus behavior and test-id derivation remain covered by in-crate tests.
 
-### Visual parity (new-york)
+### Ownership and docs parity
 
-- Pass: When `spacing == 0`, items form a segmented control:
-  - Items have no inner rounding, first/last get rounded corners.
-  - Outline variant collapses inner borders (`border-left: 0` / `border-top: 0`) for non-first items.
-- Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored outline border (best-effort).
-- Pass: When `spacing != 0` and `variant == outline`, the group container uses `shadow_xs`, matching shadcn’s `shadow-xs`.
+- Pass: Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned.
+- Pass: Item-root custom layout/chrome (`w/h`, radius) and surrounding width/flex negotiation remain caller-owned.
+- Pass: The gallery now mirrors the upstream base Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.
+- Pass: `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` remain explicit Fret follow-ups after the upstream path.
+- Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib toggle_group`
-
-## Follow-ups (recommended)
-
-- Consider matching shadcn’s exact size scale (`h-8 / h-9 / h-10`) via theme tokens.
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib toggle_group`
+- Existing chrome/layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_toggle_group_demo_chrome_matches`) and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs` (`toggle-group-*` height cases)

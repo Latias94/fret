@@ -27,15 +27,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         |cx| {
             shadcn::PopoverTrigger::new(
-                shadcn::Button::new("Open")
+                shadcn::Button::new("Open Popover")
                     .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx),
             )
             .into_element(cx)
         },
         |cx| {
-            shadcn::PopoverContent::new([cx.text("Place content for the popover here.")])
-                .into_element(cx)
+            shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
+                shadcn::PopoverTitle::new("Title").into_element(cx),
+                shadcn::PopoverDescription::new("Description text here.").into_element(cx),
+            ])
+            .into_element(cx)])
+            .into_element(cx)
         },
     )
 }

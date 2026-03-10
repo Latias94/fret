@@ -154,6 +154,9 @@ coverage for `sidebar-*` pages.
   - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json`
   - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
 - Fixed forced-mobile shortcut toggling when focus is inside the sheet: keymap shortcuts now dispatch into the UI tree command path (when handled) and `SidebarMenuButton` participates in handling `sidebar.toggle` so `Ctrl/Cmd+B` can close the sheet reliably.
+- Added provider-owned width overrides (`width`, `width_icon`, `width_mobile`) with theme-token fallback remaining in the recipe, matching the upstream `SidebarProvider` width ownership model.
+- Added targeted geometry tests for provider-owned desktop/mobile width overrides in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
+- Reordered the UI gallery sidebar page to follow the docs-first flow (`Usage -> SidebarProvider -> Sidebar -> useSidebar`) while keeping existing diagnostic `test_id_prefix` anchors stable.
 
 ## Component-by-component audit (24/24)
 
@@ -165,9 +168,9 @@ Status legend:
 
 | Component | Upstream role | Base UI/Radix contract touchpoint | Fret status | Primary gap | Owner layer |
 | --- | --- | --- | --- | --- | --- |
-| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, first-pass `Ctrl/Cmd+B` shortcut handling, provider callbacks (`on_open_change` / `on_open_mobile_change`), and function-style setter ergonomics (`set_open_with` / `set_open_mobile_with`) are implemented; cookie persistence and full React API-shape parity remain | `fret-ui-shadcn` |
+| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, provider-owned width overrides (`width` / `width_icon` / `width_mobile`), first-pass `Ctrl/Cmd+B` shortcut handling, provider callbacks (`on_open_change` / `on_open_mobile_change`), and function-style setter ergonomics (`set_open_with` / `set_open_mobile_with`) are implemented; cookie persistence and full React API-shape parity remain | `fret-ui-shadcn` |
 | `use_sidebar` | Access provider state/actions | Context read contract | Partial | Hook exists and now exposes `set_open/set_open_mobile` and function-style setters (`set_open_with` / `set_open_mobile_with`) on context; parity gaps remain around cookie-backed persistence and full React API-shape parity | `fret-ui-shadcn` |
-| `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, and first-pass `variant` width/surface matrix is now wired; richer data-slot channels and cookie persistence parity remain | `fret-ui-shadcn` |
+| `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, the desktop/mobile width matrix now reads provider-owned resolved widths first, and theme tokens remain recipe fallback; richer data-slot channels and cookie persistence parity remain | `fret-ui-shadcn` |
 | `SidebarTrigger` | Toggle sidebar state | Provider action + button semantics | Partial | Toggle behavior wired; upstream `onClick` merge, data-slot conventions, and full keyboard shortcut coupling remain to align | `fret-ui-shadcn` |
 | `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas placement matrix are wired, and hover now requests `CursorIcon::ColResize` as a first-pass cursor affordance; pseudo-element hit-area parity and full class-state styling parity remain | `fret-ui-shadcn` |
 | `SidebarInset` | Peer/inset content container | None (layout recipe) | Partial | First-pass `variant=inset` peer-surface matrix is now wired (margin/radius/shadow + collapsed margin step); responsive breakpoint choreography and full class-state parity remain | `fret-ui-shadcn` |

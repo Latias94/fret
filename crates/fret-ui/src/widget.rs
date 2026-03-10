@@ -1835,12 +1835,16 @@ pub struct ScrollByCx<'a, H: UiHost> {
     pub bounds: Rect,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum ScrollIntoViewResult {
     #[default]
     NotHandled,
     Handled {
         did_scroll: bool,
+        // Bounds outer scroll ancestors should treat as the descendant after this widget handles
+        // the request. Scroll surfaces use this to propagate their effective viewport rect instead
+        // of the original deep descendant bounds.
+        propagated_bounds: Option<Rect>,
     },
 }
 

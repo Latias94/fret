@@ -18,6 +18,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     cx,
                     "API reference: `ecosystem/fret-ui-shadcn/src/resizable.rs`.",
                 ),
+                shadcn::typography::muted(
+                    cx,
+                    "Default-style ownership follows upstream: `ResizablePanelGroup` owns `w-full h-full` and handle chrome, while border/rounded demo shells remain caller-owned.",
+                ),
             ]
         })
             .gap(Space::N1)

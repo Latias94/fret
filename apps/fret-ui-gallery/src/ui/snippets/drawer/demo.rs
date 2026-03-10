@@ -23,7 +23,6 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
     let trigger_open = open.clone();
-    let close_open = open.clone();
 
     shadcn::Drawer::new(open).build(
         cx,
@@ -45,12 +44,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             out.push(
                 shadcn::DrawerFooter::build(|cx, out| {
                     out.push(shadcn::Button::new("Submit").into_element(cx));
-                    out.push(
-                        shadcn::Button::new("Cancel")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone())
-                            .into_element(cx),
-                    );
+                    out.push(shadcn::DrawerClose::from_scope().build(
+                        cx,
+                        shadcn::Button::new("Cancel").variant(shadcn::ButtonVariant::Outline),
+                    ));
                 })
                 .into_element(cx),
             );

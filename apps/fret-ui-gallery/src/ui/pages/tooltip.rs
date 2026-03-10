@@ -17,7 +17,8 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         cx,
         [
             "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(trigger, content)` is the recipe-level composition entry point.",
-            "Wrap related tooltips in one TooltipProvider to get consistent delay-group behavior.",
+            "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
+            "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
             "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
             "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
             "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
@@ -27,7 +28,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let page = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Tooltip docs order: Demo, Usage, then Fret-specific parity checks for layout, focus, sides, richer content, disabled triggers, and RTL.",
+            "Preview follows shadcn Tooltip docs order first, then appends Fret-specific `Long Content` and `Keyboard Focus` parity sections.",
         ),
         vec![
             DocSection::new("Demo", demo_tooltip)
@@ -37,19 +38,11 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .title_test_id("ui-gallery-section-usage-title")
                 .description("Copyable shadcn-style composition reference for Tooltip.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Long Content", long_content_tooltip)
-                .description(
-                    "Longer tooltip content should wrap at the max width boundary without collapsing to a narrow column.",
-                )
-                .code_rust_from_file_region(snippets::long_content::SOURCE, "example"),
-            DocSection::new("Keyboard Focus", focus_row)
-                .description("Tooltips should open when the trigger receives keyboard focus.")
-                .code_rust_from_file_region(snippets::keyboard_focus::SOURCE, "example"),
             DocSection::new("Side", side_row)
-                .description("Tooltips can be placed on the four sides of the trigger.")
+                .description("Use the `side` prop to change the position of the tooltip.")
                 .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
             DocSection::new("With Keyboard Shortcut", keyboard_tooltip)
-                .description("Compose richer content (e.g. key hints) inside the tooltip panel.")
+                .description("Compose richer content such as key hints inside the tooltip panel.")
                 .code_rust_from_file_region(snippets::keyboard_shortcut::SOURCE, "example"),
             DocSection::new("Disabled Button", disabled_tooltip)
                 .description(
@@ -59,6 +52,14 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("RTL", rtl_row)
                 .description("Tooltip placement and alignment should work under RTL.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Long Content", long_content_tooltip)
+                .description(
+                    "Longer tooltip content should wrap at the max-width boundary without collapsing to a narrow column.",
+                )
+                .code_rust_from_file_region(snippets::long_content::SOURCE, "example"),
+            DocSection::new("Keyboard Focus", focus_row)
+                .description("Tooltips should open when the trigger receives keyboard focus.")
+                .code_rust_from_file_region(snippets::keyboard_focus::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

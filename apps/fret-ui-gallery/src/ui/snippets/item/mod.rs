@@ -10,4 +10,5 @@ pub mod image;
 pub mod link;
 pub mod link_render;
 pub mod size;
+pub mod usage;
 pub mod variants;

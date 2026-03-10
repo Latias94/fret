@@ -14,7 +14,7 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/resizable.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx`
 
 ## Fret implementation
 
@@ -39,12 +39,14 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 - Pass: The core resize interaction lives in the dedicated resizable recipe rather than leaking policy into
   general layout primitives.
 - Pass: Horizontal and vertical groups are both supported.
+- Pass: `ResizablePanelGroup` owns the upstream `w-full h-full` + orientation flex behavior, while `ResizablePanel` stays a runtime-sized wrapper and outer bordered demo shells remain caller-owned.
 - Pass: Gallery examples already cover nested groups, handle visuals, and RTL hit-testing smoke checks.
 
 ## Conclusion
 
 - Result: This component does not currently point to a missing mechanism-layer gap.
-- Result: The main missing piece was gallery/docs alignment with the upstream `Usage` section.
+- Result: Default-style ownership looks correct: group fill sizing + handle chrome are recipe-owned, while surrounding card/border shells remain caller-owned.
+- Result: The main missing piece was regression coverage for the gallery/docs-aligned example set.
 - Result: Follow-up work should focus on concrete keyboard or hit-testing regressions only if they appear.
 
 ## Validation

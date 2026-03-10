@@ -191,7 +191,7 @@ Runs:
 
 - Baseline (default extents): PASS (`run_id=1772436210204`)
   - Out dir: `target/fret-diag-se213c2-baseline`
-- Gate on (`FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`): PASS (`run_id=1772436308115`)
+- Historical gate-on (`FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`, before 2026-03-09): PASS (`run_id=1772436308115`)
   - Out dir: `target/fret-diag-se213c2-post-layout`
 
 Notes:
@@ -213,9 +213,13 @@ Run (baseline):
 
 - `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-baseline --session-auto --launch -- cargo run -p fret-ui-gallery`
 
-Run (gate on):
+Current default:
 
-- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir <out_dir> --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+
+Run (historical gate-on, before 2026-03-09):
+
+- Historical command: `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
 
 Evidence (2026-03-02, macOS aarch64, debug build):
 

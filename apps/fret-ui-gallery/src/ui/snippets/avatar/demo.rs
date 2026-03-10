@@ -21,22 +21,20 @@ fn avatar_with_image<H: UiHost>(
         .into_element(cx)
 }
 
-fn avatar_with_image_rounded<H: UiHost>(
+fn avatar_with_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
-    size: shadcn::AvatarSize,
     fallback_text: &'static str,
-    chrome: ChromeRefinement,
 ) -> AnyElement {
     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
     let fallback = shadcn::AvatarFallback::new(fallback_text)
         .when_image_missing_model(avatar_image)
         .delay_ms(120)
         .into_element(cx);
+    let badge = shadcn::AvatarBadge::new().into_element(cx);
 
-    shadcn::Avatar::new([image, fallback])
-        .size(size)
-        .refine_style(chrome)
+    shadcn::Avatar::new([image, fallback, badge])
+        .size(shadcn::AvatarSize::Default)
         .into_element(cx)
 }
 
@@ -44,44 +42,33 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
 ) -> AnyElement {
-    let rounded = avatar_with_image_rounded(
-        cx,
-        avatar_image.clone(),
-        shadcn::AvatarSize::Default,
-        "ER",
-        ChromeRefinement::default().rounded(Radius::Lg),
-    )
-    .test_id("ui-gallery-avatar-demo-rounded");
-
-    let group = fret_ui_kit::ui::h_flex(|cx| {
-        (0..3)
-            .map(|idx| {
-                let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
-                let fallback = shadcn::AvatarFallback::new(["CN", "ML", "ER"][idx])
-                    .when_image_missing_model(avatar_image.clone())
-                    .delay_ms(120)
-                    .into_element(cx);
-                let mut avatar =
-                    shadcn::Avatar::new([image, fallback]).size(shadcn::AvatarSize::Default);
-                if idx != 0 {
-                    avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
-                }
-                avatar
-                    .into_element(cx)
-                    .test_id(format!("ui-gallery-avatar-demo-group-item-{idx}"))
+    let group = {
+        let avatars = ["CN", "ML", "ER"]
+            .into_iter()
+            .map(|fallback| {
+                avatar_with_image(
+                    cx,
+                    avatar_image.clone(),
+                    shadcn::AvatarSize::Default,
+                    fallback,
+                )
             })
-            .collect::<Vec<_>>()
-    })
-    .gap(Space::N0)
-    .items_center()
-    .into_element(cx)
-    .test_id("ui-gallery-avatar-demo-group");
+            .collect::<Vec<_>>();
+        let count =
+            shadcn::AvatarGroupCount::new([ui::text("+3").font_medium().nowrap().into_element(cx)])
+                .into_element(cx);
+
+        shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+            .size(shadcn::AvatarSize::Default)
+            .into_element(cx)
+            .test_id("ui-gallery-avatar-demo-group")
+    };
 
     fret_ui_kit::ui::h_flex(|cx| {
         vec![
-            avatar_with_image(cx, avatar_image, shadcn::AvatarSize::Default, "CN")
-                .test_id("ui-gallery-avatar-demo-round"),
-            rounded,
+            avatar_with_image(cx, avatar_image.clone(), shadcn::AvatarSize::Default, "CN")
+                .test_id("ui-gallery-avatar-demo-basic"),
+            avatar_with_badge(cx, avatar_image, "ER").test_id("ui-gallery-avatar-demo-badge"),
             group,
         ]
     })

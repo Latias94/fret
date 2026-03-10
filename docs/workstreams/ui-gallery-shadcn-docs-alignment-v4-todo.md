@@ -92,7 +92,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] hover-card - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/hover_card.rs`)
 - [~] input - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input.rs`)
 - [~] input-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_group.rs`)
-- [~] input-otp - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_otp.rs`)
+- [x] input-otp — examples mirrored (Demo/Usage/Pattern/Separator/Disabled/Controlled/Invalid/Four Digits/Alphanumeric/Form/RTL) (`apps/fret-ui-gallery/src/ui/pages/input_otp.rs`, `apps/fret-ui-gallery/src/ui/snippets/input_otp/form.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`)
 - [~] item - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/item.rs`)
 - [~] kbd - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/kbd.rs`)
 - [~] label - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/label.rs`)

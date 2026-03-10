@@ -54,6 +54,7 @@ Defaults if unclear:
 - Treat MUI Material UI as the primary reference for web-facing defaults and composition details.
 - Treat Base UI as an additional headless reference for accessibility-first part composition.
 - When a mature in-tree shadcn component already solved the same Fret-side mechanism split, use it as an implementation exemplar for layering and gates, not as the visual/taxonomy truth.
+- Treat default-style ownership as a first-class decision: keep recipe defaults for intrinsic component chrome/state layers/slot spacing, and keep page/container negotiation (`fillMaxWidth`, `widthIn/maxWidth`, `flex`, centering, grid placement, `w-full`, `min-w-0`) caller-owned unless upstream makes it part of the component source or default API itself.
 - Treat policy/state machines as `ecosystem/*` unless it is a true mechanism/contract.
 - Add at least one gate (test or diag script) for any interaction/motion change.
 
@@ -61,12 +62,30 @@ Defaults if unclear:
 
 - `cargo run -p fretboard -- dev native --bin components_gallery`
 
+
+## Default-style ownership sanity check
+
+Before changing a Material recipe default, check where the upstream styling actually lives:
+
+- If it lives in the upstream component implementation or default API, it is a candidate recipe default in Fret.
+  - Examples: container height, shape, outline/filled chrome, active-indicator thickness, state-layer/ripple behavior, slot padding, default icon spacing.
+- If it lives in the upstream example/container code, keep it caller-owned in Fret.
+  - Examples: `fillMaxWidth`, `widthIn` / `maxWidth`, row/column flex behavior, grid placement, page centering, surrounding `Box` constraints, doc/demo wrappers.
+
+Heuristic:
+
+- recipe default = intrinsic across most uses of the component
+- caller-owned = negotiated with the page, layout slot, or container
+
+When in doubt, prefer caller-owned for width/flex/grid negotiation and container sizing.
+
 ## Quick start
 
 1. Decide the source-of-truth ordering before touching code.
-2. Inspect one mature in-tree exemplar before inventing a new parity workflow.
-3. Read the two reference notes listed below and map the mismatch to the correct Fret layer.
-4. Land a gate (test and/or `tools/diag-scripts/*.json`) with stable `test_id`.
+2. Decide default-style ownership before touching recipe defaults: is the styling intrinsic to the component, or negotiated by the surrounding page/container?
+3. Inspect one mature in-tree exemplar before inventing a new parity workflow.
+4. Read the two reference notes listed below and map the mismatch to the correct Fret layer.
+5. Land a gate (test and/or `tools/diag-scripts/*.json`) with stable `test_id`.
 
 ## Workflow
 
@@ -255,6 +274,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Porting Material policy into `crates/*` (wrong layer, hard-to-change).
 - Re-implementing shared Material foundations inside one component instead of using `foundation/*` / `interaction/*`.
 - Hard-coding numbers (durations/radius/elevation/opacity) instead of tokenizing them.
+- Baking caller-owned width/flex/grid constraints into a Material recipe default because one gallery/doc composition needed them.
 - Treating screenshots/goldens as sufficient for state machines, ripple, or motion.
 - Forgetting stable `test_id` surfaces for trigger/input, popup/listbox, and option/item nodes.
 - Ignoring field-family specifics such as menu width floor, query sync-on-blur, or typeahead delay.

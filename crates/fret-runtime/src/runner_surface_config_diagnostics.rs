@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use fret_core::{
-    time::{SystemTime, UNIX_EPOCH},
     AppWindowId, FrameId,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

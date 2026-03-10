@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit - Chart
+# shadcn/ui v4 Audit — Chart
 
 ## Upstream references (non-normative)
 
@@ -6,15 +6,21 @@ This document references optional local checkouts under `repo-ref/` for convenie
 Upstream sources:
 
 - shadcn/ui: https://github.com/shadcn-ui/ui
+- Recharts: https://recharts.org/
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This document tracks parity work for shadcn/ui chart surfaces (and related tooltip/legend/axis behavior).
+This document tracks parity work for shadcn/ui chart surfaces and related tooltip/legend/axis behavior.
+
+## Upstream references (source of truth)
+
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/radix/chart.mdx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/chart-demo.tsx`
 
 ## Status
 
-- Scope: Partially audited (tooltip + legend layout/chrome, chart-facing recipe surface).
-- Breadth coverage: Included in `docs/audits/shadcn-new-york-v4-coverage.md`.
-- Depth checklist: Tracked in `docs/audits/shadcn-new-york-v4-depth-checklist.md`.
+- Scope: partially audited (tooltip + legend layout/chrome, chart-facing recipe surface).
+- Breadth coverage: included in `docs/audits/shadcn-new-york-v4-coverage.md`.
+- Depth checklist: tracked in `docs/audits/shadcn-new-york-v4-depth-checklist.md`.
 
 ## Fret implementation anchors
 
@@ -25,14 +31,16 @@ This document tracks parity work for shadcn/ui chart surfaces (and related toolt
 - Interactive hover gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_hover_mid.rs`
 - Baseline chart DOM invariants: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart.rs`
 
-## Authoring surface
+## Audit checklist
+
+### Authoring surface
 
 - Pass: `ChartConfig` + `ChartConfigItem` already cover the upstream config-map authoring model.
 - Pass: `ChartContainer` provides the expected chart-scoped wrapper/context surface.
 - Pass: `ChartTooltip` / `ChartTooltipContent` and `ChartLegend` / `ChartLegendContent` already cover the important shadcn recipe outcomes for tooltip/legend authoring.
-- Note: Because Fret's actual chart engine integration lives below this recipe layer, this surface does not need a generic `compose()` builder; the main docs gap was a concise minimal `Usage` example.
+- Pass: because Fret's actual chart engine integration lives below this recipe layer, this surface does not need a generic `compose()` builder; the main docs gap was a concise minimal `Usage` example.
 
-## What 1:1 parity means here
+### What 1:1 parity means here
 
 At minimum, chart parity should cover:
 
@@ -41,29 +49,26 @@ At minimum, chart parity should cover:
 - Styling: color tokens, typography, grid/axis stroke widths, radii, and opacity.
 - Data contracts: series ordering, stacked/grouped behavior, and default variants.
 
-## Accessibility (`accessibilityLayer`)
+### Accessibility (`accessibilityLayer`)
 
-The upstream docs recommend enabling `accessibilityLayer` to add keyboard access and screen reader
-support for Recharts-driven charts.
+The upstream docs recommend enabling `accessibilityLayer` to add keyboard access and screen reader support for Recharts-driven charts.
 
-In Fret, the closest portable outcome is exposed via an opt-in accessibility layer on the native
-chart canvas surface:
+In Fret, the closest portable outcome is exposed via an opt-in accessibility layer on the native chart canvas surface:
 
 - Pass: `fret-chart::ChartCanvas` can be made focusable via `set_accessibility_layer(true)`.
-- Pass: While focused, arrow keys navigate between data points and drive the engine hover state.
-- Pass: Semantics `value` is populated from the tooltip formatter so screen readers can announce the
-  current point context without requiring DOM nodes.
+- Pass: while focused, arrow keys navigate between data points and drive the engine hover state.
+- Pass: semantics `value` is populated from the tooltip formatter so screen readers can announce the current point context without requiring DOM nodes.
 
 Evidence anchors:
 
 - Keyboard + semantics: `ecosystem/fret-chart/src/retained/canvas.rs`
 - Gallery gate: `tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json`
 
-## Conclusion
+### Defer rationale
 
-- Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing API surface.
-- Result: The main missing piece for docs parity was a concise gallery `Usage` example for `ChartContainer` + tooltip/legend recipes.
-- Result: Follow-up work should focus on concrete engine wiring and interactive chart regressions rather than adding more authoring surface.
+- Pass: the shadcn-facing chart recipe surface and its critical gates have already been audited enough to avoid blind surface widening.
+- Pass: status remains `Defer` because chart work is comparatively less editor-critical than the core application/editor surfaces currently being prioritized.
+- Pass: follow-up work should focus on concrete engine wiring or interactive regressions rather than generic API expansion.
 
 ## Validation
 

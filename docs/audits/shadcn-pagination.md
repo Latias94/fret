@@ -13,14 +13,18 @@ This audit compares Fret's shadcn-aligned `Pagination` against the upstream shad
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/pagination.mdx`
+There is no standalone `components/pagination.mdx` page in the current v4 repo snapshot. Use
+these sources instead:
+
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/pagination.tsx`
+- Upstream demo: `repo-ref/ui/apps/v4/app/(internal)/sink/components/pagination-demo.tsx`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/pagination.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/pagination.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/pagination/usage.rs`
+- Gallery examples: `apps/fret-ui-gallery/src/ui/snippets/pagination/simple.rs`, `apps/fret-ui-gallery/src/ui/snippets/pagination/icons_only.rs`
 
 ## Audit checklist
 
@@ -41,26 +45,27 @@ This audit compares Fret's shadcn-aligned `Pagination` against the upstream shad
 ### Layout & behavior parity
 
 - Pass: `Pagination` defaults to `w-full` and centered content, matching the upstream root container.
-- Pass: `PaginationContent` renders a horizontal row with `gap-1`, matching the upstream list layout.
+  Because Fret does not currently expose a dedicated `Navigation` landmark role, the root now uses
+  `Region + label("pagination")` as the closest portable approximation of upstream `<nav aria-label="pagination">`.
+- Pass: `PaginationContent` renders a horizontal row with `gap-1`, matching the upstream list layout,
+  and now stamps `List` semantics while `PaginationItem` stamps `ListItem` semantics to approximate
+  the upstream `ul/li` structure.
 - Pass: `PaginationLink` defaults to icon-sized links and stamps active-page selection semantics when
   `active(true)` is set.
 - Pass: `PaginationPrevious` / `PaginationNext` encode the responsive `sm` text visibility and swap
   icon direction correctly under RTL.
 - Pass: `PaginationEllipsis` uses a centered 36px box with a 16px more icon and hides itself from the
-  semantics tree while still labeling the content as ¡°More pages¡±.
+  semantics tree while still labeling the content as `More pages`.
 
 ## Conclusion
 
-- Result: This component does not currently point to a missing mechanism-layer gap.
-- Result: The main missing piece was gallery/docs alignment with the upstream docs `Usage` section.
+- Result: This component does not currently point to a missing mechanism-layer gap, though a future
+  `Navigation` landmark role in `fret-core` would let us tighten semantics further.
+- Result: The main drift was semantics parity at the parts boundary (`nav`/`ul`/`li`-like outcomes), not
+  default-style ownership. The root and inline layout defaults were already in the right place.
 - Result: Composable children API is already supported via the explicit parts surface, so follow-up work
   should focus on richer examples or diag gates only if a concrete parity regression appears.
 
 ## Validation
 
-- Unit tests in `ecosystem/fret-ui-shadcn/src/pagination.rs`
-  - `pagination_root_is_w_full_and_labeled`
-  - `pagination_link_active_stamps_selected`
-  - `pagination_ellipsis_is_hidden_in_semantics_tree`
-- Gallery/docs alignment check:
-  - `cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-shadcn --lib pagination_root_is_w_full_and_labeled pagination_content_and_item_emit_list_semantics pagination_link_active_stamps_selected pagination_ellipsis_is_hidden_in_semantics_tree --status-level fail`

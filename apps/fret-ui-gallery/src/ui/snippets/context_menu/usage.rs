@@ -9,7 +9,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         |cx| {
             shadcn::ContextMenuTrigger::new(
-                shadcn::Button::new("Right click")
+                shadcn::Button::new("Right click here")
                     .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx),
             )

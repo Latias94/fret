@@ -35,6 +35,7 @@ Defaults if unclear:
 
 - Treat interaction semantics as Radix truth.
 - Treat composition/sizing/tokens as shadcn truth.
+- Treat default-style ownership as a first-class decision: keep recipe defaults only for intrinsic component chrome/slot spacing, and keep page/container negotiation (`w-full`, `min-w-0`, `max-w-*`, `flex-1`, centering) caller-owned unless upstream puts it in the component source itself.
 - Add at least one gate.
 - When DOM-focused assumptions are involved, consult Base UI as an additional headless reference.
 
@@ -53,6 +54,12 @@ Common mappings:
 - `items-stretch` → explicit stretch on the flex container
 - `min-w-0` → `.ui().min_w_0()`
 - `truncate` → `.ui().truncate()`
+
+Default-style ownership check before changing a recipe:
+
+- If upstream puts the class on the *example call site* (`<Card className="w-full max-w-sm">`), keep it caller-owned in Fret too.
+- If upstream puts the class on the *component source* itself (for example card radius/border/shadow/slot padding), it is a recipe default.
+- Do not bake layout-negotiation defaults into the recipe root just because one gallery page needs them; fix the page/grid/flex container first.
 
 ## Smallest starting point (one command)
 
@@ -188,6 +195,7 @@ Prefer bounded, fast gates:
 ## Common pitfalls
 
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui` (wrong layer most of the time).
+- Baking caller-owned width/overflow/flex constraints into a shadcn recipe default because a single doc page or gallery composition needed them.
 - Relying on goldens alone for state-machine behavior (add a scripted repro).
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.

@@ -1409,7 +1409,9 @@ fn open_url(url: &str) -> Result<(), String> {
             .status()
             .map_err(|e| e.to_string())?;
         if !status.success() {
-            return Err(format!("rundll32 FileProtocolHandler exited with status: {status}"));
+            return Err(format!(
+                "rundll32 FileProtocolHandler exited with status: {status}"
+            ));
         }
         return Ok(());
     }

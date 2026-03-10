@@ -16,10 +16,10 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let notes = doc_layout::notes(
         cx,
         [
-            "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
+            "Preview follows upstream shadcn Dialog docs order first: Demo, Usage, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL; the `Parts` adapter section follows afterwards.",
             "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
-            "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
+            "Current Fret API models close controls explicitly with `DialogClose`; upstream `DialogContent` still has a more opinionated default close button surface (`showCloseButton`).",
             "Content-local examples now prefer `DialogClose::from_scope()` so the close affordance stays close to shadcn composition without threading the same open model into every close icon.",
             "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
             "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
@@ -29,7 +29,7 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Dialog docs order: Demo, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL (plus Parts adapter).",
+            "Preview follows shadcn Dialog docs order first, with the Fret-specific `Parts` adapter section appended afterwards.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -39,9 +39,6 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .title_test_id("ui-gallery-section-usage-title")
                 .description("Copyable shadcn-style composition reference for Dialog.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Parts", parts)
-                .description("shadcn-style part surface adapters (Trigger/Portal/Overlay).")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Custom Close Button", custom_close)
                 .description("Replace the close affordance with a custom footer action.")
                 .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example"),
@@ -57,6 +54,9 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("RTL", rtl)
                 .description("Dialog layout should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Parts", parts)
+                .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
+                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description(
                     "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",

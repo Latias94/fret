@@ -621,64 +621,68 @@ impl CustomEffectV2IdentityWebDriver {
                 .gap(Space::N2)
                 .into_element(cx);
 
-                let content = shadcn::CardContent::new([ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
-                    let supported = cx
-                        .app
-                        .global::<RendererCapabilities>()
-                        .map(|c| c.custom_effect_v2_user_image)
-                        .unwrap_or(false);
-                    vec![
-                        ui::h_row(|cx| {
-                            [
-                                shadcn::Switch::new(controls.enabled.clone())
-                                    .a11y_label("Enable the effect layer")
-                                    .test_id("custom-effect-v2-identity-web.enabled")
-                                    .into_element(cx),
-                                shadcn::Label::new("Enable").into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        mode_row,
-                        quality_row,
-                        sampling_row,
-                        uv_span_row,
-                        mix_row,
-                        shadcn::Separator::new().into_element(cx),
-                        ui::h_row(|cx| {
-                            [
-                                shadcn::Switch::new(controls.debug_input.clone())
-                                    .a11y_label("Show the input image")
-                                    .test_id("custom-effect-v2-identity-web.debug-input")
-                                    .into_element(cx),
-                                shadcn::Label::new("Show input").into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        shadcn::Button::new("Reset")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .on_activate(reset.clone())
-                            .test_id("custom-effect-v2-identity-web.reset")
+                let content = shadcn::CardContent::new([ui::v_flex(
+                    move |cx: &mut ElementContext<'_, App>| {
+                        let supported = cx
+                            .app
+                            .global::<RendererCapabilities>()
+                            .map(|c| c.custom_effect_v2_user_image)
+                            .unwrap_or(false);
+                        vec![
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(controls.enabled.clone())
+                                        .a11y_label("Enable the effect layer")
+                                        .test_id("custom-effect-v2-identity-web.enabled")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
                             .into_element(cx),
-                        ui::h_row(move |cx| {
-                            [
-                                shadcn::Label::new("Supported").into_element(cx),
-                                cx.spacer(SpacerProps::default()),
-                                shadcn::Badge::new(format!("{supported}"))
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        shadcn::CardDescription::new("Keys: V toggle surface, R reset controls.")
+                            mode_row,
+                            quality_row,
+                            sampling_row,
+                            uv_span_row,
+                            mix_row,
+                            shadcn::Separator::new().into_element(cx),
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(controls.debug_input.clone())
+                                        .a11y_label("Show the input image")
+                                        .test_id("custom-effect-v2-identity-web.debug-input")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Show input").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
                             .into_element(cx),
-                    ]
-                })
+                            shadcn::Button::new("Reset")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .on_activate(reset.clone())
+                                .test_id("custom-effect-v2-identity-web.reset")
+                                .into_element(cx),
+                            ui::h_row(move |cx| {
+                                [
+                                    shadcn::Label::new("Supported").into_element(cx),
+                                    cx.spacer(SpacerProps::default()),
+                                    shadcn::Badge::new(format!("{supported}"))
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
+                            shadcn::CardDescription::new(
+                                "Keys: V toggle surface, R reset controls.",
+                            )
+                            .into_element(cx),
+                        ]
+                    },
+                )
                 .gap(Space::N3)
                 .items_stretch()
                 .into_element(cx)])

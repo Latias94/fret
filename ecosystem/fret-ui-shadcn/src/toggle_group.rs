@@ -157,6 +157,8 @@ pub struct ToggleGroupItem {
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     style: ToggleGroupStyle,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for ToggleGroupItem {
@@ -167,6 +169,8 @@ impl std::fmt::Debug for ToggleGroupItem {
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
             .finish()
     }
 }
@@ -182,6 +186,8 @@ impl ToggleGroupItem {
             a11y_label: None,
             test_id: None,
             style: ToggleGroupStyle::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -231,6 +237,16 @@ impl ToggleGroupItem {
 
     pub fn style(mut self, style: ToggleGroupStyle) -> Self {
         self.style = self.style.merged(style);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 }
@@ -741,6 +757,8 @@ impl ToggleGroup {
                         a11y_label,
                         test_id,
                         style: item_style,
+                        chrome: item_chrome,
+                        layout: item_layout,
                     } = item;
                     let test_id = test_id.or_else(|| {
                         test_id_prefix.as_ref().map(|prefix| {
@@ -778,7 +796,7 @@ impl ToggleGroup {
 
                     let mut base_props = decl_style::container_props(
                         &theme,
-                        base_chrome.clone(),
+                        base_chrome.clone().merge(item_chrome),
                         LayoutRefinement::default(),
                     );
                     base_props.padding = Edges {
@@ -788,7 +806,9 @@ impl ToggleGroup {
                         left: pad_x,
                     }
                     .into();
-                    base_props.corner_radii = corners;
+                    if gap.0 <= 0.0 {
+                        base_props.corner_radii = corners;
+                    }
 
                     if gap.0 <= 0.0
                         && variant == ToggleVariant::Outline
@@ -833,7 +853,7 @@ impl ToggleGroup {
                         } else {
                             refinement = refinement.flex_none();
                         }
-                        decl_style::layout_style(&theme, refinement)
+                        decl_style::layout_style(&theme, refinement.merge(item_layout))
                     };
 
                     let item_theme = theme.clone();
@@ -1642,6 +1662,20 @@ mod tests {
         }
     }
 
+    fn find_by_test_id<'a>(el: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
+        let matches = el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            .is_some_and(|id| id == test_id);
+        if matches {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_by_test_id(child, test_id))
+    }
+
     #[test]
     fn toggle_group_root_defaults_to_w_fit_and_zero_gap() {
         let window = AppWindowId::default();
@@ -1715,5 +1749,44 @@ mod tests {
 
         assert!(find_pressable_with_test_id(&el, "toggle-group-demo-item-one").is_some());
         assert!(find_pressable_with_test_id(&el, "toggle-group-demo-item-two").is_some());
+    }
+
+    #[test]
+    fn toggle_group_item_refinements_override_root_geometry_for_custom_cards() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(Some(Arc::from("normal")));
+        let el = render_group_props(
+            &mut app,
+            window,
+            ToggleGroup::single(model)
+                .variant(ToggleVariant::Outline)
+                .size(ToggleSize::Lg)
+                .spacing(Space::N2)
+                .items([ToggleGroupItem::new("normal", Vec::<AnyElement>::new())
+                    .test_id("toggle-group-custom-normal")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(64.0)).h_px(Px(64.0)))
+                    .refine_style(ChromeRefinement::default().rounded(Radius::Lg))]),
+        );
+
+        let pressable = find_pressable_with_test_id(&el, "toggle-group-custom-normal")
+            .expect("custom toggle-group item pressable");
+        assert_eq!(pressable.layout.size.width, Length::Px(Px(64.0)));
+        assert_eq!(pressable.layout.size.height, Length::Px(Px(64.0)));
+
+        let chrome_el = find_by_test_id(&el, "toggle-group-custom-normal.chrome")
+            .expect("custom toggle-group item chrome");
+        let ElementKind::Container(chrome) = &chrome_el.kind else {
+            panic!("expected toggle-group custom chrome to be a Container");
+        };
+
+        let expected_radius =
+            MetricRef::radius(Radius::Lg).resolve(&Theme::global(&app).snapshot());
+        assert_eq!(chrome.corner_radii.top_left, expected_radius);
+        assert_eq!(chrome.corner_radii.top_right, expected_radius);
+        assert_eq!(chrome.corner_radii.bottom_left, expected_radius);
+        assert_eq!(chrome.corner_radii.bottom_right, expected_radius);
     }
 }

@@ -4,6 +4,7 @@ use crate::ui::snippets::empty as snippets;
 
 pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);
     let background = snippets::background::render(cx);
     let avatar = snippets::avatar::render(cx);
@@ -11,24 +12,30 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let input_group = snippets::input_group::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
+    let api_reference = doc_layout::notes(
         cx,
         [
-            "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
-            "Outline/background recipes mirror upstream: dashed borders plus a muted-to-background linear gradient (via `Paint`).",
-            "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
+            "`Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly.",
+            "`EmptyMedia::variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
+            "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
+            "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
+            "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
+            "No extra generic `asChild` / `compose()` surface is needed here: the existing children-based slot API already matches the upstream composition model.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Empty docs order: Demo, Outline, Background, Avatar, Avatar Group, InputGroup, RTL.",
+            "Preview mirrors the shadcn Empty docs path first, then records the current Fret ownership and source-of-truth choices in API Reference.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("A primary empty state with actions and a secondary link.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `Empty` and its slot parts.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Outline", outline)
                 .description("Outlined empty state for low-emphasis surfaces.")
                 .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
@@ -47,8 +54,9 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("RTL", rtl)
                 .description("Empty layout should follow right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("Implementation notes and regression guidelines."),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .description("Ownership notes, source-of-truth mapping, and public-surface guidance."),
         ],
     )
     .test_id("ui-gallery-empty-component");

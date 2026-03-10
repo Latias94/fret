@@ -6,6 +6,7 @@
 //!
 //! Keep `ui-gallery-toggle-group-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod custom;
 pub mod demo;
 pub mod disabled;
 pub mod flex_1_items;

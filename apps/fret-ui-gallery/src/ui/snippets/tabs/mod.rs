@@ -4,6 +4,7 @@ pub mod extras;
 pub mod icons;
 pub mod line;
 pub mod list;
+pub mod rtl;
 pub mod usage;
 pub mod vertical;
 pub mod vertical_line;

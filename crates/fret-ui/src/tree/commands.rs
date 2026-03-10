@@ -703,7 +703,6 @@ impl<H: UiHost> UiTree<H> {
         self.request_redraw_coalesced(app);
         true
     }
-
     pub fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
         let Some(target_bounds) = self.nodes.get(target).map(|n| n.bounds) else {
             return false;
@@ -715,6 +714,8 @@ impl<H: UiHost> UiTree<H> {
         // incorrectly mutate its offset (e.g. resetting a virtual list to top when it receives
         // focus).
         let mut node = self.nodes.get(target).and_then(|n| n.parent);
+        let mut any_scrolled = false;
+        let mut descendant_bounds = target_bounds;
         while let Some(id) = node {
             let parent = self.nodes.get(id).and_then(|n| n.parent);
             node = parent;
@@ -737,11 +738,16 @@ impl<H: UiHost> UiTree<H> {
                     window: tree.window,
                     bounds,
                 };
-                widget.scroll_descendant_into_view(&mut cx, target_bounds)
+                widget.scroll_descendant_into_view(&mut cx, descendant_bounds)
             });
 
-            if let crate::widget::ScrollIntoViewResult::Handled { did_scroll } = result {
+            if let crate::widget::ScrollIntoViewResult::Handled {
+                did_scroll,
+                propagated_bounds,
+            } = result
+            {
                 if did_scroll {
+                    any_scrolled = true;
                     self.mark_invalidation(id, Invalidation::HitTest);
                     if self.focus == Some(target)
                         && self
@@ -754,11 +760,14 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.request_redraw_coalesced(app);
                 }
-                return did_scroll;
+                // Once an ancestor handles the request, outer ancestors should align that
+                // ancestor's effective viewport rather than the original deep target bounds.
+                descendant_bounds = propagated_bounds.unwrap_or(bounds);
+                continue;
             }
         }
 
-        false
+        any_scrolled
     }
 
     pub fn scroll_by(&mut self, app: &mut H, target: NodeId, delta: Point) -> bool {

@@ -1,6 +1,6 @@
 # Tooling Python Unification Inventory
 
-Status: active inventory  
+Status: active inventory
 Last updated: 2026-03-09
 
 ## Goal

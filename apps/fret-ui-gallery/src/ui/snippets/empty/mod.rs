@@ -7,3 +7,4 @@ pub mod demo;
 pub mod input_group;
 pub mod outline;
 pub mod rtl;
+pub mod usage;

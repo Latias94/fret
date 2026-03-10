@@ -292,10 +292,7 @@ fn mathjax_svg_entry<H: UiHost>(
         }
     });
 
-    let state = handle
-        .layout_query(cx)
-        .cloned()
-        .unwrap_or_default();
+    let state = handle.layout_query(cx).cloned().unwrap_or_default();
 
     let Some(data) = state.data else {
         return match state.status {

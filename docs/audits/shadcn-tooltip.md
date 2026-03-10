@@ -14,7 +14,7 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tooltip.mdx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx`
 - shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx`
 - Base UI root contract: `repo-ref/base-ui/packages/react/src/tooltip/root/TooltipRoot.tsx`
 

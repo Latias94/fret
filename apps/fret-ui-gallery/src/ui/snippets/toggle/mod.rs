@@ -12,4 +12,5 @@ pub mod label;
 pub mod outline;
 pub mod rtl;
 pub mod size;
+pub mod usage;
 pub mod with_text;

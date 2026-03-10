@@ -872,41 +872,48 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     )
                 };
 
+                let viewport_bounds = scroll_viewport_bounds(&handle, cx.bounds);
                 crate::widget::ScrollIntoViewResult::Handled {
                     did_scroll: {
                         // Scroll content is translated at paint/input time (children-only transform),
                         // so `descendant_bounds` is expressed in the unscrolled content coordinate
-                        // space. Map the viewport into that same space before computing the delta.
+                        // space. Map the effective viewport into that same space before computing
+                        // the delta.
                         let offset = handle.offset();
                         let viewport_in_content = Rect::new(
                             Point::new(
-                                Px(cx.bounds.origin.x.0 + offset.x.0),
-                                Px(cx.bounds.origin.y.0 + offset.y.0),
+                                Px(viewport_bounds.origin.x.0 + offset.x.0),
+                                Px(viewport_bounds.origin.y.0 + offset.y.0),
                             ),
-                            cx.bounds.size,
+                            viewport_bounds.size,
                         );
                         scroll_handle_into_view(&handle, viewport_in_content, descendant_bounds)
                     },
+                    propagated_bounds: Some(viewport_bounds),
                 }
             }
-            ElementInstance::VirtualList(props) => crate::widget::ScrollIntoViewResult::Handled {
-                did_scroll: {
-                    // VirtualList content is translated at paint/input time (children-only
-                    // transform), so `descendant_bounds` is expressed in the unscrolled content
-                    // coordinate space. Map the viewport into that same space before computing
-                    // the delta.
-                    let handle = props.scroll_handle.base_handle();
-                    let offset = handle.offset();
-                    let viewport_in_content = Rect::new(
-                        Point::new(
-                            Px(cx.bounds.origin.x.0 + offset.x.0),
-                            Px(cx.bounds.origin.y.0 + offset.y.0),
-                        ),
-                        cx.bounds.size,
-                    );
-                    scroll_handle_into_view(handle, viewport_in_content, descendant_bounds)
-                },
-            },
+            ElementInstance::VirtualList(props) => {
+                let handle = props.scroll_handle.base_handle();
+                let viewport_bounds = scroll_viewport_bounds(handle, cx.bounds);
+                crate::widget::ScrollIntoViewResult::Handled {
+                    did_scroll: {
+                        // VirtualList content is translated at paint/input time (children-only
+                        // transform), so `descendant_bounds` is expressed in the unscrolled content
+                        // coordinate space. Map the effective viewport into that same space before
+                        // computing the delta.
+                        let offset = handle.offset();
+                        let viewport_in_content = Rect::new(
+                            Point::new(
+                                Px(viewport_bounds.origin.x.0 + offset.x.0),
+                                Px(viewport_bounds.origin.y.0 + offset.y.0),
+                            ),
+                            viewport_bounds.size,
+                        );
+                        scroll_handle_into_view(handle, viewport_in_content, descendant_bounds)
+                    },
+                    propagated_bounds: Some(viewport_bounds),
+                }
+            }
             _ => crate::widget::ScrollIntoViewResult::NotHandled,
         }
     }
@@ -959,6 +966,28 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.paint_impl(cx);
     }
+}
+
+fn scroll_viewport_bounds(handle: &crate::scroll::ScrollHandle, fallback: Rect) -> Rect {
+    // The scroll handle owns the authoritative viewport size after layout. Some scroll nodes can
+    // keep a zero-sized layout bounds entry in nested shrink-wrapping trees, so scroll-into-view
+    // must not rely on `cx.bounds.size` alone.
+    let viewport = handle.viewport_size();
+    Rect::new(
+        fallback.origin,
+        Size::new(
+            if viewport.width.0 > 0.0 {
+                viewport.width
+            } else {
+                fallback.size.width
+            },
+            if viewport.height.0 > 0.0 {
+                viewport.height
+            } else {
+                fallback.size.height
+            },
+        ),
+    )
 }
 
 fn scroll_handle_into_view(

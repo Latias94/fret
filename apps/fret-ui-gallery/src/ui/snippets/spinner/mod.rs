@@ -7,3 +7,4 @@ pub mod extras;
 pub mod input_group;
 pub mod rtl;
 pub mod sizes;
+pub mod usage;

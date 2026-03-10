@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("with_badge.rs");
 
 // region: example
-use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::ColorRef;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -16,20 +15,6 @@ fn wrap_row<H: UiHost>(
         .w_full()
         .items_center()
         .into_element(cx)
-}
-
-fn icon<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    name: &'static str,
-    size: Px,
-    fg: ColorRef,
-) -> AnyElement {
-    shadcn::icon::icon_with(
-        cx,
-        fret_icons::IconId::new_static(name),
-        Some(size),
-        Some(fg),
-    )
 }
 
 fn avatar_with_badge<H: UiHost>(
@@ -57,9 +42,8 @@ pub fn render<H: UiHost>(
     avatar_image: Model<Option<fret_core::ImageId>>,
 ) -> AnyElement {
     let destructive = Theme::global(&*cx.app).color_token("destructive");
-    let primary_fg = Theme::global(&*cx.app).color_token("primary-foreground");
 
-    let dot_row = wrap_row(cx, |cx| {
+    wrap_row(cx, |cx| {
         let custom_badge = shadcn::AvatarBadge::new()
             .refine_style(ChromeRefinement::default().bg(ColorRef::Color(destructive)));
 
@@ -87,27 +71,6 @@ pub fn render<H: UiHost>(
             ),
         ]
     })
-    .test_id("ui-gallery-avatar-badge-dot-row");
-
-    let icon_row = wrap_row(cx, |cx| {
-        let fg = ColorRef::Color(primary_fg);
-        let badge = shadcn::AvatarBadge::new().children([icon(cx, "lucide.plus", Px(10.0), fg)]);
-
-        vec![avatar_with_badge(
-            cx,
-            avatar_image.clone(),
-            shadcn::AvatarSize::Default,
-            badge,
-            "ui-gallery-avatar-badge-icon",
-        )]
-    })
-    .test_id("ui-gallery-avatar-badge-icon-row");
-
-    ui::v_flex(|_cx| vec![dot_row, icon_row])
-        .gap(Space::N4)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx)
-        .test_id("ui-gallery-avatar-badge")
+    .test_id("ui-gallery-avatar-badge")
 }
 // endregion: example

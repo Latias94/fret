@@ -64,6 +64,14 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   `NavigationMenu::viewport_component(NavigationMenuViewport::enabled(false))`.
 - Pass: Indicator rendering can be disabled via `NavigationMenu::indicator(false)` /
   `NavigationMenu::indicator_component(NavigationMenuIndicator::enabled(false))`.
+- Pass: Top-level docs-style links can be authored without a surrogate button: contentless
+  `NavigationMenuItem` now accepts `href` / `target` / `rel` and `on_activate`, covering the
+  upstream Link Component outcome while keeping trigger chrome recipe-owned.
+- Pass: `NavigationMenuLink` now also accepts `href` / `target` / `rel` and `on_activate` for
+  submenu links, attaching link-value semantics and fallback `OpenUrl` behavior when no explicit
+  action handler is provided.
+- Pass: `NavigationMenuLink` already supports arbitrary children, so rich rows/cards remain a
+  component-layer composition concern rather than a runtime contract change.
 - Pass: Base UI timing props are mirrored by shadcn-friendly aliases:
   `delay_ms`/`delay_duration`, `close_delay_ms`/`close_delay_duration`,
   and `skip_delay_ms`/`skip_delay_duration`.
@@ -79,6 +87,15 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Pointer-move gating after Escape close prevents immediate reopen (Radix behavior).
 - Pass: Link select semantics (modified clicks should not dismiss) are exposed via the shadcn
   `NavigationMenuLink` wrapper.
+
+### Default-style ownership
+
+- Pass: `navigation_menu_trigger_style(...)` intentionally remains a typed layout helper
+  (`h-9` + `flex-shrink-0`) rather than a catch-all chrome preset; open/hover chrome stays on the
+  recipe-owned trigger path.
+- Pass: Width negotiation remains caller-owned (`w-full`, `min-w-0`, `max-w-*`, flex/grid
+  participation), matching upstream where those constraints live on docs/examples rather than the
+  component source.
 
 ### Motion parity (new-york)
 
@@ -105,6 +122,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn navigation_menu`
+- Contract test: `navigation_menu_link_href_without_on_activate_emits_open_url_effect`
+- Contract test: `navigation_menu_item_href_without_on_activate_emits_open_url_effect`
 - `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
 - Contract test: `navigation_menu_delay_aliases_update_config`
 - Contract test: `navigation_menu_duration_aliases_update_config`

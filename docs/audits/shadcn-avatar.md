@@ -15,9 +15,10 @@ upstream shadcn/ui v4 docs plus Radix/Base UI interaction expectations.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/avatar.mdx`
-- shadcn dropdown docs/examples: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`
-- shadcn source: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx`
+- shadcn dropdown docs/examples: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`
+- shadcn/base source: `repo-ref/ui/apps/v4/examples/base/ui/avatar.tsx`
+- shadcn/base examples: `repo-ref/ui/apps/v4/examples/base/avatar-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-basic.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-badge.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-badge-icon.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-group.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-group-count.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-group-count-icon.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-size.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-dropdown.tsx`, `repo-ref/ui/apps/v4/examples/base/avatar-rtl.tsx`
 - Radix avatar primitive: `repo-ref/primitives/packages/react/avatar/src/avatar.tsx`
 - Base UI interaction references: `repo-ref/base-ui/packages/react/src/menu`
 
@@ -33,10 +34,15 @@ upstream shadcn/ui v4 docs plus Radix/Base UI interaction expectations.
 
 ### Docs/gallery surface
 
-- Pass: the gallery page follows a `Demo -> Usage -> Extras` structure that matches the component-doc
-  reading order more closely.
+- Pass: the gallery page now mirrors the upstream docs path much more explicitly: `Demo`, `Usage`, `Basic`, `Badge`, `Badge with Icon`, `Avatar Group`, `Avatar Group Count`, `Avatar Group with Icon`, `Sizes`, `Dropdown`, `RTL`, and `API Reference`, before a Fret-only fallback check.
 - Pass: the `Usage` snippet is copyable and complete enough for authors to lift directly.
 - Pass: avatar-in-dropdown demos are exposed with stable `test_id` anchors for diagnostics.
+
+### Gallery / docs parity
+
+- Pass: the docs-aligned `Demo` now matches the upstream outcome more closely: basic avatar, badge avatar, and avatar group with count.
+- Pass: `Badge with Icon` and `Avatar Group with Icon` are now dedicated gallery sections instead of being folded into neighboring examples, which keeps the page source-comparable against the upstream docs headings.
+- Pass: `Fallback only` remains explicitly after the upstream path as a Fret-specific regression surface.
 
 ### Avatar authoring surface
 

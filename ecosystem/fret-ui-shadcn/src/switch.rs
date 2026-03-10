@@ -185,6 +185,7 @@ pub struct Switch {
     model: SwitchModel,
     size: SwitchSize,
     disabled: bool,
+    aria_invalid: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -208,6 +209,7 @@ impl Switch {
             model: SwitchModel::Determinate(model),
             size: SwitchSize::Default,
             disabled: false,
+            aria_invalid: false,
             control_id: None,
             a11y_label: None,
             test_id: None,
@@ -230,6 +232,7 @@ impl Switch {
             model: SwitchModel::Value(checked),
             size: SwitchSize::Default,
             disabled: false,
+            aria_invalid: false,
             control_id: None,
             a11y_label: None,
             test_id: None,
@@ -250,6 +253,7 @@ impl Switch {
             model: SwitchModel::Optional(model),
             size: SwitchSize::Default,
             disabled: false,
+            aria_invalid: false,
             control_id: None,
             a11y_label: None,
             test_id: None,
@@ -296,6 +300,12 @@ impl Switch {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    // Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
         self
     }
 
@@ -384,6 +394,7 @@ impl Switch {
         cx.scope(|cx| {
             let model = self.model;
             let size = self.size;
+            let aria_invalid = self.aria_invalid;
 
             let (
                 w,
@@ -406,7 +417,11 @@ impl Switch {
                 let pad_x = switch_padding(theme, size);
 
                 let radius = Px((h.0 * 0.5).max(0.0));
-                let ring_border = switch_ring_color(theme);
+                let ring_border = if aria_invalid {
+                    theme.color_token("destructive")
+                } else {
+                    switch_ring_color(theme)
+                };
 
                 let bg_off = switch_bg_off(theme);
                 let bg_on = switch_bg_on(theme);
@@ -434,6 +449,8 @@ impl Switch {
                 )
             };
 
+            let theme = Theme::global(&*cx.app).snapshot();
+
             let default_track_background = WidgetStateProperty::new(ColorRef::Color(bg_off))
                 .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
                 .when(
@@ -456,9 +473,12 @@ impl Switch {
             let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg_off))
                 .when(WidgetStates::SELECTED, ColorRef::Color(thumb_bg_on));
 
-            let default_border_color =
-                WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
-                    .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+            let default_border_color = WidgetStateProperty::new(ColorRef::Color(if aria_invalid {
+                theme.color_token("destructive")
+            } else {
+                Color::TRANSPARENT
+            }))
+            .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
             let a11y_label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
@@ -549,7 +569,11 @@ impl Switch {
                 .value;
 
                 let mut ring = decl_style::focus_ring(&theme, radius);
-                ring.color = alpha_mul(ring_border, 0.5);
+                ring.color = if aria_invalid {
+                    crate::theme_variants::invalid_control_ring_color(&theme, ring_border)
+                } else {
+                    alpha_mul(ring_border, 0.5)
+                };
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,

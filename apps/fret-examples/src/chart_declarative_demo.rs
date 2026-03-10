@@ -7,7 +7,7 @@ use delinea::{
     AxisRange, AxisScale, ChartEngine, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
     SeriesKind, SeriesSpec, TimeAxisScale,
 };
-use fret_chart::{chart_canvas_panel, ChartCanvasPanelProps};
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
 
 struct ChartDeclarativeView {
     engine: Model<ChartEngine>,

@@ -14,9 +14,9 @@ examples in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`
-- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/dropdown-menu.tsx`
-- Reference examples: `repo-ref/ui/apps/v4/registry/bases/radix/examples/dropdown-menu-example.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`
+- Reference implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx`
+- Reference example: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx`
 
 Key upstream behaviors/surfaces:
 
@@ -47,6 +47,9 @@ Key upstream behaviors/surfaces:
 - Pass: Default `side_offset` aligns with upstream (`4`).
 - Pass: Viewport size tracks trigger width (with a minimum) and clamps height to available space;
   internal scrolling is via `Scroll` (Y-axis).
+- Note: Default-style ownership remains split on purpose: trigger sizing and outer button layout stay
+  caller-owned, while menu panel chrome / placement defaults remain recipe-owned and explicit panel
+  width overrides belong on `DropdownMenuContent::min_width(...)`.
 
 ### Dismissal & focus
 

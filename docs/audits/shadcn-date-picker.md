@@ -7,13 +7,18 @@ Upstream sources:
 
 - shadcn/ui: https://github.com/shadcn-ui/ui
 - Radix Primitives: https://github.com/radix-ui/primitives
+- Base UI: https://github.com/mui/base-ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/date-picker.mdx`
-- shadcn demo recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/date-picker-demo.tsx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/date-picker.mdx`
+- shadcn demo example: `repo-ref/ui/apps/v4/examples/base/date-picker-demo.tsx`
+- shadcn range example: `repo-ref/ui/apps/v4/examples/base/date-picker-range.tsx`
+- shadcn date-of-birth example: `repo-ref/ui/apps/v4/examples/base/date-picker-dob.tsx`
+- shadcn input example: `repo-ref/ui/apps/v4/examples/base/date-picker-input.tsx`
+- shadcn time example: `repo-ref/ui/apps/v4/examples/base/date-picker-time.tsx`
 
 ## Fret implementation anchors
 
@@ -21,53 +26,42 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 - Building blocks:
   - `ecosystem/fret-ui-shadcn/src/button.rs`
   - `ecosystem/fret-ui-shadcn/src/popover.rs`
-  - `ecosystem/fret-ui-shadcn/src/drawer.rs`
   - `ecosystem/fret-ui-shadcn/src/calendar.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/date_picker.rs`
-- Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/date_picker/usage.rs`
+- Copyable snippets:
+  - `apps/fret-ui-gallery/src/ui/snippets/date_picker/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/date_picker/label.rs`
+- Gallery gate: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 
 ## Audit checklist
 
 ### Authoring surface
 
-- Pass: `DatePicker::new(open, month, selected)` already covers the common compact recipe path.
-- Pass: `DatePicker::new_controllable(...)` covers Radix-style controlled/uncontrolled authoring without
-  forcing callers to manually allocate models.
-- Pass: `placeholder(...)`, `format_selected_by(...)`, `format_selected_iso()`, `week_start(...)`,
-  `control_id(...)`, `test_id_prefix(...)`, and disable/show-outside-days toggles cover the important
-  shadcn recipe outcomes.
-- Note: Because `DatePicker` is intentionally a compact recipe over `Popover + Calendar`, it does not need
-  a composable children API or a generic `compose()` builder.
+- Pass: `DatePicker::new(open, month, selected)` covers the compact single-date recipe path.
+- Pass: `DatePicker::new_controllable(...)` keeps the common controlled/uncontrolled authoring path lightweight.
+- Pass: `placeholder(...)`, `format_selected_by(...)`, `format_selected_iso()`, `week_start(...)`, `control_id(...)`, `test_id_prefix(...)`, and disabled/outside-day controls cover the current docs/examples surface.
+- Pass: The compact builder does not need a generic children API; upstream docs are still a recipe over `Popover + Calendar`, not an open-ended slot surface.
 
-### Trigger composition (Button)
+### Default-style ownership
 
-- Pass: Trigger uses outline button styling and left-justified content (`justify-start` parity).
-- Pass: Trigger includes a leading calendar icon (Lucide ID: `lucide.calendar`).
-- Pass: Placeholder state uses muted foreground color when no date is selected.
-- Pass: Trigger uses normal font weight (shadcn demo uses `font-normal`).
+- Pass: Trigger chrome belongs to the recipe (`outline`, calendar icon, `justify-start`, `font-normal`, placeholder muted foreground).
+- Pass: Trigger width is caller-owned. Upstream examples put width decisions on the call site (`w-[212px]`, `w-32`, field/container classes), so Fret should not bake `w_full()` into `DatePicker` by default.
+- Pass: `PopoverContent` keeping `w-auto p-0` inside the compact builder is still recipe-owned, because upstream source places that on the date-picker composition itself rather than on page shells.
+- Pass: Form/gallery call sites that want stretch behavior now opt in explicitly with `refine_layout(LayoutRefinement::default().w_full())`.
 
 ### Overlay composition (Popover + Calendar)
 
-- Pass: Date picker is authored as a composition of `Popover` and `Calendar` (shadcn docs contract).
-- Pass: Popover content uses `w-auto p-0` style intent (no default padding).
-
-### Responsive recipe (gallery-only)
-
-The upstream docs describe a Popover-based recipe. In the Fret UI gallery, the "With dropdowns"
-section is rendered as explicit desktop/mobile branches for deterministic validation:
-
-- Pass: Desktop (`>= md`) uses `Popover`.
-- Pass: Narrow viewports use `Drawer` (mobile-friendly recipe).
+- Pass: Date picker remains a `Popover` + `Calendar` composition, matching shadcn docs structure.
+- Pass: Calendar focus handoff on open is covered by a component unit test.
+- Pass: Gallery docs order follows the upstream docs flow (`Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL`), with `Label Association` kept as an extra Fret-specific section after the main path.
 
 ## Conclusion
 
-- Result: This component does not currently point to a missing mechanism-layer gap in the shadcn-facing surface.
-- Result: The main missing piece for docs parity was a concise gallery `Usage` example for the compact builder.
-- Result: Follow-up work should focus on concrete parsing/calendar behavior regressions only if they appear.
+- Result: The current mismatch was not a mechanism-layer gap; it was a recipe-level ownership drift where trigger width had been baked into the default builder.
+- Result: After removing the default `w_full()`, the compact `DatePicker` aligns better with shadcn source ownership: recipe-owned chrome stays in the component, while page/form width negotiation stays at the call site.
+- Result: No generic children API is required for the current shadcn/Base UI parity target.
 
 ## Validation
 
-- `cargo check -p fret-ui-gallery --message-format short`
-- `cargo check -p fret-ui-shadcn -p fret-ui-gallery -p fret-diag`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-date-picker-dropdowns-mobile-drawer.json --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-date-picker-nested-caption-select-scroll-clamp.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --lib gallery_date_picker_core_examples_keep_upstream_aligned_targets_present --status-level fail`

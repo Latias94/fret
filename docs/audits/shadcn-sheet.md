@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit - Sheet (new-york)
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -14,7 +13,7 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-dialog` (Sheet is a styled modal dialog)
 
@@ -32,6 +31,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 
 - `Sheet`
 - `SheetTrigger`
+- `SheetClose`
 - `SheetContent`
 - `SheetHeader`
 - `SheetFooter`
@@ -46,13 +46,16 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
   underlay layout/overflow.
-- Pass: `SheetClose::from_scope()` is available as recipe-layer sugar for content-local close
-  buttons while preserving `SheetClose::new(open)` as the explicit constructor.
+- Pass: `SheetContent` renders a default close affordance and exposes
+  `show_close_button(false)`, matching upstream `showCloseButton={false}`.
+- Pass: `SheetClose::from_scope()` is available as recipe-layer sugar for additional content-local
+  close buttons while preserving `SheetClose::new(open)` as the explicit constructor.
 - Pass: `Sheet::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
 
 ### Placement & sizing
 
+- Pass: `Sheet::new(open)` defaults to `Right`, matching the upstream component default.
 - Pass: Supports `side` (`Left`/`Right`/`Top`/`Bottom`) and a per-side `size` override (width or
   height), matching the upstream intent.
 - Pass: `Left`/`Right` default width is token-driven (e.g. `component.sheet.size` /

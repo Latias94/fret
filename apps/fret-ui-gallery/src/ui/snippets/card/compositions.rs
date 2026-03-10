@@ -10,8 +10,16 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let cell = |cx: &mut ElementContext<'_, App>, card: shadcn::Card| {
-        card.refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
+    let cell = |cx: &mut ElementContext<'_, App>, test_id: &'static str, card: shadcn::Card| {
+        let card = card
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
+            .into_element(cx)
+            .test_id(test_id);
+
+        ui::v_flex(move |_cx| vec![card])
+            .w_full()
+            .min_w_0()
+            .items_start()
             .into_element(cx)
     };
 
@@ -34,7 +42,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-content-only", card)
             };
 
             let header_only = {
@@ -48,7 +56,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-only", card)
             };
 
             let header_and_content = {
@@ -62,7 +70,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-content", card)
             };
 
             let footer_only = {
@@ -72,7 +80,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-footer-only", card)
             };
 
             let header_and_footer = {
@@ -86,7 +94,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-footer", card)
             };
 
             let content_and_footer = {
@@ -100,7 +108,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-content-footer", card)
             };
 
             let header_content_footer = {
@@ -118,7 +126,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(
+                    cx,
+                    "ui-gallery-card-compositions-header-content-footer",
+                    card,
+                )
             };
 
             let bordered_sections = {
@@ -140,7 +152,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .border_top(true)
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-bordered-sections", card)
             };
 
             vec![

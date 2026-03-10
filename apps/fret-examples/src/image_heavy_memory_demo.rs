@@ -7,7 +7,7 @@ use fret_app::App;
 use fret_core::{
     AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap,
 };
-use fret_render::{write_rgba8_texture_region, ImageDescriptor, Renderer, WgpuContext};
+use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::element::{
     FlexProps, ImageProps, LayoutStyle, Length, ScrollProps, SizeStyle, SpacingEdges,
     SpacingLength, TextProps,

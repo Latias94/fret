@@ -50,7 +50,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let close_open = open.clone();
 
     shadcn::Drawer::new(open)
-        .side(shadcn::DrawerSide::Right)
+        .direction(shadcn::DrawerDirection::Right)
         .into_element(
             cx,
             move |cx| {
