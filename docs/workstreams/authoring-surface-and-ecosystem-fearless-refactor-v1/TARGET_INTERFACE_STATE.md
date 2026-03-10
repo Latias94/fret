@@ -26,6 +26,7 @@ It is intentionally concrete:
 | --- | --- | --- | --- |
 | app builder | `FretApp` | App | canonical user-facing entry point |
 | kernel runtime app | `KernelApp` | Advanced / component as needed | no longer taught as bare `App` in app prelude |
+| app window identity | `WindowId` | App | hides `AppWindowId` noise in default app code |
 | app-facing view context | `AppUi` | App | replaces `ViewCx` as the taught surface |
 | rendered UI return alias | `Ui` | App | canonical alias over `Elements` |
 | extracted app helper context | `UiCx` | App | hides `ElementContext<'_, KernelApp>` noise in default app code |
@@ -38,6 +39,7 @@ Target exports:
 
 - `FretApp`
 - `View`
+- `WindowId`
 - `AppUi`
 - `UiCx`
 - `LocalState`
@@ -51,6 +53,7 @@ Target exports:
 Target non-exports:
 
 - `Event`
+- `AppWindowId`
 - `ElementContext`
 - `UiTree`
 - `UiServices`

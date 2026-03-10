@@ -61,7 +61,7 @@ fn install_commands(app: &mut KernelApp) {
 struct OverlayBasicsView;
 
 impl View for OverlayBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

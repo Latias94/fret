@@ -17,7 +17,7 @@ const TEST_ID_DISMISS_ALL: &str = "cookbook.toast_basics.dismiss_all";
 struct ToastBasicsView;
 
 impl View for ToastBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

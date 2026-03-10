@@ -53,7 +53,7 @@ fn append_log(log: &mut String, line: &str) {
 }
 
 struct AsyncInboxBasicsState {
-    window: AppWindowId,
+    window: WindowId,
     dispatcher: Option<DispatcherHandle>,
     current_job: Arc<AtomicU64>,
 
@@ -74,7 +74,7 @@ struct AsyncInboxBasicsView {
 }
 
 impl View for AsyncInboxBasicsView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: WindowId) -> Self {
         let dispatcher = app.global::<DispatcherHandle>().cloned();
 
         let current_job = Arc::new(AtomicU64::new(0));

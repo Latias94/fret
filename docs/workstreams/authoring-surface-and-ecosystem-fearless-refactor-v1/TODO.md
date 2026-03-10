@@ -19,6 +19,7 @@ Companion docs:
 - [ ] Decide and lock the canonical names:
   - [x] `FretApp`
   - [x] `KernelApp`
+  - [x] `WindowId`
   - [x] `AppUi`
   - [x] `Ui`
 - [ ] Define the three public surface tiers:
@@ -43,6 +44,7 @@ Companion docs:
 - [x] Add explicit advanced import modules under `fret::advanced::*`.
 - [x] Remove broad transitive re-export of `fret_ui_kit::declarative::prelude::*` from the app surface.
 - [ ] Remove low-level mechanism types from the default app prelude:
+  - [x] `AppWindowId`
   - [x] `Event`
   - [x] `ActionId`
   - [x] `TypedAction`

@@ -22,7 +22,7 @@ struct DataTableBasicsView {
 }
 
 impl View for DataTableBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: WindowId) -> Self {
         let rows: Arc<[DemoRow]> = (0..2_000)
             .map(|i| DemoRow {
                 id: i as u64,

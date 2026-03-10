@@ -44,7 +44,7 @@ mod act {
 struct MarkdownAndCodeBasicsView;
 
 impl View for MarkdownAndCodeBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

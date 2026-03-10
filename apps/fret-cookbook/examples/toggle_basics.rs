@@ -11,7 +11,7 @@ const TEST_ID_STATE: &str = "cookbook.toggle_basics.state";
 struct ToggleBasicsView;
 
 impl View for ToggleBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

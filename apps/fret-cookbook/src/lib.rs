@@ -64,6 +64,8 @@ mod authoring_surface_policy_tests {
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("KernelApp"));
+        assert!(src.contains("WindowId"));
+        assert!(!src.contains("AppWindowId"));
         assert!(src.contains("AppUi<'_, '_>"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
         assert!(src.contains(") -> Ui {"));
@@ -74,6 +76,14 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.use_local"));
         assert!(!src.contains("cx.on_action_notify_"));
         assert!(!src.contains("cx.on_payload_action_notify_"));
+    }
+
+    fn assert_uses_app_surface_doc(src: &str) {
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("AppUi<'_, '_>"));
+        assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(!src.contains("use fret::prelude::*;"));
+        assert!(!src.contains("ViewCx<'_, '_, App>"));
     }
 
     fn assert_uses_advanced_surface(src: &str) {
@@ -285,7 +295,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn onboarding_docs_use_the_new_app_surface() {
         assert_uses_app_surface(ROOT_README);
-        assert_uses_app_surface(GOLDEN_PATH_DOC);
+        assert_uses_app_surface_doc(GOLDEN_PATH_DOC);
         assert!(ROOT_README.contains("cx.state().local::<String>()"));
         assert!(ROOT_README.contains("cx.actions().local_set::<act::Add, String>"));
         assert!(GOLDEN_PATH_DOC.contains("cx.state().local::<String>()"));

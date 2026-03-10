@@ -31,7 +31,7 @@
 //! struct HelloView;
 //!
 //! impl View for HelloView {
-//!     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+//!     fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
 //!         Self
 //!     }
 //!
@@ -49,6 +49,9 @@
 //! ```
 
 pub use fret_app::App as KernelApp;
+
+/// Canonical app-facing window identity alias for the default authoring surface.
+pub type WindowId = fret_core::AppWindowId;
 
 /// Re-export the default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
@@ -206,9 +209,9 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::{LocalState, TrackedStateExt, View};
-        pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};
+        pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx, WindowId};
         pub use crate::{actions, workspace_menu};
-        pub use fret_core::{AppWindowId, Px, SemanticsRole, TextOverflow, TextWrap};
+        pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
         pub use fret_icons::IconId;
         pub use fret_runtime::CommandId;
         pub use fret_ui::{Theme, ThemeSnapshot};
@@ -869,7 +872,7 @@ mod builder_surface_tests {
     use super::{FretApp, IconRegistry, KernelApp};
     use crate::app::prelude::FretApp as AppPreludeFretApp;
     use crate::view::View;
-    use crate::{AppUi, Defaults, Ui, ViewElements};
+    use crate::{AppUi, Defaults, Ui, ViewElements, WindowId};
     use fret_app::CreateWindowRequest;
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
@@ -959,7 +962,7 @@ mod builder_surface_tests {
     struct SmokeView;
 
     impl View for SmokeView {
-        fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
             Self
         }
 
@@ -1177,6 +1180,8 @@ mod authoring_surface_policy_tests {
         ));
         assert!(rustdoc.contains("use fret::app::prelude::*;"));
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
+        assert!(rustdoc.contains("WindowId"));
+        assert!(!rustdoc.contains("AppWindowId"));
         assert!(rustdoc.contains("AppUi<'_, '_>"));
         assert!(!rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
@@ -1186,7 +1191,11 @@ mod authoring_surface_policy_tests {
     fn app_prelude_stays_explicit_instead_of_reexporting_legacy_surface() {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
-        assert!(app_prelude.contains("pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};"));
+        assert!(app_prelude.contains("pub use crate::{"));
+        assert!(app_prelude.contains("AppUi"));
+        assert!(app_prelude.contains("KernelApp"));
+        assert!(app_prelude.contains("UiChild"));
+        assert!(app_prelude.contains("WindowId"));
         assert!(app_prelude.contains("pub use fret_icons::IconId;"));
         assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
         assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
@@ -1200,6 +1209,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn app_prelude_omits_low_level_mechanism_types() {
+        assert!(!app_prelude_exports_symbol("AppWindowId"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
         assert!(!app_prelude_exports_symbol("UiTree"));

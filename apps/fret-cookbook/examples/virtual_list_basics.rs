@@ -70,7 +70,7 @@ struct VirtualListBasicsView {
 }
 
 impl View for VirtualListBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: WindowId) -> Self {
         Self {
             items: app.models_mut().insert(make_items(LIST_LEN)),
             scroll: VirtualListScrollHandle::new(),

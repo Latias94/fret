@@ -44,7 +44,7 @@ struct RouterBasicsView {
 }
 
 impl View for RouterBasicsView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: WindowId) -> Self {
         let tree = Arc::new(RouteTree::new(
             RouteNode::new(RouteId::Home, "/")
                 .unwrap()

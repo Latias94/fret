@@ -63,7 +63,7 @@ fn install_commands(app: &mut KernelApp) {
 struct CommandsKeymapBasicsView;
 
 impl View for CommandsKeymapBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

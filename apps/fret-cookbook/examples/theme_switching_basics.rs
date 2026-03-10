@@ -25,12 +25,12 @@ fn apply_scheme(app: &mut KernelApp, scheme: &str) {
 }
 
 struct ThemeSwitchingBasicsView {
-    window: AppWindowId,
+    window: WindowId,
     applied_scheme: Option<Arc<str>>,
 }
 
 impl View for ThemeSwitchingBasicsView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: WindowId) -> Self {
         apply_scheme(app, SCHEME_LIGHT);
 
         Self {

@@ -159,7 +159,7 @@ fn record_value_tx(
 }
 
 impl View for UndoBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: WindowId) -> Self {
         Self {
             value: app.models_mut().insert(0),
             history: app.models_mut().insert(UndoHistory::with_limit(64)),

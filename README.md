@@ -160,7 +160,7 @@ fn install_app(app: &mut KernelApp) {
 }
 
 impl View for TodoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

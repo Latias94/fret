@@ -30,7 +30,7 @@ struct TodoRow {
 struct SimpleTodoView;
 
 impl View for SimpleTodoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
         Self
     }
 

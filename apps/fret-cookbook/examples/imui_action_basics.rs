@@ -29,7 +29,7 @@ struct ImUiActionBasicsView {
 }
 
 impl View for ImUiActionBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: WindowId) -> Self {
         let genui_state = app.models_mut().insert(json!({}));
 
         let genui_spec: SpecV1 = serde_json::from_value(json!({
