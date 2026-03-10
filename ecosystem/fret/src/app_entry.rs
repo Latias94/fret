@@ -106,7 +106,7 @@ impl FretApp {
 
     /// Build a view-runtime app (`fret::view`) and return a runnable builder.
     ///
-    /// This is the recommended authoring loop once `ViewCx` adoption lands for the target area.
+    /// This is the recommended authoring loop once `AppUi` adoption lands for the target area.
     pub fn view<V: crate::view::View>(
         self,
     ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {

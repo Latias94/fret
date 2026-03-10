@@ -398,6 +398,7 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
+        pub use crate::{AppUi, Ui};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, SemanticsRole};
         pub use fret_runtime::{ActionId, CommandId, TypedAction};
@@ -1272,6 +1273,11 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("UiIntoElementTestIdExt"));
         assert!(app_prelude.contains("ElementContextThemeExt"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
+    }
+
+    #[test]
+    fn advanced_prelude_reexports_app_facing_view_aliases() {
+        assert!(LIB_RS.contains("pub use crate::{AppUi, Ui};"));
     }
 
     #[test]

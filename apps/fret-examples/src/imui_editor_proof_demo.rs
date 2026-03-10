@@ -146,7 +146,7 @@ impl View for ImUiEditorProofView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         render_view(cx.elements())
     }
 }

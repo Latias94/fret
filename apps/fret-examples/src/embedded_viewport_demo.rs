@@ -40,7 +40,7 @@ impl View for EmbeddedViewportDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let window = cx.window;
         let theme = Theme::global(&*cx.app).snapshot();
 

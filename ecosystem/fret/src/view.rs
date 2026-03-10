@@ -1,7 +1,8 @@
 //! View authoring runtime (ecosystem-level).
 //!
 //! This module provides a cohesive authoring loop aligned with ADR 0308:
-//! - a stateful `View` object renders into the existing declarative IR (`Elements`),
+//! - a stateful `View` object renders into the existing declarative IR (`Ui`, backed by
+//!   `Elements`),
 //! - views can register typed action handlers (action-first),
 //! - hook-style helpers compose existing mechanism contracts (models + observation).
 //!
@@ -22,15 +23,15 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 #[cfg(feature = "state-query")]
 use std::future::Future;
 
-/// A stateful view object that renders into the existing declarative IR (`Elements`).
+/// A stateful view object that renders into the existing declarative IR (`Ui`).
 pub trait View: 'static {
     /// Initialize the view for a specific window.
     fn init(app: &mut crate::app::App, window: crate::WindowId) -> Self
     where
         Self: Sized;
 
-    /// Render the view into declarative elements.
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, crate::app::App>) -> Elements;
+    /// Render the view into declarative UI.
+    fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui;
 }
 
 pub struct LocalState<T> {

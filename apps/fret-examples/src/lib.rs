@@ -245,7 +245,8 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("RetainedSubtreeProps::new::<App>"));
         assert!(!src.contains("UiChildIntoElement<App>"));
         assert!(
-            src.contains("ViewCx<'_, '_, KernelApp>")
+            src.contains("AppUi<'_, '_>")
+                || src.contains("ViewCx<'_, '_, KernelApp>")
                 || src.contains("ElementContext<'_, KernelApp>")
                 || src.contains("UiTree<KernelApp>")
                 || src.contains("KernelApp::new()")
