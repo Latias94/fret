@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextWrap,
+    Color, Corners, Edges, FontWeight, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
@@ -975,6 +975,8 @@ impl AlertDialogContent {
         let layout = LayoutRefinement::default()
             .w_full()
             .max_w(default_max_w)
+            .min_w_0()
+            .min_h_0()
             .merge(self.layout);
 
         if let Some(max_w) = layout
@@ -999,7 +1001,7 @@ impl AlertDialogContent {
             },
             shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0())
                 .items_stretch(),
             children,
         );
@@ -1154,21 +1156,30 @@ impl AlertDialogHeader {
         // Upstream: `sm:group-data-[size=default]` switches from centered to left-aligned header.
         // We approximate this by inferring `size` from the committed content max-width.
         let left_aligned = sm_breakpoint && !content_is_sm;
+        let text_align = if left_aligned {
+            TextAlign::Start
+        } else {
+            TextAlign::Center
+        };
 
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default(),
-            LayoutRefinement::default().w_full(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
 
-        let children = self.children;
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_alert_dialog_header_text_alignment(child, text_align))
+            .collect();
         let Some(media) = self.media else {
             return shadcn_layout::container_vstack(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items(if left_aligned {
                         fret_ui_kit::Items::Stretch
                     } else {
@@ -1198,7 +1209,7 @@ impl AlertDialogHeader {
                 props,
                 shadcn_layout::HStackProps::default()
                     .gap(Space::N6)
-                    .layout(LayoutRefinement::default().w_full())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items_start(),
                 vec![media, text],
             )
@@ -1210,7 +1221,7 @@ impl AlertDialogHeader {
                 props,
                 shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items_center(),
                 children,
             )
@@ -1557,6 +1568,35 @@ fn patch_alert_dialog_title_text_style_recursive(
         color,
         -0.02,
     );
+}
+
+fn apply_alert_dialog_header_text_alignment(
+    mut element: AnyElement,
+    align: TextAlign,
+) -> AnyElement {
+    let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+        *text_align = align;
+    };
+
+    match &mut element.kind {
+        ElementKind::Text(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::StyledText(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::SelectableText(props) => apply_text(&mut props.layout, &mut props.align),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_alert_dialog_header_text_alignment(child, align))
+        .collect();
+    element
 }
 
 #[derive(Debug)]
@@ -2612,6 +2652,90 @@ mod tests {
         trigger_id.expect("trigger id")
     }
 
+    fn render_alert_dialog_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, _id| Vec::new(),
+                );
+
+                let open_for_dialog = open.clone();
+                let open_for_cancel = open.clone();
+                let open_for_action = open.clone();
+                let content_id_out = content_id_out.clone();
+                let description_id_out = description_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+
+                let alert = AlertDialog::new(open_for_dialog).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let title =
+                            AlertDialogTitle::new("Delete the production project?").into_element(cx);
+                        let description = AlertDialogDescription::new(
+                            "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently, and the content should wrap within the alert dialog panel instead of measuring against the window width.",
+                        )
+                        .into_element(cx);
+                        description_id_out.set(Some(description.id));
+
+                        let header =
+                            AlertDialogHeader::new(vec![title, description]).into_element(cx);
+
+                        let cancel =
+                            AlertDialogCancel::new("Cancel", open_for_cancel.clone()).into_element(cx);
+                        cancel_id_out.set(Some(cancel.id));
+
+                        let action = AlertDialogAction::new("Delete", open_for_action.clone())
+                            .variant(ButtonVariant::Destructive)
+                            .into_element(cx);
+                        action_id_out.set(Some(action.id));
+
+                        let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
+                        let content = AlertDialogContent::new(vec![header, footer]).into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![alert]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
     #[test]
     fn alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm() {
         let window = AppWindowId::default();
@@ -2695,6 +2819,91 @@ mod tests {
         .expect("action bounds");
         assert!((cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5);
         assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
+    }
+
+    #[test]
+    fn alert_dialog_real_content_stays_within_panel_bounds_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 512.5,
+            "expected alert dialog content width to stay near shadcn's sm:max-w-lg, got {content_bounds:?}"
+        );
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside alert dialog content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside alert dialog content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside alert dialog content; content={content_bounds:?} action={action_bounds:?}"
+        );
     }
 
     fn render_alert_dialog_frame_with_auto_focus_hooks(
