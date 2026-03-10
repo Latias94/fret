@@ -41,11 +41,21 @@ Companion docs:
 - [x] Make `fret::app::prelude::*` the only canonical app import and delete the broad `fret::prelude::*` bridge.
 - [x] Add `fret::component::prelude::*`.
 - [x] Add explicit advanced import modules under `fret::advanced::*`.
-- [ ] Remove broad transitive re-export of `fret_ui_kit::prelude::*` from the app surface.
+- [x] Remove broad transitive re-export of `fret_ui_kit::declarative::prelude::*` from the app surface.
 - [ ] Remove low-level mechanism types from the default app prelude:
-  - [ ] `ElementContext`
-  - [ ] `UiTree`
-  - [ ] `UiServices`
+  - [x] `Event`
+  - [x] `ActionId`
+  - [x] `TypedAction`
+  - [x] `UiBuilder`
+  - [x] `UiPatchTarget`
+  - [x] `Length`
+  - [x] `SemanticsProps`
+  - [x] `HoverRegionProps`
+  - [x] `ElementContext`
+  - [x] `UiTree`
+  - [x] `UiServices`
+  - [x] `UiHost`
+  - [x] `AnyElement`
   - [ ] other runner/maintainer-only types
 - [ ] Update crate-level docs to teach the new split.
 

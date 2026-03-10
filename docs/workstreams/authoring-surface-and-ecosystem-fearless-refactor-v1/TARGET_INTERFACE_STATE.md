@@ -46,14 +46,24 @@ Target exports:
 - `ui`
 - `shadcn` (feature-gated)
 - `ThemeSnapshot`
-- typed action/payload action macros and IDs needed by ordinary apps
+- typed action/payload action macros plus `CommandId`
 
 Target non-exports:
 
+- `Event`
 - `ElementContext`
 - `UiTree`
 - `UiServices`
+- `UiHost`
+- `AnyElement`
 - `ModelStore`
+- `ActionId`
+- `TypedAction`
+- `UiBuilder`
+- `UiPatchTarget`
+- `Length`
+- `SemanticsProps`
+- `HoverRegionProps`
 - runner/driver traits
 - viewport/interop traits
 - broad component-author internals
@@ -62,6 +72,8 @@ Target rule:
 
 - if a symbol is primarily useful for component authors or runner authors, it does not belong in
   `fret::app::prelude`.
+- `fret::app::prelude` must use curated exports; it does not blanket re-export
+  `fret_ui_kit::declarative::prelude::*`.
 
 Legacy bridge status:
 

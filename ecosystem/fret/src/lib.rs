@@ -208,15 +208,28 @@ pub mod app {
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};
         pub use crate::{actions, workspace_menu};
-        pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, TextOverflow, TextWrap};
+        pub use fret_core::{AppWindowId, Px, SemanticsRole, TextOverflow, TextWrap};
         pub use fret_icons::IconId;
-        pub use fret_runtime::{ActionId, CommandId, TypedAction};
-        pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps};
+        pub use fret_runtime::CommandId;
         pub use fret_ui::{Theme, ThemeSnapshot};
         pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::icon;
-        pub use fret_ui_kit::declarative::prelude::*;
+        pub use fret_ui_kit::declarative::{
+            AnyElementSemanticsExt, ContainerQueryHysteresis, ElementContextThemeExt,
+            UiIntoElementA11yExt, UiIntoElementKeyContextExt, UiIntoElementTestIdExt,
+            ViewportOrientation, ViewportQueryHysteresis, accent_color, container_breakpoints,
+            container_query_region, container_query_region_with_id, container_width_at_least,
+            contrast_preference, forced_colors_active, forced_colors_mode, occlusion_insets,
+            occlusion_insets_or_zero, preferred_color_scheme, prefers_dark_color_scheme,
+            prefers_more_contrast, prefers_reduced_motion, prefers_reduced_transparency,
+            primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
+            safe_area_insets, safe_area_insets_or_zero, tailwind, text_scale_factor,
+            viewport_aspect_ratio, viewport_breakpoints, viewport_height_at_least,
+            viewport_height_breakpoints, viewport_is_landscape, viewport_is_portrait,
+            viewport_orientation, viewport_tailwind, viewport_width_at_least,
+            window_insets_padding_refinement_or_zero,
+        };
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
@@ -227,7 +240,6 @@ pub mod app {
             resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
             resolve_override_slot_with, resolve_slot,
         };
-        pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
         pub use fret_ui_kit::{
             on_activate, on_activate_notify, on_activate_request_redraw,
             on_activate_request_redraw_notify,
@@ -1127,6 +1139,33 @@ mod authoring_surface_policy_tests {
         &LIB_RS[app_start..component_start]
     }
 
+    fn app_prelude_exports_symbol(symbol: &str) -> bool {
+        app_prelude_source()
+            .split(';')
+            .filter(|statement| statement.contains("pub use "))
+            .any(|statement| statement_mentions_symbol(statement, symbol))
+    }
+
+    fn statement_mentions_symbol(statement: &str, symbol: &str) -> bool {
+        let is_ident_char = |ch: char| ch.is_ascii_alphanumeric() || ch == '_';
+        let mut search_start = 0;
+
+        while let Some(offset) = statement[search_start..].find(symbol) {
+            let start = search_start + offset;
+            let end = start + symbol.len();
+            let before = statement[..start].chars().next_back();
+            let after = statement[end..].chars().next();
+
+            if !before.is_some_and(is_ident_char) && !after.is_some_and(is_ident_char) {
+                return true;
+            }
+
+            search_start = end;
+        }
+
+        false
+    }
+
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(README.contains(
@@ -1153,19 +1192,31 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
         assert!(app_prelude.contains("pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};"));
         assert!(app_prelude.contains("pub use fret_icons::IconId;"));
+        assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
         assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
-        assert!(app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
+        assert!(app_prelude.contains("UiIntoElementA11yExt"));
+        assert!(app_prelude.contains("UiIntoElementKeyContextExt"));
+        assert!(app_prelude.contains("UiIntoElementTestIdExt"));
+        assert!(app_prelude.contains("ElementContextThemeExt"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
     }
 
     #[test]
     fn app_prelude_omits_low_level_mechanism_types() {
-        let app_prelude = app_prelude_source();
-        assert!(!app_prelude.contains("ElementContext"));
-        assert!(!app_prelude.contains("UiTree"));
-        assert!(!app_prelude.contains("UiServices"));
-        assert!(!app_prelude.contains("UiHost"));
-        assert!(!app_prelude.contains("AnyElement"));
+        assert!(!app_prelude_exports_symbol("Event"));
+        assert!(!app_prelude_exports_symbol("ElementContext"));
+        assert!(!app_prelude_exports_symbol("UiTree"));
+        assert!(!app_prelude_exports_symbol("UiServices"));
+        assert!(!app_prelude_exports_symbol("UiHost"));
+        assert!(!app_prelude_exports_symbol("AnyElement"));
+        assert!(!app_prelude_exports_symbol("ActionId"));
+        assert!(!app_prelude_exports_symbol("TypedAction"));
+        assert!(!app_prelude_exports_symbol("UiBuilder"));
+        assert!(!app_prelude_exports_symbol("UiPatchTarget"));
+        assert!(!app_prelude_exports_symbol("HoverRegionProps"));
+        assert!(!app_prelude_exports_symbol("Length"));
+        assert!(!app_prelude_exports_symbol("SemanticsProps"));
     }
 
     #[test]
