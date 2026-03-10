@@ -39,7 +39,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-platform-web/Cargo.toml`
-- `pwsh -NoProfile -File tools/check_layering.ps1`
+- `python tools/check_layering.py`
 
 ## 4) Module ownership map (internal seams)
 
@@ -89,4 +89,3 @@ Evidence anchors:
 
 - Where should the canonical “web platform capabilities defaults” live: this crate, runner-web, or app shells?
 - Do we want a uniform error taxonomy for browser API failures (structured kinds), or is “best-effort + fallback events” sufficient?
-

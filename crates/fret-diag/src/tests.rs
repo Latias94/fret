@@ -1180,6 +1180,7 @@ fn run_script_over_transport_dump_bundle_with_trace_writes_run_id_trace_chrome_j
         .flatten()
         .filter_map(|f| f.get("id").and_then(|v| v.as_str()))
         .collect::<Vec<_>>();
+    assert!(ids.contains(&"script_result"));
     assert!(ids.contains(&"trace_chrome_json"));
 }
 

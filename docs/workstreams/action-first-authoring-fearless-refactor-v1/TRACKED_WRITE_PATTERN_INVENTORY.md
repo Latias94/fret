@@ -38,8 +38,8 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 
 | Surface | What it demonstrates |
 | --- | --- |
-| `apps/fret-cookbook/examples/simple_todo_v2_target.rs` | `LocalState<Vec<_>>` + `value_in*` + `update_in_if` for list mutations |
-| `apps/fret-cookbook/examples/simple_todo.rs` | Remaining explicit-model collection comparison surface |
+| `apps/fret-cookbook/examples/simple_todo.rs` | Default cookbook keyed list now on `LocalState<Vec<_>>` + payload row toggle |
+| `apps/fret-cookbook/examples/simple_todo_v2_target.rs` | Denser `LocalState<Vec<_>>` comparison surface with payload-row/root-handler pressure still visible |
 | `apps/fretboard/src/scaffold/templates.rs` | Template default path now using `LocalState<Vec<_>>` for the simple keyed-list scaffold while still relying on `on_action_notify_models` for coordinated writes |
 | `apps/fret-cookbook/examples/text_input_basics.rs` | Multi-state local transaction that still fits `on_action_notify_models` cleanly |
 | `apps/fret-examples/src/hello_counter_demo.rs` | Straight local writes that do not need more than current helpers |
@@ -56,7 +56,7 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 
 | Open question | Current recommendation |
 | --- | --- |
-| Should multi-state transactions get another default helper beyond `on_action_notify_models`? | Not yet. First gather more evidence from explicit-model collection surfaces and templates. |
+| Should multi-state transactions get another default helper beyond `on_action_notify_models`? | Not yet. First gather more evidence from intentionally advanced explicit-model surfaces and richer templates. |
 | Should shared explicit-model collection writes get a handled-aware helper too? | Probably not by default; the shared-model boundary is usually the reason the code is more explicit. |
 | Should payload/local collection flows get dedicated sugar? | Not yet. `on_payload_action_notify` + `update_in_if` is currently readable enough. |
 

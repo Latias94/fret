@@ -4,76 +4,38 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 
 fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        2,
-        [
-            shadcn::TableHead::new("Part").into_element(cx),
-            shadcn::TableHead::new("Fret surface").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |part: &'static str, surface: &'static str| {
+        shadcn::TableRow::build(2, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(surface)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("ModelSelector")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Thin dialog root that owns open state only, now with a Rust-friendly `into_element_with_children(...)` compound entrypoint. Selected model and search query stay app-owned."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("ModelSelectorTrigger")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Recipe-level trigger surface that opens the dialog while letting apps compose provider logos and names explicitly."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("ModelSelectorContent + Dialog")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Dialog shell with accessible title plus command container. `ModelSelectorDialog` remains the alternate full command-dialog surface."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Input / List / Empty / Group / Item / Shortcut / Separator")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("These parts intentionally lean on shared `Command*` surfaces, which matches the upstream component's thin-wrapper nature and keeps behavior centralized."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Logo / LogoGroup / Name")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Presentation helpers for provider identity. The current Fret port uses local placeholder badges instead of the official remote `models.dev` SVG source."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(2, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Fret surface").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("ModelSelector", "Thin dialog root that owns open state only, now with a Rust-friendly `into_element_with_children(...)` compound entrypoint. Selected model and search query stay app-owned."));
+                out.push_ui(cx, row("ModelSelectorTrigger", "Recipe-level trigger surface that opens the dialog while letting apps compose provider logos and names explicitly."));
+                out.push_ui(cx, row("ModelSelectorContent + Dialog", "Dialog shell with accessible title plus command container. `ModelSelectorDialog` remains the alternate full command-dialog surface."));
+                out.push_ui(cx, row("Input / List / Empty / Group / Item / Shortcut / Separator", "These parts intentionally lean on shared `Command*` surfaces, which matches the upstream component's thin-wrapper nature and keeps behavior centralized."));
+                out.push_ui(cx, row("Logo / LogoGroup / Name", "Presentation helpers for provider identity. The current Fret port uses local placeholder badges instead of the official remote `models.dev` SVG source."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 pub(super) fn preview_ai_model_selector_demo(

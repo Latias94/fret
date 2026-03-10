@@ -443,8 +443,8 @@ If a change touches a hot path (dispatch/layout/paint) or interaction semantics,
 
 | level | minimum gates | typical outputs |
 | --- | --- | --- |
-| L0 | `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate <crate>` | 3–10 hazards + a short next-steps list |
-| L1 | L0 + `pwsh -NoProfile -File tools/check_layering.ps1` + `cargo fmt` + `cargo nextest run -p <crate>` | at least one new regression gate, plus 3–8 landable refactor steps |
+| L0 | `python tools/audit_crate.py --crate <crate>` | 3–10 hazards + a short next-steps list |
+| L1 | L0 + `python tools/check_layering.py` + `cargo fmt` + `cargo nextest run -p <crate>` | at least one new regression gate, plus 3–8 landable refactor steps |
 | L2 | L1 + `cargo clippy --workspace --all-targets -- -D warnings` + at least one `fretboard diag` suite or perf gate (as applicable) | contract closure notes, portability review, and ADR alignment updates if touched |
 
 ### What “Rust best practices” means in this repo (non-normative)
@@ -511,8 +511,8 @@ Gate tiers (suggested; tune to your machine/CI budgets):
 
 Canonical scripts (keep these stable so “fearless” stays repeatable):
 
-- Fast: `pwsh -NoProfile -File tools/gates_fast.ps1`
-- Full: `pwsh -NoProfile -File tools/gates_full.ps1`
+- Fast: `python tools/gates_fast.py`
+- Full: `python tools/gates_full.py`
   - Note: the heaviest shadcn web-golden-backed conformance tests are gated behind
     `--features web-goldens` for `fret-ui-shadcn` to keep the default inner loop cheaper.
 

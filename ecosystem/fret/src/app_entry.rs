@@ -3,7 +3,7 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
-use crate::{Defaults, Result, UiAppBuilder, UiAppDriver, ViewElements};
+use crate::{Defaults, Result, UiAppBuilder, UiAppDriver};
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
@@ -114,64 +114,6 @@ impl App {
         self
     }
 
-    /// Build a UI app from `init_window` + `view` and return a runnable builder.
-    pub fn ui<S: 'static>(
-        self,
-        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
-        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
-    ) -> Result<UiAppBuilder<S>> {
-        self.ui_with_hooks(init_window, view, |driver| driver)
-    }
-
-    /// Same as [`ui`](Self::ui), but keeps the `UiAppDriver` configuration seam available on
-    /// the builder path.
-    pub fn ui_with_hooks<S: 'static>(
-        self,
-        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
-        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
-        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-    ) -> Result<UiAppBuilder<S>> {
-        let App {
-            root_name,
-            main_window,
-            defaults,
-            command_palette,
-            install_app_hooks,
-            install_hooks,
-            register_icon_pack_hooks,
-        } = self;
-
-        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
-            .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
-        #[cfg(feature = "shadcn")]
-        let driver = driver.on_global_changes_middleware(
-            crate::shadcn_sync_theme_from_environment_on_global_changes::<S>,
-        );
-        #[cfg(feature = "command-palette")]
-        let driver = {
-            let mut driver = configure(UiAppDriver::new(driver));
-            if command_palette {
-                driver = driver.command_palette(true);
-            }
-            driver
-        };
-        #[cfg(not(feature = "command-palette"))]
-        let driver = {
-            let _ = command_palette;
-            configure(UiAppDriver::new(driver))
-        };
-
-        finish_builder(
-            root_name,
-            main_window,
-            defaults,
-            install_app_hooks,
-            install_hooks,
-            register_icon_pack_hooks,
-            driver,
-        )
-    }
-
     /// Build a view-runtime app (`fret::view`) and return a runnable builder.
     ///
     /// This is the recommended authoring loop once `ViewCx` adoption lands for the target area.
@@ -254,24 +196,6 @@ impl App {
         self.view_with_hooks::<V>(configure)?.run()
     }
 
-    /// Convenience: build a UI app and run it immediately.
-    pub fn run_ui<S: 'static>(
-        self,
-        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
-        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
-    ) -> Result<()> {
-        self.ui(init_window, view)?.run()
-    }
-
-    /// Convenience: build a UI app with driver hooks and run it immediately.
-    pub fn run_ui_with_hooks<S: 'static>(
-        self,
-        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
-        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
-        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-    ) -> Result<()> {
-        self.ui_with_hooks(init_window, view, configure)?.run()
-    }
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

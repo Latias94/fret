@@ -260,6 +260,15 @@ impl BreadcrumbItem {
         self
     }
 
+    /// Bind a stable action ID to this breadcrumb item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self

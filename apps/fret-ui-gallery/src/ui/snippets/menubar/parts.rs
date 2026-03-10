@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("parts.rs");
 
 // region: example
 use fret_core::Px;
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -14,6 +15,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::MenubarContent::new(),
             [
                 shadcn::MenubarItem::new("New Tab")
+                    .action(CommandId::new("ui_gallery.menubar.parts.new_tab"))
                     .test_id("ui-gallery-menubar-parts-item-new-tab")
                     .into(),
                 shadcn::MenubarSeparator::new().into(),
@@ -22,9 +24,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .refine(|item| item.test_id("ui-gallery-menubar-parts-item-share")),
                     shadcn::MenubarSubContent::new([
                         shadcn::MenubarItem::new("Email link")
+                            .action(CommandId::new("ui_gallery.menubar.parts.share.email_link"))
                             .test_id("ui-gallery-menubar-parts-sub-email")
                             .into(),
                         shadcn::MenubarItem::new("Messages")
+                            .action(CommandId::new("ui_gallery.menubar.parts.share.messages"))
                             .test_id("ui-gallery-menubar-parts-sub-messages")
                             .into(),
                     ]),

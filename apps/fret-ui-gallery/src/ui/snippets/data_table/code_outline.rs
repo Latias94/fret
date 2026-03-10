@@ -7,7 +7,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![shadcn::typography::muted(
             cx,
-            "Key snippets for the guide-aligned recipe surface.",
+            "Reference outline only: the default recipe lives above, and these snippets map the denser advanced guide-aligned surface.",
         )]
     })
     .gap(Space::N2)

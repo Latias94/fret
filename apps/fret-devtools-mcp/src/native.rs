@@ -8,11 +8,16 @@ use std::time::Duration;
 use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionStatusV1,
+    RegressionSummaryV1,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
+};
+use fret_diag::{
+    DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
+    dashboard_human_lines_from_projection, project_dashboard_summary,
 };
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
@@ -1604,6 +1609,14 @@ struct DashboardFailingSummaryEntryV1 {
     items_total: u64,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+struct RegressionDashboardEvidenceV1 {
+    #[serde(default)]
+    capability_sources: Vec<String>,
+    #[serde(default)]
+    capabilities_check_paths: Vec<String>,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct RegressionDashboardResultV1 {
     schema_version: u32,
@@ -1620,9 +1633,42 @@ struct RegressionDashboardResultV1 {
     tool_counters: Vec<DashboardCountEntryV1>,
     top_reason_codes: Vec<DashboardReasonCodeEntryV1>,
     failing_summaries: Vec<DashboardFailingSummaryEntryV1>,
+    #[serde(default)]
+    capability_sources: Vec<String>,
+    #[serde(default)]
+    capabilities_check_paths: Vec<String>,
     human_summary: String,
     #[serde(default)]
     index_json: Option<String>,
+}
+
+impl From<DashboardCountEntry> for DashboardCountEntryV1 {
+    fn from(value: DashboardCountEntry) -> Self {
+        Self {
+            key: value.key,
+            count: value.count,
+        }
+    }
+}
+
+impl From<DashboardReasonCodeEntry> for DashboardReasonCodeEntryV1 {
+    fn from(value: DashboardReasonCodeEntry) -> Self {
+        Self {
+            reason_code: value.reason_code,
+            count: value.count,
+        }
+    }
+}
+
+impl From<DashboardFailingSummaryEntry> for DashboardFailingSummaryEntryV1 {
+    fn from(value: DashboardFailingSummaryEntry) -> Self {
+        Self {
+            path: value.path,
+            lane: value.lane,
+            failures: value.failures,
+            items_total: value.items_total,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -2147,6 +2193,91 @@ fn session_resource_uris(
     uris
 }
 
+fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(path) = value.get("path").and_then(|value| value.as_str())
+        && !path.trim().is_empty()
+    {
+        return Some(path.to_string());
+    }
+    if let Some(label) = value.get("label").and_then(|value| value.as_str())
+        && !label.trim().is_empty()
+    {
+        return Some(label.to_string());
+    }
+    let transport = value.get("transport").and_then(|value| value.as_str());
+    let session_id = value.get("session_id").and_then(|value| value.as_str());
+    match (transport, session_id) {
+        (Some(transport), Some(session_id))
+            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
+        {
+            Some(format!("{transport}:{session_id}"))
+        }
+        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
+        _ => None,
+    }
+}
+
+fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashboardEvidenceV1 {
+    let Ok(summary_json) = std::fs::read_to_string(summary_path) else {
+        return RegressionDashboardEvidenceV1::default();
+    };
+    let Ok(summary) = serde_json::from_str::<RegressionSummaryV1>(&summary_json) else {
+        return RegressionDashboardEvidenceV1::default();
+    };
+    let mut evidence = RegressionDashboardEvidenceV1::default();
+    for item in summary.items {
+        if item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+        let capability_source = item
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.extra.as_ref())
+            .and_then(|extra| extra.get("capability_source"))
+            .and_then(capability_source_display_from_value)
+            .or_else(|| {
+                item.source
+                    .as_ref()
+                    .and_then(|source| source.metadata.as_ref())
+                    .and_then(|metadata| metadata.get("capability_source"))
+                    .and_then(capability_source_display_from_value)
+            })
+            .or_else(|| {
+                item.evidence
+                    .as_ref()
+                    .and_then(|evidence| evidence.extra.as_ref())
+                    .and_then(|extra| extra.get("capabilities_source_path"))
+                    .and_then(|value| value.as_str())
+                    .filter(|value| !value.trim().is_empty())
+                    .map(ToString::to_string)
+            });
+        if let Some(source) = capability_source
+            && !evidence
+                .capability_sources
+                .iter()
+                .any(|existing| existing == &source)
+        {
+            evidence.capability_sources.push(source);
+        }
+        if let Some(check_path) = item
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.extra.as_ref())
+            .and_then(|extra| extra.get("capabilities_check_path"))
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(ToString::to_string)
+            && !evidence
+                .capabilities_check_paths
+                .iter()
+                .any(|existing| existing == &check_path)
+        {
+            evidence.capabilities_check_paths.push(check_path);
+        }
+    }
+    evidence
+}
+
 fn build_regression_dashboard_result(
     dir: String,
     index_path: &Path,
@@ -2155,162 +2286,67 @@ fn build_regression_dashboard_result(
     include_json: bool,
     index_json: Option<String>,
 ) -> RegressionDashboardResultV1 {
-    let kind = payload
-        .get("kind")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-    let out_dir = payload
-        .get("out_dir")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-    let summaries_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| rows.len() as u64)
-        .unwrap_or(0);
-    let items_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
-                .sum::<u64>()
-        })
-        .unwrap_or(0);
-    let status_counters = dashboard_counter_entries(payload, "/counters/by_status");
-    let lane_counters = dashboard_counter_entries(payload, "/counters/by_lane");
-    let tool_counters = dashboard_counter_entries(payload, "/counters/by_tool");
-    let top_reason_codes = dashboard_reason_code_entries(payload, top);
-    let failing_summaries = dashboard_failing_summary_entries(payload, top);
-
-    let mut lines = vec![format!("dashboard index: {}", index_path.display())];
-    if let Some(kind) = kind.as_deref() {
-        lines.push(format!("kind: {kind}"));
+    let projection = project_dashboard_summary(payload, top);
+    let summary_path = index_path.with_file_name(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let evidence = collect_regression_dashboard_evidence(&summary_path);
+    let mut human_lines = dashboard_human_lines_from_projection(index_path, &projection);
+    if !evidence.capability_sources.is_empty() {
+        human_lines.push("capability sources:".to_string());
+        human_lines.extend(
+            evidence
+                .capability_sources
+                .iter()
+                .map(|source| format!("  - {source}")),
+        );
     }
-    if let Some(out_dir) = out_dir.as_deref() {
-        lines.push(format!("out_dir: {out_dir}"));
+    if !evidence.capabilities_check_paths.is_empty() {
+        human_lines.push("capability checks:".to_string());
+        human_lines.extend(
+            evidence
+                .capabilities_check_paths
+                .iter()
+                .map(|path| format!("  - {path}")),
+        );
     }
-    lines.push(format!("summaries_total: {summaries_total}"));
-    lines.push(format!("items_total: {items_total}"));
-    push_counter_lines(&mut lines, "status counters", &status_counters);
-    push_counter_lines(&mut lines, "lane counters", &lane_counters);
-    push_counter_lines(&mut lines, "tool counters", &tool_counters);
-    if !top_reason_codes.is_empty() {
-        lines.push("top reason codes:".to_string());
-        for row in &top_reason_codes {
-            lines.push(format!("  {}: {}", row.reason_code, row.count));
-        }
-    }
-    if !failing_summaries.is_empty() {
-        lines.push("failing summaries:".to_string());
-        for row in &failing_summaries {
-            lines.push(format!(
-                "  {} | lane={} failures={} items={}",
-                row.path, row.lane, row.failures, row.items_total
-            ));
-        }
-    }
+    let human_summary = human_lines.join("\n");
 
     RegressionDashboardResultV1 {
         schema_version: 1,
         dir,
         index_path: index_path.to_string_lossy().to_string(),
-        kind,
-        out_dir,
-        summaries_total,
-        items_total,
-        status_counters,
-        lane_counters,
-        tool_counters,
-        top_reason_codes,
-        failing_summaries,
-        human_summary: lines.join(
-            "
-",
-        ),
+        kind: projection.kind,
+        out_dir: projection.out_dir,
+        summaries_total: projection.summaries_total as u64,
+        items_total: projection.items_total,
+        status_counters: projection
+            .status_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        lane_counters: projection
+            .lane_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        tool_counters: projection
+            .tool_counters
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        top_reason_codes: projection
+            .top_reason_codes
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        failing_summaries: projection
+            .failing_summaries
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+        capability_sources: evidence.capability_sources,
+        capabilities_check_paths: evidence.capabilities_check_paths,
+        human_summary,
         index_json: if include_json { index_json } else { None },
-    }
-}
-
-fn dashboard_counter_entries(
-    payload: &serde_json::Value,
-    pointer: &str,
-) -> Vec<DashboardCountEntryV1> {
-    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
-        return Vec::new();
-    };
-    let mut rows: Vec<DashboardCountEntryV1> = obj
-        .iter()
-        .filter_map(|(key, value)| {
-            Some(DashboardCountEntryV1 {
-                key: key.to_string(),
-                count: value.as_u64()?,
-            })
-        })
-        .collect();
-    rows.sort_by(|a, b| a.key.cmp(&b.key));
-    rows
-}
-
-fn dashboard_reason_code_entries(
-    payload: &serde_json::Value,
-    top: usize,
-) -> Vec<DashboardReasonCodeEntryV1> {
-    payload
-        .get("top_reason_codes")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .take(top)
-                .map(|row| DashboardReasonCodeEntryV1 {
-                    reason_code: row
-                        .get("reason_code")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    count: row.get("count").and_then(|v| v.as_u64()).unwrap_or(0),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn dashboard_failing_summary_entries(
-    payload: &serde_json::Value,
-    top: usize,
-) -> Vec<DashboardFailingSummaryEntryV1> {
-    payload
-        .get("failing_summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .take(top)
-                .map(|row| DashboardFailingSummaryEntryV1 {
-                    path: row
-                        .get("path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    lane: row
-                        .get("lane")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("<unknown>")
-                        .to_string(),
-                    failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
-                    items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn push_counter_lines(lines: &mut Vec<String>, title: &str, rows: &[DashboardCountEntryV1]) {
-    if rows.is_empty() {
-        return;
-    }
-    lines.push(format!("{title}:"));
-    for row in rows {
-        lines.push(format!("  {}: {}", row.key, row.count));
     }
 }
 
@@ -2803,6 +2839,15 @@ mod tests {
 
     #[test]
     fn build_regression_dashboard_result_limits_top_rows_and_builds_human_summary() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-regression-dashboard-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let index_path = dir.join("regression.index.json");
+        let summary_path = dir.join("regression.summary.json");
         let payload = serde_json::json!({
             "kind": "diag_regression_index",
             "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
@@ -2811,7 +2856,7 @@ mod tests {
                 { "items_total": 3 }
             ],
             "counters": {
-                "by_status": { "passed": 3, "failed_deterministic": 2 },
+                "by_status": { "passed": 3, "failed_deterministic": 2, "skipped_policy": 1 },
                 "by_lane": { "smoke": 1, "perf": 1 },
                 "by_tool": { "suite": 1, "perf": 1 }
             },
@@ -2824,10 +2869,44 @@ mod tests {
                 { "path": "b/regression.summary.json", "lane": "perf", "failures": 1, "items_total": 3 }
             ]
         });
+        let summary_payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "evidence": {
+                        "extra": {
+                            "capability_source": {
+                                "kind": "filesystem",
+                                "path": "target/fret-diag/capabilities.json",
+                                "label": "filesystem:target/fret-diag/capabilities.json",
+                                "transport": "filesystem",
+                                "session_id": null
+                            },
+                            "capabilities_check_path": "target/fret-diag/campaigns/ui-gallery/check.capabilities.json"
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(
+            &summary_path,
+            serde_json::to_vec_pretty(&summary_payload).unwrap(),
+        )
+        .unwrap();
 
         let result = build_regression_dashboard_result(
             "target/fret-diag/campaigns/ui-gallery-pr".to_string(),
-            Path::new("F:/repo/target/fret-diag/campaigns/ui-gallery-pr/regression.index.json"),
+            &index_path,
             &payload,
             1,
             false,
@@ -2838,8 +2917,84 @@ mod tests {
         assert_eq!(result.items_total, 5);
         assert_eq!(result.top_reason_codes.len(), 1);
         assert_eq!(result.failing_summaries.len(), 1);
+        assert!(
+            result
+                .status_counters
+                .iter()
+                .any(|entry| entry.key == "skipped_policy" && entry.count == 1)
+        );
+        assert!(result.human_summary.contains("normalized status counters:"));
+        assert!(result.human_summary.contains("skipped_policy: 1"));
+        assert!(result.human_summary.contains("non-passing summaries:"));
         assert!(result.human_summary.contains("top reason codes:"));
         assert!(result.human_summary.contains("pixel_diff: 4"));
+        assert_eq!(
+            result.capability_sources,
+            vec!["target/fret-diag/capabilities.json".to_string()]
+        );
+        assert_eq!(
+            result.capabilities_check_paths,
+            vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
+        );
+        assert!(result.human_summary.contains("capability sources:"));
+        assert!(result.human_summary.contains("capability checks:"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn collect_regression_dashboard_evidence_falls_back_to_capability_source_label() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-regression-evidence-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let summary_path = dir.join("regression.summary.json");
+        let summary_payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "source": {
+                        "metadata": {
+                            "capability_source": {
+                                "kind": "transport_session",
+                                "path": null,
+                                "label": "devtools_ws:session-123",
+                                "transport": "devtools_ws",
+                                "session_id": "session-123"
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(
+            &summary_path,
+            serde_json::to_vec_pretty(&summary_payload).unwrap(),
+        )
+        .unwrap();
+
+        let evidence = collect_regression_dashboard_evidence(&summary_path);
+
+        assert_eq!(
+            evidence.capability_sources,
+            vec!["devtools_ws:session-123".to_string()]
+        );
+        assert!(evidence.capabilities_check_paths.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

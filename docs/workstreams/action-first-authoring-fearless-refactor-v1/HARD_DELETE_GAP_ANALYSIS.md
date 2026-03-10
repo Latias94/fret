@@ -1,6 +1,15 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Hard-Delete Gap Analysis
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
+
+Related execution sequence:
+
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 
 This note answers a narrower question than the main v2 proposal:
 
@@ -11,6 +20,10 @@ Short answer:
 - **MVU itself is already hard-deleted in-tree.**
 - **The repo is not yet ready to hard-delete every remaining compatibility surface around the new default path.**
 - The remaining blockers are no longer architectural unknowns; they are now mostly **surface-policy decisions** plus a small number of **migration/gating tasks**.
+- The concrete execution order for those decisions now lives in
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`.
+- A compressed “what is actually next” read now also lives in
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`.
 
 ---
 
@@ -34,35 +47,42 @@ Reference anchors:
 
 ## Remaining blockers before broader hard deletes
 
-## 1) App-entry closure surface still exists as a supported public path
+Current prioritization (2026-03-09):
+
+- `App::ui*` is no longer a blocker; the pre-release hard delete has already landed.
+- `run_native_with_compat_driver(...)` and `use_state::<T>()` are both currently better framed as
+  intentional advanced/non-default seams than as near-term hard-delete targets.
+- The command-first widget family is no longer the repo’s default next broad implementation pass.
+  The obvious app-facing/internal residue is now much smaller: the curated post-v1 follow-up
+  aligned workspace tab-strip overflow and GenUI shadcn overlay menu rows to `action(...)`, and
+  the remaining visible cases are mostly intentional retained surfaces now recorded in
+  `COMMAND_FIRST_INTENTIONAL_SURFACES.md`.
+
+## 1) App-entry closure surface is now closed on the public facade
 
 Current state:
 
-- `fret::App::{ui, ui_with_hooks}` still exist as public entry points.
-- `view::<V>()` is now the documented default, but the closure entry path is still live and still used by some advanced demos.
+- `fret::App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` no longer exist on the public facade.
+- `view::<V>()` / `view_with_hooks::<V>(...)` are the only documented app-entry paths on `fret`.
+- README/rustdoc policy is locked by an in-crate test plus `tools/gate_fret_builder_only_surface.py`.
 
 Evidence anchors:
 
 - `ecosystem/fret/src/app_entry.rs`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/README.md`
-- `apps/fret-examples/src/assets_demo.rs`
-- `apps/fret-examples/src/embedded_viewport_demo.rs`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
 
-Why this blocks deletion:
+Why this no longer blocks cleanup:
 
-- We have not yet made a repo-level decision whether `ui(...)` is:
-  - a permanent secondary surface,
-  - an advanced-only escape hatch, or
-  - a true legacy surface to deprecate.
+- no in-tree callers remained before the patch,
+- the surface had not shipped in a published `fret` release,
+- and the repo chose to eliminate the split mental model before public release.
 
-Required before hard delete:
+Required after hard delete:
 
-- Recommended policy draft now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`.
-- Adopt one explicit policy: either keep `ui(...)` as advanced-only bridge surface, or begin a deprecation plan toward removal.
-- After that choice, migrate the remaining advanced demos and add the matching gate/deprecation window.
-- The current caller-by-caller migration table now lives in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`.
-- Progress update (as of 2026-03-09): the in-tree Batch A/B/C callers tracked in that inventory have now moved to `view::<V>()` / `view_with_hooks::<V>(...)`; the blocker is now deprecation/removal sequencing, not unresolved demo migration.
+- preserve the docs/test gate so `view::<V>()` remains the only default teaching path,
+- treat any future restoration of closure-root app entry as a new product decision.
 
 ---
 
@@ -80,11 +100,13 @@ Evidence anchors:
 - `apps/fret-examples/src/lib.rs`
 - `apps/fret-examples/src/area_demo.rs`
 - `apps/fret-examples/src/plot3d_demo.rs`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 
 Why this blocks deletion:
 
 - The repo has not yet separated “advanced interop runner surface we keep on purpose” from “temporary compat path we intend to remove”.
 - Hard-deleting it today would be a product decision, not just cleanup.
+- The current caller inventory now shows three real in-tree families (plot/chart demos, low-level renderer/asset demos, advanced shell demos), which strengthens the case that this is not a trivial leftover.
 
 Required before hard delete:
 
@@ -93,6 +115,15 @@ Required before hard delete:
   - quarantine/deprecate/remove candidate.
 - If removal is desired, migrate the plot/chart demo family first or move the surface behind an explicit compat boundary.
 
+Progress update (as of 2026-03-09):
+
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+  now recommends keeping `run_native_with_compat_driver(...)` for now as an advanced low-level
+  interop seam and deferring hard delete until a clearer quarantine/replacement plan exists.
+- `ecosystem/fret/README.md` and `ecosystem/fret/src/lib.rs` now match that policy wording, so the
+  remaining compat-driver work is product-surface policy / possible future quarantine rather than
+  basic docs cleanup.
+
 ---
 
 ## 3) `use_state::<T>()` still survives as a user-visible compatibility alias
@@ -100,7 +131,7 @@ Required before hard delete:
 Current state:
 
 - `use_local*` is now the intended default teaching surface.
-- `use_state::<T>()` still exists and still appears in a small number of starter/reference snippets.
+- `use_state::<T>()` still exists as public API, but direct runtime/teaching-surface callers have now been migrated off it.
 
 Evidence anchors:
 
@@ -109,6 +140,8 @@ Evidence anchors:
 - `apps/fret-cookbook/examples/overlay_basics.rs`
 - `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
+- `apps/fretboard/src/scaffold/templates.rs`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 
 Why this blocks deletion:
 
@@ -116,11 +149,24 @@ Why this blocks deletion:
   - a permanent shorthand for simple local slots,
   - a deprecated alias to be steered toward `use_local*`, or
   - a future API that should be repointed to a different semantics.
+- The current caller inventory now shows that the remaining pressure is no longer starter/reference
+  leakage; it is now almost entirely policy/facade clarity around a still-public raw-model seam.
 
 Required before hard delete:
 
 - Decide whether `use_state` stays or becomes a deprecation target.
-- If it becomes legacy, migrate the remaining teaching/reference surfaces and add a gate so new docs/examples stop introducing it.
+- If it becomes legacy, add a narrow gate so new docs/examples/templates stop reintroducing it.
+
+Progress update (as of 2026-03-09):
+
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+  now recommends keeping `use_state` for now as an explicit raw-model hook, while treating
+  `use_local*` as the only default local-state teaching path.
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
+  now records that the starter/reference callers have moved to `use_local*`, leaving `use_state`
+  present only in the runtime/API substrate plus intentional migration/contract docs.
+- `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved
+  first-contact/reference files, and scaffold template output remains covered by unit assertions.
 
 ---
 
@@ -138,6 +184,7 @@ Evidence anchors:
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
 - `ecosystem/fret-ui-material3/src/snackbar.rs`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
 
 Why this blocks deletion:
 
@@ -149,6 +196,18 @@ Required before hard delete:
 - Decide whether `CommandId` remains a permanent mechanism-level contract for these widgets.
 - If not, add typed-action adapters/replacements and move `CommandId` out of the default teaching surface.
 - Only then consider deprecating the direct command-first widget APIs.
+
+Progress update (as of 2026-03-09):
+
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+  now scopes this blocker into three buckets:
+  - already-aligned dual-surface widgets (`Button`, `CommandItem`),
+  - menu-family alias candidates (`ContextMenu*`, `Menubar*`),
+  - and lower-risk app-facing alias candidates (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`).
+- The first low-risk alias pass has now started: `BreadcrumbItem::action(...)`,
+  `NavigationMenuLink::action(...)`, and `NavigationMenuItem::action(...)` are landed, while the
+  heavier menu-family item APIs remain the main unfinished command-first surface.
+- This means the blocker is now implementation-scoped rather than an unbounded policy blob.
 
 ---
 
@@ -188,17 +247,15 @@ These surfaces may still be noisy, but they are **not** the same as the remainin
 
 ## Recommended hard-delete sequence from here
 
-1. **Decide app-entry policy**
-   - Is `App::ui(...)` advanced-but-supported, or on a path to deprecation?
-2. **Decide compat-driver policy**
+1. **Decide compat-driver policy**
    - Keep as advanced interop, or quarantine/remove?
-3. **Decide `use_state` fate**
+2. **Decide `use_state` fate**
    - Permanent shorthand, or deprecated alias in favor of `use_local*`?
-4. **Decide command-contract policy**
+3. **Decide command-contract policy**
    - Permanent mechanism-level `CommandId`, or migrate more widgets toward typed-action-first adapters?
-5. **Then add targeted gates + deprecations**
+4. **Then add targeted gates + deprecations**
    - only after the above four decisions are explicit.
-6. **Only then hard-delete what is truly legacy**
+5. **Only then hard-delete what is truly legacy**
    - keep advanced/interop surfaces if they are intentional product choices.
 
 ---
@@ -209,7 +266,7 @@ The repo is now much closer to a clean hard-delete phase than it was during the 
 
 What remains is mostly:
 
-- **one app-entry decision**,
+- **one closed app-entry lane that now serves as precedent**,
 - **one compat-runner decision**,
 - **one local-state alias decision**,
 - **one command-contract decision**,

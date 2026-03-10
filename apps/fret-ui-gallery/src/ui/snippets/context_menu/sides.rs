@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("sides.rs");
 // region: example
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
+use fret_runtime::CommandId;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, GridProps};
 use fret_ui_kit::declarative::style as decl_style;
@@ -61,9 +62,15 @@ fn side_menu<H: UiHost>(
             |_cx| {
                 vec![
                     shadcn::ContextMenuGroup::new(vec![
-                        shadcn::ContextMenuItem::new("Back").into(),
-                        shadcn::ContextMenuItem::new("Forward").into(),
-                        shadcn::ContextMenuItem::new("Reload").into(),
+                        shadcn::ContextMenuItem::new("Back")
+                            .action(CommandId::new("ui_gallery.context_menu.sides.back"))
+                            .into(),
+                        shadcn::ContextMenuItem::new("Forward")
+                            .action(CommandId::new("ui_gallery.context_menu.sides.forward"))
+                            .into(),
+                        shadcn::ContextMenuItem::new("Reload")
+                            .action(CommandId::new("ui_gallery.context_menu.sides.reload"))
+                            .into(),
                     ])
                     .into(),
                 ]

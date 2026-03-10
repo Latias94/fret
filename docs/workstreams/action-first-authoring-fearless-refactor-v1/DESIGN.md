@@ -496,7 +496,7 @@ What remains intentionally deferred to a later phase:
 - `ViewCx::use_state` still returns `Model<T>` rather than offering a plain-Rust local-state story,
 - medium demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes,
 - `ui::children!` remains the dominant composition style instead of builder-only composition,
-- widget-local action sugar such as `listener` / `dispatch` / `shortcut` is not yet the default mental model,
+- keyed-list / payload-row handler ergonomics are not yet productized as a narrow default follow-up,
 - some App/transient-effect cases still require explicit scheduling ceremony.
 
 Recommendation:

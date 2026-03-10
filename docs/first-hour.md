@@ -8,6 +8,8 @@ Goals:
 - Learn the minimum mental model needed to keep making progress.
 - Avoid early concept overload (selectors/queries/advanced interop).
 
+This guide is the **default** path, not the comparison or maintainer path.
+
 Non-goals:
 
 - Web/wasm setup (follow [docs/ui-ergonomics-and-interop.md](./ui-ergonomics-and-interop.md) and [apps/fret-demo-web](../apps/fret-demo-web)).
@@ -38,6 +40,8 @@ Why `simple-todo`?
 
 - It is **LocalState + view runtime + typed actions + keyed lists** only.
 - It intentionally does **not** pull in `fret-selector` or `fret-query`.
+- It is the boring default path for a first real app, while `todo` is the richer follow-up and
+  `simple_todo_v2_target` remains comparison-only.
 
 ## 2) Where to edit
 
@@ -51,6 +55,12 @@ The template is intentionally small:
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
 - `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.on_action_notify_models`, `cx.on_action_notify_transient`, plus local `on_activate*` only when widget glue truly needs it.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
+
+### Path taxonomy
+
+- **Default**: `hello`, `simple-todo`, `todo`
+- **Comparison**: `simple_todo_v2_target`
+- **Advanced**: gallery, viewport/interop, docking, renderer-heavy demos
 
 ## 3) The three things you should learn first
 
@@ -77,9 +87,17 @@ for item in items {
 }
 ```
 
-### B) The authoring dialect: `ui::*` constructors + `UiBuilder`
+### B) The authoring dialect: one small default surface
 
-In the onboarding path, you will mostly author UI via `ui::*` constructors from `fret_ui_shadcn::prelude::*`.
+In the onboarding path, stay on one small surface:
+
+- `LocalState` for view-owned state
+- typed actions for intent
+- `on_action_notify_models` for coordinated writes
+- `on_action_notify_transient` only for App-bound effects
+- local `on_activate*` only when widget glue truly needs it
+
+For UI composition, you will mostly author via `ui::*` constructors from `fret_ui_shadcn::prelude::*`.
 
 Key points:
 
@@ -160,10 +178,13 @@ If you are unsure, start with `Layout` and tighten later.
 2) **Simple baseline**: `simple-todo` (this guide)
 3) **Best-practice baseline**: `todo` (selectors + queries)
    - See: `docs/examples/todo-app-golden-path.md`
-4) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
+4) **Comparison only**: `simple_todo_v2_target`
+   - Use this only to compare authoring density or local-state/list tradeoffs against the default path.
+   - Do not treat it as the main onboarding surface.
+5) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
    - See: `docs/ui-ergonomics-and-interop.md`
    - See: `ecosystem/fret/src/interop/embedded_viewport.rs`
-5) **Examples index**: templates + cookbook + gallery + labs
+6) **Examples index**: templates + cookbook + gallery + labs
    - See: `docs/examples/README.md`
    - Workstream notes: `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 

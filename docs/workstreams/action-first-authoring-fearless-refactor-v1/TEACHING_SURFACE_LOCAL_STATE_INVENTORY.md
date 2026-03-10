@@ -1,7 +1,7 @@
 # Teaching-Surface Local-State Inventory (Draft)
 
 Status: draft, post-v1 audit
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -22,6 +22,8 @@ These surfaces already serve as evidence for the intended default authoring mode
 - `apps/fret-cookbook/examples/query_basics.rs`
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
 - `apps/fret-cookbook/examples/text_input_basics.rs`
+- `apps/fret-cookbook/examples/overlay_basics.rs`
+- `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-cookbook/examples/date_picker_basics.rs`
 - `apps/fret-cookbook/examples/form_basics.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
@@ -37,7 +39,9 @@ These surfaces already serve as evidence for the intended default authoring mode
 Those examples collectively cover:
 
 - straightforward local writes,
+- local overlay/interop examples that still bridge model-centered widget boundaries with `local.clone_model()`,
 - command availability and widget interop,
+- cross-frontend action convergence (declarative + IMUI + GenUI) while keeping the shared counter on `use_local*`,
 - controlled widget bridges that still require `Model<T>` at the component boundary,
 - pure toggle demos that still bridge into model-centered widgets,
 - mixed editor/render-option demos that bridge multiple model-centered widgets on one page,
@@ -80,9 +84,8 @@ first wave of `use_local*` migration.
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
 - `apps/fret-cookbook/examples/embedded_viewport_basics.rs`
 - `apps/fret-cookbook/examples/external_texture_import_basics.rs`
-- `apps/fret-cookbook/examples/imui_action_basics.rs`
 
-Reason: background execution, viewport coordination, diagnostics surfaces, or IMUI/host interop are
+Reason: background execution, viewport coordination, diagnostics surfaces, or host interop are
 part of the teaching goal.
 
 ### Component APIs that are still model-centered today
@@ -110,16 +113,16 @@ The inventory above closes the default cookbook/template migration queue. The fo
 still useful in-tree references, but they should be treated as advanced/runtime-bound or
 component-contract examples rather than blockers for the post-v1 default path.
 
-### Explicit-model collection comparison targets
+### Keyed-list comparison / evidence targets
 
-- `apps/fret-cookbook/examples/simple_todo.rs`
 - `apps/fret-cookbook/examples/simple_todo_v2_target.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 
-Reason: `simple_todo.rs` remains useful as the explicit-model reference, while
-`simple_todo_v2_target.rs`, `todo_demo.rs`, and the scaffold simple-todo template now collectively
-prove that the v2 local-state keyed-list path is teachable across cookbook, app-grade, and generated
-app surfaces. See `EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` for the updated sequencing note.
+Reason: `simple_todo.rs`, `simple_todo_v2_target.rs`, `todo_demo.rs`, and the scaffold simple-todo
+template now all live on the same local-state keyed-list baseline. The dedicated comparison pressure
+has therefore narrowed to `simple_todo_v2_target.rs` (denser payload-row/root-handler shape) rather
+than to an explicit-model-vs-local-state split. See
+`EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` for the updated sequencing note.
 
 ### `apps/fret-examples` (advanced / runtime-bound)
 

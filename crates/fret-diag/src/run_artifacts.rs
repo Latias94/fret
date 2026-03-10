@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::util::{now_unix_ms, write_json_value};
 
 const BUNDLE_JSON_CHUNK_BYTES: usize = 256 * 1024;
+const SCRIPT_RESULT_FILE_ID: &str = "script_result";
+const LEGACY_SCRIPT_RESULT_FILE_ID: &str = "script_result_json";
+const TRACE_CHROME_FILE_ID: &str = "trace_chrome_json";
 
 pub(crate) fn run_id_artifact_dir(out_dir: &Path, run_id: u64) -> PathBuf {
     out_dir.join(run_id.to_string())
@@ -75,19 +78,21 @@ pub(crate) fn refresh_run_id_manifest_file_index(out_dir: &Path, run_id: u64) {
     manifest.schema_version = 2;
     manifest.run_id = run_id;
 
-    manifest
-        .files
-        .retain(|f| f.id != "script_result_json" && f.id != "trace_chrome_json");
+    manifest.files.retain(|f| {
+        f.id != SCRIPT_RESULT_FILE_ID
+            && f.id != LEGACY_SCRIPT_RESULT_FILE_ID
+            && f.id != TRACE_CHROME_FILE_ID
+    });
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "script_result_json",
+        SCRIPT_RESULT_FILE_ID,
         "script.result.json",
     );
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "trace_chrome_json",
+        TRACE_CHROME_FILE_ID,
         "trace.chrome.json",
     );
 
@@ -108,7 +113,9 @@ fn stage_as_str(stage: &UiScriptStageV1) -> &'static str {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct RunManifestPathsV1 {
+    #[serde(rename = "script_result", alias = "script_result_json")]
     script_result_json: String,
+    #[serde(rename = "bundle_artifact", alias = "bundle_json")]
     bundle_json: String,
 }
 
@@ -231,13 +238,13 @@ pub(crate) fn write_run_id_manifest_json(out_dir: &Path, run_id: u64, result: &U
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "script_result_json",
+        SCRIPT_RESULT_FILE_ID,
         "script.result.json",
     );
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "trace_chrome_json",
+        TRACE_CHROME_FILE_ID,
         "trace.chrome.json",
     );
     let _ = write_json_value(
@@ -391,19 +398,21 @@ fn update_run_id_manifest_with_bundle_json_chunks(
     });
 
     // Refresh file index (bounded to stable, small files; bundle.json is indexed via chunks).
-    manifest
-        .files
-        .retain(|f| f.id != "script_result_json" && f.id != "trace_chrome_json");
+    manifest.files.retain(|f| {
+        f.id != SCRIPT_RESULT_FILE_ID
+            && f.id != LEGACY_SCRIPT_RESULT_FILE_ID
+            && f.id != TRACE_CHROME_FILE_ID
+    });
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "script_result_json",
+        SCRIPT_RESULT_FILE_ID,
         "script.result.json",
     );
     push_file_entry_if_present(
         &mut manifest,
         &dir,
-        "trace_chrome_json",
+        TRACE_CHROME_FILE_ID,
         "trace.chrome.json",
     );
 
@@ -563,10 +572,80 @@ mod tests {
         assert_eq!(
             parsed
                 .get("paths")
-                .and_then(|v| v.get("script_result_json"))
+                .and_then(|v| v.get("script_result"))
                 .and_then(|v| v.as_str()),
             Some("script.result.json")
         );
+        assert_eq!(
+            parsed
+                .get("paths")
+                .and_then(|v| v.get("bundle_artifact"))
+                .and_then(|v| v.as_str()),
+            Some("bundle.json")
+        );
+        let file_ids = parsed
+            .get("files")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|entry| entry.get("id").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(file_ids.contains(&SCRIPT_RESULT_FILE_ID));
+        assert!(!file_ids.contains(&LEGACY_SCRIPT_RESULT_FILE_ID));
+    }
+
+    #[test]
+    fn run_manifest_paths_accept_legacy_aliases_when_reading() {
+        let parsed: RunManifestV2 = serde_json::from_value(serde_json::json!({
+            "schema_version": 2,
+            "generated_unix_ms": 1,
+            "run_id": 7,
+            "paths": {
+                "script_result_json": "script.result.json",
+                "bundle_json": "bundle.json"
+            }
+        }))
+        .expect("parse manifest aliases");
+
+        assert_eq!(parsed.paths.script_result_json, "script.result.json");
+        assert_eq!(parsed.paths.bundle_json, "bundle.json");
+    }
+
+    #[test]
+    fn refresh_run_id_manifest_file_index_replaces_legacy_script_result_file_id() {
+        let root = make_temp_dir("fret-diag-run-artifacts-refresh-legacy-id");
+        let run_id = 17u64;
+        let run_dir = root.join(run_id.to_string());
+        std::fs::create_dir_all(&run_dir).expect("create run dir");
+        std::fs::write(run_dir.join("script.result.json"), b"{}").expect("write script result");
+        write_json_value(
+            &run_dir.join("manifest.json"),
+            &serde_json::json!({
+                "schema_version": 2,
+                "generated_unix_ms": 1,
+                "run_id": run_id,
+                "files": [
+                    { "id": "script_result_json", "path": "script.result.json", "bytes": 2 }
+                ]
+            }),
+        )
+        .expect("write legacy manifest");
+
+        refresh_run_id_manifest_file_index(&root, run_id);
+
+        let parsed: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(run_dir.join("manifest.json")).expect("read manifest"),
+        )
+        .expect("parse manifest");
+        let file_ids = parsed
+            .get("files")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|entry| entry.get("id").and_then(|v| v.as_str()))
+            .collect::<Vec<_>>();
+        assert!(file_ids.contains(&SCRIPT_RESULT_FILE_ID));
+        assert!(!file_ids.contains(&LEGACY_SCRIPT_RESULT_FILE_ID));
     }
 
     #[test]

@@ -113,13 +113,14 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_json(
         .take(30)
         .map(|(key, count)| serde_json::json!({ "key": key, "count": count }))
         .collect();
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
 
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "notify_hotspots",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,

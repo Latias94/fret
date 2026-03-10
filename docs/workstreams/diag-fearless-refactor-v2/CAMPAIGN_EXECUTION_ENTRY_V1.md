@@ -8,6 +8,7 @@ Related notes:
 
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 
 ## 0) Purpose
@@ -24,6 +25,12 @@ Current shipped surface:
 - `fretboard diag campaign show <campaign_id>`
 - `fretboard diag campaign run <campaign_id>`
 - `fretboard diag campaign run --lane <lane> --tag <tag> --platform <platform>`
+
+Vocabulary rule:
+
+- CLI may continue to accept user-facing broad selectors such as `full`,
+- persisted run artifacts should normalize the broad scheduled lane to `nightly` unless the repo
+  later makes `full` a distinct semantic lane.
 
 Current shipped behavior:
 
@@ -43,6 +50,13 @@ Current shipped behavior:
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,
 - the final artifact contract remains `regression.index.json` + `regression.summary.json`.
+
+Path vocabulary rule:
+
+- campaign and batch roots should continue to prefer the canonical root/file names from
+  `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
+- presentation surfaces may add convenience views, but should link back to the canonical persisted
+  paths instead of copying them into parallel stores.
 
 Known gaps after the first landing:
 
@@ -188,10 +202,12 @@ Recommended definition fields:
 - `default_launch`
   - optional launch command template or expected launch mode
 - `retry_policy`
-  - campaign-level default only
+  - campaign-level default only, expected to align with normalized flake-policy vocabulary
 - `evidence_profile`
   - bounded / with_pack / with_screenshots / perf_heavy
 - `tags`
+- `requires_capabilities`
+  - uses stable capability tags such as `runtime.devtools_ws` or `capture.screenshot`
 
 Important constraint:
 
@@ -228,6 +244,19 @@ Suggested contents:
 - `bundles/` or per-item evidence paths
   - only where produced by the underlying run/suite flow
 
+Vocabulary rules:
+
+- canonical top-level persisted names should remain:
+  - `campaign.manifest.json`
+  - `campaign.result.json`
+  - `batch.manifest.json`
+  - `batch.result.json`
+  - `regression.summary.json`
+  - `regression.index.json`
+  - `share/share.manifest.json`
+  - `share/combined-failures.zip`
+- `dashboard.txt` is optional presentation output, not a source-of-truth artifact.
+
 The key property is not the exact names of every side file.
 
 The key property is this:
@@ -254,6 +283,13 @@ This preserves one shared handoff surface:
 - `regression.index.json`
 - `regression.summary.json`
 
+And one shared status/reason vocabulary:
+
+- normalized `lane`
+- normalized `status`
+- normalized `reason_code`
+- canonical evidence-path field names
+
 ## 9) Relationship to existing commands
 
 The campaign entry should be implemented as orchestration over existing commands/engines, not as a replacement.
@@ -276,7 +312,7 @@ To keep v1 landable, make the following policy choices explicit.
 For slice 1:
 
 - allow only a simple campaign-level retry mode,
-- prefer `none` or `retry_once`,
+- prefer normalized flake-policy terms such as `fail_fast` or `retry_once`,
 - defer richer flake classification policy to later slices.
 
 ### 10.2 Evidence policy
@@ -355,7 +391,10 @@ Acceptance:
 Status:
 
 - Done for the minimal surface (`list` + `show` are implemented).
-- Still open: authoring documentation once campaign definitions stop being Rust-only.
+- Manifest-backed authoring is now documented in `tools/diag-campaigns/README.md`.
+- `diag campaign validate` now provides a first authoring-time validation path for repo-owned or
+  explicit ad hoc campaign manifests.
+- Still open: richer authoring UX only if the current JSON + validate flow proves insufficient.
 
 ## 12) Initial recommendation for naming
 
@@ -370,6 +409,7 @@ Concrete recommendation:
 - command: `diag campaign run`
 - artifacts: `regression.index.json` and `regression.summary.json`
 - UI label: `Regression Workspace`
+- broad persisted lane label: `nightly` (`full` may remain a selector alias)
 
 This matches the current repo direction more cleanly than introducing a second top-level noun.
 

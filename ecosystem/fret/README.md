@@ -13,7 +13,7 @@ applications while keeping the framework/kernel crates (`crates/*`) policy-light
 ## Boundary note
 
 `fret` is the golden-path authoring facade for application code. It is intentionally **not** the
-repo?s canonical example host.
+repo's canonical example host.
 
 - Use `docs/examples/README.md` for the canonical learning/index path.
 - Use `examples/README.md` as the GitHub-friendly portal.
@@ -26,6 +26,17 @@ For repository overview / architecture docs, see the monorepo README:
 https://github.com/Latias94/fret
 
 ## Quick start (in this repo)
+
+If you are learning the repo's default path, follow this ladder in order:
+
+1. `hello`
+2. `simple-todo`
+3. `todo`
+
+- Index: `docs/examples/README.md`
+- The generated template READMEs repeat the same ladder and explain where each rung fits.
+- Use `fretboard new todo` when you want the richer third-rung baseline, not as a replacement for
+  the first two rungs.
 
 Generate a runnable starter:
 
@@ -116,19 +127,17 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 - App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
 - App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
-- Closure-style UI surface (still available): `fret::App::new(...).window(...).ui(...)?`
-- Closure-style UI surface with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
-- Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
+- Advanced low-level interop driver path (compat seam, non-default): `fret::run_native_with_compat_driver(...)`
 
 ## What remains first-class on `fret`
 
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
-- `App::{ui_with_hooks, view::<V>, view_with_hooks::<V>}`
+- `App::{view::<V>, view_with_hooks::<V>}`
 - `UiAppBuilder::configure(...)` for launch/window config
 - `UiAppBuilder::on_gpu_ready(...)`
 - `UiAppBuilder::install_custom_effects(...)`
@@ -153,13 +162,12 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret::App::new(...).ui_with_hooks(...)` -> `fret_bootstrap::ui_app_with_hooks(...)`
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
 - `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
 - `fret::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
 - `fret::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
-- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)`
+- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

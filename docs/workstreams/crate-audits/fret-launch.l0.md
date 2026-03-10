@@ -47,7 +47,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-launch/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-launch`
+- `python tools/audit_crate.py --crate fret-launch`
 
 ## 4) Module ownership map (internal seams)
 
@@ -91,7 +91,7 @@ Evidence anchors:
 
 ## 7) Recommended refactor steps (small, gated)
 
-1. Split `crates/fret-launch/src/runner/desktop/mod.rs` into a thin facade + submodules (event loop, menus, diagnostics, hotpatch, dispatcher) — outcome: smaller diffs and faster review — gate: `cargo test -p fret-launch --no-run` + `pwsh -NoProfile -File tools/check_layering.ps1`.
+1. Split `crates/fret-launch/src/runner/desktop/mod.rs` into a thin facade + submodules (event loop, menus, diagnostics, hotpatch, dispatcher) — outcome: smaller diffs and faster review — gate: `cargo test -p fret-launch --no-run` + `python tools/check_layering.py`.
 2. Add “compile gates” for feature flags + wasm target — outcome: catch cfg/feature regressions early — gate: `cargo check -p fret-launch --features hotpatch-subsecond`, `cargo check -p fret-launch --features diag-screenshots`, `cargo check -p fret-launch --target wasm32-unknown-unknown`.
 3. Document the intended public surface (what is stable vs wiring-only) — outcome: fearless refactors without downstream breakage — gate: none initially (follow-up: public API snapshot).
 
@@ -99,4 +99,3 @@ Evidence anchors:
 
 - Should `fret-launch` be purely a wiring crate, with the “stable runner API” living in `fret-runner-winit` / `fret-runner-web`, and `fret-launch` only providing a small set of entrypoints?
 - Do we want a policy that runner-facing surfaces must remain executor-agnostic (no Tokio in this layer), leaving async to the app/effects boundary?
-

@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_core::Px;
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -47,26 +48,30 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let file = shadcn::MenubarMenu::new("File").entries([
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("New Tab")
-                .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx)),
-        ),
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("New Window")
-                .trailing(shadcn::MenubarShortcut::new("⌘N").into_element(cx)),
-        ),
-        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Incognito Window").disabled(true)),
-        shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Submenu(shadcn::MenubarItem::new("Share").submenu([
-            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Email link")),
-            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Messages")),
-            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Notes")),
+        shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new([
+            shadcn::MenubarEntry::Item(
+                shadcn::MenubarItem::new("New Tab")
+                    .action(CommandId::new("ui_gallery.menubar.demo.new_tab"))
+                    .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx)),
+            ),
+            shadcn::MenubarEntry::Item(
+                shadcn::MenubarItem::new("New Window")
+                    .action(CommandId::new("ui_gallery.menubar.demo.new_window")),
+            ),
         ])),
         shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Print...")
-                .trailing(shadcn::MenubarShortcut::new("⌘P").into_element(cx)),
-        ),
+        shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new([
+            shadcn::MenubarEntry::Item(
+                shadcn::MenubarItem::new("Share")
+                    .close_on_select(false)
+                    .action(CommandId::new("ui_gallery.menubar.demo.share")),
+            ),
+            shadcn::MenubarEntry::Item(
+                shadcn::MenubarItem::new("Print")
+                    .close_on_select(false)
+                    .action(CommandId::new("ui_gallery.menubar.demo.print")),
+            ),
+        ])),
     ]);
 
     let edit = shadcn::MenubarMenu::new("Edit").entries([

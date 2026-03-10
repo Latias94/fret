@@ -38,7 +38,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-render-core/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-render-core`
+- `python tools/audit_crate.py --crate fret-render-core`
 
 ## 4) Module ownership map (internal seams)
 
@@ -73,4 +73,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - Should `RenderTargetColorSpace` be `#[non_exhaustive]` (publicly forward-compatible) or remain exhaustive for internal stability? Decide once downstream crates start matching exhaustively across public APIs.
-

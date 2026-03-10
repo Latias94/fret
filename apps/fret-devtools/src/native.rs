@@ -16,6 +16,10 @@ use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
 };
+use fret_diag::{
+    dashboard_failing_summary_entries, dashboard_human_lines_from_projection,
+    project_dashboard_summary,
+};
 use fret_diag_protocol::{
     DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiScriptStageV1,
 };
@@ -141,6 +145,8 @@ struct State {
     regression_selected_summary_path: Model<Option<Arc<str>>>,
     regression_selected_summary_json: Model<String>,
     regression_selected_bundle_dirs: Model<Vec<Arc<str>>>,
+    regression_selected_capability_sources: Model<Vec<Arc<str>>>,
+    regression_selected_capabilities_checks: Model<Vec<Arc<str>>>,
     regression_selected_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
@@ -308,6 +314,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let regression_selected_summary_path = app.models_mut().insert(None::<Arc<str>>);
     let regression_selected_summary_json = app.models_mut().insert(String::new());
     let regression_selected_bundle_dirs = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_capability_sources = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let regression_selected_capabilities_checks = app.models_mut().insert(Vec::<Arc<str>>::new());
     let regression_selected_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
@@ -434,6 +442,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         regression_selected_summary_path,
         regression_selected_summary_json,
         regression_selected_bundle_dirs,
+        regression_selected_capability_sources,
+        regression_selected_capabilities_checks,
         regression_selected_error,
         log_lines,
         semantics_cache,
@@ -569,6 +579,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.regression_selected_summary_path, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_summary_json, Invalidation::Paint);
     cx.observe_model(&st.regression_selected_bundle_dirs, Invalidation::Paint);
+    cx.observe_model(
+        &st.regression_selected_capability_sources,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.regression_selected_capabilities_checks,
+        Invalidation::Paint,
+    );
     cx.observe_model(&st.regression_selected_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
@@ -901,15 +919,11 @@ fn footer_bar(
         fret_ui_kit::declarative::style::container_props(
             &theme,
             fret_ui_kit::ChromeRefinement::default()
-                .bg(fret_ui_kit::ColorRef::Color(
-                    theme.color_token("muted"),
-                ))
+                .bg(fret_ui_kit::ColorRef::Color(theme.color_token("muted")))
                 .px(fret_ui_kit::Space::N3)
                 .py(fret_ui_kit::Space::N2)
                 .border_1()
-                .border_color(fret_ui_kit::ColorRef::Color(
-                    theme.color_token("border"),
-                )),
+                .border_color(fret_ui_kit::ColorRef::Color(theme.color_token("border"))),
             fret_ui_kit::LayoutRefinement::default().w_full(),
         ),
         |_cx| [status_badges],
@@ -1029,8 +1043,10 @@ fn left_panel(
     shadcn::Card::new([
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Inspect Workspace").into_element(cx),
-            shadcn::CardDescription::new("Semantics navigation, live selection, and recent diagnostics events.")
-                .into_element(cx),
+            shadcn::CardDescription::new(
+                "Semantics navigation, live selection, and recent diagnostics events.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
         shadcn::CardContent::new([tabs]).into_element(cx),
@@ -1454,105 +1470,105 @@ fn center_panel(
     };
 
     let primary_actions = ui::h_row(|cx| {
-            [
-                shadcn::Button::new("Push Script")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_PUSH)
-                    .into_element(cx),
-                shadcn::Button::new("Run Script")
-                    .variant(shadcn::ButtonVariant::Default)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_RUN)
-                    .into_element(cx),
-                shadcn::Button::new("Run & Pack")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_RUN_AND_PACK)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        [
+            shadcn::Button::new("Push Script")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_PUSH)
+                .into_element(cx),
+            shadcn::Button::new("Run Script")
+                .variant(shadcn::ButtonVariant::Default)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_RUN)
+                .into_element(cx),
+            shadcn::Button::new("Run & Pack")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_RUN_AND_PACK)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let library_actions = ui::h_row(|cx| {
-            [
-                shadcn::Button::new("Refresh Scripts")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CMD_SCRIPTS_REFRESH)
-                    .into_element(cx),
-                shadcn::Button::new("Fork")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_fork)
-                    .on_click(CMD_SCRIPT_FORK)
-                    .into_element(cx),
-                shadcn::Button::new("Save")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_save)
-                    .on_click(CMD_SCRIPT_SAVE)
-                    .into_element(cx),
-                consume_toggle,
-                shadcn::Badge::new(if consume_clicks {
-                    "Consume clicks on"
-                } else {
-                    "Consume clicks off"
-                })
-                .variant(if consume_clicks {
-                    shadcn::BadgeVariant::Secondary
-                } else {
-                    shadcn::BadgeVariant::Outline
-                })
+        [
+            shadcn::Button::new("Refresh Scripts")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_SCRIPTS_REFRESH)
                 .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+            shadcn::Button::new("Fork")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_fork)
+                .on_click(CMD_SCRIPT_FORK)
+                .into_element(cx),
+            shadcn::Button::new("Save")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_save)
+                .on_click(CMD_SCRIPT_SAVE)
+                .into_element(cx),
+            consume_toggle,
+            shadcn::Badge::new(if consume_clicks {
+                "Consume clicks on"
+            } else {
+                "Consume clicks off"
+            })
+            .variant(if consume_clicks {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let pack_row = ui::h_row(|cx| {
-            let copy_enabled = last_pack_path.is_some();
-            [
-                cx.text("Artifacts:"),
-                shadcn::Button::new("Pack last bundle")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_pack || pack_in_flight)
-                    .on_click(CMD_PACK_LAST_BUNDLE)
-                    .into_element(cx),
-                shadcn::Button::new("Copy pack path")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!copy_enabled)
-                    .on_click(CMD_COPY_PACK_PATH)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        let copy_enabled = last_pack_path.is_some();
+        [
+            cx.text("Artifacts:"),
+            shadcn::Button::new("Pack last bundle")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_pack || pack_in_flight)
+                .on_click(CMD_PACK_LAST_BUNDLE)
+                .into_element(cx),
+            shadcn::Button::new("Copy pack path")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!copy_enabled)
+                .on_click(CMD_COPY_PACK_PATH)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let viewer_row = ui::h_row(|cx| {
-            [
-                cx.text("Viewer:"),
-                viewer_url_input,
-                shadcn::Button::new("Open viewer")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(viewer_url.trim().is_empty())
-                    .on_click(CMD_OPEN_VIEWER_URL)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        [
+            cx.text("Viewer:"),
+            viewer_url_input,
+            shadcn::Button::new("Open viewer")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(viewer_url.trim().is_empty())
+                .on_click(CMD_OPEN_VIEWER_URL)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let apply_row = ui::h_row(|cx| {
         [
@@ -2131,7 +2147,10 @@ fn center_panel(
     let scripts_sidebar = diag_card(
         cx,
         "Script Source",
-        format!("Workspace tools and local scripts available: {}", scripts.len()),
+        format!(
+            "Workspace tools and local scripts available: {}",
+            scripts.len()
+        ),
         vec![scripts_list],
     );
 
@@ -2313,6 +2332,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.regression_selected_bundle_dirs, |v| v.clone())
         .unwrap_or_default();
+    let selected_capability_sources = cx
+        .app
+        .models()
+        .read(&st.regression_selected_capability_sources, |v| v.clone())
+        .unwrap_or_default();
+    let selected_capabilities_checks = cx
+        .app
+        .models()
+        .read(&st.regression_selected_capabilities_checks, |v| v.clone())
+        .unwrap_or_default();
     let selected_error = cx
         .app
         .models()
@@ -2345,6 +2374,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
+    let selected_capability_source_count = selected_capability_sources.len();
+    let selected_capabilities_check_count = selected_capabilities_checks.len();
     let summarize_status_line = {
         let err = summarize_last_error
             .as_deref()
@@ -2390,16 +2421,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if parts.is_empty() {
             "<empty>".to_string()
         } else {
-            parts.join("
+            parts.join(
+                "
 
-")
+",
+            )
         }
     };
 
     let failing_list = if failing_rows.is_empty() {
-        shadcn::ScrollArea::new([cx.text(
-            "No failing summaries in the current regression index.",
-        )])
+        shadcn::ScrollArea::new([
+            cx.text("No non-passing summaries in the current regression index.")
+        ])
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default()
                 .w_full()
@@ -2422,66 +2455,109 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             let selected_summary_path_model = st.regression_selected_summary_path.clone();
             let selected_summary_json_model = st.regression_selected_summary_json.clone();
             let selected_bundle_dirs_model = st.regression_selected_bundle_dirs.clone();
+            let selected_capability_sources_model =
+                st.regression_selected_capability_sources.clone();
+            let selected_capabilities_checks_model =
+                st.regression_selected_capabilities_checks.clone();
             let selected_error_model = st.regression_selected_error.clone();
             let log_lines_model = st.log_lines.clone();
             let copy_path = resolved_summary_path_str.clone();
             let select_path = resolved_summary_path_str.clone();
-            let on_select: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let path = PathBuf::from(&select_path);
-                match load_regression_summary_drilldown(&path) {
-                    Ok(data) => {
-                        let _ = host.models_mut().update(&selected_summary_path_model, |v| {
-                            *v = Some(Arc::<str>::from(select_path.clone()));
-                        });
-                        let _ = host.models_mut().update(&selected_summary_json_model, |v| {
-                            *v = data.summary_json;
-                        });
-                        let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| {
-                            *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
-                        });
-                        let _ = host.models_mut().update(&selected_error_model, |v| *v = None);
+            let on_select: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let path = PathBuf::from(&select_path);
+                    match load_regression_summary_drilldown(&path) {
+                        Ok(data) => {
+                            let _ = host.models_mut().update(&selected_summary_path_model, |v| {
+                                *v = Some(Arc::<str>::from(select_path.clone()));
+                            });
+                            let _ = host.models_mut().update(&selected_summary_json_model, |v| {
+                                *v = data.summary_json;
+                            });
+                            let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| {
+                                *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
+                            });
+                            let _ = host.models_mut().update(
+                                &selected_capability_sources_model,
+                                |v| {
+                                    *v = data
+                                        .capability_sources
+                                        .into_iter()
+                                        .map(Arc::<str>::from)
+                                        .collect();
+                                },
+                            );
+                            let _ = host.models_mut().update(
+                                &selected_capabilities_checks_model,
+                                |v| {
+                                    *v = data
+                                        .capabilities_check_paths
+                                        .into_iter()
+                                        .map(Arc::<str>::from)
+                                        .collect();
+                                },
+                            );
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_error_model, |v| *v = None);
+                        }
+                        Err(err) => {
+                            let _ = host.models_mut().update(&selected_summary_path_model, |v| {
+                                *v = Some(Arc::<str>::from(select_path.clone()));
+                            });
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_summary_json_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_bundle_dirs_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_capability_sources_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_capabilities_checks_model, |v| v.clear());
+                            let _ = host.models_mut().update(&selected_error_model, |v| {
+                                *v = Some(Arc::<str>::from(format!(
+                                    "failed to load selected regression summary {}: {err}",
+                                    path.display()
+                                )))
+                            });
+                            let _ = host.models_mut().update(&log_lines_model, |v| {
+                                v.push(Arc::<str>::from(format!(
+                                    "regression summary drill-down load failed: {}",
+                                    path.display()
+                                )));
+                                if v.len() > 2000 {
+                                    let drain = v.len().saturating_sub(2000);
+                                    v.drain(0..drain);
+                                }
+                            });
+                        }
                     }
-                    Err(err) => {
-                        let _ = host.models_mut().update(&selected_summary_path_model, |v| {
-                            *v = Some(Arc::<str>::from(select_path.clone()));
-                        });
-                        let _ = host.models_mut().update(&selected_summary_json_model, |v| v.clear());
-                        let _ = host.models_mut().update(&selected_bundle_dirs_model, |v| v.clear());
-                        let _ = host.models_mut().update(&selected_error_model, |v| {
-                            *v = Some(Arc::<str>::from(format!(
-                                "failed to load selected regression summary {}: {err}",
-                                path.display()
-                            )))
-                        });
-                        let _ = host.models_mut().update(&log_lines_model, |v| {
-                            v.push(Arc::<str>::from(format!(
-                                "regression summary drill-down load failed: {}",
-                                path.display()
-                            )));
-                            if v.len() > 2000 {
-                                let drain = v.len().saturating_sub(2000);
-                                v.drain(0..drain);
-                            }
-                        });
-                    }
-                }
-                host.request_redraw(action_cx.window);
-            });
+                    host.request_redraw(action_cx.window);
+                });
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText { text: copy_path.clone() });
+                host.push_effect(Effect::ClipboardSetText {
+                    text: copy_path.clone(),
+                });
                 host.request_redraw(action_cx.window);
             });
             let title_text = cx.text(title);
             let resolved_path_text = cx.text(resolved_path_label);
             let badges = ui::h_row(|cx| {
                 [
-                    shadcn::Badge::new(if is_selected { "Selected" } else { "Failing" })
-                        .variant(if is_selected {
-                            shadcn::BadgeVariant::Secondary
-                        } else {
-                            shadcn::BadgeVariant::Destructive
-                        })
-                        .into_element(cx),
+                    shadcn::Badge::new(if is_selected {
+                        "Selected"
+                    } else {
+                        "Non-passing"
+                    })
+                    .variant(if is_selected {
+                        shadcn::BadgeVariant::Secondary
+                    } else {
+                        shadcn::BadgeVariant::Destructive
+                    })
+                    .into_element(cx),
                     shadcn::Badge::new(lane_label)
                         .variant(shadcn::BadgeVariant::Outline)
                         .into_element(cx),
@@ -2498,15 +2574,19 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             .into_element(cx);
             let actions = ui::h_row(|cx| {
                 [
-                    shadcn::Button::new(if is_selected { "Opened" } else { "Open details" })
-                        .variant(if is_selected {
-                            shadcn::ButtonVariant::Secondary
-                        } else {
-                            shadcn::ButtonVariant::Ghost
-                        })
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_activate(on_select)
-                        .into_element(cx),
+                    shadcn::Button::new(if is_selected {
+                        "Opened"
+                    } else {
+                        "Open details"
+                    })
+                    .variant(if is_selected {
+                        shadcn::ButtonVariant::Secondary
+                    } else {
+                        shadcn::ButtonVariant::Ghost
+                    })
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_select)
+                    .into_element(cx),
                     shadcn::Button::new("Copy path")
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(shadcn::ButtonSize::Sm)
@@ -2518,19 +2598,20 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             .items_center()
             .into_element(cx);
             rows.push(
-                shadcn::Card::new([
-                    shadcn::CardContent::new([badges, title_text, resolved_path_text, actions])
-                        .into_element(cx),
+                shadcn::Card::new([shadcn::CardContent::new([
+                    badges,
+                    title_text,
+                    resolved_path_text,
+                    actions,
                 ])
+                .into_element(cx)])
                 .into_element(cx),
             );
         }
-        shadcn::ScrollArea::new([
-            ui::v_stack(|_cx| rows)
-                .gap(fret_ui_kit::Space::N2)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-                .into_element(cx),
-        ])
+        shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+            .gap(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)])
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default()
                 .w_full()
@@ -2543,17 +2624,38 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .iter()
         .map(|v| v.as_ref().to_string())
         .collect::<Vec<_>>()
-        .join("
-");
+        .join("\r\n");
+    let selected_capability_sources_text = selected_capability_sources
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
+    let selected_capabilities_checks_text = selected_capabilities_checks
+        .iter()
+        .map(|v| v.as_ref().to_string())
+        .collect::<Vec<_>>()
+        .join("\r\n");
     let selected_summary_overview = {
         let mut parts: Vec<String> = Vec::new();
         match selected_summary_path.as_deref() {
             Some(path) => parts.push(format!("Selected summary: {path}")),
             None => parts.push("Selected summary: <none>".to_string()),
         }
-        parts.push(format!("Failing bundle dirs: {selected_bundle_count}"));
+        parts.push(format!("Selected bundle dirs: {selected_bundle_count}"));
         if let Some(first) = selected_bundle_dirs.first() {
             parts.push(format!("First bundle dir: {}", first.as_ref()));
+        }
+        parts.push(format!(
+            "Selected capability sources: {selected_capability_source_count}"
+        ));
+        if let Some(first) = selected_capability_sources.first() {
+            parts.push(format!("First capability source: {}", first.as_ref()));
+        }
+        parts.push(format!(
+            "Selected capability checks: {selected_capabilities_check_count}"
+        ));
+        if let Some(first) = selected_capabilities_checks.first() {
+            parts.push(format!("First capability check: {}", first.as_ref()));
         }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("Selected error: {err}"));
@@ -2569,6 +2671,14 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             parts.push("bundle_dirs:".to_string());
             parts.push(selected_bundle_dirs_text.clone());
         }
+        if !selected_capability_sources_text.trim().is_empty() {
+            parts.push("capability_sources:".to_string());
+            parts.push(selected_capability_sources_text.clone());
+        }
+        if !selected_capabilities_checks_text.trim().is_empty() {
+            parts.push("capabilities_check_paths:".to_string());
+            parts.push(selected_capabilities_checks_text.clone());
+        }
         if let Some(err) = selected_error.as_deref() {
             parts.push(format!("error: {err}"));
         }
@@ -2579,9 +2689,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         if parts.is_empty() {
             "<empty>".to_string()
         } else {
-            parts.join("
+            parts.join(
+                "
 
-")
+",
+            )
         }
     };
 
@@ -2601,16 +2713,51 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             );
         }
         if let Some(first_bundle_dir) = selected_bundle_dirs.first().map(|v| v.to_string()) {
-            let on_copy_first: fret_ui::action::OnActivate = Arc::new(
-                move |host, action_cx, _reason| {
+            let on_copy_first: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
                     host.push_effect(Effect::ClipboardSetText {
                         text: first_bundle_dir.clone(),
                     });
                     host.request_redraw(action_cx.window);
-                },
-            );
+                });
             out.push(
                 shadcn::Button::new("Copy first bundle dir")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy_first)
+                    .into_element(cx),
+            );
+        }
+        if let Some(first_capability_check) =
+            selected_capabilities_checks.first().map(|v| v.to_string())
+        {
+            let on_copy_first: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    host.push_effect(Effect::ClipboardSetText {
+                        text: first_capability_check.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            out.push(
+                shadcn::Button::new("Copy first capability check")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy_first)
+                    .into_element(cx),
+            );
+        }
+        if let Some(first_capability_source) =
+            selected_capability_sources.first().map(|v| v.to_string())
+        {
+            let on_copy_first: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    host.push_effect(Effect::ClipboardSetText {
+                        text: first_capability_source.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            out.push(
+                shadcn::Button::new("Copy first capability source")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy_first)
@@ -2635,6 +2782,38 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             });
             out.push(
                 shadcn::Button::new("Copy bundle dirs")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        if !selected_capabilities_checks_text.trim().is_empty() {
+            let capability_checks = selected_capabilities_checks_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: capability_checks.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy capability checks")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy)
+                    .into_element(cx),
+            );
+        }
+        if !selected_capability_sources_text.trim().is_empty() {
+            let capability_sources = selected_capability_sources_text.clone();
+            let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: capability_sources.clone(),
+                });
+                host.request_redraw(action_cx.window);
+            });
+            out.push(
+                shadcn::Button::new("Copy capability sources")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_copy)
@@ -2666,6 +2845,24 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     shadcn::BadgeVariant::Outline
                 })
                 .into_element(cx),
+            shadcn::Badge::new(format!(
+                "capability sources {selected_capability_source_count}"
+            ))
+            .variant(if selected_capability_source_count > 0 {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
+            shadcn::Badge::new(format!(
+                "capability checks {selected_capabilities_check_count}"
+            ))
+            .variant(if selected_capabilities_check_count > 0 {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
+            .into_element(cx),
             shadcn::Badge::new(if selected_error.is_some() {
                 "Selection error"
             } else {
@@ -2695,7 +2892,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 shadcn::BadgeVariant::Outline
             })
             .into_element(cx),
-            shadcn::Badge::new(format!("failing {failing_count}"))
+            shadcn::Badge::new(format!("non-passing {failing_count}"))
                 .variant(if failing_count > 0 {
                     shadcn::BadgeVariant::Destructive
                 } else {
@@ -2705,6 +2902,16 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             shadcn::Badge::new(format!("selected bundles {selected_bundle_count}"))
                 .variant(shadcn::BadgeVariant::Outline)
                 .into_element(cx),
+            shadcn::Badge::new(format!(
+                "selected capability sources {selected_capability_source_count}"
+            ))
+            .variant(shadcn::BadgeVariant::Outline)
+            .into_element(cx),
+            shadcn::Badge::new(format!(
+                "selected capability checks {selected_capabilities_check_count}"
+            ))
+            .variant(shadcn::BadgeVariant::Outline)
+            .into_element(cx),
             shadcn::Badge::new(if summarize_in_flight {
                 "Summarizing"
             } else {
@@ -2766,7 +2973,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let overview_card = diag_card(
         cx,
         "Regression Workspace",
-        "Summary-first view over aggregate artifacts, failing summaries, and evidence actions.",
+        "Summary-first view over aggregate artifacts, non-passing summaries, and evidence actions.",
         vec![
             overview_status_section,
             overview_actions_section,
@@ -2776,31 +2983,48 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
 
     let left_card = diag_card(
         cx,
-        "Failing Summaries",
-        "Select one failing summary to open its evidence-focused drill-down.",
+        "Non-passing Summaries",
+        "Select one non-passing summary to open its evidence-focused drill-down.",
         vec![failing_list],
     );
 
     let selected_summary_overview_text = cx.text(selected_summary_overview);
-    let selected_bundle_dirs_blob = text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
+    let selected_bundle_dirs_blob =
+        text_blob_sized(cx, selected_bundle_dirs_text.clone(), Px(96.0));
+    let selected_capability_sources_blob =
+        text_blob_sized(cx, selected_capability_sources_text.clone(), Px(96.0));
+    let selected_capabilities_blob =
+        text_blob_sized(cx, selected_capabilities_checks_text.clone(), Px(96.0));
     let selected_raw_summary_blob = text_blob_sized(cx, selected_detail_content, Px(220.0));
     let selected_overview_section = diag_section(
         cx,
         "Selection Overview",
-        "Keep the current failure state visible before diving into raw JSON.",
+        "Keep the current non-passing state visible before diving into raw JSON.",
         vec![selected_summary_badges, selected_summary_overview_text],
     );
     let selected_actions_section = diag_section(
         cx,
         "Evidence Actions",
-        "Copy paths or pack the currently selected failing evidence without leaving this inspector.",
+        "Copy paths or pack the currently selected evidence without leaving this inspector.",
         vec![selected_actions],
     );
     let selected_bundle_dirs_section = diag_section(
         cx,
         "Bundle Directories",
-        "These are the concrete artifact roots attached to the selected failing summary.",
+        "These are the concrete artifact roots attached to the selected non-passing summary.",
         vec![selected_bundle_dirs_blob],
+    );
+    let selected_capability_sources_section = diag_section(
+        cx,
+        "Capability Sources",
+        "Capability provenance is shown separately from campaign-local check artifacts and prefers the additive source object when present.",
+        vec![selected_capability_sources_blob],
+    );
+    let selected_capabilities_section = diag_section(
+        cx,
+        "Capability Checks",
+        "Policy-skipped summaries can point at campaign capability check artifacts even when no bundle dir exists.",
+        vec![selected_capabilities_blob],
     );
     let selected_raw_summary_section = diag_section(
         cx,
@@ -2812,11 +3036,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let right_card = diag_card(
         cx,
         "Selected Summary",
-        "Evidence actions and raw summary payload stay close to the current failing selection.",
+        "Evidence actions and raw summary payload stay close to the current non-passing selection.",
         vec![
             selected_overview_section,
             selected_actions_section,
             selected_bundle_dirs_section,
+            selected_capability_sources_section,
+            selected_capabilities_section,
             selected_raw_summary_section,
         ],
     );
@@ -2827,7 +3053,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 fret_ui_kit::declarative::style::container_props(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
-                    fret_ui_kit::LayoutRefinement::default().w_px(Px(372.0)).h_full(),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(372.0))
+                        .h_full(),
                 ),
                 |_cx| [left_card],
             ),
@@ -2835,7 +3063,10 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 fret_ui_kit::declarative::style::container_props(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
-                    fret_ui_kit::LayoutRefinement::default().flex_1().min_w_0().h_full(),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .flex_1()
+                        .min_w_0()
+                        .h_full(),
                 ),
                 |_cx| [right_card],
             ),
@@ -2903,7 +3134,11 @@ fn text_blob_sized(cx: &mut ElementContext<'_, App>, text: String, min_h: Px) ->
 
     let pre = cx.text(text);
     shadcn::ScrollArea::new([pre])
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full().min_h(min_h))
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_full()
+                .min_h(min_h),
+        )
         .into_element(cx)
 }
 
@@ -3256,7 +3491,11 @@ fn on_command(
         }
         CMD_REGRESSION_SUMMARIZE => {
             if let Err(err) = summarize::start_regression_summarize(app, st) {
-                push_log(app, &st.log_lines, &format!("regression summarize refused: {err}"));
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("regression summarize refused: {err}"),
+                );
             }
             app.request_redraw(window);
         }
@@ -3276,7 +3515,11 @@ fn on_command(
                 return;
             };
             if let Err(err) = pack::start_pack_bundle_dir(app, st, bundle_dir.as_ref()) {
-                push_log(app, &st.log_lines, &format!("regression pack refused: {err}"));
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("regression pack refused: {err}"),
+                );
             }
             app.request_redraw(window);
         }
@@ -4479,6 +4722,12 @@ pub(crate) fn clear_regression_selection(app: &mut App, st: &State) {
         .update(&st.regression_selected_bundle_dirs, |v| v.clear());
     let _ = app
         .models_mut()
+        .update(&st.regression_selected_capability_sources, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_selected_capabilities_checks, |v| v.clear());
+    let _ = app
+        .models_mut()
         .update(&st.regression_selected_error, |v| *v = None);
 }
 
@@ -4538,9 +4787,11 @@ pub(crate) fn refresh_regression_artifacts(app: &mut App, st: &mut State) {
     let _ = app.models_mut().update(&st.regression_index_json, |v| {
         *v = index_json.unwrap_or_default();
     });
-    let _ = app.models_mut().update(&st.regression_dashboard_human, |v| {
-        *v = dashboard_human;
-    });
+    let _ = app
+        .models_mut()
+        .update(&st.regression_dashboard_human, |v| {
+            *v = dashboard_human;
+        });
     let _ = app.models_mut().update(&st.regression_loaded_dir, |v| {
         *v = Some(Arc::<str>::from(root.to_string_lossy().to_string()));
     });
@@ -4562,46 +4813,122 @@ struct RegressionFailingSummaryRow {
 struct RegressionSummaryDrilldownData {
     summary_json: String,
     bundle_dirs: Vec<String>,
+    capability_sources: Vec<String>,
+    capabilities_check_paths: Vec<String>,
 }
 
-fn regression_failing_summary_rows(index_json: &str, top: usize) -> Vec<RegressionFailingSummaryRow> {
+fn capability_source_display_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(path) = value.get("path").and_then(|value| value.as_str())
+        && !path.trim().is_empty()
+    {
+        return Some(path.to_string());
+    }
+    if let Some(label) = value.get("label").and_then(|value| value.as_str())
+        && !label.trim().is_empty()
+    {
+        return Some(label.to_string());
+    }
+    let transport = value.get("transport").and_then(|value| value.as_str());
+    let session_id = value.get("session_id").and_then(|value| value.as_str());
+    match (transport, session_id) {
+        (Some(transport), Some(session_id))
+            if !transport.trim().is_empty() && !session_id.trim().is_empty() =>
+        {
+            Some(format!("{transport}:{session_id}"))
+        }
+        (Some(transport), _) if !transport.trim().is_empty() => Some(transport.to_string()),
+        _ => None,
+    }
+}
+
+fn regression_item_capability_source_display(item: &fret_diag::regression_summary::RegressionItemSummaryV1) -> Option<String> {
+    item.evidence
+        .as_ref()
+        .and_then(|evidence| evidence.extra.as_ref())
+        .and_then(|extra| extra.get("capability_source"))
+        .and_then(capability_source_display_from_value)
+        .or_else(|| {
+            item.source
+                .as_ref()
+                .and_then(|source| source.metadata.as_ref())
+                .and_then(|metadata| metadata.get("capability_source"))
+                .and_then(capability_source_display_from_value)
+        })
+        .or_else(|| {
+            item.evidence
+                .as_ref()
+                .and_then(|evidence| evidence.extra.as_ref())
+                .and_then(|extra| extra.get("capabilities_source_path"))
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .map(ToString::to_string)
+        })
+}
+
+fn regression_failing_summary_rows(
+    index_json: &str,
+    top: usize,
+) -> Vec<RegressionFailingSummaryRow> {
     let Ok(payload) = serde_json::from_str::<serde_json::Value>(index_json) else {
         return Vec::new();
     };
-    payload
-        .get("failing_summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .take(top)
-                .map(|row| RegressionFailingSummaryRow {
-                    path: row.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                    lane: row.get("lane").and_then(|v| v.as_str()).unwrap_or("<unknown>").to_string(),
-                    failures: row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0),
-                    items_total: row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0),
-                })
-                .filter(|row| !row.path.trim().is_empty())
-                .collect()
+    dashboard_failing_summary_entries(&payload, top)
+        .into_iter()
+        .filter(|row| !row.path.trim().is_empty())
+        .map(|row| RegressionFailingSummaryRow {
+            path: row.path,
+            lane: row.lane,
+            failures: row.failures,
+            items_total: row.items_total,
         })
-        .unwrap_or_default()
+        .collect()
 }
 
-fn load_regression_summary_drilldown(summary_path: &Path) -> Result<RegressionSummaryDrilldownData, String> {
+fn load_regression_summary_drilldown(
+    summary_path: &Path,
+) -> Result<RegressionSummaryDrilldownData, String> {
     let summary_json = std::fs::read_to_string(summary_path).map_err(|e| e.to_string())?;
-    let summary: RegressionSummaryV1 = serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
+    let summary: RegressionSummaryV1 =
+        serde_json::from_str(&summary_json).map_err(|e| e.to_string())?;
     let mut bundle_dirs: Vec<String> = Vec::new();
+    let mut capability_sources: Vec<String> = Vec::new();
+    let mut capabilities_check_paths: Vec<String> = Vec::new();
     for item in summary.items {
         if item.status == RegressionStatusV1::Passed {
             continue;
         }
-        if let Some(dir) = item.evidence.and_then(|e| e.bundle_dir)
-            && !dir.trim().is_empty()
-            && !bundle_dirs.iter().any(|existing| existing == &dir)
+        if let Some(source) = regression_item_capability_source_display(&item)
+            && !capability_sources.iter().any(|existing| existing == &source)
         {
-            bundle_dirs.push(dir);
+            capability_sources.push(source);
+        }
+        if let Some(evidence) = item.evidence {
+            if let Some(dir) = evidence.bundle_dir
+                && !dir.trim().is_empty()
+                && !bundle_dirs.iter().any(|existing| existing == &dir)
+            {
+                bundle_dirs.push(dir);
+            }
+            if let Some(path) = evidence
+                .extra
+                .as_ref()
+                .and_then(|extra| extra.get("capabilities_check_path"))
+                .and_then(|value| value.as_str())
+                && !path.trim().is_empty()
+                && !capabilities_check_paths
+                    .iter()
+                    .any(|existing| existing == path)
+            {
+                capabilities_check_paths.push(path.to_string());
+            }
         }
     }
-    Ok(RegressionSummaryDrilldownData { summary_json, bundle_dirs })
+    Ok(RegressionSummaryDrilldownData {
+        summary_json,
+        bundle_dirs,
+        capability_sources,
+        capabilities_check_paths,
+    })
 }
 
 pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
@@ -4615,15 +4942,51 @@ pub(crate) fn reload_selected_regression_summary(app: &mut App, st: &State) {
     };
     match load_regression_summary_drilldown(Path::new(path.as_ref())) {
         Ok(data) => {
-            let _ = app.models_mut().update(&st.regression_selected_summary_json, |v| *v = data.summary_json);
-            let _ = app.models_mut().update(&st.regression_selected_bundle_dirs, |v| {
-                *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
-            });
-            let _ = app.models_mut().update(&st.regression_selected_error, |v| *v = None);
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_summary_json, |v| {
+                    *v = data.summary_json
+                });
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_bundle_dirs, |v| {
+                    *v = data.bundle_dirs.into_iter().map(Arc::<str>::from).collect();
+                });
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_capability_sources, |v| {
+                    *v = data
+                        .capability_sources
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_capabilities_checks, |v| {
+                    *v = data
+                        .capabilities_check_paths
+                        .into_iter()
+                        .map(Arc::<str>::from)
+                        .collect();
+                });
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_error, |v| *v = None);
         }
         Err(err) => {
-            let _ = app.models_mut().update(&st.regression_selected_summary_json, |v| v.clear());
-            let _ = app.models_mut().update(&st.regression_selected_bundle_dirs, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_summary_json, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_bundle_dirs, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_capability_sources, |v| v.clear());
+            let _ = app
+                .models_mut()
+                .update(&st.regression_selected_capabilities_checks, |v| v.clear());
             let _ = app.models_mut().update(&st.regression_selected_error, |v| {
                 *v = Some(Arc::<str>::from(format!(
                     "failed to load selected regression summary {}: {err}",
@@ -4639,82 +5002,8 @@ fn build_regression_dashboard_human(
     payload: &serde_json::Value,
     top: usize,
 ) -> String {
-    let mut lines = vec![format!("dashboard index: {}", index_path.display())];
-    if let Some(kind) = payload.get("kind").and_then(|v| v.as_str()) {
-        lines.push(format!("kind: {kind}"));
-    }
-    if let Some(out_dir) = payload.get("out_dir").and_then(|v| v.as_str()) {
-        lines.push(format!("out_dir: {out_dir}"));
-    }
-    let summaries_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| rows.len())
-        .unwrap_or(0);
-    let items_total = payload
-        .get("summaries")
-        .and_then(|v| v.as_array())
-        .map(|rows| {
-            rows.iter()
-                .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
-                .sum::<u64>()
-        })
-        .unwrap_or(0);
-    lines.push(format!("summaries_total: {summaries_total}"));
-    lines.push(format!("items_total: {items_total}"));
-    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_status", "status counters");
-    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_lane", "lane counters");
-    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_tool", "tool counters");
-    if let Some(rows) = payload.get("top_reason_codes").and_then(|v| v.as_array()) {
-        if !rows.is_empty() {
-            lines.push("top reason codes:".to_string());
-            for row in rows.iter().take(top) {
-                let reason_code = row
-                    .get("reason_code")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("<unknown>");
-                let count = row.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
-                lines.push(format!("  {reason_code}: {count}"));
-            }
-        }
-    }
-    if let Some(rows) = payload.get("failing_summaries").and_then(|v| v.as_array()) {
-        if !rows.is_empty() {
-            lines.push("failing summaries:".to_string());
-            for row in rows.iter().take(top) {
-                let path = row.get("path").and_then(|v| v.as_str()).unwrap_or("<unknown>");
-                let lane = row.get("lane").and_then(|v| v.as_str()).unwrap_or("<unknown>");
-                let failures = row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0);
-                let items_total = row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0);
-                lines.push(format!(
-                    "  {path} | lane={lane} failures={failures} items={items_total}"
-                ));
-            }
-        }
-    }
-    lines.join("
-")
-}
-
-fn push_dashboard_counter_lines(
-    lines: &mut Vec<String>,
-    payload: &serde_json::Value,
-    pointer: &str,
-    title: &str,
-) {
-    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
-        return;
-    };
-    if obj.is_empty() {
-        return;
-    }
-    lines.push(format!("{title}:"));
-    let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
-    keys.sort_unstable();
-    for key in keys {
-        let count = obj.get(key).and_then(|v| v.as_u64()).unwrap_or(0);
-        lines.push(format!("  {key}: {count}"));
-    }
+    let projection = project_dashboard_summary(payload, top);
+    dashboard_human_lines_from_projection(index_path, &projection).join("\n")
 }
 
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
@@ -4775,14 +5064,16 @@ fn env_transport_kind(key: &str) -> Option<DiagTransportKind> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn resolve_repo_or_abs_path_resolves_relative_input() {
-        let resolved = resolve_repo_or_abs_path(Path::new("F:/repo"), "target/fret-diag/campaigns/ui-gallery-pr");
+        let resolved = resolve_repo_or_abs_path(
+            Path::new("F:/repo"),
+            "target/fret-diag/campaigns/ui-gallery-pr",
+        );
         assert_eq!(
             resolved,
             PathBuf::from("F:/repo").join("target/fret-diag/campaigns/ui-gallery-pr")
@@ -4822,7 +5113,6 @@ mod tests {
         assert!(human.contains("top reason codes:"));
         assert!(human.contains("pixel_diff: 2"));
     }
-
 
     #[test]
     fn regression_failing_summary_rows_reads_ranked_rows() {
@@ -4881,7 +5171,118 @@ mod tests {
 
         let data = load_regression_summary_drilldown(&path).expect("load drilldown");
         assert!(data.summary_json.contains("failed_deterministic"));
-        assert_eq!(data.bundle_dirs, vec!["target/fret-diag/runs/bundle-a".to_string()]);
+        assert_eq!(
+            data.bundle_dirs,
+            vec!["target/fret-diag/runs/bundle-a".to_string()]
+        );
+        assert!(data.capability_sources.is_empty());
+        assert!(data.capabilities_check_paths.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_collects_policy_skip_capability_checks() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-policy-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "evidence": {
+                        "extra": {
+                            "capability_source": {
+                                "kind": "filesystem",
+                                "path": "target/fret-diag/capabilities.json",
+                                "label": "filesystem:target/fret-diag/capabilities.json",
+                                "transport": "filesystem",
+                                "session_id": null
+                            },
+                            "capabilities_check_path": "target/fret-diag/campaigns/ui-gallery/check.capabilities.json"
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert!(data.bundle_dirs.is_empty());
+        assert_eq!(
+            data.capability_sources,
+            vec!["target/fret-diag/capabilities.json".to_string()]
+        );
+        assert_eq!(
+            data.capabilities_check_paths,
+            vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_regression_summary_drilldown_falls_back_to_capability_source_label() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-devtools-regression-drilldown-source-label-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("regression.summary.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag_regression_summary",
+            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
+            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
+            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
+            "items": [
+                {
+                    "item_id": "capability-check",
+                    "kind": "script",
+                    "name": "capability-check",
+                    "status": "skipped_policy",
+                    "lane": "smoke",
+                    "reason_code": "capability.missing",
+                    "source": {
+                        "metadata": {
+                            "capability_source": {
+                                "kind": "transport_session",
+                                "path": null,
+                                "label": "devtools_ws:session-123",
+                                "transport": "devtools_ws",
+                                "session_id": "session-123"
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
+
+        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
+        assert!(data.bundle_dirs.is_empty());
+        assert_eq!(
+            data.capability_sources,
+            vec!["devtools_ws:session-123".to_string()]
+        );
+        assert!(data.capabilities_check_paths.is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);
     }

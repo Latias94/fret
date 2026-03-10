@@ -56,7 +56,10 @@ fn resolve_manifest_path(dir: &Path) -> Option<PathBuf> {
 fn resolve_script_result_path(dir: &Path, manifest: &Value) -> PathBuf {
     let from_manifest = manifest
         .get("paths")
-        .and_then(|p| p.get("script_result_json"))
+        .and_then(|p| {
+            p.get("script_result")
+                .or_else(|| p.get("script_result_json"))
+        })
         .and_then(|v| v.as_str())
         .map(|s| dir.join(s));
     from_manifest.unwrap_or_else(|| dir.join("script.result.json"))
@@ -700,10 +703,10 @@ mod tests {
             "schema_version": 2,
             "generated_unix_ms": 2,
             "run_id": run_id,
-            "paths": { "script_result_json": "script.result.json", "bundle_json": "bundle.json" },
+            "paths": { "script_result": "script.result.json", "bundle_artifact": "bundle.json" },
             "script_result": { "stage": "passed", "reason_code": null, "updated_unix_ms": script_result.updated_unix_ms },
             "files": [
-                { "id": "script_result_json", "path": "script.result.json", "bytes": bytes.len(), "blake3": blake3_hex(&bytes) }
+                { "id": "script_result", "path": "script.result.json", "bytes": bytes.len(), "blake3": blake3_hex(&bytes) }
             ]
         });
         write_json(&dir.join("manifest.json"), &manifest);
@@ -758,7 +761,7 @@ mod tests {
             "schema_version": 2,
             "generated_unix_ms": 2,
             "run_id": run_id + 1,
-            "paths": { "script_result_json": "script.result.json", "bundle_json": "bundle.json" },
+            "paths": { "script_result": "script.result.json", "bundle_artifact": "bundle.json" },
             "script_result": { "stage": "passed", "reason_code": null, "updated_unix_ms": 1 },
             "files": [],
         });
@@ -814,7 +817,7 @@ mod tests {
             "schema_version": 2,
             "generated_unix_ms": 2,
             "run_id": run_id,
-            "paths": { "script_result_json": "script.result.json", "bundle_json": "bundle.json" },
+            "paths": { "script_result": "script.result.json", "bundle_artifact": "bundle.json" },
             "bundle_json": {
                 "mode": "chunks.v1",
                 "total_bytes": 1,
@@ -830,6 +833,54 @@ mod tests {
 
         let report = lint_run_artifact_dir(&dir, 0).unwrap();
         assert!(report.error_issues > 0);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn artifact_lint_accepts_legacy_manifest_path_aliases() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-artifact-lint-legacy-paths-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        let run_id: u64 = 314;
+        let dir = root.join(run_id.to_string());
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let script_result = UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: 1,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: Some(UiScriptEvidenceV1::default()),
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        let bytes = serde_json::to_vec_pretty(&script_result).unwrap();
+        std::fs::write(dir.join("script.result.json"), &bytes).unwrap();
+
+        let manifest = serde_json::json!({
+            "schema_version": 2,
+            "generated_unix_ms": 2,
+            "run_id": run_id,
+            "paths": { "script_result_json": "script.result.json", "bundle_json": "bundle.json" },
+            "script_result": { "stage": "passed", "reason_code": null, "updated_unix_ms": script_result.updated_unix_ms },
+            "files": [
+                { "id": "script_result_json", "path": "script.result.json", "bytes": bytes.len(), "blake3": blake3_hex(&bytes) }
+            ]
+        });
+        write_json(&dir.join("manifest.json"), &manifest);
+
+        let report = lint_run_artifact_dir(&dir, 0).unwrap();
+        assert_eq!(report.error_issues, 0);
 
         let _ = std::fs::remove_dir_all(&root);
     }

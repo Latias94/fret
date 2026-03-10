@@ -1,7 +1,7 @@
 # Fret Interaction Kernel (v1)
 
 Status: Draft (v1 direction locked)
-Last updated: 2026-02-10
+Last updated: 2026-03-09
 
 This workstream introduces an ecosystem-level crate that consolidates interaction primitives shared
 across editor-grade surfaces:
@@ -144,6 +144,6 @@ For a concrete checklist and gates, see:
 
 Preferred one-shot gate script for this workstream:
 
-- `pwsh tools/diag_gate_interaction_kernel_v1.ps1`
+- `python tools/diag_gate_interaction_kernel_v1.py`
   - Default: includes the strong M3 hover gate (`--check-dock-drag-current-windows-min 2`).
-  - Optional (weaker): `-WeakDockHover` to skip the strong hover gate while iterating locally.
+  - Optional (weaker): `--weak-dock-hover` to skip the strong hover gate while iterating locally.

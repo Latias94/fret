@@ -84,6 +84,13 @@ Examples:
 - `batch.manifest.json`
 - future compact dashboard-style index files
 
+Field classification note:
+
+- `RegressionArtifactsV1.index_json` belongs to this derived summary/index layer and is the
+  canonical path pointer for first-open routing to the derived index artifact.
+- `RegressionArtifactsV1.html_report` is not part of the canonical machine artifact vocabulary; it
+  remains a presentation-facing projection.
+
 Rules:
 
 - These artifacts may be regenerated.
@@ -104,6 +111,13 @@ Examples:
 - AI-only share zips
 - combined failure zips
 - `share/share.manifest.json`
+
+Field classification note:
+
+- `RegressionEvidenceV1.perf_summary_json` and `RegressionEvidenceV1.compare_json` should be treated
+  as projection-only additive evidence fields.
+- They may point to perf or compare drill-down artifacts, but they are not the generic canonical
+  artifact-path vocabulary that new cross-surface consumers should start from.
 
 Rules:
 

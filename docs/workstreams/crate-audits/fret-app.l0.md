@@ -6,7 +6,7 @@ Status: L0 complete (quick scan; no deep dive yet)
 
 App kernel glue: “Models + Commands + Effects” plumbing, app settings surfaces, and portable helpers that sit above `fret-runtime`.
 
-## Snapshot (from `tools/audit_crate.ps1`)
+## Snapshot (from `tools/audit_crate.py`)
 
 - Largest files:
   - `crates/fret-app/src/app.rs`
@@ -26,4 +26,3 @@ App kernel glue: “Models + Commands + Effects” plumbing, app settings surfac
 
 1. Directory-module split of `app.rs` if it keeps growing (separate plumbing vs helpers vs tests).
 2. Add explicit “settings schema stability” tests for key persisted surfaces (ties to `BU-FR-core-014`).
-

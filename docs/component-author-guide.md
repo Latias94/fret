@@ -155,19 +155,31 @@ props.corner_radii = Corners::all(radius);
 cx.container(props, |_cx| Vec::new());
 ```
 
-## 3) Commands + shortcuts: always go through `CommandId` + keymap
+## 3) Actions + shortcuts: author action-first, lower through the command pipeline where needed
 
-If an action can be triggered by keyboard/menu/palette, it should be a `CommandId`.
+If an interaction can be triggered by keyboard/menu/palette, the public authoring surface should
+prefer a typed action / action-first name. In v1, runtime identity, keymap integration, menu
+metadata, and command catalog routing may still lower through the `CommandId`-compatible command
+pipeline, but downstream component authors should not have to start from command-shaped builder
+names on normal app-facing widgets.
 
 Guidelines:
 
-- Namespace command IDs: `crate.scope.action` (e.g. `node_graph.add_node`).
+- Prefer public builder names like `action(...)` over command-shaped names when the widget is a
+  normal app-facing surface.
+- Keep explicit command-centric naming only for catalog/metadata-oriented surfaces where command
+  identity, shortcut display, or command registry behavior is the point (for example command
+  palette/catalog entries).
+- Namespace command/action IDs consistently: `crate.scope.action` (e.g. `node_graph.add_node`).
 - Put default shortcuts into `CommandMeta.default_keybindings`.
 - Use `when` expressions to guard context (e.g. disable global shortcuts when focus is in text input).
+- Keep raw key handling out of widgets unless you are implementing mechanism-level input behavior.
 
 Avoid:
 
 - Hard-coding shortcut behavior by intercepting raw key-down events inside component rendering.
+- Requiring downstream app code to spell legacy command-centric builder names when the surface is
+  really just dispatching a stable action.
 
 ## 4) Theme tokens: no hard-coded palettes
 

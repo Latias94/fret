@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("checkboxes.rs");
 
 // region: example
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -65,16 +66,25 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 vec![
                     shadcn::ContextMenuEntry::CheckboxItem(
                         shadcn::ContextMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
+                            .action(CommandId::new(
+                                "ui_gallery.context_menu.checkboxes.status_bar",
+                            ))
                             .test_id("ui-gallery-context-menu-checkboxes-status-bar"),
                     ),
                     shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
                         show_activity_bar.clone(),
                         "Activity Bar",
-                    )),
+                    )
+                    .action(CommandId::new(
+                        "ui_gallery.context_menu.checkboxes.activity_bar",
+                    ))),
                     shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
                         show_line_numbers.clone(),
                         "Show Line Numbers",
-                    )),
+                    )
+                    .action(CommandId::new(
+                        "ui_gallery.context_menu.checkboxes.show_line_numbers",
+                    ))),
                 ]
             },
         )

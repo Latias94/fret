@@ -519,6 +519,15 @@ impl NavigationMenuLink {
         self
     }
 
+    /// Bind a stable action ID to this navigation menu link (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -924,6 +933,15 @@ impl NavigationMenuItem {
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Bind a stable action ID to this navigation menu item trigger (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
         self
     }
 
@@ -4256,7 +4274,7 @@ mod tests {
                 vec![
                     NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
                         .label("Link")
-                        .on_click(cmd.clone())
+                        .action(cmd.clone())
                         .test_id("disabled-link")
                         .into_element(cx),
                 ]
@@ -4317,7 +4335,7 @@ mod tests {
                 vec![
                     NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
                         .label("Link")
-                        .on_click(cmd.clone())
+                        .action(cmd.clone())
                         .test_id("disabled-link")
                         .into_element(cx),
                 ]
@@ -4391,7 +4409,7 @@ mod tests {
                 vec![
                     NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
                         .label("Link")
-                        .on_click(cmd.clone())
+                        .action(cmd.clone())
                         .test_id("disabled-link")
                         .into_element(cx),
                 ]

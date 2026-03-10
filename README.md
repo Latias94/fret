@@ -57,7 +57,7 @@ Want the shortest onboarding path? Read [docs/first-hour.md](./docs/first-hour.m
 
 Need help choosing the right example entry point (templates vs cookbook vs gallery vs labs)? See [docs/examples/README.md](./docs/examples/README.md).
 
-For new app authors, keep the default authoring model small:
+For new app authors, keep the default authoring model small and explicit:
 
 - `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
 - `on_action_notify_models` for most typed UI actions,
@@ -65,6 +65,12 @@ For new app authors, keep the default authoring model small:
 - `on_activate*` only for local pressable/widget glue.
 - Everything else (`on_action_notify`, single-model aliases, redraw-oriented `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
 - The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
+
+Use the onboarding ladder on purpose:
+
+- **Default**: `hello` → `simple-todo` → `todo`
+- **Comparison**: `simple_todo_v2_target` only when you want to compare local-state/list ergonomics against the default path
+- **Advanced**: gallery, interop, docking, renderer, and maintainer demos
 
 See [docs/README.md](./docs/README.md#state-management-authoring-ergonomics) for the full authoring map.
 
@@ -194,6 +200,7 @@ Reference implementation:
 
 - Cookbook: [`apps/fret-cookbook/examples/simple_todo.rs`](./apps/fret-cookbook/examples/simple_todo.rs)
 - Template guide: [`docs/first-hour.md`](./docs/first-hour.md)
+- Example taxonomy: [`docs/examples/README.md`](./docs/examples/README.md)
 
 ![Fret gallery 01](screenshots/gallery-01.png)
 ![Fret gallery 02](screenshots/gallery-02.png)

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
@@ -20,11 +21,14 @@ use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost, focus_visible};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+use fret_ui_kit::{
+    LayoutRefinement, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
+    UiSupportsLayout,
+};
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -710,6 +714,25 @@ impl ScrollArea {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> ScrollAreaBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        ScrollAreaBuild {
+            build: Some(build),
+            axis: ScrollAxis::Y,
+            show_scrollbar: true,
+            scrollbar_type: ScrollAreaType::default(),
+            scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
+            scroll_handle: None,
+            viewport_test_id: None,
+            viewport_focus_test_id: None,
+            viewport_intrinsic_measure_mode: None,
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn axis(mut self, axis: ScrollAxis) -> Self {
         self.axis = axis;
         self
@@ -809,6 +832,142 @@ where
     ScrollArea::new(f(cx)).into_element(cx)
 }
 
+pub struct ScrollAreaBuild<H, B> {
+    build: Option<B>,
+    axis: ScrollAxis,
+    show_scrollbar: bool,
+    scrollbar_type: ScrollAreaType,
+    scroll_hide_delay_ticks: u64,
+    layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
+    viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
+    viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar(mut self, show: bool) -> Self {
+        self.show_scrollbar = show;
+        self
+    }
+
+    pub fn type_(mut self, scrollbar_type: ScrollAreaType) -> Self {
+        self.scrollbar_type = scrollbar_type;
+        self
+    }
+
+    pub fn scroll_hide_delay_ticks(mut self, ticks: u64) -> Self {
+        self.scroll_hide_delay_ticks = ticks;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn scroll_handle(mut self, handle: ScrollHandle) -> Self {
+        self.scroll_handle = Some(handle);
+        self
+    }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.viewport_intrinsic_measure_mode = Some(mode);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_scroll_area_children(
+            cx,
+            self.build.expect("expected scroll-area build closure"),
+        );
+        let mut area = ScrollArea::new(children)
+            .axis(self.axis)
+            .show_scrollbar(self.show_scrollbar)
+            .type_(self.scrollbar_type)
+            .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
+            .refine_layout(self.layout);
+
+        if let Some(handle) = self.scroll_handle {
+            area = area.scroll_handle(handle);
+        }
+        if let Some(test_id) = self.viewport_test_id {
+            area = area.viewport_test_id(test_id);
+        }
+        if let Some(test_id) = self.viewport_focus_test_id {
+            area = area.viewport_focus_test_id(test_id);
+        }
+        if let Some(mode) = self.viewport_intrinsic_measure_mode {
+            area = area.viewport_intrinsic_measure_mode(mode);
+        }
+
+        area.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for ScrollAreaBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_scroll_area_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -822,7 +981,27 @@ mod tests {
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, ElementKind, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::ui;
     use std::time::Duration;
+
+    fn any_element_has_test_id(el: &AnyElement, test_id: &str) -> bool {
+        el.semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+            || el
+                .children
+                .iter()
+                .any(|child| any_element_has_test_id(child, test_id))
+    }
+
+    fn any_element_has_text(el: &AnyElement, needle: &str) -> bool {
+        matches!(&el.kind, ElementKind::Text(props) if props.text.as_ref() == needle)
+            || el
+                .children
+                .iter()
+                .any(|child| any_element_has_text(child, needle))
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -898,6 +1077,36 @@ mod tests {
         assert_eq!(bar.orientation, ScrollAreaScrollbarOrientation::Horizontal);
         assert_eq!(bar.track_padding, Px(2.0));
         assert!((bar.thumb_idle_alpha - 0.6).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn scroll_area_build_collects_children_and_viewport_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, ui::text("Row"));
+            })
+            .viewport_test_id("sa.viewport")
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(80.0)))
+            .into_element(cx)
+        });
+
+        assert!(
+            any_element_has_test_id(&element, "sa.viewport"),
+            "expected ScrollArea::build to preserve viewport test_id"
+        );
+        assert!(
+            any_element_has_text(&element, "Row"),
+            "expected ScrollArea::build to keep child content"
+        );
     }
 
     #[test]

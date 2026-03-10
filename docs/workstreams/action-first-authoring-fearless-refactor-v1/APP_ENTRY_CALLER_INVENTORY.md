@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — App Entry Caller Inventory
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 This inventory turns the app-entry policy draft into an execution list.
 
@@ -54,24 +54,25 @@ Current conclusion:
 | File | Current role | Recommended class | Notes |
 |---|---|---|---|
 | `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `done` | migrated on 2026-03-08 to `run_view::<ChartDeclarativeView>()`; confirms a plain declarative chart demo also does not need closure-root `App::ui(...)` |
-| `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `migrate-to-view` | useful as proof that plain IMUI demos do not require closure-root app entry |
+| `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiFloatingWindowsView>()`; confirms a floating-window IMUI surface also does not need closure-root app entry |
 | `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiHelloView>()`; keep as the first Batch A proof point until the remaining callers are burned down |
-| `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `migrate-to-view` | still appears to be authoring debt rather than a lower-level requirement |
+| `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiNodeGraphView>()`; confirms retained IMUI node-graph demos also fit the default view entry path |
 | `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiResponseSignalsView>()`; proves response-signal-heavy IMUI demos also fit the default view entry path |
-| `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `migrate-to-view` | useful proof that adapter demos can still live on the default entry path |
+| `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiShadcnAdapterView>()`; confirms adapter-heavy IMUI demos also fit the default view entry path |
 | `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `done` | migrated on 2026-03-08 to `run_view::<NodeGraphDemoView>()`; confirms a retained-model canvas demo also fits the default view entry path |
 
 ---
 
 ## Non-consumer references that still need cleanup attention
 
-These are not part of the migration table above, but they still matter for policy closure:
+These are not part of the migration table above; they now serve as historical evidence for the
+pre-release hard delete:
 
 | File | Why it matters |
 |---|---|
-| `ecosystem/fret/src/lib.rs` | rustdoc still contains closure-style `App::ui(...)` example text and should eventually follow the final policy decision |
-| `ecosystem/fret/src/app_entry.rs` | defines the public `ui(...)` / `ui_with_hooks(...)` surface; future deprecation/removal will land here |
-| `ecosystem/fret/README.md` | already moved to “view is default, ui is advanced bridge”; keep aligned with the policy draft |
+| `ecosystem/fret/src/lib.rs` | crate rustdoc now proves the facade teaches only `view::<V>()` / `view_with_hooks::<V>(...)` |
+| `ecosystem/fret/src/app_entry.rs` | the closure-root entry methods used to live here; the file now proves the hard delete landed |
+| `ecosystem/fret/README.md` | README now documents only the surviving builder-first entry path |
 
 ---
 
@@ -131,6 +132,7 @@ Status update:
 
 ## Practical verdict
 
-Based on the current caller set, the repo is **not blocked by lack of a `View`-based app entry API**.
-Batch A, Batch B, and Batch C callers are now migrated, so the remaining work is no longer caller migration.
-It is deprecation sequencing for `App::ui(...)` / `ui_with_hooks(...)` plus any final lower-level exceptions that are intentionally kept outside the facade.
+Based on the current caller set, the repo was **not blocked by lack of a `View`-based app entry
+API**, which is why the pre-release hard delete was viable.
+There are no in-tree example/demo callers left on `App::ui(...)` / `ui_with_hooks(...)`, and the
+`fret` facade no longer exposes that closure-root path.

@@ -68,11 +68,11 @@ impl View for OverlayBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let cmd_bump: CommandId = act::BumpUnderlay.into();
 
-        let dialog_open = cx.use_state::<bool>();
-        let underlay_bumps = cx.use_state::<u32>();
+        let dialog_open_state = cx.use_local::<bool>();
+        let underlay_bumps_state = cx.use_local::<u32>();
 
-        cx.on_action_notify_model_set::<act::OpenDialog, bool>(dialog_open.clone(), true);
-        cx.on_action_notify_model_update::<act::BumpUnderlay, u32>(underlay_bumps.clone(), |v| {
+        cx.on_action_notify_local_set::<act::OpenDialog, bool>(&dialog_open_state, true);
+        cx.on_action_notify_local_update::<act::BumpUnderlay, u32>(&underlay_bumps_state, |v| {
             *v = v.saturating_add(1);
         });
         cx.on_action_availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available);
@@ -80,11 +80,11 @@ impl View for OverlayBasicsView {
             CommandAvailability::Available
         });
 
-        let dialog_open_for_dialog = dialog_open.clone();
-        let dialog_open_for_footer = dialog_open.clone();
-        let dialog_open_for_close = dialog_open.clone();
+        let dialog_open_for_dialog = dialog_open_state.clone_model();
+        let dialog_open_for_footer = dialog_open_state.clone_model();
+        let dialog_open_for_close = dialog_open_state.clone_model();
 
-        let bumps = cx.watch_model(&underlay_bumps).layout().value_or(0);
+        let bumps = underlay_bumps_state.watch(cx).layout().value_or(0);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"

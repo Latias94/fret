@@ -177,6 +177,10 @@ use bundle_stats_snapshot::{
     snapshot_widget_measure_hotspots,
 };
 
+fn bundle_artifact_alias_pair(bundle_path: &Path) -> (String, String) {
+    crate::artifact_alias::bundle_artifact_alias_pair(bundle_path)
+}
+
 fn compact_string_middle<'a>(s: &'a str, head_bytes: usize, tail_bytes: usize) -> Cow<'a, str> {
     // Keep `diag stats` output readable: element paths can be extremely long on Windows
     // (workspace root + nested debug identity chain). Prefer keeping both the root prefix and the

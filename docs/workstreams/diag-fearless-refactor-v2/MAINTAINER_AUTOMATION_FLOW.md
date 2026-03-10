@@ -81,6 +81,18 @@ Examples:
 - `cargo run -p fretboard -- diag dashboard <campaign_or_batch_root>`
 - `cargo run -p fretboard -- diag summarize <campaign_or_batch_root> --json`
 
+For policy-skipped slices, keep this distinction explicit:
+
+1. use aggregate output to confirm `skipped_policy` and `capability.missing`,
+2. read `capability_source` to understand where the capability decision came from,
+3. open `capabilities_check_path` to inspect the campaign-local missing/available lists.
+
+Current consumer behavior now follows that same split:
+
+- DevTools `Regression` shows `Capability Sources` separately from `Capability Checks`,
+- MCP regression dashboard output also surfaces capability provenance and capability-check paths
+  when the sibling summary artifact is available.
+
 ### 4. Generate bounded share artifacts
 
 When a campaign or batch contains failures, prefer one bounded share step instead of hand-picking
@@ -121,9 +133,11 @@ Use this after a behavior lands or changes:
 
 1. run one campaign or one filtered campaign batch,
 2. inspect `regression.summary.json`,
-3. if failed, first check whether `share/share.manifest.json` was already generated automatically,
-4. if it is missing, run `diag campaign share <root>`,
-5. attach `share/share.manifest.json` and the generated `*.ai.zip` outputs to the handoff.
+3. if a failure is actually `skipped_policy`, inspect `capability_source` before opening raw
+   bundle-level evidence paths,
+4. if failed, first check whether `share/share.manifest.json` was already generated automatically,
+5. if it is missing, run `diag campaign share <root>`,
+6. attach `share/share.manifest.json` and the generated `*.ai.zip` outputs to the handoff.
 
 ## Why this flow is recommended
 

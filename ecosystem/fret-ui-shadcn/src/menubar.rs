@@ -264,6 +264,15 @@ impl MenubarItem {
         self
     }
 
+    /// Bind a stable action ID to this menubar item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -744,6 +753,15 @@ impl MenubarCheckboxItem {
         self
     }
 
+    /// Bind a stable action ID to this menubar checkbox item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -832,6 +850,15 @@ impl MenubarRadioItemSpec {
         self
     }
 
+    /// Bind a stable action ID to this menubar radio item spec (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -907,6 +934,15 @@ impl MenubarRadioItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Bind a stable action ID to this menubar radio item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
         self
     }
 

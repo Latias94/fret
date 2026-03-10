@@ -9,6 +9,13 @@ This note is a design-oriented snapshot focused on two questions:
 This document is not an ADR. If we agree on a direction, we should promote the chosen contract
 surface(s) into an ADR (and keep it narrow and hard-to-change).
 
+Positioning note:
+
+- **Default** onboarding stays on `hello` → `simple-todo` → `todo`.
+- This document is **advanced** guidance for interop and framework-shape evaluation.
+- Comparison samples such as `simple_todo_v2_target` are useful for ergonomics review, but they are
+  not the main interop teaching path.
+
 ## Background work (portable) and "heavy app" adapters
 
 Fret is intentionally main-thread oriented for UI/runtime mutation. The scalable pattern is:
@@ -74,6 +81,12 @@ Runnable Tier A demo (native):
 
 - `cargo run -p fret-demo --bin embedded_viewport_demo`
 - Cookbook: `docs/interop-tier-a-embedded-viewport.md`
+
+Treat Tier A embedding as an advanced surface:
+
+- useful once the default app path is already understood,
+- not part of first-contact onboarding,
+- intentionally separate from the `hello` / `simple-todo` / `todo` ladder.
 
 Instead, a practical interop strategy is:
 

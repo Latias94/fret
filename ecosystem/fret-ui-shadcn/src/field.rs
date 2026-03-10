@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::LayoutDirection;
@@ -13,7 +14,10 @@ use fret_ui_kit::primitives::control_registry::{
 };
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 use fret_ui_kit::typography::{
     description_text_refinement_with_fallbacks, muted_foreground_color,
@@ -424,6 +428,17 @@ impl FieldSet {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldSetBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldSetBuild {
+            build: Some(build),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -708,6 +723,19 @@ impl FieldGroup {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldGroupBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldGroupBuild {
+            build: Some(build),
+            slot: FieldGroupSlot::default(),
+            gap: None,
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn checkbox_group(mut self) -> Self {
         self.slot = FieldGroupSlot::CheckboxGroup;
         self
@@ -774,6 +802,157 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     FieldGroup::new(f(cx)).into_element(cx)
+}
+
+pub struct FieldSetBuild<H, B> {
+    build: Option<B>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_field_children(cx, self.build.expect("expected field-set build closure"));
+        FieldSet::new(children)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldSetBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldSetBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldSetBuild::into_element(self, cx)
+    }
+}
+
+pub struct FieldGroupBuild<H, B> {
+    build: Option<B>,
+    slot: FieldGroupSlot,
+    gap: Option<MetricRef>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn checkbox_group(mut self) -> Self {
+        self.slot = FieldGroupSlot::CheckboxGroup;
+        self
+    }
+
+    pub fn gap(mut self, space: Space) -> Self {
+        self.gap = Some(MetricRef::space(space));
+        self
+    }
+
+    pub fn gap_px(mut self, px: Px) -> Self {
+        self.gap = Some(px.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_field_children(
+            cx,
+            self.build.expect("expected field-group build closure"),
+        );
+        let mut group = FieldGroup::new(children).refine_layout(self.layout);
+        if self.slot == FieldGroupSlot::CheckboxGroup {
+            group = group.checkbox_group();
+        }
+        if let Some(gap) = self.gap {
+            group = group.gap_px(gap.resolve(Theme::global(&*cx.app)));
+        }
+        group.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldGroupBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldGroupBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldGroupBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_field_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 #[derive(Debug)]
@@ -1556,6 +1735,21 @@ impl Field {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldBuild {
+            build: Some(build),
+            orientation: FieldOrientation::default(),
+            invalid: false,
+            disabled: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     /// Apply the upstream `data-invalid` styling state to this field grouping.
     pub fn invalid(mut self, invalid: bool) -> Self {
         self.invalid = invalid;
@@ -1789,6 +1983,98 @@ impl Field {
     }
 }
 
+pub struct FieldBuild<H, B> {
+    build: Option<B>,
+    orientation: FieldOrientation,
+    invalid: bool,
+    disabled: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn invalid(mut self, invalid: bool) -> Self {
+        self.invalid = invalid;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn orientation(mut self, orientation: FieldOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_field_children(cx, self.build.expect("expected field build closure"));
+        Field::new(children)
+            .orientation(self.orientation)
+            .invalid(self.invalid)
+            .disabled(self.disabled)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for FieldBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldBuild::into_element(self, cx)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1810,6 +2096,14 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(240.0)),
         )
+    }
+
+    fn any_element_has_text(element: &AnyElement, needle: &str) -> bool {
+        matches!(&element.kind, ElementKind::Text(props) if props.text.as_ref() == needle)
+            || element
+                .children
+                .iter()
+                .any(|child| any_element_has_text(child, needle))
     }
 
     struct FakeServices;
@@ -1889,6 +2183,25 @@ mod tests {
             element.semantics_decoration.as_ref().and_then(|d| d.role),
             Some(SemanticsRole::List)
         );
+    }
+
+    #[test]
+    fn field_build_collects_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Field::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, FieldLabel::new("Email"));
+                out.push_ui(cx, ui::text("Control"));
+            })
+            .into_element(cx)
+        });
+
+        assert!(any_element_has_text(&element, "Email"));
+        assert!(any_element_has_text(&element, "Control"));
     }
 
     #[test]

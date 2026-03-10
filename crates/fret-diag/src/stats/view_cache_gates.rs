@@ -277,12 +277,13 @@ pub(crate) fn check_bundle_for_view_cache_reuse_stable_min(
     }
 
     let out_path = out_dir.join("check.view_cache_reuse_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "view_cache_reuse_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_tail_frames": min_tail_frames,

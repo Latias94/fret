@@ -11,7 +11,7 @@ use fret_ui::element::{LayoutStyle, Length};
 use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt as _};
 use serde_json::Value;
 
-struct ImUiNodeGraphState {
+struct ImUiNodeGraphView {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
 }
@@ -19,55 +19,56 @@ struct ImUiNodeGraphState {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-node-graph-demo")
         .window("imui_node_graph_demo", (980.0, 720.0))
-        .ui(init_window, view)?
-        .run()?;
+        .run_view::<ImUiNodeGraphView>()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> ImUiNodeGraphState {
-    let graph = demo_graph();
-    let graph = app.models_mut().insert(graph);
-    let view = app.models_mut().insert(NodeGraphViewState::default());
-    ImUiNodeGraphState { graph, view }
-}
+impl View for ImUiNodeGraphView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        let graph = demo_graph();
+        let graph = app.models_mut().insert(graph);
+        let view = app.models_mut().insert(NodeGraphViewState::default());
+        Self { graph, view }
+    }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret::ViewElements {
-    let graph = st.graph.clone();
-    let view = st.view.clone();
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let graph = self.graph.clone();
+        let view = self.view.clone();
 
-    fret_imui::imui(cx, |ui| {
-        use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
-        use fret_ui_kit::imui::UiWriterUiKitExt as _;
+        fret_imui::imui(cx.elements(), |ui| {
+            use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+            use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
-            fret_imui::imui_build(cx, out, |ui| {
-                let title = fret_ui_kit::ui::text().font_semibold();
-                ui.add_ui(title);
-                ui.separator();
+            let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
+                fret_imui::imui_build(cx, out, |ui| {
+                    let title = fret_ui_kit::ui::text().font_semibold();
+                    ui.add_ui(title);
+                    ui.separator();
 
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.height = Length::Fill;
-                layout.flex.grow = 1.0;
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout.flex.grow = 1.0;
 
-                fret_node::imui::retained_subtree_with(
-                    ui,
-                    RetainedSubtreeProps::new::<App>(move |ui_tree: &mut UiTree<App>| {
-                        let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
-                            .with_fit_view_on_mount();
-                        let canvas_node = ui_tree.create_node_retained(canvas);
+                    fret_node::imui::retained_subtree_with(
+                        ui,
+                        RetainedSubtreeProps::new::<App>(move |ui_tree: &mut UiTree<App>| {
+                            let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+                                .with_fit_view_on_mount();
+                            let canvas_node = ui_tree.create_node_retained(canvas);
 
-                        let root = ui_tree.create_node_retained(NodeGraphEditor::new());
-                        ui_tree.set_children(root, vec![canvas_node]);
-                        root
-                    })
-                    .with_layout(layout),
-                );
-            });
+                            let root = ui_tree.create_node_retained(NodeGraphEditor::new());
+                            ui_tree.set_children(root, vec![canvas_node]);
+                            root
+                        })
+                        .with_layout(layout),
+                    );
+                });
+            })
+            .size_full();
+            ui.add_ui(root);
         })
-        .size_full();
-        ui.add_ui(root);
-    })
+    }
 }
 
 fn demo_graph() -> Graph {

@@ -198,7 +198,8 @@ surface from the post-v1 density goals:
 - Landed in v1: `View` + typed actions, `use_selector` / `use_query`, cx-less `ui::*` constructors,
   semantics/test IDs before `into_element(cx)`, and a narrowed default helper surface.
 - Not yet the default story: plain-Rust local state, builder-only composition that removes most
-  `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
+  `ui::children!`, and any narrower keyed-list / payload-row handler-placement aid beyond the
+  current root action table.
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
 
@@ -347,7 +348,7 @@ Example:
 - `apps/fret-cookbook/examples/text_input_basics.rs` (shows the narrow text bridge: `Input::new(&LocalState<String>)` on the default path, while submit/clear gating stays on `on_action_notify_models`).
 - `apps/fret-cookbook/examples/date_picker_basics.rs` (shows the same bridge for `DatePicker::new_controllable(...)` while keeping the component boundary unchanged).
 - `apps/fret-cookbook/examples/form_basics.rs` (shows multi-field local-state reads plus generic `on_action_notify_models` coordination for validation/reset).
-- `apps/fret-cookbook/examples/simple_todo.rs` (kept intentionally as the keyed-list explicit-model comparison/reference surface: local draft / `next_id`, explicit collection model, and keyed row identity).
+- `apps/fret-cookbook/examples/simple_todo.rs` (now matches the default cookbook keyed-list path: `LocalState<Vec<_>>`, payload row toggle, and stable keyed row identity without explicit row `Model<bool>` handles).
 - `apps/fret-examples/src/todo_demo.rs` (shows the default app-grade keyed-list path: `LocalState<Vec<_>>`, payload row actions, and snapshot checkbox rendering).
 - `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs` now matches that default keyed-list path for generated starter apps instead of mirroring the cookbook comparison split).
 - `apps/fret-examples/src/async_playground_demo.rs` (theme mirrors `Model<bool>`; `render()` applies the theme when the value changes).
@@ -527,11 +528,11 @@ ui::container(|cx| {
   introducing extra adapters.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in
   cookbook/examples (and the UI gallery shell):
-  - `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
-  - `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
-  - `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`) (shell-only; preview pages migrate in batches)
+  - `tools/gate_no_stack_in_cookbook.py`
+  - `tools/gate_no_stack_in_examples.py`
+  - `tools/gate_no_stack_in_ui_gallery_shell.py` (preview pages migrate in batches)
 - Legacy stack helpers are hard-deleted from `fret-ui-kit` and gated to prevent regressions.
-  - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
+  - Gate: `tools/gate_no_public_stack_in_ui_kit.py`
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 

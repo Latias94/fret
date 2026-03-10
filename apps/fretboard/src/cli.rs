@@ -72,6 +72,7 @@ Usage:
   fretboard diag dashboard [<dir|regression.index.json>] [--dir <dir>] [--top <n>] [--json]
   fretboard diag doctor [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--check|--strict] [--fix|--fix-dry-run] [--fix-schema2] [--json]
   fretboard diag doctor scripts [--max-examples <n>] [--json]
+  fretboard diag doctor campaigns [--strict] [--json]
   fretboard diag registry <check|write|print> [--path <path>] [--json]
   fretboard diag trace <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--trace-out <path>]
   fretboard diag pack [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--dir <dir>] [--pack-out <path>] [--ai-packet] [--ai-only] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
@@ -191,6 +192,9 @@ Examples:
   fretboard diag summarize --dir target/fret-diag/campaigns/ui-gallery-pr
   fretboard diag dashboard --dir target/fret-diag/campaigns/ui-gallery-pr --top 10
   fretboard diag campaign list --lane smoke --tag ui-gallery --platform native
+  fretboard diag campaign validate
+  fretboard diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json --json
+  fretboard diag doctor campaigns --json
   fretboard diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag campaign share target/fret-diag/campaign-batches/filtered-lane-smoke-tag-ui-gallery-platform-native-2-campaigns/1234
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus

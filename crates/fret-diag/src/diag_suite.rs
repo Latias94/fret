@@ -990,6 +990,607 @@ fn execute_suite_script_iteration_block(
     )
 }
 
+fn execute_suite_script_iteration(
+    request: SuiteScriptExecutionRequest<'_>,
+) -> Result<crate::stats::ScriptResultSummary, String> {
+    let transport = resolve_suite_script_transport(SuiteScriptTransportRequest {
+        use_devtools_ws: request.use_devtools_ws,
+        reuse_process: request.reuse_process,
+        connected_ws: request.connected_ws,
+        connected_fs: request.connected_fs,
+        fs_transport_cfg: request.fs_transport_cfg,
+        resolved_ready_path: request.resolved_ready_path,
+        child_running: request.child.is_some(),
+        timeout_ms: request.timeout_ms,
+        poll_ms: request.poll_ms,
+        resolved_script_result_path: request.resolved_script_result_path,
+        script_key: request.script_key,
+    })?;
+
+    let mut execution_ctx = SuiteScriptExecutionBlockContext {
+        tool_launched: request.tool_launched,
+        child: request.child,
+        use_devtools_ws: request.use_devtools_ws,
+        connected_ws: request.connected_ws,
+        connected_fs_for_aux: transport.connected_fs_for_aux(),
+        workspace_root: request.workspace_root,
+        resolved_out_dir: request.resolved_out_dir,
+        resolved_exit_path: request.resolved_exit_path,
+        keep_open: request.keep_open,
+        reuse_process: request.reuse_process,
+        resolved_script_result_path: request.resolved_script_result_path,
+        resolved_script_result_trigger_path: request.resolved_script_result_trigger_path,
+        capabilities_check_path: request.capabilities_check_path,
+        timeout_ms: request.timeout_ms,
+        poll_ms: request.poll_ms,
+        trace_chrome: request.trace_chrome,
+    };
+
+    execute_suite_script_iteration_block(
+        request.src,
+        request.idx,
+        request.script_key,
+        transport.connected(),
+        &mut execution_ctx,
+        request.resolved_suite_prewarm_scripts,
+        request.resolved_suite_prelude_scripts,
+        request.suite_prelude_each_run,
+    )
+}
+
+struct SuiteScriptExecutionRequest<'a> {
+    src: &'a Path,
+    idx: usize,
+    script_key: &'a str,
+    tool_launched: bool,
+    child: &'a mut Option<LaunchedDemo>,
+    use_devtools_ws: bool,
+    connected_ws: Option<&'a ConnectedToolingTransport>,
+    connected_fs: Option<&'a ConnectedToolingTransport>,
+    workspace_root: &'a Path,
+    resolved_ready_path: &'a Path,
+    resolved_out_dir: &'a Path,
+    resolved_exit_path: &'a Path,
+    keep_open: bool,
+    reuse_process: bool,
+    fs_transport_cfg: &'a crate::transport::FsDiagTransportConfig,
+    resolved_script_result_path: &'a Path,
+    resolved_script_result_trigger_path: &'a Path,
+    capabilities_check_path: &'a Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+    trace_chrome: bool,
+    resolved_suite_prewarm_scripts: &'a [PathBuf],
+    resolved_suite_prelude_scripts: &'a [PathBuf],
+    suite_prelude_each_run: bool,
+}
+
+struct SuiteScriptLintRequest<'a> {
+    src: &'a Path,
+    result: &'a crate::stats::ScriptResultSummary,
+    resolved_out_dir: &'a Path,
+    suite_lint: bool,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    lint_all_test_ids_bounds: bool,
+    lint_eps_px: f32,
+    timeout_ms: u64,
+    poll_ms: u64,
+}
+
+fn maybe_run_suite_script_lint(
+    request: SuiteScriptLintRequest<'_>,
+    script_ctx: &mut PreparedSuiteScriptContext,
+) -> Result<bool, String> {
+    if !request.suite_lint {
+        return Ok(false);
+    }
+
+    let Some(last_bundle_dir) = request
+        .result
+        .last_bundle_dir
+        .as_deref()
+        .and_then(|value| (!value.trim().is_empty()).then_some(value.trim()))
+    else {
+        return Ok(false);
+    };
+
+    let bundle_dir = PathBuf::from(last_bundle_dir);
+    let bundle_dir = if bundle_dir.is_absolute() {
+        bundle_dir
+    } else {
+        request.resolved_out_dir.join(bundle_dir)
+    };
+    let bundle_path =
+        wait_for_bundle_artifact_in_dir(&bundle_dir, request.timeout_ms, request.poll_ms)
+            .ok_or_else(|| {
+                format!(
+                    "suite lint is enabled but no bundle artifact was found in time: {}",
+                    bundle_dir.display()
+                )
+            })?;
+
+    if request.bundle_doctor_mode != BundleDoctorMode::Off {
+        run_bundle_doctor_for_bundle_path(
+            &bundle_path,
+            request.bundle_doctor_mode,
+            request.warmup_frames,
+        )?;
+    }
+
+    let report = lint_bundle_from_path(
+        &bundle_path,
+        request.warmup_frames,
+        LintOptions {
+            all_test_ids_bounds: request.lint_all_test_ids_bounds,
+            eps_px: request.lint_eps_px,
+        },
+    )?;
+
+    let out = default_lint_out_path(&bundle_path);
+    script_ctx.lint_summary = Some(serde_json::json!({
+        "out": out.display().to_string(),
+        "error_issues": report
+            .payload
+            .get("error_issues")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(report.error_issues),
+        "warning_issues": report
+            .payload
+            .get("warning_issues")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        "counts_by_code": report.payload.get("counts_by_code").cloned(),
+    }));
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
+    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+    if report.error_issues == 0 {
+        return Ok(false);
+    }
+
+    eprintln!(
+        "LINT-FAIL {} (run_id={}) errors={} out={}",
+        request.src.display(),
+        request.result.run_id,
+        report.error_issues,
+        out.display()
+    );
+    Ok(true)
+}
+
+struct PreparedSuiteScriptPostRunContext {
+    bundle_path: PathBuf,
+    checks_for_post_run: SuiteChecks,
+}
+
+struct SuiteScriptPostRunPreparationRequest<'a> {
+    src: &'a Path,
+    result: &'a crate::stats::ScriptResultSummary,
+    suite_profile: SuiteRunProfile,
+    builtin_suite: Option<BuiltinSuite>,
+    checks_for_post_run_template: &'a SuiteChecks,
+    check_notify_hotspot_file_max: &'a [(String, u64)],
+    resolved_out_dir: &'a Path,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    timeout_ms: u64,
+    poll_ms: u64,
+}
+
+fn prepare_suite_script_post_run_context(
+    request: SuiteScriptPostRunPreparationRequest<'_>,
+) -> Result<Option<PreparedSuiteScriptPostRunContext>, String> {
+    let script_override_checks =
+        resolve_suite_script_override_checks(request.src, request.checks_for_post_run_template);
+    let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
+        request.src,
+        request.checks_for_post_run_template,
+    );
+
+    let is_gc_liveness_script = request
+        .src
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            name == "ui-gallery-overlay-torture.json"
+                || name == "ui-gallery-sidebar-scroll-refresh.json"
+        });
+
+    let wants_post_run_checks_for_script = request.suite_profile.wants_post_run_checks_for_script(
+        request.builtin_suite,
+        wants_post_run_checks_for_script,
+        is_gc_liveness_script,
+    );
+
+    if request.result.stage.as_deref() != Some("passed") || !wants_post_run_checks_for_script {
+        return Ok(None);
+    }
+
+    let bundle_path = wait_for_bundle_artifact_from_script_result(
+        request.resolved_out_dir,
+        request.result,
+        request.timeout_ms,
+        request.poll_ms,
+    )
+    .ok_or_else(|| {
+        format!(
+            "script passed but no bundle artifact was found (required for post-run checks): {}",
+            request.src.display()
+        )
+    })?;
+
+    if request.bundle_doctor_mode != BundleDoctorMode::Off {
+        run_bundle_doctor_for_bundle_path(
+            &bundle_path,
+            request.bundle_doctor_mode,
+            request.warmup_frames,
+        )?;
+    }
+
+    let suite_core_default_checks = build_suite_core_default_post_run_checks(
+        request.src,
+        request.suite_profile,
+        request.builtin_suite,
+        request.checks_for_post_run_template,
+        is_gc_liveness_script,
+    );
+    let suite_editor_text_default_checks = build_suite_editor_text_default_post_run_checks(
+        request.src,
+        request.checks_for_post_run_template,
+    );
+    let mut notify_hotspot_file_max_for_script = request.check_notify_hotspot_file_max.to_vec();
+    if notify_hotspot_file_max_for_script.is_empty()
+        && request.builtin_suite == Some(BuiltinSuite::UiGallery)
+        && request
+            .src
+            .file_name()
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value == "ui-gallery-virtual-list-torture.json")
+    {
+        notify_hotspot_file_max_for_script.push((
+            "crates/fret-ui/src/declarative/host_widget/event/pressable.rs".to_string(),
+            0,
+        ));
+    }
+    let mut checks_for_post_run = request.checks_for_post_run_template.clone();
+
+    if checks_for_post_run.check_stale_paint_test_id.is_none() {
+        checks_for_post_run.check_stale_paint_test_id =
+            suite_core_default_checks.check_stale_paint_test_id.clone();
+    }
+    if checks_for_post_run.check_pixels_changed_test_id.is_none() {
+        checks_for_post_run.check_pixels_changed_test_id = suite_core_default_checks
+            .check_pixels_changed_test_id
+            .clone();
+    }
+
+    apply_suite_editor_text_default_post_run_checks(
+        &mut checks_for_post_run,
+        &suite_editor_text_default_checks,
+    );
+
+    checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
+        .check_wheel_events_max_per_frame
+        .or(suite_core_default_checks.check_wheel_events_max_per_frame);
+    if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
+        checks_for_post_run.check_wheel_scroll_test_id =
+            suite_core_default_checks.check_wheel_scroll_test_id.clone();
+    }
+    if checks_for_post_run
+        .check_wheel_scroll_hit_changes_test_id
+        .is_none()
+    {
+        checks_for_post_run.check_wheel_scroll_hit_changes_test_id = suite_core_default_checks
+            .check_wheel_scroll_hit_changes_test_id
+            .clone();
+    }
+
+    checks_for_post_run.check_prepaint_actions_min = checks_for_post_run
+        .check_prepaint_actions_min
+        .or(suite_core_default_checks.check_prepaint_actions_min);
+    checks_for_post_run.check_chart_sampling_window_shifts_min = checks_for_post_run
+        .check_chart_sampling_window_shifts_min
+        .or(suite_core_default_checks.check_chart_sampling_window_shifts_min);
+    checks_for_post_run.check_node_graph_cull_window_shifts_min = checks_for_post_run
+        .check_node_graph_cull_window_shifts_min
+        .or(suite_core_default_checks.check_node_graph_cull_window_shifts_min);
+    checks_for_post_run.check_node_graph_cull_window_shifts_max = checks_for_post_run
+        .check_node_graph_cull_window_shifts_max
+        .or(suite_core_default_checks.check_node_graph_cull_window_shifts_max);
+    checks_for_post_run.check_vlist_visible_range_refreshes_min = checks_for_post_run
+        .check_vlist_visible_range_refreshes_min
+        .or(suite_core_default_checks.check_vlist_visible_range_refreshes_min);
+    checks_for_post_run.check_vlist_visible_range_refreshes_max = checks_for_post_run
+        .check_vlist_visible_range_refreshes_max
+        .or(suite_core_default_checks.check_vlist_visible_range_refreshes_max);
+
+    checks_for_post_run.check_vlist_window_shifts_explainable |=
+        suite_core_default_checks.check_vlist_window_shifts_explainable;
+    checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
+        suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
+    checks_for_post_run.check_vlist_window_shifts_non_retained_max = script_override_checks
+        .vlist_window_shifts_non_retained_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
+    checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
+        .check_vlist_window_shifts_prefetch_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
+    checks_for_post_run.check_vlist_window_shifts_escape_max = checks_for_post_run
+        .check_vlist_window_shifts_escape_max
+        .or(suite_core_default_checks.check_vlist_window_shifts_escape_max);
+    checks_for_post_run.check_vlist_policy_key_stable |=
+        suite_core_default_checks.check_vlist_policy_key_stable;
+
+    checks_for_post_run.check_windowed_rows_offset_changes_min = checks_for_post_run
+        .check_windowed_rows_offset_changes_min
+        .or(suite_core_default_checks.check_windowed_rows_offset_changes_min);
+    checks_for_post_run.check_windowed_rows_visible_start_changes_repainted |=
+        suite_core_default_checks.check_windowed_rows_visible_start_changes_repainted;
+    checks_for_post_run.check_layout_fast_path_min = checks_for_post_run
+        .check_layout_fast_path_min
+        .or(suite_core_default_checks.check_layout_fast_path_min);
+    checks_for_post_run.check_hover_layout_max = checks_for_post_run
+        .check_hover_layout_max
+        .or(suite_core_default_checks.check_hover_layout_max);
+    checks_for_post_run.check_gc_sweep_liveness |=
+        suite_core_default_checks.check_gc_sweep_liveness;
+
+    checks_for_post_run.check_notify_hotspot_file_max = notify_hotspot_file_max_for_script;
+    checks_for_post_run.check_view_cache_reuse_stable_min = checks_for_post_run
+        .check_view_cache_reuse_stable_min
+        .or(suite_core_default_checks.check_view_cache_reuse_stable_min);
+    checks_for_post_run.check_view_cache_reuse_min = checks_for_post_run
+        .check_view_cache_reuse_min
+        .or(suite_core_default_checks.check_view_cache_reuse_min);
+
+    checks_for_post_run.check_viewport_input_min = checks_for_post_run
+        .check_viewport_input_min
+        .or(suite_core_default_checks.check_viewport_input_min);
+    checks_for_post_run.check_dock_drag_min = checks_for_post_run
+        .check_dock_drag_min
+        .or(suite_core_default_checks.check_dock_drag_min);
+    checks_for_post_run.check_viewport_capture_min = checks_for_post_run
+        .check_viewport_capture_min
+        .or(suite_core_default_checks.check_viewport_capture_min);
+
+    checks_for_post_run.check_retained_vlist_reconcile_no_notify_min = script_override_checks
+        .retained_vlist_reconcile_no_notify_min
+        .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
+    checks_for_post_run.check_retained_vlist_attach_detach_max = script_override_checks
+        .retained_vlist_attach_detach_max
+        .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
+    checks_for_post_run.check_retained_vlist_keep_alive_reuse_min = script_override_checks
+        .retained_vlist_keep_alive_reuse_min
+        .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
+    checks_for_post_run.check_retained_vlist_keep_alive_budget = script_override_checks
+        .retained_vlist_keep_alive_budget
+        .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
+
+    Ok(Some(PreparedSuiteScriptPostRunContext {
+        bundle_path,
+        checks_for_post_run,
+    }))
+}
+
+struct SuiteScriptStageFinalizeRequest<'a> {
+    src: &'a Path,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    resolved_exit_path: &'a Path,
+    poll_ms: u64,
+    summary_ctx: &'a SuiteSummaryContext<'a>,
+    stage_counts: &'a std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &'a std::collections::BTreeMap<String, u64>,
+    rows: &'a mut Vec<serde_json::Value>,
+    evidence_aggregate: &'a suite_summary::SuiteEvidenceAggregate,
+    script_ctx: &'a PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_stage_or_exit(request: SuiteScriptStageFinalizeRequest<'_>) {
+    match request.result.stage.as_deref() {
+        Some("passed") => {
+            println!(
+                "PASS {} (run_id={})",
+                request.src.display(),
+                request.result.run_id
+            )
+        }
+        Some("failed") => {
+            eprintln!(
+                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                request.src.display(),
+                request.result.run_id,
+                request.result.step_index.unwrap_or(0),
+                request.result.reason.as_deref().unwrap_or("unknown"),
+                request.result.last_bundle_dir.as_deref().unwrap_or("")
+            );
+            exit_for_suite_script_outcome(
+                request.child,
+                !request.keep_open,
+                request.resolved_exit_path,
+                request.poll_ms,
+                request.summary_ctx,
+                request.stage_counts,
+                request.reason_code_counts,
+                request.rows,
+                request.evidence_aggregate,
+                &request.script_ctx.script_key,
+                request.result,
+                request.script_ctx.lint_summary.as_ref(),
+                request.script_ctx.evidence_highlights.as_ref(),
+                "failed",
+                None,
+                None,
+            );
+        }
+        _ => {
+            eprintln!(
+                "unexpected script stage for {}: {:?}",
+                request.src.display(),
+                request.result
+            );
+            exit_for_suite_script_outcome(
+                request.child,
+                !request.keep_open,
+                request.resolved_exit_path,
+                request.poll_ms,
+                request.summary_ctx,
+                request.stage_counts,
+                request.reason_code_counts,
+                request.rows,
+                request.evidence_aggregate,
+                &request.script_ctx.script_key,
+                request.result,
+                request.script_ctx.lint_summary.as_ref(),
+                request.script_ctx.evidence_highlights.as_ref(),
+                "failed",
+                None,
+                None,
+            );
+        }
+    }
+}
+
+struct SuiteScriptSuccessFinalizeRequest<'a> {
+    idx: usize,
+    script_count: usize,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    reuse_process: bool,
+    resolved_exit_path: &'a Path,
+    poll_ms: u64,
+    rows: &'a mut Vec<serde_json::Value>,
+    script_ctx: &'a PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_success_iteration(request: SuiteScriptSuccessFinalizeRequest<'_>) {
+    record_suite_script_outcome(
+        request.rows,
+        &request.script_ctx.script_key,
+        request.result,
+        request.script_ctx.lint_summary.as_ref(),
+        request.script_ctx.evidence_highlights.as_ref(),
+    );
+
+    if !request.reuse_process {
+        let is_last = request.idx.saturating_add(1) >= request.script_count;
+        if !(request.keep_open && is_last) {
+            stop_launched_demo(request.child, request.resolved_exit_path, request.poll_ms);
+        }
+    }
+}
+
+struct SuiteScriptSuccessTailRequest<'a> {
+    src: &'a Path,
+    idx: usize,
+    script_count: usize,
+    child: &'a mut Option<LaunchedDemo>,
+    keep_open: bool,
+    reuse_process: bool,
+    resolved_exit_path: &'a Path,
+    resolved_out_dir: &'a Path,
+    poll_ms: u64,
+    suite_lint: bool,
+    bundle_doctor_mode: BundleDoctorMode,
+    warmup_frames: u64,
+    lint_all_test_ids_bounds: bool,
+    lint_eps_px: f32,
+    timeout_ms: u64,
+    suite_profile: SuiteRunProfile,
+    builtin_suite: Option<BuiltinSuite>,
+    checks_for_post_run_template: &'a SuiteChecks,
+    check_notify_hotspot_file_max: &'a [(String, u64)],
+    summary_ctx: &'a SuiteSummaryContext<'a>,
+    stage_counts: &'a std::collections::BTreeMap<String, u64>,
+    reason_code_counts: &'a std::collections::BTreeMap<String, u64>,
+    rows: &'a mut Vec<serde_json::Value>,
+    evidence_aggregate: &'a suite_summary::SuiteEvidenceAggregate,
+    script_ctx: &'a mut PreparedSuiteScriptContext,
+    result: &'a crate::stats::ScriptResultSummary,
+}
+
+fn finalize_suite_script_success_tail(
+    request: SuiteScriptSuccessTailRequest<'_>,
+) -> Result<(), String> {
+    if maybe_run_suite_script_lint(
+        SuiteScriptLintRequest {
+            src: request.src,
+            result: request.result,
+            resolved_out_dir: request.resolved_out_dir,
+            suite_lint: request.suite_lint,
+            bundle_doctor_mode: request.bundle_doctor_mode,
+            warmup_frames: request.warmup_frames,
+            lint_all_test_ids_bounds: request.lint_all_test_ids_bounds,
+            lint_eps_px: request.lint_eps_px,
+            timeout_ms: request.timeout_ms,
+            poll_ms: request.poll_ms,
+        },
+        request.script_ctx,
+    )? {
+        exit_for_suite_script_outcome(
+            request.child,
+            true,
+            request.resolved_exit_path,
+            request.poll_ms,
+            request.summary_ctx,
+            request.stage_counts,
+            request.reason_code_counts,
+            request.rows,
+            request.evidence_aggregate,
+            &request.script_ctx.script_key,
+            request.result,
+            request.script_ctx.lint_summary.as_ref(),
+            request.script_ctx.evidence_highlights.as_ref(),
+            "failed",
+            None,
+            Some("lint_failed"),
+        );
+    }
+
+    if let Some(post_run_ctx) =
+        prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+            src: request.src,
+            result: request.result,
+            suite_profile: request.suite_profile,
+            builtin_suite: request.builtin_suite,
+            checks_for_post_run_template: request.checks_for_post_run_template,
+            check_notify_hotspot_file_max: request.check_notify_hotspot_file_max,
+            resolved_out_dir: request.resolved_out_dir,
+            bundle_doctor_mode: request.bundle_doctor_mode,
+            warmup_frames: request.warmup_frames,
+            timeout_ms: request.timeout_ms,
+            poll_ms: request.poll_ms,
+        })?
+    {
+        apply_post_run_checks(
+            Some(&post_run_ctx.bundle_path),
+            request.resolved_out_dir,
+            &post_run_ctx.checks_for_post_run,
+            request.warmup_frames,
+        )?;
+    }
+
+    finalize_suite_script_success_iteration(SuiteScriptSuccessFinalizeRequest {
+        idx: request.idx,
+        script_count: request.script_count,
+        child: request.child,
+        keep_open: request.keep_open,
+        reuse_process: request.reuse_process,
+        resolved_exit_path: request.resolved_exit_path,
+        poll_ms: request.poll_ms,
+        rows: request.rows,
+        script_ctx: request.script_ctx,
+        result: request.result,
+    });
+
+    Ok(())
+}
+
 fn emit_suite_summary(
     input: &SuiteSummaryEmitInput<'_>,
     status: &'static str,
@@ -2344,6 +2945,52 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
 }
 
 #[derive(Debug, Clone)]
+struct SingleScriptExternalNoDiagSuiteDecision {
+    checks_for_post_run: SuiteChecks,
+    use_external_no_diag: bool,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_single_script_external_no_diag_suite_decision(
+    single_src: &Path,
+    checks_for_post_run_template: &SuiteChecks,
+    launch_requested: bool,
+    reuse_launch: bool,
+    keep_open: bool,
+    use_devtools_ws: bool,
+    suite_wants_screenshots: bool,
+    launch_write_bundle_json: bool,
+    bundle_doctor_mode: BundleDoctorMode,
+    has_prewarm_scripts: bool,
+    has_prelude_scripts: bool,
+) -> SingleScriptExternalNoDiagSuiteDecision {
+    let mut checks_for_post_run = checks_for_post_run_template.clone();
+    checks_for_post_run.check_hello_world_compare_idle_present_max_delta = checks_for_post_run
+        .check_hello_world_compare_idle_present_max_delta
+        .or(diag_policy::hello_world_compare_script_idle_present_max_delta(
+            single_src,
+        ));
+
+    let use_external_no_diag = launch_requested
+        && !reuse_launch
+        && !keep_open
+        && !use_devtools_ws
+        && !suite_wants_screenshots
+        && !launch_write_bundle_json
+        && bundle_doctor_mode == BundleDoctorMode::Off
+        && !has_prewarm_scripts
+        && !has_prelude_scripts
+        && diag_policy::hello_world_compare_script_prefers_external_no_diag_post_run(single_src)
+        && !crate::registry::checks::CheckRegistry::builtin()
+            .wants_bundle_artifact(&checks_for_post_run);
+
+    SingleScriptExternalNoDiagSuiteDecision {
+        checks_for_post_run,
+        use_external_no_diag,
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
     pub rest: Vec<String>,
@@ -2623,27 +3270,21 @@ hint: list suites via `fretboard diag list suites`"
     let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
 
     if let [single_src] = scripts.as_slice() {
-        let mut external_no_diag_checks = checks_for_post_run_template.clone();
-        external_no_diag_checks.check_hello_world_compare_idle_present_max_delta =
-            external_no_diag_checks
-                .check_hello_world_compare_idle_present_max_delta
-                .or(diag_policy::hello_world_compare_script_idle_present_max_delta(single_src));
-        let use_external_no_diag_single_script_suite = launch.is_some()
-            && !reuse_launch
-            && !keep_open
-            && !use_devtools_ws
-            && !suite_wants_screenshots
-            && !launch_write_bundle_json
-            && bundle_doctor_mode == BundleDoctorMode::Off
-            && resolved_suite_prewarm_scripts.is_empty()
-            && resolved_suite_prelude_scripts.is_empty()
-            && diag_policy::hello_world_compare_script_prefers_external_no_diag_post_run(
-                single_src,
-            )
-            && !crate::registry::checks::CheckRegistry::builtin()
-                .wants_bundle_artifact(&external_no_diag_checks);
+        let external_no_diag_decision = prepare_single_script_external_no_diag_suite_decision(
+            single_src,
+            &checks_for_post_run_template,
+            launch.is_some(),
+            reuse_launch,
+            keep_open,
+            use_devtools_ws,
+            suite_wants_screenshots,
+            launch_write_bundle_json,
+            bundle_doctor_mode,
+            !resolved_suite_prewarm_scripts.is_empty(),
+            !resolved_suite_prelude_scripts.is_empty(),
+        );
 
-        if use_external_no_diag_single_script_suite {
+        if external_no_diag_decision.use_external_no_diag {
             let script_key = normalize_repo_relative_path(&workspace_root, single_src);
             let resolved_script_path = resolved_out_dir.join("script.json");
             let mut external_no_diag_launch_env: Vec<(String, String)> = suite_launch_env
@@ -2668,7 +3309,7 @@ hint: list suites via `fretboard diag list suites`"
                     poll_ms,
                     launch_high_priority,
                     warmup_frames,
-                    checks_for_post_run: &external_no_diag_checks,
+                    checks_for_post_run: &external_no_diag_decision.checks_for_post_run,
                     tooling_event_kind: "tooling_external_no_diagnostics",
                     tooling_event_note: Some(
                         "diag-suite external no-diagnostics post-run path".to_string(),
@@ -2979,51 +3620,32 @@ hint: list suites via `fretboard diag list suites`"
                 "suite run failed (see suite.summary.json)",
             ));
         }
-        let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
-            let transport = resolve_suite_script_transport(SuiteScriptTransportRequest {
-                use_devtools_ws,
-                reuse_process,
-                connected_ws: connected_ws.as_ref(),
-                connected_fs: connected_fs.as_ref(),
-                fs_transport_cfg: &fs_transport_cfg,
-                resolved_ready_path: &resolved_ready_path,
-                child_running: child.is_some(),
-                timeout_ms,
-                poll_ms,
-                resolved_script_result_path: &resolved_script_result_path,
-                script_key: script_key.as_str(),
-            })?;
-
-            let mut execution_ctx = SuiteScriptExecutionBlockContext {
-                tool_launched,
-                child: &mut child,
-                use_devtools_ws,
-                connected_ws: connected_ws.as_ref(),
-                connected_fs_for_aux: transport.connected_fs_for_aux(),
-                workspace_root: &workspace_root,
-                resolved_out_dir: &resolved_out_dir,
-                resolved_exit_path: &resolved_exit_path,
-                keep_open,
-                reuse_process,
-                resolved_script_result_path: &resolved_script_result_path,
-                resolved_script_result_trigger_path: &resolved_script_result_trigger_path,
-                capabilities_check_path: &capabilities_check_path,
-                timeout_ms,
-                poll_ms,
-                trace_chrome,
-            };
-
-            Ok(execute_suite_script_iteration_block(
-                &src,
-                idx,
-                script_key.as_str(),
-                transport.connected(),
-                &mut execution_ctx,
-                &resolved_suite_prewarm_scripts,
-                &resolved_suite_prelude_scripts,
-                suite_prelude_each_run,
-            )?)
-        })();
+        let result = execute_suite_script_iteration(SuiteScriptExecutionRequest {
+            src: &src,
+            idx,
+            script_key: script_key.as_str(),
+            tool_launched,
+            child: &mut child,
+            use_devtools_ws,
+            connected_ws: connected_ws.as_ref(),
+            connected_fs: connected_fs.as_ref(),
+            workspace_root: &workspace_root,
+            resolved_ready_path: &resolved_ready_path,
+            resolved_out_dir: &resolved_out_dir,
+            resolved_exit_path: &resolved_exit_path,
+            keep_open,
+            reuse_process,
+            fs_transport_cfg: &fs_transport_cfg,
+            resolved_script_result_path: &resolved_script_result_path,
+            resolved_script_result_trigger_path: &resolved_script_result_trigger_path,
+            capabilities_check_path: &capabilities_check_path,
+            timeout_ms,
+            poll_ms,
+            trace_chrome,
+            resolved_suite_prewarm_scripts: &resolved_suite_prewarm_scripts,
+            resolved_suite_prelude_scripts: &resolved_suite_prelude_scripts,
+            suite_prelude_each_run,
+        });
 
         let result = match result {
             Ok(v) => v,
@@ -3053,349 +3675,49 @@ hint: list suites via `fretboard diag list suites`"
             &mut suite_reason_code_counts,
             &mut suite_evidence_agg,
         );
-        match result.stage.as_deref() {
-            Some("passed") => {
-                println!("PASS {} (run_id={})", src.display(), result.run_id)
-            }
-            Some("failed") => {
-                eprintln!(
-                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                    src.display(),
-                    result.run_id,
-                    result.step_index.unwrap_or(0),
-                    result.reason.as_deref().unwrap_or("unknown"),
-                    result.last_bundle_dir.as_deref().unwrap_or("")
-                );
-                exit_for_suite_script_outcome(
-                    &mut child,
-                    !keep_open,
-                    &resolved_exit_path,
-                    poll_ms,
-                    &summary_ctx,
-                    &suite_stage_counts,
-                    &suite_reason_code_counts,
-                    &mut suite_rows,
-                    &suite_evidence_agg,
-                    &script_ctx.script_key,
-                    &result,
-                    script_ctx.lint_summary.as_ref(),
-                    script_ctx.evidence_highlights.as_ref(),
-                    "failed",
-                    None,
-                    None,
-                );
-            }
-            _ => {
-                eprintln!(
-                    "unexpected script stage for {}: {:?}",
-                    src.display(),
-                    result
-                );
-                exit_for_suite_script_outcome(
-                    &mut child,
-                    !keep_open,
-                    &resolved_exit_path,
-                    poll_ms,
-                    &summary_ctx,
-                    &suite_stage_counts,
-                    &suite_reason_code_counts,
-                    &mut suite_rows,
-                    &suite_evidence_agg,
-                    &script_ctx.script_key,
-                    &result,
-                    script_ctx.lint_summary.as_ref(),
-                    script_ctx.evidence_highlights.as_ref(),
-                    "failed",
-                    None,
-                    None,
-                );
-            }
-        }
-
-        if suite_lint {
-            let last_bundle_dir = result
-                .last_bundle_dir
-                .as_deref()
-                .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()));
-            if let Some(last_bundle_dir) = last_bundle_dir {
-                let bundle_dir = PathBuf::from(last_bundle_dir);
-                let bundle_dir = if bundle_dir.is_absolute() {
-                    bundle_dir
-                } else {
-                    resolved_out_dir.join(bundle_dir)
-                };
-                let bundle_path = wait_for_bundle_artifact_in_dir(&bundle_dir, timeout_ms, poll_ms)
-                    .ok_or_else(|| {
-                        format!(
-                            "suite lint is enabled but no bundle artifact was found in time: {}",
-                            bundle_dir.display()
-                        )
-                    })?;
-
-                if bundle_doctor_mode != BundleDoctorMode::Off {
-                    run_bundle_doctor_for_bundle_path(
-                        &bundle_path,
-                        bundle_doctor_mode,
-                        warmup_frames,
-                    )?;
-                }
-
-                let report = lint_bundle_from_path(
-                    &bundle_path,
-                    warmup_frames,
-                    LintOptions {
-                        all_test_ids_bounds: lint_all_test_ids_bounds,
-                        eps_px: lint_eps_px,
-                    },
-                )?;
-
-                let out = default_lint_out_path(&bundle_path);
-                script_ctx.lint_summary = Some(serde_json::json!({
-                    "out": out.display().to_string(),
-                    "error_issues": report
-                        .payload
-                        .get("error_issues")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(report.error_issues),
-                    "warning_issues": report
-                        .payload
-                        .get("warning_issues")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0),
-                    "counts_by_code": report.payload.get("counts_by_code").cloned(),
-                }));
-                if let Some(parent) = out.parent() {
-                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                }
-                let pretty = serde_json::to_string_pretty(&report.payload)
-                    .unwrap_or_else(|_| "{}".to_string());
-                std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-
-                if report.error_issues > 0 {
-                    eprintln!(
-                        "LINT-FAIL {} (run_id={}) errors={} out={}",
-                        src.display(),
-                        result.run_id,
-                        report.error_issues,
-                        out.display()
-                    );
-                    exit_for_suite_script_outcome(
-                        &mut child,
-                        true,
-                        &resolved_exit_path,
-                        poll_ms,
-                        &summary_ctx,
-                        &suite_stage_counts,
-                        &suite_reason_code_counts,
-                        &mut suite_rows,
-                        &suite_evidence_agg,
-                        &script_ctx.script_key,
-                        &result,
-                        script_ctx.lint_summary.as_ref(),
-                        script_ctx.evidence_highlights.as_ref(),
-                        "failed",
-                        None,
-                        Some("lint_failed"),
-                    );
-                }
-            }
-        }
-
-        let script_override_checks =
-            resolve_suite_script_override_checks(&src, &checks_for_post_run_template);
-        let wants_post_run_checks_for_script = wants_explicit_or_policy_post_run_checks_for_script(
-            &src,
-            &checks_for_post_run_template,
-        );
-
-        let is_gc_liveness_script = src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-            n == "ui-gallery-overlay-torture.json" || n == "ui-gallery-sidebar-scroll-refresh.json"
+        finalize_suite_script_stage_or_exit(SuiteScriptStageFinalizeRequest {
+            src: &src,
+            child: &mut child,
+            keep_open,
+            resolved_exit_path: &resolved_exit_path,
+            poll_ms,
+            summary_ctx: &summary_ctx,
+            stage_counts: &suite_stage_counts,
+            reason_code_counts: &suite_reason_code_counts,
+            rows: &mut suite_rows,
+            evidence_aggregate: &suite_evidence_agg,
+            script_ctx: &script_ctx,
+            result: &result,
         });
 
-        let wants_post_run_checks_for_script = suite_profile.wants_post_run_checks_for_script(
+        finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
+            src: &src,
+            idx,
+            script_count,
+            child: &mut child,
+            keep_open,
+            reuse_process,
+            resolved_exit_path: &resolved_exit_path,
+            resolved_out_dir: &resolved_out_dir,
+            poll_ms,
+            suite_lint,
+            bundle_doctor_mode,
+            warmup_frames,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            timeout_ms,
+            suite_profile,
             builtin_suite,
-            wants_post_run_checks_for_script,
-            is_gc_liveness_script,
-        );
-
-        if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
-            let bundle_path = wait_for_bundle_artifact_from_script_result(
-                &resolved_out_dir,
-                &result,
-                timeout_ms,
-                poll_ms,
-            )
-            .ok_or_else(|| {
-                format!(
-                    "script passed but no bundle artifact was found (required for post-run checks): {}",
-                    src.display()
-                )
-            })?;
-
-            if bundle_doctor_mode != BundleDoctorMode::Off {
-                run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
-            }
-
-            let suite_core_default_checks = build_suite_core_default_post_run_checks(
-                &src,
-                suite_profile,
-                builtin_suite,
-                &checks_for_post_run_template,
-                is_gc_liveness_script,
-            );
-            let suite_editor_text_default_checks = build_suite_editor_text_default_post_run_checks(
-                &src,
-                &checks_for_post_run_template,
-            );
-            let mut notify_hotspot_file_max_for_script = check_notify_hotspot_file_max.clone();
-            if notify_hotspot_file_max_for_script.is_empty()
-                && builtin_suite == Some(BuiltinSuite::UiGallery)
-                && src
-                    .file_name()
-                    .and_then(|v| v.to_str())
-                    .is_some_and(|v| v == "ui-gallery-virtual-list-torture.json")
-            {
-                notify_hotspot_file_max_for_script.push((
-                    "crates/fret-ui/src/declarative/host_widget/event/pressable.rs".to_string(),
-                    0,
-                ));
-            }
-            let mut checks_for_post_run = checks_for_post_run_template.clone();
-
-            if checks_for_post_run.check_stale_paint_test_id.is_none() {
-                checks_for_post_run.check_stale_paint_test_id =
-                    suite_core_default_checks.check_stale_paint_test_id.clone();
-            }
-            if checks_for_post_run.check_pixels_changed_test_id.is_none() {
-                checks_for_post_run.check_pixels_changed_test_id = suite_core_default_checks
-                    .check_pixels_changed_test_id
-                    .clone();
-            }
-
-            apply_suite_editor_text_default_post_run_checks(
-                &mut checks_for_post_run,
-                &suite_editor_text_default_checks,
-            );
-
-            checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
-                .check_wheel_events_max_per_frame
-                .or(suite_core_default_checks.check_wheel_events_max_per_frame);
-            if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
-                checks_for_post_run.check_wheel_scroll_test_id =
-                    suite_core_default_checks.check_wheel_scroll_test_id.clone();
-            }
-            if checks_for_post_run
-                .check_wheel_scroll_hit_changes_test_id
-                .is_none()
-            {
-                checks_for_post_run.check_wheel_scroll_hit_changes_test_id =
-                    suite_core_default_checks
-                        .check_wheel_scroll_hit_changes_test_id
-                        .clone();
-            }
-
-            checks_for_post_run.check_prepaint_actions_min = checks_for_post_run
-                .check_prepaint_actions_min
-                .or(suite_core_default_checks.check_prepaint_actions_min);
-            checks_for_post_run.check_chart_sampling_window_shifts_min = checks_for_post_run
-                .check_chart_sampling_window_shifts_min
-                .or(suite_core_default_checks.check_chart_sampling_window_shifts_min);
-            checks_for_post_run.check_node_graph_cull_window_shifts_min = checks_for_post_run
-                .check_node_graph_cull_window_shifts_min
-                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_min);
-            checks_for_post_run.check_node_graph_cull_window_shifts_max = checks_for_post_run
-                .check_node_graph_cull_window_shifts_max
-                .or(suite_core_default_checks.check_node_graph_cull_window_shifts_max);
-            checks_for_post_run.check_vlist_visible_range_refreshes_min = checks_for_post_run
-                .check_vlist_visible_range_refreshes_min
-                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_min);
-            checks_for_post_run.check_vlist_visible_range_refreshes_max = checks_for_post_run
-                .check_vlist_visible_range_refreshes_max
-                .or(suite_core_default_checks.check_vlist_visible_range_refreshes_max);
-
-            checks_for_post_run.check_vlist_window_shifts_explainable |=
-                suite_core_default_checks.check_vlist_window_shifts_explainable;
-            checks_for_post_run.check_vlist_window_shifts_have_prepaint_actions |=
-                suite_core_default_checks.check_vlist_window_shifts_have_prepaint_actions;
-            checks_for_post_run.check_vlist_window_shifts_non_retained_max = script_override_checks
-                .vlist_window_shifts_non_retained_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_non_retained_max);
-            checks_for_post_run.check_vlist_window_shifts_prefetch_max = checks_for_post_run
-                .check_vlist_window_shifts_prefetch_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_prefetch_max);
-            checks_for_post_run.check_vlist_window_shifts_escape_max = checks_for_post_run
-                .check_vlist_window_shifts_escape_max
-                .or(suite_core_default_checks.check_vlist_window_shifts_escape_max);
-            checks_for_post_run.check_vlist_policy_key_stable |=
-                suite_core_default_checks.check_vlist_policy_key_stable;
-
-            checks_for_post_run.check_windowed_rows_offset_changes_min = checks_for_post_run
-                .check_windowed_rows_offset_changes_min
-                .or(suite_core_default_checks.check_windowed_rows_offset_changes_min);
-            checks_for_post_run.check_windowed_rows_visible_start_changes_repainted |=
-                suite_core_default_checks.check_windowed_rows_visible_start_changes_repainted;
-            checks_for_post_run.check_layout_fast_path_min = checks_for_post_run
-                .check_layout_fast_path_min
-                .or(suite_core_default_checks.check_layout_fast_path_min);
-            checks_for_post_run.check_hover_layout_max = checks_for_post_run
-                .check_hover_layout_max
-                .or(suite_core_default_checks.check_hover_layout_max);
-            checks_for_post_run.check_gc_sweep_liveness |=
-                suite_core_default_checks.check_gc_sweep_liveness;
-
-            checks_for_post_run.check_notify_hotspot_file_max = notify_hotspot_file_max_for_script;
-            checks_for_post_run.check_view_cache_reuse_stable_min = checks_for_post_run
-                .check_view_cache_reuse_stable_min
-                .or(suite_core_default_checks.check_view_cache_reuse_stable_min);
-            checks_for_post_run.check_view_cache_reuse_min = checks_for_post_run
-                .check_view_cache_reuse_min
-                .or(suite_core_default_checks.check_view_cache_reuse_min);
-
-            checks_for_post_run.check_viewport_input_min = checks_for_post_run
-                .check_viewport_input_min
-                .or(suite_core_default_checks.check_viewport_input_min);
-            checks_for_post_run.check_dock_drag_min = checks_for_post_run
-                .check_dock_drag_min
-                .or(suite_core_default_checks.check_dock_drag_min);
-            checks_for_post_run.check_viewport_capture_min = checks_for_post_run
-                .check_viewport_capture_min
-                .or(suite_core_default_checks.check_viewport_capture_min);
-
-            checks_for_post_run.check_retained_vlist_reconcile_no_notify_min =
-                script_override_checks
-                    .retained_vlist_reconcile_no_notify_min
-                    .or(suite_core_default_checks.check_retained_vlist_reconcile_no_notify_min);
-            checks_for_post_run.check_retained_vlist_attach_detach_max = script_override_checks
-                .retained_vlist_attach_detach_max
-                .or(suite_core_default_checks.check_retained_vlist_attach_detach_max);
-            checks_for_post_run.check_retained_vlist_keep_alive_reuse_min = script_override_checks
-                .retained_vlist_keep_alive_reuse_min
-                .or(suite_core_default_checks.check_retained_vlist_keep_alive_reuse_min);
-            checks_for_post_run.check_retained_vlist_keep_alive_budget = script_override_checks
-                .retained_vlist_keep_alive_budget
-                .or(suite_core_default_checks.check_retained_vlist_keep_alive_budget);
-
-            apply_post_run_checks(
-                Some(&bundle_path),
-                &resolved_out_dir,
-                &checks_for_post_run,
-                warmup_frames,
-            )?;
-        }
-
-        suite_rows.push(build_suite_script_result_row(
-            &script_ctx.script_key,
-            &result,
-            script_ctx.lint_summary.as_ref(),
-            script_ctx.evidence_highlights.as_ref(),
-        ));
-
-        if !reuse_process {
-            let is_last = idx.saturating_add(1) >= script_count;
-            if !(keep_open && is_last) {
-                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-            }
-        }
+            checks_for_post_run_template: &checks_for_post_run_template,
+            check_notify_hotspot_file_max: &check_notify_hotspot_file_max,
+            summary_ctx: &summary_ctx,
+            stage_counts: &suite_stage_counts,
+            reason_code_counts: &suite_reason_code_counts,
+            rows: &mut suite_rows,
+            evidence_aggregate: &suite_evidence_agg,
+            script_ctx: &mut script_ctx,
+            result: &result,
+        })?;
     }
 
     if !keep_open {
@@ -3569,6 +3891,256 @@ mod tests {
             std::path::Path::new("ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"),
             &SuiteChecks::default(),
         ));
+    }
+
+    #[test]
+    fn prepare_single_script_external_no_diag_suite_decision_routes_hello_world_compare_script() {
+        let decision = prepare_single_script_external_no_diag_suite_decision(
+            std::path::Path::new("hello-world-compare-idle-present-gate.json"),
+            &SuiteChecks::default(),
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            BundleDoctorMode::Off,
+            false,
+            false,
+        );
+
+        assert_eq!(
+            decision
+                .checks_for_post_run
+                .check_hello_world_compare_idle_present_max_delta,
+            Some(1)
+        );
+        assert!(decision.use_external_no_diag);
+    }
+
+    #[test]
+    fn prepare_suite_script_post_run_context_skips_non_passed_results() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("failed".to_string()),
+            step_index: Some(3),
+            reason_code: Some("boom".to_string()),
+            reason: Some("script failed".to_string()),
+            last_bundle_dir: None,
+        };
+
+        let prepared =
+            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+                src: std::path::Path::new(
+                    "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
+                ),
+                result: &result,
+                suite_profile: SuiteRunProfile::default(),
+                builtin_suite: Some(BuiltinSuite::UiGalleryCodeEditor),
+                checks_for_post_run_template: &SuiteChecks::default(),
+                check_notify_hotspot_file_max: &[],
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            })
+            .expect("non-passed result should skip post-run preparation");
+
+        assert!(prepared.is_none());
+    }
+
+    #[test]
+    fn prepare_suite_script_post_run_context_skips_when_no_explicit_or_policy_gate_exists() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+
+        let prepared =
+            prepare_suite_script_post_run_context(SuiteScriptPostRunPreparationRequest {
+                src: std::path::Path::new("unrelated.json"),
+                result: &result,
+                suite_profile: SuiteRunProfile::default(),
+                builtin_suite: None,
+                checks_for_post_run_template: &SuiteChecks::default(),
+                check_notify_hotspot_file_max: &[],
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            })
+            .expect("scripts without post-run gates should skip preparation");
+
+        assert!(prepared.is_none());
+    }
+
+    #[test]
+    fn maybe_run_suite_script_lint_skips_when_suite_lint_is_disabled() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: Some("bundle-dir".to_string()),
+        };
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "script.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: None,
+        };
+
+        let lint_failed = maybe_run_suite_script_lint(
+            SuiteScriptLintRequest {
+                src: std::path::Path::new("script.json"),
+                result: &result,
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                suite_lint: false,
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                lint_all_test_ids_bounds: false,
+                lint_eps_px: 0.0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            },
+            &mut script_ctx,
+        )
+        .expect("disabled suite lint should skip helper work");
+
+        assert!(!lint_failed);
+        assert!(script_ctx.lint_summary.is_none());
+    }
+
+    #[test]
+    fn maybe_run_suite_script_lint_skips_when_bundle_dir_is_missing() {
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "script.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: None,
+        };
+
+        let lint_failed = maybe_run_suite_script_lint(
+            SuiteScriptLintRequest {
+                src: std::path::Path::new("script.json"),
+                result: &result,
+                resolved_out_dir: std::path::Path::new("diag-out"),
+                suite_lint: true,
+                bundle_doctor_mode: BundleDoctorMode::Off,
+                warmup_frames: 0,
+                lint_all_test_ids_bounds: false,
+                lint_eps_px: 0.0,
+                timeout_ms: 1,
+                poll_ms: 1,
+            },
+            &mut script_ctx,
+        )
+        .expect("missing bundle dir should skip lint helper");
+
+        assert!(!lint_failed);
+        assert!(script_ctx.lint_summary.is_none());
+    }
+
+    #[test]
+    fn finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip() {
+        let workspace_root = std::path::Path::new(".");
+        let resolved_out_dir = std::path::Path::new("diag-out");
+        let suite_summary_path = std::path::Path::new("diag-out/suite.summary.json");
+        let regression_summary_path = std::path::Path::new("diag-out/regression.summary.json");
+        let summary_ctx = SuiteSummaryContext {
+            workspace_root,
+            resolved_out_dir,
+            suite_summary_path,
+            regression_summary_path,
+            suite_name: Some("test-suite"),
+            generated_unix_ms: 7,
+            warmup_frames: 0,
+            reuse_launch: true,
+            wants_screenshots: false,
+        };
+        let result = crate::stats::ScriptResultSummary {
+            run_id: 7,
+            stage: Some("passed".to_string()),
+            step_index: Some(3),
+            reason_code: None,
+            reason: None,
+            last_bundle_dir: None,
+        };
+        let mut stage_counts = std::collections::BTreeMap::new();
+        stage_counts.insert("passed".to_string(), 1);
+        let reason_code_counts = std::collections::BTreeMap::new();
+        let evidence_aggregate = suite_summary::SuiteEvidenceAggregate::default();
+        let mut rows = Vec::new();
+        let mut child = None;
+        let mut script_ctx = PreparedSuiteScriptContext {
+            script_key: "unrelated.json".to_string(),
+            lint_summary: None,
+            evidence_highlights: Some(serde_json::json!({
+                "artifacts": []
+            })),
+        };
+
+        finalize_suite_script_success_tail(SuiteScriptSuccessTailRequest {
+            src: std::path::Path::new("unrelated.json"),
+            idx: 0,
+            script_count: 1,
+            child: &mut child,
+            keep_open: false,
+            reuse_process: true,
+            resolved_exit_path: std::path::Path::new("diag-out/exit"),
+            resolved_out_dir,
+            poll_ms: 1,
+            suite_lint: false,
+            bundle_doctor_mode: BundleDoctorMode::Off,
+            warmup_frames: 0,
+            lint_all_test_ids_bounds: false,
+            lint_eps_px: 0.0,
+            timeout_ms: 1,
+            suite_profile: SuiteRunProfile::default(),
+            builtin_suite: None,
+            checks_for_post_run_template: &SuiteChecks::default(),
+            check_notify_hotspot_file_max: &[],
+            summary_ctx: &summary_ctx,
+            stage_counts: &stage_counts,
+            reason_code_counts: &reason_code_counts,
+            rows: &mut rows,
+            evidence_aggregate: &evidence_aggregate,
+            script_ctx: &mut script_ctx,
+            result: &result,
+        })
+        .expect("success tail should fall through to row recording when lint and post-run skip");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].get("script").and_then(|value| value.as_str()),
+            Some("unrelated.json")
+        );
+        assert_eq!(
+            rows[0].get("stage").and_then(|value| value.as_str()),
+            Some("passed")
+        );
+        assert!(rows[0].get("lint").is_some_and(|value| value.is_null()));
+        assert_eq!(
+            rows[0]
+                .get("evidence_highlights")
+                .and_then(|value| value.get("artifacts"))
+                .and_then(|value| value.as_array())
+                .map(Vec::len),
+            Some(0)
+        );
     }
 
     #[test]
