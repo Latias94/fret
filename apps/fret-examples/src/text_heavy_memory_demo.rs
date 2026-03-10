@@ -1,4 +1,4 @@
-use fret_app::App;
+use fret::advanced::prelude::*;
 use fret_core::{Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::ElementContext;
 use fret_ui::element::{
@@ -11,23 +11,20 @@ struct TextHeavyMemoryState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_bootstrap::ui_app("text-heavy-memory-demo", init_window, view)
-        .init_app(fret_bootstrap::install_default_i18n_backend)
+    ui_app("text-heavy-memory-demo", init_window, view)
+        .setup(fret_bootstrap::install_default_i18n_backend)
         .with_main_window("text_heavy_memory_demo", (980.0, 720.0))
         .run()
         .map_err(anyhow::Error::from)
 }
 
-fn init_window(_app: &mut App, _window: fret_core::AppWindowId) -> TextHeavyMemoryState {
+fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> TextHeavyMemoryState {
     TextHeavyMemoryState {
         content: build_text_heavy_content(),
     }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut TextHeavyMemoryState,
-) -> fret_ui::element::Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut TextHeavyMemoryState) -> ViewElements {
     let scroll = cx.scroll(
         ScrollProps {
             layout: LayoutStyle {
@@ -80,7 +77,7 @@ fn view(
         },
     );
 
-    fret_ui::element::Elements::from_iter([scroll])
+    ViewElements::from_iter([scroll])
 }
 
 fn build_text_heavy_content() -> Arc<str> {

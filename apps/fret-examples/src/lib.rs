@@ -214,11 +214,14 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V2_DEMO: &str = include_str!("custom_effect_v2_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
+    const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_AVF_DEMO: &str =
         include_str!("external_video_imports_avf_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_MF_DEMO: &str = include_str!("external_video_imports_mf_demo.rs");
+    const EXTRAS_MARQUEE_PERF_DEMO: &str = include_str!("extras_marquee_perf_demo.rs");
     const GENUI_DEMO: &str = include_str!("genui_demo.rs");
     const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
     const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
@@ -229,20 +232,27 @@ mod authoring_surface_policy_tests {
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const LAUNCHER_UTILITY_WINDOW_DEMO: &str = include_str!("launcher_utility_window_demo.rs");
+    const LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO: &str =
+        include_str!("launcher_utility_window_materials_demo.rs");
     const LIQUID_GLASS_DEMO: &str = include_str!("liquid_glass_demo.rs");
     const MARKDOWN_DEMO: &str = include_str!("markdown_demo.rs");
     const NODE_GRAPH_DEMO: &str = include_str!("node_graph_demo.rs");
     const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
     const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
+    const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
 
     fn assert_uses_advanced_surface(src: &str) {
         assert!(src.contains("advanced::prelude::*"));
         assert!(src.contains("KernelApp"));
+        assert!(!src.contains("fret_bootstrap::ui_app("));
+        assert!(!src.contains("fret_bootstrap::ui_app_with_hooks("));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("use fret::prelude::{"));
+        assert!(!src.contains(".init_app("));
         assert!(!src.contains("ViewCx<'_, '_, App>"));
         assert!(!src.contains("ElementContext<'_, App>"));
         assert!(!src.contains("UiTree<App>"));
@@ -284,7 +294,10 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V2_DEMO,
             CUSTOM_EFFECT_V3_DEMO,
             DROP_SHADOW_DEMO,
+            ECHARTS_DEMO,
             EMBEDDED_VIEWPORT_DEMO,
+            EMPTY_IDLE_DEMO,
+            EXTRAS_MARQUEE_PERF_DEMO,
             GENUI_DEMO,
             HELLO_COUNTER_DEMO,
             HELLO_WORLD_COMPARE_DEMO,
@@ -295,12 +308,15 @@ mod authoring_surface_policy_tests {
             IMUI_NODE_GRAPH_DEMO,
             IMUI_RESPONSE_SIGNALS_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
+            LAUNCHER_UTILITY_WINDOW_DEMO,
+            LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
             LIQUID_GLASS_DEMO,
             MARKDOWN_DEMO,
             NODE_GRAPH_DEMO,
             POSTPROCESS_THEME_DEMO,
             QUERY_ASYNC_TOKIO_DEMO,
             QUERY_DEMO,
+            TEXT_HEAVY_MEMORY_DEMO,
             TODO_DEMO,
             WINDOW_HIT_TEST_PROBE_DEMO,
         ] {

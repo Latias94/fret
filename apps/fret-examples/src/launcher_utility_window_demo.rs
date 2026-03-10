@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_bootstrap::ui_app_with_hooks;
-use fret_core::{AppWindowId, MouseButton, Px, SemanticsRole};
+use fret::advanced::prelude::*;
+use fret_app::{CommandId, Effect, WindowRequest};
+use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
 use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, TimerToken, WindowDecorationsRequest, WindowResizeDirection,
@@ -11,7 +11,6 @@ use fret_runtime::{
 };
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
@@ -45,7 +44,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Default::default()
         };
     })
-    .init_app(|app| {
+    .setup_with(|app: &mut KernelApp| {
         app.commands_mut().register(
             CommandId::from(CMD_BLINK),
             fret_app::CommandMeta::new("Blink (hide + show)"),
@@ -70,7 +69,7 @@ struct LauncherUtilityWindowState {
     status: fret_runtime::Model<Arc<str>>,
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
     LauncherUtilityWindowState {
         window,
         always_on_top: app.models_mut().insert(false),
@@ -80,16 +79,16 @@ fn init_window(app: &mut App, window: AppWindowId) -> LauncherUtilityWindowState
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<LauncherUtilityWindowState> {
+    driver: UiAppDriver<LauncherUtilityWindowState>,
+) -> UiAppDriver<LauncherUtilityWindowState> {
     driver.on_command(on_command).on_event(on_event)
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut LauncherUtilityWindowState,
     command: &CommandId,
 ) {
@@ -154,10 +153,10 @@ fn on_command(
 }
 
 fn on_event(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut LauncherUtilityWindowState,
     event: &fret_core::Event,
 ) {
@@ -180,9 +179,9 @@ fn on_event(
 }
 
 fn view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut LauncherUtilityWindowState,
-) -> fret_bootstrap::ui_app_driver::ViewElements {
+) -> ViewElements {
     let theme = cx.theme().snapshot();
     let color_background = theme.color_token("background");
     let color_muted_foreground = theme.color_token("muted-foreground");
