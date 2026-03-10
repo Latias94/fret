@@ -1044,22 +1044,9 @@ impl ElementHostWidget {
                 },
             ),
         );
-        let ignore_width_in_cache_key =
-            matches!(props.axis, crate::element::ScrollAxis::Y) && props.probe_unbounded;
-        let ignore_height_in_cache_key =
-            matches!(props.axis, crate::element::ScrollAxis::X) && props.probe_unbounded;
-
         let key = ScrollMeasureKey {
-            avail_w: if ignore_width_in_cache_key {
-                0
-            } else {
-                available_space_cache_key(child_constraints.available.width)
-            },
-            avail_h: if ignore_height_in_cache_key {
-                0
-            } else {
-                available_space_cache_key(child_constraints.available.height)
-            },
+            avail_w: available_space_cache_key(child_constraints.available.width),
+            avail_h: available_space_cache_key(child_constraints.available.height),
         };
         let frame_id = cx.app.frame_id();
 
