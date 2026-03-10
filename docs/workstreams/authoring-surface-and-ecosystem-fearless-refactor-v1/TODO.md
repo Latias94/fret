@@ -113,8 +113,8 @@ Companion docs:
 ## M4 — Migrate docs, templates, and examples
 
 - [x] Update `README.md`.
-- [ ] Update `docs/README.md`.
-- [ ] Update `docs/first-hour.md`.
+- [x] Update `docs/README.md`.
+- [x] Update `docs/first-hour.md`.
 - [x] Update the golden-path todo docs.
 - [x] Update scaffold templates in `apps/fretboard`.
 - [x] Update official cookbook examples to use the new app surface.
@@ -137,7 +137,7 @@ Companion docs:
 - [x] Add a gate that checks low-level mechanism types do not leak into the app prelude.
 - [x] Add a gate that templates only use blessed app-surface APIs.
 - [x] Add source gates that keep default docs/examples/templates on `view::<V>()?.run()`.
-- [ ] Add a gate that README/docs/first-hour agree on the default action model.
+- [x] Add a gate that README/docs/first-hour agree on the default action model.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
 - [ ] Keep layering checks green.
 

@@ -1172,6 +1172,7 @@ mod authoring_surface_policy_tests {
     const ROOT_README: &str = include_str!("../../../README.md");
     const README: &str = include_str!("../README.md");
     const DOCS_README: &str = include_str!("../../../docs/README.md");
+    const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
     const TODO_APP_GOLDEN_PATH: &str =
         include_str!("../../../docs/examples/todo-app-golden-path.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
@@ -1306,6 +1307,25 @@ mod authoring_surface_policy_tests {
         assert!(DOCS_README.contains("`cx.actions().payload::<A>()`"));
         assert!(!DOCS_README.contains("`ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)"));
         assert!(!DOCS_README.contains("ViewCx::on_payload_action*"));
+    }
+
+    #[test]
+    fn docs_index_and_first_hour_stay_on_default_app_surface() {
+        assert!(DOCS_README.contains("`use fret::app::prelude::*;`"));
+        assert!(DOCS_README.contains("`FretApp::new(...).window(...).view::<MyView>()?.run()`"));
+        assert!(DOCS_README.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!DOCS_README.contains("run_view::<"));
+        assert!(!DOCS_README.contains("ViewCx::"));
+
+        assert!(FIRST_HOUR.contains("`use fret::app::prelude::*;`"));
+        assert!(FIRST_HOUR.contains(
+            "`FretApp::new(\"my-simple-todo\").window(\"my-simple-todo\", (...)).view::<TodoView>()?.run()`"
+        ));
+        assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
+        assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!FIRST_HOUR.contains("run_view::<"));
+        assert!(!FIRST_HOUR.contains("ViewCx::"));
+        assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
     }
 
     #[test]

@@ -11,6 +11,8 @@ GATE_NAME = "fret builder-only surface"
 LIB_RS = WORKSPACE_ROOT / "ecosystem/fret/src/lib.rs"
 APP_ENTRY_RS = WORKSPACE_ROOT / "ecosystem/fret/src/app_entry.rs"
 README_MD = WORKSPACE_ROOT / "ecosystem/fret/README.md"
+DOCS_README_MD = WORKSPACE_ROOT / "docs/README.md"
+FIRST_HOUR_MD = WORKSPACE_ROOT / "docs/first-hour.md"
 LAUNCH_SURFACE_DESIGN_MD = (
     WORKSPACE_ROOT / "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md"
 )
@@ -85,6 +87,8 @@ def main() -> None:
     lib_rustdoc_text = rustdoc_only(lib_text)
     app_entry_text = read_text(APP_ENTRY_RS)
     readme_text = read_text(README_MD)
+    docs_readme_text = read_text(DOCS_README_MD)
+    first_hour_text = read_text(FIRST_HOUR_MD)
     launch_surface_design_text = read_text(LAUNCH_SURFACE_DESIGN_MD)
     launch_surface_audit_text = read_text(LAUNCH_SURFACE_AUDIT_MD)
     launch_surface_todo_text = read_text(LAUNCH_SURFACE_TODO_MD)
@@ -172,6 +176,52 @@ def main() -> None:
                 "fret::App::new(...).window(...).view_with_hooks::<V>(...)?",
                 "fret::App::new(...).window(...).ui(...)?",
                 "fret::App::new(...).window(...).ui_with_hooks(...)?",
+            ],
+        )
+    )
+    problems.extend(
+        require_snippets(
+            DOCS_README_MD,
+            docs_readme_text,
+            snippets=[
+                "use fret::app::prelude::*;",
+                "FretApp::new(...).window(...).view::<MyView>()?.run()",
+                "cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()",
+            ],
+        )
+    )
+    problems.extend(
+        forbid_snippets(
+            DOCS_README_MD,
+            docs_readme_text,
+            snippets=[
+                "run_view::<",
+                "ViewCx::",
+                "use fret::prelude::*;",
+            ],
+        )
+    )
+    problems.extend(
+        require_snippets(
+            FIRST_HOUR_MD,
+            first_hour_text,
+            snippets=[
+                "use fret::app::prelude::*;",
+                'FretApp::new("my-simple-todo").window("my-simple-todo", (...)).view::<TodoView>()?.run()',
+                "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
+                "cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()",
+            ],
+        )
+    )
+    problems.extend(
+        forbid_snippets(
+            FIRST_HOUR_MD,
+            first_hour_text,
+            snippets=[
+                "run_view::<",
+                "ViewCx::",
+                "use fret::prelude::*;",
+                "fret_ui_shadcn::prelude::*",
             ],
         )
     )

@@ -15,6 +15,13 @@ Default onboarding ladder:
 - **Comparison**: `simple_todo_v2_target` when you want to compare authoring density or local-state/list tradeoffs
 - **Advanced**: gallery, interop, docking, renderer, and maintainer harnesses
 
+Default app-author surface to keep in your head:
+
+- `use fret::app::prelude::*;`
+- `FretApp::new(...).window(...).view::<MyView>()?.run()`
+- `impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`
+- grouped defaults first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
+
 ## Command conventions (docs)
 
 Unless a document says otherwise:
@@ -126,6 +133,9 @@ now taught as `LocalState` + view runtime + typed actions.
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+- Canonical startup/import reminder:
+  - app-facing imports live under `use fret::app::prelude::*;`
+  - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
 - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `cx.actions().payload::<A>()` / `cx.actions().payload_locals::<A>(...)` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.

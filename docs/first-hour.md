@@ -56,6 +56,13 @@ The template is intentionally small:
 - `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, `cx.actions().transient(...)`, plus local `on_activate*` only when widget glue truly needs it. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
+Memorize the default app surface before you start editing:
+
+- import from `use fret::app::prelude::*;`
+- startup path: `FretApp::new("my-simple-todo").window("my-simple-todo", (...)).view::<TodoView>()?.run()`
+- render signature: `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
+- grouped namespaces first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
+
 ### Path taxonomy
 
 - **Default**: `hello`, `simple-todo`, `todo`
@@ -97,7 +104,12 @@ In the onboarding path, stay on one small surface:
 - `cx.actions().transient(...)` only for App-bound effects
 - local `on_activate*` only when widget glue truly needs it
 
-For UI composition, you will mostly author via `ui::*` constructors from `fret_ui_shadcn::prelude::*`.
+This all lives on the default app import surface:
+
+- `use fret::app::prelude::*;`
+- `shadcn` and `ui` come from that prelude on the default app path
+
+For UI composition, you will mostly author via `ui::*` constructors from that app prelude.
 
 Key points:
 
