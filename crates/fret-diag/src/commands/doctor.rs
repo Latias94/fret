@@ -366,6 +366,13 @@ pub(crate) fn cmd_doctor(
     if rest.first().is_some_and(|s| s == "scripts") {
         return super::doctor_scripts::cmd_doctor_scripts(&rest[1..], workspace_root, stats_json);
     }
+    if rest.first().is_some_and(|s| s == "campaigns") {
+        return super::doctor_campaigns::cmd_doctor_campaigns(
+            &rest[1..],
+            workspace_root,
+            stats_json,
+        );
+    }
 
     let mut fix_bundle_json: bool = false;
     let mut fix_schema2: bool = false;

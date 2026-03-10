@@ -8,6 +8,7 @@ pub(crate) mod config;
 pub(crate) mod dock_graph;
 pub(crate) mod dock_routing;
 pub(crate) mod doctor;
+pub(crate) mod doctor_campaigns;
 pub(crate) mod doctor_scripts;
 pub(crate) mod extensions;
 pub(crate) mod hotspots;

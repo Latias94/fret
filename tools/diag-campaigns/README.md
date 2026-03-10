@@ -29,6 +29,7 @@ Example:
 - `cargo run -p fretboard -- diag campaign list --lane smoke --tag ui-gallery --platform native`
 - `cargo run -p fretboard -- diag campaign validate`
 - `cargo run -p fretboard -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json --json`
+- `cargo run -p fretboard -- diag doctor campaigns --json`
 - `cargo run -p fretboard -- diag campaign show ui-gallery-smoke --json`
 - `cargo run -p fretboard -- diag campaign show ui-gallery-accordion-script-smoke --json`
 - `cargo run -p fretboard -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`
@@ -42,6 +43,12 @@ Example:
 - with one or more explicit manifest paths, validates only those files,
 - reuses the campaign manifest loader contract already used by registry loading,
 - supports text or `--json` output for authoring and CI-facing checks.
+
+`diag doctor campaigns` behavior:
+
+- checks the repo-owned manifest set under `tools/diag-campaigns/` as a read-only maintainer preflight,
+- reports invalid manifests, duplicate campaign ids, and remaining legacy top-level `suites` / `scripts` authoring shape,
+- keeps `diag campaign validate` as the explicit ad hoc validation entrypoint for one-off manifest paths.
 
 `diag campaign share` behavior:
 

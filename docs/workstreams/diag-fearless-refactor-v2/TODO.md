@@ -394,8 +394,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] pack/share evidence.
 - [ ] Add one cheap repo-owned campaign authoring preflight:
   - [x] land `diag campaign validate` for local authoring and ad hoc manifest checks,
-  - [ ] decide whether the first always-on enforcement should live in `diag doctor`, CI, or a
-    dedicated maintainer script,
+  - [x] land `diag doctor campaigns` as the first repo-owned read-only preflight for checked-in
+    manifests,
+  - [ ] decide whether CI should also run that preflight by default or keep it maintainer-invoked
+    first,
   - [ ] avoid inventing a richer manifest UX before the current JSON authoring flow proves
     insufficient.
 

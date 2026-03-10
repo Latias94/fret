@@ -325,6 +325,11 @@ Progress update:
     ad hoc manifest paths,
   - subcommand dispatch now avoids preloading the full workspace registry for validation-only runs,
   - maintainer docs now include validate examples instead of leaving manifest checks implicit,
+- campaign authoring preflight now also has a first doctor surface:
+  - `diag doctor campaigns` checks the repo-owned manifest set as a read-only maintainer preflight,
+  - the first report covers invalid manifests, duplicate ids, and residual legacy top-level
+    `suites` / `scripts` authoring shape,
+  - `--strict` can already treat legacy shape usage as non-OK without changing the loader contract,
 - a bounded DevTools/MCP raw-JSON defer audit now also exists, explicitly separating app-local text
   holders from shared persisted artifact vocabulary,
 - the next value in this area is finishing residual naming adoption rather than another terminology

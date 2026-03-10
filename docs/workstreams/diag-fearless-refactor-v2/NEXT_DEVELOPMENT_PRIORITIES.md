@@ -38,7 +38,9 @@ The following are now already true:
 - campaign capability loading now reuses the shared filesystem capability loader,
 - `diag doctor` now reports normalized capabilities from that same resolved source,
 - campaign authoring now has a dedicated `diag campaign validate` entrypoint for repo-owned or
-  explicit ad hoc manifests.
+  explicit ad hoc manifests,
+- repo-owned campaign manifests now also have a first read-only doctor preflight via
+  `diag doctor campaigns`.
 
 This means the highest-value next work is no longer "make campaign capability preflight exist".
 
@@ -64,8 +66,9 @@ Recommended work:
   - `campaigns_skipped_policy`,
   - `capabilities_check_path`,
   - capability source path reporting,
-- decide whether `diag campaign validate` should stay as a maintainer-only command or become the
-  first cheap always-on preflight in CI / doctor tooling,
+- keep `diag campaign validate` for explicit ad hoc manifest paths and `diag doctor campaigns` for
+  repo-owned preflight, then decide later whether CI should invoke the same doctor surface by
+  default,
 - audit any non-CLI consumer that reads campaign/batch outputs and make sure it does not collapse
   policy skips back into generic failures,
 - keep the wording aligned across CLI, docs, GUI, MCP, and machine-readable reports.
