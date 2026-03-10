@@ -5,12 +5,14 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{
+    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextAlign, Transform2D,
+};
 use fret_runtime::{Model, TickId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
-    RenderTransformProps, SemanticsDecoration, SizeStyle,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
+    PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
@@ -35,7 +37,7 @@ use fret_ui_kit::declarative::motion_value::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, UiChildIntoElement,
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
     UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
@@ -158,6 +160,32 @@ fn collect_built_drawer_children<H: UiHost>(
     out
 }
 
+fn apply_drawer_header_text_alignment(mut element: AnyElement, align: TextAlign) -> AnyElement {
+    let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+        *text_align = align;
+    };
+
+    match &mut element.kind {
+        ElementKind::Text(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::StyledText(props) => apply_text(&mut props.layout, &mut props.align),
+        ElementKind::SelectableText(props) => apply_text(&mut props.layout, &mut props.align),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_drawer_header_text_alignment(child, align))
+        .collect();
+    element
+}
+
 /// shadcn/ui `DrawerContent` (v4).
 #[derive(Debug)]
 pub struct DrawerContent {
@@ -278,10 +306,14 @@ impl DrawerContent {
             DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
                 .w_full()
                 .h_full()
+                .min_w_0()
+                .min_h_0()
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
                 .max_h(max_height)
+                .min_w_0()
+                .min_h_0()
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
@@ -349,8 +381,14 @@ impl DrawerContent {
         rows.extend(children);
 
         let stack_layout = match side {
-            DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default().w_full().h_full(),
-            DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default().w_full(),
+            DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .min_w_0()
+                .min_h_0(),
+            DrawerSide::Top | DrawerSide::Bottom => {
+                LayoutRefinement::default().w_full().min_w_0().min_h_0()
+            }
         };
         let content = cx.container(props, move |cx| {
             vec![
@@ -483,23 +521,38 @@ impl DrawerHeader {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let side = drawer_side_in_scope(cx);
-        let items = match side {
-            DrawerSide::Top | DrawerSide::Bottom => Items::Center,
-            DrawerSide::Left | DrawerSide::Right => Items::Start,
+        let md_breakpoint = cx
+            .environment_viewport_width(fret_ui::Invalidation::Layout)
+            .0
+            >= fret_ui_kit::declarative::viewport_tailwind::MD.0;
+        let centered = matches!(side, DrawerSide::Top | DrawerSide::Bottom) && !md_breakpoint;
+        let text_align = if centered {
+            TextAlign::Center
+        } else {
+            TextAlign::Start
         };
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
-        let children = self.children;
+        let gap = if md_breakpoint {
+            Space::N1p5
+        } else {
+            Space::N0p5
+        };
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_drawer_header_text_alignment(child, text_align))
+            .collect();
         shadcn_layout::container_vstack(
             cx,
             props,
             shadcn_layout::VStackProps::default()
-                .gap(Space::N1)
-                .layout(LayoutRefinement::default().w_full())
-                .items(items),
+                .gap(gap)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items_stretch(),
             children,
         )
     }
@@ -580,10 +633,18 @@ impl DrawerFooter {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default().mt_auto(),
+            LayoutRefinement::default().w_full().min_w_0().mt_auto(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items_stretch(),
+            children,
+        )
     }
 }
 
@@ -1608,7 +1669,7 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextAlign};
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -1648,6 +1709,24 @@ mod tests {
         )
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        let node = find_text_element(el, needle)?;
+        match &node.kind {
+            ElementKind::Text(props) => Some(props),
+            _ => None,
+        }
+    }
+
     #[test]
     fn drawer_new_controllable_can_build_with_or_without_controlled_open_model() {
         let window = AppWindowId::default();
@@ -1672,6 +1751,89 @@ mod tests {
         let inner_debug = format!("{:?}", drawer.inner);
         assert!(inner_debug.contains("on_open_change: true"));
         assert!(inner_debug.contains("on_open_change_complete: true"));
+    }
+
+    #[test]
+    fn drawer_header_root_fills_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            with_drawer_side_provider(cx, DrawerSide::Bottom, |cx| {
+                DrawerHeader::new([
+                    DrawerTitle::new("Title").into_element(cx),
+                    DrawerDescription::new("Description").into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!(
+                "expected DrawerHeader root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn drawer_header_centers_text_below_md_breakpoint_for_bottom_drawer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            with_drawer_side_provider(cx, DrawerSide::Bottom, |cx| {
+                DrawerHeader::new([
+                    DrawerTitle::new("Title").into_element(cx),
+                    DrawerDescription::new("Description").into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected drawer header text node");
+            assert_eq!(text.align, TextAlign::Center);
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        }
+    }
+
+    #[test]
+    fn drawer_header_left_aligns_text_for_side_drawers() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            with_drawer_side_provider(cx, DrawerSide::Left, |cx| {
+                DrawerHeader::new([
+                    DrawerTitle::new("Title").into_element(cx),
+                    DrawerDescription::new("Description").into_element(cx),
+                ])
+                .into_element(cx)
+            })
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected drawer header text node");
+            assert_eq!(text.align, TextAlign::Start);
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        }
     }
 
     #[test]
@@ -1733,6 +1895,142 @@ mod tests {
         assert!(
             (content_bounds.size.height.0 - expected).abs() < 2.0,
             "expected content max-height fraction clamp near {expected}px, got {content_bounds:?}"
+        );
+    }
+
+    fn render_drawer_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        side: DrawerSide,
+        content_id_out: Rc<Cell<Option<GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    ) {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let content_id_out = content_id_out.clone();
+                let description_id_out = description_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+
+                let content = with_drawer_side_provider(cx, side, |cx| {
+                    let title = DrawerTitle::new("Delete the production project?").into_element(cx);
+                    let description = DrawerDescription::new(
+                        "This drawer should keep its header text and footer actions inside the panel bounds on narrow viewports instead of measuring against unconstrained content width.",
+                    )
+                    .into_element(cx);
+                    description_id_out.set(Some(description.id));
+
+                    let header = DrawerHeader::new(vec![title, description]).into_element(cx);
+
+                    let action = crate::Button::new("Submit")
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx);
+                    action_id_out.set(Some(action.id));
+
+                    let cancel = crate::Button::new("Cancel")
+                        .variant(crate::ButtonVariant::Outline)
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx);
+                    cancel_id_out.set(Some(cancel.id));
+
+                    let footer = DrawerFooter::new(vec![action, cancel]).into_element(cx);
+                    let content = DrawerContent::new(vec![header, footer]).into_element(cx);
+                    content_id_out.set(Some(content.id));
+                    content
+                });
+
+                vec![content]
+            },
+        );
+
+        ui.set_root(root);
+    }
+
+    #[test]
+    fn drawer_real_content_stays_within_panel_bounds_on_narrow_bottom_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(600.0)),
+        );
+
+        render_drawer_frame_with_real_content(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            DrawerSide::Bottom,
+            content_id.clone(),
+            description_id.clone(),
+            cancel_id.clone(),
+            action_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_bounds = current_bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = current_bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = current_bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = current_bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside drawer content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside drawer content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside drawer content; content={content_bounds:?} action={action_bounds:?}"
         );
     }
 
