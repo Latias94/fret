@@ -73,7 +73,10 @@ fn pointer_driven_focus_requests_do_not_scroll_into_view() {
             _descendant_bounds: Rect,
         ) -> ScrollIntoViewResult {
             self.scroll_calls.fetch_add(1, Ordering::SeqCst);
-            ScrollIntoViewResult::Handled { did_scroll: true }
+            ScrollIntoViewResult::Handled {
+                did_scroll: true,
+                propagated_bounds: None,
+            }
         }
 
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
