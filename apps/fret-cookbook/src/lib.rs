@@ -31,8 +31,11 @@ mod authoring_surface_policy_tests {
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
+    const THEME_SWITCHING_EXAMPLE: &str = include_str!("../examples/theme_switching_basics.rs");
     const TEXT_INPUT_EXAMPLE: &str = include_str!("../examples/text_input_basics.rs");
+    const TOAST_EXAMPLE: &str = include_str!("../examples/toast_basics.rs");
     const TOGGLE_EXAMPLE: &str = include_str!("../examples/toggle_basics.rs");
+    const VIRTUAL_LIST_EXAMPLE: &str = include_str!("../examples/virtual_list_basics.rs");
 
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
@@ -77,6 +80,9 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(DATE_PICKER_EXAMPLE);
         assert_uses_app_surface(COMMANDS_KEYMAP_EXAMPLE);
         assert_uses_app_surface(OVERLAY_EXAMPLE);
+        assert_uses_app_surface(THEME_SWITCHING_EXAMPLE);
+        assert_uses_app_surface(TOAST_EXAMPLE);
+        assert_uses_app_surface(VIRTUAL_LIST_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
@@ -102,6 +108,16 @@ mod authoring_surface_policy_tests {
 
         assert!(OVERLAY_EXAMPLE.contains("local_set::<act::OpenDialog, bool>"));
         assert!(OVERLAY_EXAMPLE.contains("local_update::<act::BumpUnderlay, u32>"));
+
+        assert!(THEME_SWITCHING_EXAMPLE.contains("use fret_app::Effect;"));
+        assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
+
+        assert!(TOAST_EXAMPLE.contains("on_action_notify::<act::DefaultToast>"));
+
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
     }
 
     #[test]

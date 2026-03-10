@@ -1,5 +1,7 @@
-use fret::prelude::*;
 use std::sync::Arc;
+
+use fret::app::prelude::*;
+use fret_app::Effect;
 
 const TEST_ID_ROOT: &str = "cookbook.theme_switching_basics.root";
 const TEST_ID_TOGGLE: &str = "cookbook.theme_switching_basics.toggle";
@@ -11,7 +13,7 @@ const TEST_ID_SAMPLE_CARD: &str = "cookbook.theme_switching_basics.sample_card";
 const SCHEME_LIGHT: &str = "light";
 const SCHEME_DARK: &str = "dark";
 
-fn apply_scheme(app: &mut App, scheme: &str) {
+fn apply_scheme(app: &mut KernelApp, scheme: &str) {
     shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -28,7 +30,7 @@ struct ThemeSwitchingBasicsView {
 }
 
 impl View for ThemeSwitchingBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         apply_scheme(app, SCHEME_LIGHT);
 
         Self {
@@ -37,10 +39,13 @@ impl View for ThemeSwitchingBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let scheme_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
-        let scheme: Arc<str> = scheme_state
-            .watch(cx)
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let scheme_state = cx
+            .state()
+            .local_init(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
+        let scheme: Arc<str> = cx
+            .state()
+            .watch(&scheme_state)
             .layout()
             .value_or_default()
             .unwrap_or_else(|| Arc::from(SCHEME_LIGHT));
