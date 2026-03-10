@@ -675,8 +675,8 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         key: fret_query::QueryKey<T>,
         policy: fret_query::QueryPolicy,
         fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
-        + Send
-        + 'static,
+            + Send
+            + 'static,
     ) -> fret_query::QueryHandle<T> {
         fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
     }
@@ -715,7 +715,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
@@ -729,7 +729,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.on_action::<A>(move |host, action_cx| {
             let handled = f(host, action_cx);
@@ -861,11 +861,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
@@ -876,11 +876,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.on_payload_action::<A>(move |host, action_cx, payload| {
             let handled = f(host, action_cx, payload);
@@ -912,14 +912,31 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         });
     }
 
+    /// Register a typed payload action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the handler only coordinates view-owned `LocalState<T>` slots.
+    pub fn on_payload_action_notify_locals<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
+    ) {
+        self.on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, payload)
+        })
+    }
+
     /// Register a typed unit action availability handler.
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
+                &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+                fret_ui::action::CommandAvailabilityActionCx,
+            ) -> fret_ui::CommandAvailability
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
