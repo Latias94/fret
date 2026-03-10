@@ -150,16 +150,20 @@ impl<H: UiHost> ScrollOverflowTree for UiTreeScrollOverflowTree<'_, '_, H> {
     }
 
     fn node_clips_descendant_scroll_overflow(&mut self, node: NodeId) -> bool {
-        crate::declarative::frame::element_record_for_node(self.app, self.window, node).is_some_and(
-            |record| {
-                matches!(
-                    record.instance,
-                    crate::declarative::frame::ElementInstance::Scroll(_)
-                        | crate::declarative::frame::ElementInstance::ViewportSurface(_)
-                        | crate::declarative::frame::ElementInstance::VirtualList(_)
-                )
-            },
-        )
+        let layout_clips = matches!(
+            crate::declarative::frame::layout_style_for_node(self.app, self.window, node).overflow,
+            crate::element::Overflow::Clip
+        );
+        layout_clips
+            || crate::declarative::frame::element_record_for_node(self.app, self.window, node)
+                .is_some_and(|record| {
+                    matches!(
+                        record.instance,
+                        crate::declarative::frame::ElementInstance::Scroll(_)
+                            | crate::declarative::frame::ElementInstance::ViewportSurface(_)
+                            | crate::declarative::frame::ElementInstance::VirtualList(_)
+                    )
+                })
     }
 }
 
