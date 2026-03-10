@@ -1216,6 +1216,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_up_commit/group_drag.rs` seams, so `pointer_up_commit.rs` now mainly
     keeps root re-exports plus node-drag delegation explicit while the commit wrappers stop
     accumulating inline orchestration.
+  - Progress: pointer-up state synchronization and release guards now also route through the
+    private `ui/canvas/widget/pointer_up_state/sync.rs` and
+    `ui/canvas/widget/pointer_up_state/release.rs` seams, so `pointer_up_state.rs` now mainly
+    keeps root re-exports explicit while pointer-state projection and sticky-wire/pan release
+    branches stop living inline together.
 
 ## M5 - Compatibility retained convergence
 
