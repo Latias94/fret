@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
@@ -33,7 +33,7 @@ struct AssetsReloadEpochBasicsView {
 }
 
 impl View for AssetsReloadEpochBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
@@ -50,7 +50,7 @@ impl View for AssetsReloadEpochBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let bumps_state = cx.use_local::<u64>();
 
@@ -151,7 +151,7 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
 ) -> AnyElement {
@@ -239,7 +239,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::SvgFileState,
 ) -> AnyElement {

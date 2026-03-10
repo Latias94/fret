@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::advanced::interop::embedded_viewport as embedded;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::ViewportFit;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
@@ -25,7 +25,7 @@ struct EmbeddedViewportDemoView {
 }
 
 impl View for EmbeddedViewportDemoView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         let models = embedded::ensure_models(app, window);
         let _ = app.models_mut().update(&models.last_input, |v| {
             *v = Arc::<str>::from("Click inside the viewport panel to see input forwarding.");
@@ -40,7 +40,7 @@ impl View for EmbeddedViewportDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let window = cx.window;
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -184,7 +184,7 @@ impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
 
     fn record_embedded_viewport(
         &mut self,
-        app: &mut App,
+        app: &mut KernelApp,
         window: AppWindowId,
         _context: &WgpuContext,
         _renderer: &mut Renderer,

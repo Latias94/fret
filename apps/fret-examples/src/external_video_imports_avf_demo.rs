@@ -362,6 +362,7 @@ fn record_engine_frame(
             let should_decode = !st.view.target.is_registered()
                 || !st.view.avf_pacing_enabled
                 || st
+                    .view
                     .avf_last_decode_at
                     .is_none_or(|t| now.saturating_duration_since(t) >= st.view.avf_frame_interval);
 
@@ -431,7 +432,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::App::new("external-video-imports-avf")
+    let builder = fret::FretApp::new("external-video-imports-avf")
         .window(
             "fret-demo external_video_imports_avf_demo (V toggles visibility, I toggles source)",
             (980.0, 720.0),

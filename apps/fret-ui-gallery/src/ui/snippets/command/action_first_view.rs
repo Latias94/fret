@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::advanced::prelude::*;
 use fret_ui::CommandAvailability;
 use fret_ui_shadcn::{self as shadcn};
 
@@ -21,11 +21,11 @@ struct ActionFirstViewRuntimeDemo {
 }
 
 impl View for ActionFirstViewRuntimeDemo {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self { last_action: None }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let last_action = self
             .last_action
             .clone()
@@ -70,7 +70,7 @@ impl View for ActionFirstViewRuntimeDemo {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn render(cx: &mut ElementContext<'_, App>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut ElementContext<'_, KernelApp>, last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
         struct ViewSlot {
             state: Option<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
@@ -113,7 +113,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, last_action: Model<Arc<str>>) ->
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn render(cx: &mut ElementContext<'_, App>, _last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut ElementContext<'_, KernelApp>, _last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
         ui::v_flex(|cx| {
             [

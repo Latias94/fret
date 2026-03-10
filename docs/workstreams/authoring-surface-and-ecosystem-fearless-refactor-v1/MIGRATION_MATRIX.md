@@ -46,10 +46,10 @@ An old surface is eligible for deletion only when all of the following are true:
 
 | Lane | Old surface / implementation | Target surface | Temporary migration tactic | Delete trigger | Status | Evidence anchors |
 | --- | --- | --- | --- | --- | --- | --- |
-| App prelude | broad `fret::prelude::*` re-export posture | `fret::app::prelude::*` | explicit app module plus short-lived legacy bridge | no low-level mechanism types remain in `fret::app::prelude` and the legacy bridge is deleted | In progress | `ecosystem/fret/src/lib.rs`, `TARGET_INTERFACE_STATE.md` |
+| App prelude | broad `fret::prelude::*` re-export posture | `fret::app::prelude::*` | explicit app module during migration, then delete the root bridge | no low-level mechanism types remain in `fret::app::prelude` and the legacy bridge is deleted | Deleted | `ecosystem/fret/src/lib.rs`, `TARGET_INTERFACE_STATE.md` |
 | Component prelude | mixed import posture via `fret-ui-kit` / recipe crates | `fret::component::prelude::*` | add explicit component module before moving call sites | first-party reusable crates no longer need app prelude | Scaffolding only | `TARGET_INTERFACE_STATE.md` |
-| Advanced imports | accidental discovery through default imports | `fret::advanced::*` | explicit modules that forward to current low-level seams | app docs/templates no longer import low-level seams | Scaffolding only | `DESIGN.md` |
-| App builder naming | `fret::App`, `AppBuilder`, `FretApp` mixed posture | `FretApp` canonical | short-lived alias from old builder name to new canonical name | docs/templates stop teaching `fret::App` | In progress | `ecosystem/fret/src/app_entry.rs`, `TARGET_INTERFACE_STATE.md` |
+| Advanced imports | accidental discovery through default imports | `fret::advanced::*` | explicit modules that forward to current low-level seams | app docs/templates no longer import low-level seams | In progress | `ecosystem/fret/src/lib.rs`, `apps/fret-cookbook/examples/` |
+| App builder naming | `fret::App`, `AppBuilder`, `FretApp` mixed posture | `FretApp` canonical | migrate call sites/docs to `FretApp`, then delete old aliases | docs/templates stop teaching `fret::App` | Deleted | `ecosystem/fret/src/app_entry.rs`, `TARGET_INTERFACE_STATE.md` |
 | Kernel runtime naming | bare `App` in app-facing imports | `KernelApp` | type alias only for migration, then stop exporting bare `App` on app path | app prelude no longer exposes kernel runtime as bare `App` | In progress | `TARGET_INTERFACE_STATE.md` |
 | App UI context | `ViewCx` | `AppUi` | type alias first, grouped API second, delete old teaching last | templates/examples use `AppUi` and grouped namespaces | In progress | `ecosystem/fret/src/view.rs`, `TARGET_INTERFACE_STATE.md` |
 | UI return alias | `Elements` as default taught return type | `Ui` | alias `Ui = Elements` | official examples/docs use `Ui` | In progress | `TARGET_INTERFACE_STATE.md` |
@@ -80,7 +80,7 @@ An old surface is eligible for deletion only when all of the following are true:
 | `docs/first-hour.md` | strong default guidance, still tied to current naming | teach `FretApp`, `AppUi`, grouped namespaces | templates and cookbook match exactly | In progress | `docs/first-hour.md` |
 | scaffold templates | current `hello/simple-todo/todo` teach old surface names | teach only new app surface | template gate added and green | Migrated | `apps/fretboard/src/scaffold/templates.rs` |
 | cookbook official examples | current view runtime posture | new app surface posture | no official example teaches the old surface | In progress | `apps/fret-cookbook/examples/` |
-| comparison/advanced examples | mixed by design | explicit advanced/component imports where appropriate | examples taxonomy is clear and documented | Not started | `docs/examples/README.md` |
+| comparison/advanced examples | mixed by design | explicit advanced/component imports where appropriate | examples taxonomy is clear and documented | Migrated | `apps/fret-cookbook/examples/`, `apps/fret-cookbook/src/lib.rs`, `apps/fret-examples/src/lib.rs`, `apps/fret-ui-gallery/src/lib.rs` |
 
 ## Hard Delete Matrix
 
@@ -88,13 +88,13 @@ These are the concrete "remove this" lanes.
 
 | Old symbol / posture | Replacement | Delete when | Status |
 | --- | --- | --- | --- |
-| `fret::App` as default taught builder name | `FretApp` | app docs/templates/examples all migrated | In progress |
+| `fret::App` as default taught builder name | `FretApp` | app docs/templates/examples all migrated | Deleted |
 | bare `App` in app-facing prelude for kernel runtime | `KernelApp` | app prelude no longer exports it bare and call sites are migrated | In progress |
 | `ViewCx` as the taught app-facing context name | `AppUi` | grouped context APIs are live and official surfaces migrated | In progress |
 | `Elements` as the taught app-facing return alias | `Ui` | official examples/docs migrated | In progress |
 | flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | In progress |
 | flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated | In progress |
-| broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | In progress |
+| broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | Deleted |
 | stale docs that teach superseded names | rewritten docs | new docs merged and linked | In progress |
 
 ## Recommended Execution Order

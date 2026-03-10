@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_bootstrap::ui_app_driver::ViewElements;
 use fret_core::scene::Paint;
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, MouseButton, Px, Rect, SemanticsRole,
@@ -126,7 +125,7 @@ struct GizmoBasicsWindowState {
     model: Model<GizmoBasicsModel>,
 }
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
 
     app.commands_mut().register(
@@ -146,7 +145,7 @@ fn install_commands(app: &mut App) {
     );
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> GizmoBasicsWindowState {
+fn init_window(app: &mut KernelApp, _window: AppWindowId) -> GizmoBasicsWindowState {
     GizmoBasicsWindowState {
         model: app.models_mut().insert(GizmoBasicsModel::default()),
     }
@@ -334,7 +333,7 @@ fn paint_gizmo(
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState) -> ViewElements {
     let model = cx.watch_model(&st.model).paint().value_or_default();
 
     let pos = model.transform.translation;
@@ -691,10 +690,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut GizmoBasicsWindowState,
     command: &CommandId,
 ) {
@@ -719,13 +718,13 @@ fn on_command(
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<GizmoBasicsWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<GizmoBasicsWindowState> {
+    driver: UiAppDriver<GizmoBasicsWindowState>,
+) -> UiAppDriver<GizmoBasicsWindowState> {
     driver.on_command(on_command)
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = fret_bootstrap::ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
+    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-gizmo-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
         .install_app(install_commands)

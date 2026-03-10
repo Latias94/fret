@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{AppWindowId, Color, EffectId, Px, SemanticsRole};
 use fret_render::RendererCapabilities;
@@ -55,14 +55,14 @@ struct CookbookCustomV1Effect(Option<EffectId>);
 
 struct CustomV1BasicsView;
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program.ensure_registered(effects).ok();
     app.set_global(CookbookCustomV1Effect(id));
 }
 
-fn panel_shell<I: UiChildIntoElement<App>>(
-    cx: &mut ElementContext<'_, App>,
+fn panel_shell<I: UiChildIntoElement<KernelApp>>(
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &str,
     body: I,
 ) -> AnyElement {
@@ -97,10 +97,10 @@ fn panel_shell<I: UiChildIntoElement<App>>(
     .into_element(cx)
 }
 
-fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement {
+fn preview_content(cx: &mut ElementContext<'_, KernelApp>, label: &str) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let swatch = |_cx: &mut ElementContext<'_, App>, rgb: u32| {
+    let swatch = |_cx: &mut ElementContext<'_, KernelApp>, rgb: u32| {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .bg(ColorRef::Color(Color::from_srgb_hex_rgb(rgb)))
             .rounded(Radius::Sm)
@@ -137,11 +137,11 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
     .into_element(cx)
 }
 impl View for CustomV1BasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let enabled_state = cx.use_local_with(|| true);
         let strength_state = cx.use_local_with(|| 0.35f32);
 

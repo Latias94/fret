@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_bootstrap::ui_app_driver::ViewElements;
 use fret_core::DockOp;
 use fret_core::dock::{Axis, DockNode};
 use fret_core::{AppWindowId, Color, DockNodeId, PanelKey, Px, SemanticsRole};
@@ -34,7 +33,7 @@ const CMD_ACTIVATE_INSPECTOR: &str = "cookbook.docking.activate_inspector";
 const CMD_ACTIVATE_EDITOR: &str = "cookbook.docking.activate_editor";
 const CMD_ACTIVATE_CONSOLE: &str = "cookbook.docking.activate_console";
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
 
     app.commands_mut().register(
@@ -167,11 +166,11 @@ impl DockingPolicy for DockingBasicsPolicy {
 
 struct DockingBasicsPanelRegistry;
 
-impl DockPanelRegistry<App> for DockingBasicsPanelRegistry {
+impl DockPanelRegistry<KernelApp> for DockingBasicsPanelRegistry {
     fn render_panel(
         &self,
-        ui: &mut UiTree<App>,
-        app: &mut App,
+        ui: &mut UiTree<KernelApp>,
+        app: &mut KernelApp,
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: fret_core::Rect,
@@ -274,17 +273,20 @@ struct DockingBasicsWindowState {
     layout_ids: DockLayoutIds,
 }
 
-fn install_docking_services(app: &mut App) {
-    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(Arc::new(DockingBasicsPanelRegistry));
-    });
+fn install_docking_services(app: &mut KernelApp) {
+    app.with_global_mut(
+        DockPanelRegistryService::<KernelApp>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DockingBasicsPanelRegistry));
+        },
+    );
 
     app.with_global_mut(DockingPolicyService::default, |svc, _app| {
         svc.set(Arc::new(DockingBasicsPolicy));
     });
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> DockingBasicsWindowState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> DockingBasicsWindowState {
     let layout_ids = app.with_global_mut(DockManager::default, |dock, _app| {
         reset_dock_layout(dock, window)
     });
@@ -292,7 +294,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> DockingBasicsWindowState {
     DockingBasicsWindowState { window, layout_ids }
 }
 
-fn active_tab_title(app: &App, tabs: DockNodeId) -> Option<String> {
+fn active_tab_title(app: &KernelApp, tabs: DockNodeId) -> Option<String> {
     let dock = app.global::<DockManager>()?;
     let DockNode::Tabs { tabs, active } = dock.graph.node(tabs)? else {
         return None;
@@ -301,7 +303,7 @@ fn active_tab_title(app: &App, tabs: DockNodeId) -> Option<String> {
     dock.panel(panel).map(|p| p.title.clone())
 }
 
-fn active_tab_state(app: &App, tabs: DockNodeId) -> Option<(u32, u32)> {
+fn active_tab_state(app: &KernelApp, tabs: DockNodeId) -> Option<(u32, u32)> {
     let dock = app.global::<DockManager>()?;
     let DockNode::Tabs { tabs, active } = dock.graph.node(tabs)? else {
         return None;
@@ -310,7 +312,7 @@ fn active_tab_state(app: &App, tabs: DockNodeId) -> Option<(u32, u32)> {
     Some((*active as u32, tabs.len() as u32))
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowState) -> ViewElements {
     let active_left = active_tab_title(cx.app, st.layout_ids.left_tabs).unwrap_or("Unknown".into());
     let active_right =
         active_tab_title(cx.app, st.layout_ids.right_tabs).unwrap_or("Unknown".into());
@@ -381,12 +383,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
             layout.size.width = Length::Fill;
             layout.size.height = Length::Fill;
 
-            let props = fret_ui::retained_bridge::RetainedSubtreeProps::new::<App>(move |ui| {
-                let dock_space =
-                    create_dock_space_node_with_test_id(ui, window, TEST_ID_DOCK_SPACE);
-                ui.create_node_retained(DockingBasicsDockHostRoot::new(window, dock_space))
-            })
-            .with_layout(layout);
+            let props =
+                fret_ui::retained_bridge::RetainedSubtreeProps::new::<KernelApp>(move |ui| {
+                    let dock_space =
+                        create_dock_space_node_with_test_id(ui, window, TEST_ID_DOCK_SPACE);
+                    ui.create_node_retained(DockingBasicsDockHostRoot::new(window, dock_space))
+                })
+                .with_layout(layout);
 
             vec![cx.retained_subtree(props)]
         });
@@ -437,10 +440,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
-    _ui: &mut UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     st: &mut DockingBasicsWindowState,
     command: &CommandId,
 ) {
@@ -479,7 +482,7 @@ fn on_command(
     fret_docking::runtime::request_dock_invalidation(app, [window]);
 }
 
-fn on_dock_op(app: &mut App, op: DockOp) {
+fn on_dock_op(app: &mut KernelApp, op: DockOp) {
     // DockSpace emits Effect::Dock(op); the runner routes it here.
     //
     // Notes:
@@ -490,13 +493,13 @@ fn on_dock_op(app: &mut App, op: DockOp) {
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<DockingBasicsWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<DockingBasicsWindowState> {
+    driver: UiAppDriver<DockingBasicsWindowState>,
+) -> UiAppDriver<DockingBasicsWindowState> {
     driver.on_command(on_command).dock_op(on_dock_op)
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = fret_bootstrap::ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
+    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-docking-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
         .install_app(install_commands)

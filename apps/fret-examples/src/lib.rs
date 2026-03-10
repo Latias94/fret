@@ -204,3 +204,93 @@ pub mod virtual_list_stress_demo;
 pub mod window_hit_test_probe_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod workspace_shell_demo;
+
+#[cfg(test)]
+mod authoring_surface_policy_tests {
+    const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
+    const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
+    const CHART_DECLARATIVE_DEMO: &str = include_str!("chart_declarative_demo.rs");
+    const CUSTOM_EFFECT_V1_DEMO: &str = include_str!("custom_effect_v1_demo.rs");
+    const CUSTOM_EFFECT_V2_DEMO: &str = include_str!("custom_effect_v2_demo.rs");
+    const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
+    const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
+    const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const GENUI_DEMO: &str = include_str!("genui_demo.rs");
+    const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
+    const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
+    const IMAGE_HEAVY_MEMORY_DEMO: &str = include_str!("image_heavy_memory_demo.rs");
+    const IMUI_EDITOR_PROOF_DEMO: &str = include_str!("imui_editor_proof_demo.rs");
+    const IMUI_FLOATING_WINDOWS_DEMO: &str = include_str!("imui_floating_windows_demo.rs");
+    const IMUI_HELLO_DEMO: &str = include_str!("imui_hello_demo.rs");
+    const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
+    const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
+    const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const LIQUID_GLASS_DEMO: &str = include_str!("liquid_glass_demo.rs");
+    const MARKDOWN_DEMO: &str = include_str!("markdown_demo.rs");
+    const NODE_GRAPH_DEMO: &str = include_str!("node_graph_demo.rs");
+    const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
+    const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
+    const QUERY_DEMO: &str = include_str!("query_demo.rs");
+    const TODO_DEMO: &str = include_str!("todo_demo.rs");
+    const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
+
+    fn assert_uses_advanced_surface(src: &str) {
+        assert!(src.contains("advanced::prelude::*"));
+        assert!(src.contains("KernelApp"));
+        assert!(!src.contains("use fret::prelude::*;"));
+        assert!(!src.contains("use fret::prelude::{"));
+        assert!(!src.contains("ViewCx<'_, '_, App>"));
+        assert!(!src.contains("ElementContext<'_, App>"));
+        assert!(!src.contains("UiTree<App>"));
+        assert!(!src.contains("RetainedSubtreeProps::new::<App>"));
+        assert!(!src.contains("UiChildIntoElement<App>"));
+        assert!(
+            src.contains("ViewCx<'_, '_, KernelApp>")
+                || src.contains("ElementContext<'_, KernelApp>")
+                || src.contains("UiTree<KernelApp>")
+                || src.contains("KernelApp::new()")
+        );
+    }
+
+    #[test]
+    fn migrated_examples_use_the_explicit_advanced_surface() {
+        for src in [
+            ASSETS_DEMO,
+            ASYNC_PLAYGROUND_DEMO,
+            CHART_DECLARATIVE_DEMO,
+            CUSTOM_EFFECT_V1_DEMO,
+            CUSTOM_EFFECT_V2_DEMO,
+            CUSTOM_EFFECT_V3_DEMO,
+            DROP_SHADOW_DEMO,
+            EMBEDDED_VIEWPORT_DEMO,
+            GENUI_DEMO,
+            HELLO_COUNTER_DEMO,
+            HELLO_WORLD_COMPARE_DEMO,
+            IMAGE_HEAVY_MEMORY_DEMO,
+            IMUI_EDITOR_PROOF_DEMO,
+            IMUI_FLOATING_WINDOWS_DEMO,
+            IMUI_HELLO_DEMO,
+            IMUI_NODE_GRAPH_DEMO,
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            IMUI_SHADCN_ADAPTER_DEMO,
+            LIQUID_GLASS_DEMO,
+            MARKDOWN_DEMO,
+            NODE_GRAPH_DEMO,
+            POSTPROCESS_THEME_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            QUERY_DEMO,
+            TODO_DEMO,
+            WINDOW_HIT_TEST_PROBE_DEMO,
+        ] {
+            assert_uses_advanced_surface(src);
+        }
+    }
+
+    #[test]
+    fn embedded_viewport_driver_extensions_are_discoverable_from_advanced_prelude() {
+        assert!(EMBEDDED_VIEWPORT_DEMO.contains(".drive_embedded_viewport()"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains(".drive_embedded_viewport()"));
+        assert!(!EMBEDDED_VIEWPORT_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
+    }
+}

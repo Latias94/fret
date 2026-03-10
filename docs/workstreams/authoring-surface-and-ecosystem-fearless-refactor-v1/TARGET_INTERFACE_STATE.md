@@ -63,10 +63,10 @@ Target rule:
 - if a symbol is primarily useful for component authors or runner authors, it does not belong in
   `fret::app::prelude`.
 
-Legacy bridge to delete:
+Legacy bridge status:
 
-- `fret::prelude::*` may exist only as a short-lived in-repo migration bridge and is not the target
-  public import surface.
+- `fret::prelude::*` is deleted; the target public import surfaces are `fret::app`,
+  `fret::component`, and `fret::advanced`.
 
 ## `fret::component::prelude` (Component Surface)
 
@@ -95,6 +95,7 @@ Target rule:
 
 Target exports:
 
+- `ui_app(...)` / `ui_app_with_hooks(...)` for explicit golden-path manual assembly
 - driver hooks
 - viewport embedding / interop seams
 - manual assembly surfaces

@@ -48,7 +48,7 @@ Companion docs:
 
 ## `fret` facade alignment
 
-- [x] Verify that `fret::App`, `UiAppDriver`, and `UiAppBuilder` expose the minimum lower-layer concepts needed for common apps.
+- [x] Verify that `fret::FretApp`, `UiAppDriver`, and `UiAppBuilder` expose the minimum lower-layer concepts needed for common apps.
 - [x] Identify where current docs/examples force users to learn runner-centric concepts too early.
 - [x] Map which advanced seams should remain first-class on `fret`:
   - [x] `configure(...)`

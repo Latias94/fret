@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
@@ -433,7 +433,7 @@ enum Msg {
 }
 
 impl GenUiView {
-    fn init_state(app: &mut App) -> GenUiState {
+    fn init_state(app: &mut KernelApp) -> GenUiState {
         let spec: SpecV1 = serde_json::from_str(SPEC_JSON).expect("SPEC_JSON must parse");
         let seed = spec.state.clone().unwrap_or(Value::Null);
         let mut catalog = shadcn_catalog_v1();
@@ -466,7 +466,7 @@ impl GenUiView {
         }
     }
 
-    fn handle_msg(app: &mut App, state: &mut GenUiState, message: Msg) {
+    fn handle_msg(app: &mut KernelApp, state: &mut GenUiState, message: Msg) {
         match message {
             Msg::ClearActions => {
                 let _ = app
@@ -812,13 +812,13 @@ impl GenUiView {
 }
 
 impl View for GenUiView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: Self::init_state(app),
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.on_action_notify_transient::<act::ClearActions>(TRANSIENT_GENUI_CLEAR_ACTIONS);
         cx.on_action_notify_transient::<act::ApplyQueuedActions>(
             TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS,
@@ -863,7 +863,7 @@ impl View for GenUiView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> Elements {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let clear_cmd: fret_runtime::CommandId = act::ClearActions.into();

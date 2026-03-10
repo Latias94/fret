@@ -24,9 +24,14 @@ mod authoring_surface_policy_tests {
     const DATA_TABLE_EXAMPLE: &str = include_str!("../examples/data_table_basics.rs");
     const DATE_PICKER_EXAMPLE: &str = include_str!("../examples/date_picker_basics.rs");
     const DRAG_EXAMPLE: &str = include_str!("../examples/drag_basics.rs");
+    const DOCKING_EXAMPLE: &str = include_str!("../examples/docking_basics.rs");
     const DROP_SHADOW_EXAMPLE: &str = include_str!("../examples/drop_shadow_basics.rs");
+    const EMBEDDED_VIEWPORT_EXAMPLE: &str = include_str!("../examples/embedded_viewport_basics.rs");
     const EFFECTS_LAYER_EXAMPLE: &str = include_str!("../examples/effects_layer_basics.rs");
+    const EXTERNAL_TEXTURE_IMPORT_EXAMPLE: &str =
+        include_str!("../examples/external_texture_import_basics.rs");
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
+    const GIZMO_EXAMPLE: &str = include_str!("../examples/gizmo_basics.rs");
     const IMUI_ACTION_EXAMPLE: &str = include_str!("../examples/imui_action_basics.rs");
     const ICONS_AND_ASSETS_EXAMPLE: &str = include_str!("../examples/icons_and_assets_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
@@ -41,22 +46,30 @@ mod authoring_surface_policy_tests {
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
     const ASYNC_INBOX_EXAMPLE: &str = include_str!("../examples/async_inbox_basics.rs");
+    const ASSETS_RELOAD_EPOCH_EXAMPLE: &str =
+        include_str!("../examples/assets_reload_epoch_basics.rs");
+    const CANVAS_PAN_ZOOM_EXAMPLE: &str = include_str!("../examples/canvas_pan_zoom_basics.rs");
+    const CHART_INTERACTIONS_EXAMPLE: &str =
+        include_str!("../examples/chart_interactions_basics.rs");
     const THEME_SWITCHING_EXAMPLE: &str = include_str!("../examples/theme_switching_basics.rs");
+    const CUSTOM_V1_EXAMPLE: &str = include_str!("../examples/customv1_basics.rs");
     const TEXT_INPUT_EXAMPLE: &str = include_str!("../examples/text_input_basics.rs");
     const TOAST_EXAMPLE: &str = include_str!("../examples/toast_basics.rs");
     const TOGGLE_EXAMPLE: &str = include_str!("../examples/toggle_basics.rs");
     const UNDO_EXAMPLE: &str = include_str!("../examples/undo_basics.rs");
+    const UTILITY_WINDOW_MATERIALS_EXAMPLE: &str =
+        include_str!("../examples/utility_window_materials_windows.rs");
     const VIRTUAL_LIST_EXAMPLE: &str = include_str!("../examples/virtual_list_basics.rs");
 
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("KernelApp"));
         assert!(src.contains("AppUi<'_, '_, KernelApp>"));
-        assert!(src.contains("-> Ui"));
+        assert!(src.contains(") -> Ui {"));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("ViewCx<'_, '_, App>"));
         assert!(!src.contains("fn init(_app: &mut App"));
-        assert!(!src.contains("-> Elements"));
+        assert!(!src.contains(") -> Elements {"));
         assert!(!src.contains("cx.use_local"));
         assert!(!src.contains("cx.on_action_notify_"));
         assert!(!src.contains("cx.on_payload_action_notify_"));
@@ -65,12 +78,15 @@ mod authoring_surface_policy_tests {
     fn assert_uses_advanced_surface(src: &str) {
         assert!(src.contains("advanced::prelude::*"));
         assert!(src.contains("KernelApp"));
-        assert!(src.contains("ViewCx<'_, '_, KernelApp>"));
-        assert!(src.contains("-> Elements"));
+        assert!(
+            src.contains("ViewCx<'_, '_, KernelApp>")
+                || src.contains("ElementContext<'_, KernelApp>")
+        );
+        assert!(src.contains(") -> Elements {") || src.contains(") -> ViewElements {"));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("use fret::app::prelude::*;"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
-        assert!(!src.contains("-> Ui"));
+        assert!(!src.contains(") -> Ui {"));
     }
 
     #[test]
@@ -190,6 +206,15 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
         assert_uses_advanced_surface(DROP_SHADOW_EXAMPLE);
         assert_uses_advanced_surface(ICONS_AND_ASSETS_EXAMPLE);
+        assert_uses_advanced_surface(ASSETS_RELOAD_EPOCH_EXAMPLE);
+        assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
+        assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
+        assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
+        assert_uses_advanced_surface(DOCKING_EXAMPLE);
+        assert_uses_advanced_surface(EMBEDDED_VIEWPORT_EXAMPLE);
+        assert_uses_advanced_surface(EXTERNAL_TEXTURE_IMPORT_EXAMPLE);
+        assert_uses_advanced_surface(GIZMO_EXAMPLE);
+        assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
 
         assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
@@ -202,6 +227,61 @@ mod authoring_surface_policy_tests {
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+
+        assert!(
+            ASSETS_RELOAD_EPOCH_EXAMPLE
+                .contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
+        );
+        assert!(
+            ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
+        );
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+
+        assert!(
+            CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
+        );
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("PanZoomCanvasSurfacePanelProps"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasPainter"));
+
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
+
+        assert!(CUSTOM_V1_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
+        assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
+        assert!(CUSTOM_V1_EXAMPLE.contains(".install_custom_effects(install_custom_effect)"));
+
+        assert!(DOCKING_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
+        assert!(DOCKING_EXAMPLE.contains("DockPanelRegistry<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
+
+        assert!(
+            EMBEDDED_VIEWPORT_EXAMPLE
+                .contains("use fret::advanced::interop::embedded_viewport as embedded;")
+        );
+        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("ui_app_with_hooks("));
+        assert!(
+            EMBEDDED_VIEWPORT_EXAMPLE.contains("UiAppDriver<EmbeddedViewportBasicsWindowState>")
+        );
+
+        assert!(
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
+        );
+        assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("ui_app_with_hooks("));
+        assert!(
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE
+                .contains("UiAppDriver<ExternalTextureImportBasicsState>")
+        );
+
+        assert!(GIZMO_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
+        assert!(GIZMO_EXAMPLE.contains("GizmoInput"));
+        assert!(GIZMO_EXAMPLE.contains("ui_app_with_hooks("));
+
+        assert!(
+            UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
+        );
+        assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui_app_with_hooks("));
+        assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("status: Model<Arc<str>>"));
     }
 
     #[test]

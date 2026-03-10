@@ -11,6 +11,22 @@ GATE_NAME = "fret builder-only surface"
 LIB_RS = WORKSPACE_ROOT / "ecosystem/fret/src/lib.rs"
 APP_ENTRY_RS = WORKSPACE_ROOT / "ecosystem/fret/src/app_entry.rs"
 README_MD = WORKSPACE_ROOT / "ecosystem/fret/README.md"
+LAUNCH_SURFACE_DESIGN_MD = (
+    WORKSPACE_ROOT / "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md"
+)
+LAUNCH_SURFACE_AUDIT_MD = (
+    WORKSPACE_ROOT / "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md"
+)
+LAUNCH_SURFACE_TODO_MD = (
+    WORKSPACE_ROOT / "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md"
+)
+CUSTOM_EFFECT_AUTHORING_MD = (
+    WORKSPACE_ROOT
+    / "docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/authoring-install-pattern.md"
+)
+UI_MEMORY_FOOTPRINT_README = (
+    WORKSPACE_ROOT / "docs/workstreams/ui-memory-footprint-closure-v1/README.md"
+)
 
 
 def read_text(path: Path) -> str:
@@ -69,6 +85,11 @@ def main() -> None:
     lib_rustdoc_text = rustdoc_only(lib_text)
     app_entry_text = read_text(APP_ENTRY_RS)
     readme_text = read_text(README_MD)
+    launch_surface_design_text = read_text(LAUNCH_SURFACE_DESIGN_MD)
+    launch_surface_audit_text = read_text(LAUNCH_SURFACE_AUDIT_MD)
+    launch_surface_todo_text = read_text(LAUNCH_SURFACE_TODO_MD)
+    custom_effect_authoring_text = read_text(CUSTOM_EFFECT_AUTHORING_MD)
+    ui_memory_footprint_text = read_text(UI_MEMORY_FOOTPRINT_README)
 
     problems: list[str] = []
     problems.extend(
@@ -88,6 +109,7 @@ def main() -> None:
             APP_ENTRY_RS,
             app_entry_text,
             patterns=[
+                r"\bpub\s+struct\s+FretApp\b",
                 r"\bpub\s+fn\s+view_with_hooks\s*<",
                 r"\bpub\s+fn\s+run_view_with_hooks\s*<",
                 r"\bfn\s+finish_builder\s*<",
@@ -99,6 +121,7 @@ def main() -> None:
             APP_ENTRY_RS,
             app_entry_text,
             patterns=[
+                r"\bpub\s+struct\s+App\b",
                 r"\bpub\s+fn\s+ui\s*<",
                 r"\bpub\s+fn\s+ui_with_hooks\s*<",
                 r"\bpub\s+fn\s+run_ui\s*<",
@@ -106,14 +129,31 @@ def main() -> None:
             ],
         )
     )
+    for current_doc, current_text in [
+        (LAUNCH_SURFACE_DESIGN_MD, launch_surface_design_text),
+        (LAUNCH_SURFACE_AUDIT_MD, launch_surface_audit_text),
+        (LAUNCH_SURFACE_TODO_MD, launch_surface_todo_text),
+        (CUSTOM_EFFECT_AUTHORING_MD, custom_effect_authoring_text),
+        (UI_MEMORY_FOOTPRINT_README, ui_memory_footprint_text),
+    ]:
+        problems.extend(
+            forbid_snippets(
+                current_doc,
+                current_text,
+                snippets=[
+                    "fret::App",
+                    "fret::AppBuilder",
+                ],
+            )
+        )
     problems.extend(
         require_snippets(
             README_MD,
             readme_text,
             snippets=[
                 'FretApp::new("hello")',
-                "fret::App::new(...).window(...).view::<V>()?",
-                "fret::App::new(...).window(...).view_with_hooks::<V>(...)?",
+                "fret::FretApp::new(...).window(...).view::<V>()?",
+                "fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?",
             ],
         )
     )
@@ -126,6 +166,8 @@ def main() -> None:
                 "fret::app_with_hooks",
                 "fret::run(",
                 "fret::run_with_hooks",
+                "fret::App::new(...).window(...).view::<V>()?",
+                "fret::App::new(...).window(...).view_with_hooks::<V>(...)?",
                 "fret::App::new(...).window(...).ui(...)?",
                 "fret::App::new(...).window(...).ui_with_hooks(...)?",
             ],
@@ -136,7 +178,7 @@ def main() -> None:
             LIB_RS,
             lib_rustdoc_text,
             snippets=[
-                "fret::App::new(...).window(...).view::<V>()?",
+                "fret::FretApp::new(...).window(...).view::<V>()?",
                 "fret::run_native_with_fn_driver(...)",
             ],
         )
@@ -150,8 +192,20 @@ def main() -> None:
                 "fret::app_with_hooks",
                 "fret::run(",
                 "fret::run_with_hooks",
+                "fret::App::new(...).window(...).view::<V>()?",
+                "fret::App::new(...).window(...).view_with_hooks::<V>(...)?",
                 "fret::App::new(...).window(...).ui(...)?",
                 "fret::App::new(...).window(...).ui_with_hooks(...)?",
+            ],
+        )
+    )
+    problems.extend(
+        forbid_regexes(
+            LIB_RS,
+            lib_text,
+            patterns=[
+                r"(?m)^\s*pub use app_entry::App;\s*$",
+                r"(?m)^\s*pub use app_entry::App as AppBuilder;\s*$",
             ],
         )
     )

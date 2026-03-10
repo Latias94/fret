@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryError, QueryKey, QueryPolicy,
     QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
@@ -53,7 +53,7 @@ impl FutureSpawner for TokioHandleSpawner {
     }
 }
 
-fn install_tokio_spawner(app: &mut App) {
+fn install_tokio_spawner(app: &mut KernelApp) {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_time()
         .build()
@@ -68,11 +68,11 @@ fn install_tokio_spawner(app: &mut App) {
 struct QueryAsyncTokioDemoView;
 
 impl View for QueryAsyncTokioDemoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let fail_mode_state = cx.use_local_with(|| false);
 

@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,
@@ -186,7 +186,11 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(
+    cx: &mut ElementContext<'_, KernelApp>,
+    model: &Model<Vec<f32>>,
+    default: f32,
+) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -418,7 +422,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effects(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effects(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program_v2 = CustomEffectProgramV2::wgsl_utf8(CUSTOM_WARP_V2_WGSL);
     let v2 = match program_v2.ensure_registered(effects) {
         Ok(id) => Some(id),
@@ -491,7 +495,7 @@ impl LiquidGlassState {
 }
 
 impl View for LiquidGlassView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let warp_map_size = (128u32, 128u32);
         let warp_map_rgba = generate_warp_map_rg_signed(warp_map_size.0, warp_map_size.1);
         let warp_map_key = ImageAssetKey::from_rgba8(
@@ -553,7 +557,7 @@ impl View for LiquidGlassView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.on_action_notify_models::<act::Reset>({
             let st = self.st.clone();
             move |models| {
@@ -587,7 +591,7 @@ impl View for LiquidGlassView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Elements {
     let theme = Theme::global(&*cx.app).snapshot();
     let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
@@ -1080,7 +1084,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    let mk_card = |cx: &mut ElementContext<'_, App>,
+                                    let mk_card = |cx: &mut ElementContext<'_, KernelApp>,
                                                    title: &'static str,
                                                    bg: Color,
                                                    border: Color| {
@@ -1515,7 +1519,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                 ]);
 
                                 let label_row =
-                                    |cx: &mut ElementContext<'_, App>,
+                                    |cx: &mut ElementContext<'_, KernelApp>,
                                      label: &str,
                                      value: String| {
                                         ui::h_row(move |cx| {

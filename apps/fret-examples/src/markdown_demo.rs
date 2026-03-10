@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_query::ui::QueryElementContextExt as _;
@@ -178,7 +178,7 @@ impl MarkdownDemoView {
 
     fn maybe_scroll_pending_anchor(
         &mut self,
-        cx: &mut ViewCx<'_, '_, App>,
+        cx: &mut ViewCx<'_, '_, KernelApp>,
         viewport_region: Option<fret_ui::GlobalElementId>,
         padding_top: Px,
     ) {
@@ -230,7 +230,7 @@ impl MarkdownDemoView {
 }
 
 impl View for MarkdownDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let wrap_code = app.models_mut().insert(false);
         let cap_code_height = app.models_mut().insert(true);
         let expanded_code_blocks = app.models_mut().insert(HashSet::new());
@@ -352,7 +352,7 @@ $$
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         if cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES) {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
@@ -389,7 +389,7 @@ $$
             .layout()
             .value_or_default();
 
-        let mut components = markdown::MarkdownComponents::<App>::default();
+        let mut components = markdown::MarkdownComponents::<KernelApp>::default();
         components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));
         components.code_block_ui.wrap = if wrap_enabled {
             fret_code_view::CodeBlockWrap::Word
@@ -460,7 +460,7 @@ $$
             size.size.width = Length::Fill;
             size.size.height = Length::Px(Px(240.0));
 
-            let spinner_box = |cx: &mut fret_ui::ElementContext<'_, App>| {
+            let spinner_box = |cx: &mut fret_ui::ElementContext<'_, KernelApp>| {
                 cx.container(
                     fret_ui::element::ContainerProps {
                         layout: size,
@@ -760,7 +760,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     })
 }
 
-fn apply_markdown_demo_theme_tokens(app: &mut App) {
+fn apply_markdown_demo_theme_tokens(app: &mut KernelApp) {
     Theme::with_global_mut(app, |theme| {
         // Demo-only: inject explicit markdown math tokens so theme tuning is discoverable.
         let font_size = theme.metric_token("metric.font.size").0;

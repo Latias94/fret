@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
@@ -135,11 +135,14 @@ fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilde
         .on_gpu_ready(upload_user0_images)
 }
 
-fn install_app_globals(app: &mut App) {
+fn install_app_globals(app: &mut KernelApp) {
     app.set_global(DemoGlobals::new());
 }
 
-fn register_custom_effect_v3(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn register_custom_effect_v3(
+    app: &mut KernelApp,
+    effects: &mut dyn fret_core::CustomEffectService,
+) {
     app.with_global_mut(DemoGlobals::new, |g, _app| {
         if let Err(err) = g.lens_program.ensure_registered(effects) {
             tracing::warn!(?err, "custom effect v3 lens registration failed");
@@ -156,7 +159,7 @@ fn register_custom_effect_v3(app: &mut App, effects: &mut dyn fret_core::CustomE
     });
 }
 
-fn upload_user0_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_user0_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
     let filterable_size = (1u32, 1u32);
     let filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v3_demo user0 filterable"),
@@ -289,7 +292,7 @@ impl State {
 }
 
 impl View for CustomEffectV3View {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: State {
                 enabled: app.models_mut().insert(true),
@@ -301,7 +304,7 @@ impl View for CustomEffectV3View {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
@@ -326,7 +329,7 @@ impl CustomEffectV3View {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> Elements {
     // Animations make refraction far easier to see than static gradients.
     // Hold a continuous-frames lease so the backdrop moves without user input.
     let _frames = cx.begin_continuous_frames();
@@ -426,7 +429,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut State,
     enabled: bool,
     show_user0_probe: bool,
@@ -534,7 +537,7 @@ fn stage(
 }
 
 fn stage_controls(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut State,
     enabled: bool,
     show_user0_probe: bool,
@@ -634,7 +637,7 @@ fn stage_controls(
     .into_element(cx)
 }
 
-fn animated_backdrop(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn animated_backdrop(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement {
     let viewport = cx.environment_viewport_bounds(Invalidation::Paint);
     let w = viewport.size.width.0.max(1.0);
     let h = viewport.size.height.0.max(1.0);
@@ -765,7 +768,7 @@ fn animated_backdrop(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 fn lens_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     show_user0_probe: bool,
     lens_effect: EffectId,
@@ -874,7 +877,7 @@ fn lens_row(
 }
 
 fn lens_shell(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     radius: Px,
     lens_w: Px,
@@ -971,7 +974,7 @@ fn lens_shell(
 }
 
 fn plain_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     radius: Px,
     lens_w: Px,
@@ -981,7 +984,7 @@ fn plain_lens(
 }
 
 fn custom_effect_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     effect: EffectId,
     radius: Px,
@@ -1031,7 +1034,7 @@ fn custom_effect_lens(
 }
 
 fn custom_effect_user0_probe_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     effect: EffectId,
     user0_image: ImageId,
@@ -1060,7 +1063,7 @@ fn custom_effect_user0_probe_lens(
 }
 
 fn custom_effect_user1_probe_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     effect: EffectId,
     user1_image: ImageId,
@@ -1089,7 +1092,7 @@ fn custom_effect_user1_probe_lens(
 }
 
 fn custom_effect_user01_probe_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     title: &'static str,
     effect: EffectId,
     user0_image: ImageId,

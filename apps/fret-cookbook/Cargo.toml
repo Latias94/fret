@@ -62,6 +62,8 @@ cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = [
     "dep:fret-bootstrap",
     "dep:fret-render",
+    "fret/ui-assets",
+    "fret/icons",
     "fret-bootstrap/ui-assets",
     "fret-bootstrap/icons-ui-semantic-lucide",
 ]

@@ -49,8 +49,8 @@ Evidence:
 
 Why this is enough:
 
-- `fret::App::new(...).window(...).view::<V>()` is the recommended short path.
-- `fret::App::new(...).window(...).view_with_hooks::<V>(...)` keeps advanced driver hooks on that
+- `fret::FretApp::new(...).window(...).view::<V>()` is the recommended short path.
+- `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)` keeps advanced driver hooks on that
   same builder path.
 - The builder chain is now the only `fret` app-author entry story, which removes first-contact
   ambiguity at the crate root.
@@ -61,7 +61,7 @@ Why this is enough:
 
 The `fret` facade already exposes the advanced hooks that matter for non-trivial products:
 
-- `App::view_with_hooks::<V>`
+- `FretApp::view_with_hooks::<V>`
 - `configure(...)`
 - `on_gpu_ready(...)`
 - `install_custom_effects(...)`

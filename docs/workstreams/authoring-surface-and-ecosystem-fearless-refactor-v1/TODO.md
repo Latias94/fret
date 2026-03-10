@@ -38,7 +38,7 @@ Companion docs:
 
 ## M1 — Split the public preludes and imports
 
-- [ ] Make `fret::app::prelude::*` the only canonical app import and delete the broad `fret::prelude::*` bridge.
+- [x] Make `fret::app::prelude::*` the only canonical app import and delete the broad `fret::prelude::*` bridge.
 - [x] Add `fret::component::prelude::*`.
 - [x] Add explicit advanced import modules under `fret::advanced::*`.
 - [ ] Remove broad transitive re-export of `fret_ui_kit::prelude::*` from the app surface.
@@ -83,7 +83,7 @@ Companion docs:
 - [x] Update the golden-path todo docs.
 - [x] Update scaffold templates in `apps/fretboard`.
 - [ ] Update official cookbook examples to use the new app surface.
-- [ ] Move advanced examples to explicit advanced imports when needed.
+- [x] Move advanced examples to explicit advanced imports when needed.
 - [ ] Remove or rewrite examples that still teach superseded patterns.
 
 ## M5 — Delete the old surface

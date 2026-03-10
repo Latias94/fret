@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
@@ -215,7 +215,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program
         .ensure_registered(effects)
@@ -239,7 +239,7 @@ impl CustomEffectV1State {
 }
 
 impl View for CustomEffectV1View {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: CustomEffectV1State {
                 enabled: app.models_mut().insert(true),
@@ -256,7 +256,7 @@ impl View for CustomEffectV1View {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
@@ -294,7 +294,11 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(
+    cx: &mut ElementContext<'_, KernelApp>,
+    model: &Model<Vec<f32>>,
+    default: f32,
+) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -302,7 +306,7 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
         .unwrap_or(default)
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> Elements {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
@@ -356,7 +360,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Eleme
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -499,7 +503,7 @@ fn stage(
 }
 
 fn lens_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -542,7 +546,7 @@ fn lens_row(
 }
 
 fn lens_shell(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: Arc<str>,
     radius: Px,
     body: AnyElement,
@@ -602,7 +606,7 @@ fn lens_shell(
 }
 
 fn plain_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: impl Into<Arc<str>>,
     radius: Px,
 ) -> AnyElement {
@@ -623,7 +627,7 @@ fn plain_lens(
 }
 
 fn custom_effect_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: impl Into<Arc<str>>,
     effect: EffectId,
     blur_radius_px: f32,
@@ -694,7 +698,7 @@ fn custom_effect_lens(
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut CustomEffectV1State,
     blur_radius_px: f32,
     blur_downsample: f32,
@@ -739,7 +743,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+            let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String| {
                 ui::h_flex(move |cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),

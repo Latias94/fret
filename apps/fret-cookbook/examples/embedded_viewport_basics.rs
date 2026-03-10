@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::advanced::interop::embedded_viewport as embedded;
+use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{AppWindowId, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
@@ -54,7 +54,7 @@ struct EmbeddedViewportBasicsDiagService {
 impl EmbeddedViewportBasicsDiagService {
     fn ensure_window(
         &mut self,
-        app: &mut App,
+        app: &mut KernelApp,
         window: AppWindowId,
     ) -> EmbeddedViewportBasicsDiagModels {
         if let Some(existing) = self.by_window.get(&window) {
@@ -79,13 +79,16 @@ impl EmbeddedViewportBasicsDiagService {
     }
 }
 
-fn ensure_diag_models(app: &mut App, window: AppWindowId) -> EmbeddedViewportBasicsDiagModels {
+fn ensure_diag_models(
+    app: &mut KernelApp,
+    window: AppWindowId,
+) -> EmbeddedViewportBasicsDiagModels {
     app.with_global_mut(EmbeddedViewportBasicsDiagService::default, |svc, app| {
         svc.ensure_window(app, window)
     })
 }
 
-fn diag_models(app: &App, window: AppWindowId) -> Option<EmbeddedViewportBasicsDiagModels> {
+fn diag_models(app: &KernelApp, window: AppWindowId) -> Option<EmbeddedViewportBasicsDiagModels> {
     app.global::<EmbeddedViewportBasicsDiagService>()
         .and_then(|svc| svc.by_window.get(&window).cloned())
 }
@@ -100,7 +103,7 @@ fn viewport_kind_code(kind: ViewportInputKind) -> f64 {
     }
 }
 
-fn on_viewport_input(app: &mut App, event: ViewportInputEvent) {
+fn on_viewport_input(app: &mut KernelApp, event: ViewportInputEvent) {
     let Some(models) = embedded::models(app, event.window) else {
         embedded::handle_viewport_input(app, event);
         return;
@@ -140,7 +143,7 @@ struct EmbeddedViewportBasicsWindowState {
     fit: Model<ViewportFit>,
 }
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
 
     app.commands_mut().register(
@@ -189,10 +192,10 @@ fn install_commands(app: &mut App) {
 }
 
 fn on_command(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     st: &mut EmbeddedViewportBasicsWindowState,
     command: &CommandId,
 ) {
@@ -230,7 +233,7 @@ impl embedded::EmbeddedViewportRecord for EmbeddedViewportBasicsWindowState {
 
     fn record_embedded_viewport(
         &mut self,
-        app: &mut App,
+        app: &mut KernelApp,
         window: AppWindowId,
         _context: &WgpuContext,
         _renderer: &mut Renderer,
@@ -264,7 +267,7 @@ impl embedded::EmbeddedViewportRecord for EmbeddedViewportBasicsWindowState {
     }
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> EmbeddedViewportBasicsWindowState {
+fn init_window(app: &mut KernelApp, window: AppWindowId) -> EmbeddedViewportBasicsWindowState {
     let _ = embedded::ensure_models(app, window);
     let _ = ensure_diag_models(app, window);
 
@@ -280,7 +283,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> EmbeddedViewportBasicsWind
 }
 
 fn view(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut EmbeddedViewportBasicsWindowState,
 ) -> ViewElements {
     let window = cx.window;
@@ -490,8 +493,8 @@ fn view(
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<EmbeddedViewportBasicsWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<EmbeddedViewportBasicsWindowState> {
+    driver: UiAppDriver<EmbeddedViewportBasicsWindowState>,
+) -> UiAppDriver<EmbeddedViewportBasicsWindowState> {
     driver
         .on_command(on_command)
         .viewport_input(on_viewport_input)
@@ -499,7 +502,7 @@ fn configure_driver(
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = fret_bootstrap::ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
+    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-embedded-viewport-basics", (1120.0, 780.0))
         .install_app(install_commands)
         .install_app(shadcn::install_app)

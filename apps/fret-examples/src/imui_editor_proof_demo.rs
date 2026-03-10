@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::advanced::interop::embedded_viewport as embedded;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::{Color, Px};
 use fret_docking::{
@@ -63,7 +63,7 @@ impl embedded::EmbeddedViewportView for ImUiEditorProofView {
 
     fn record_embedded_viewport(
         &mut self,
-        _app: &mut App,
+        _app: &mut KernelApp,
         _window: AppWindowId,
         _context: &WgpuContext,
         _renderer: &mut Renderer,
@@ -115,7 +115,7 @@ fn single_window_mode_enabled() -> bool {
     std::env::var_os(ENV_SINGLE_WINDOW).is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-fn configure_single_window_caps_if_requested(app: &mut App) {
+fn configure_single_window_caps_if_requested(app: &mut KernelApp) {
     if !single_window_mode_enabled() {
         return;
     }
@@ -131,7 +131,7 @@ fn configure_single_window_caps_if_requested(app: &mut App) {
 }
 
 impl View for ImUiEditorProofView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         embedded::ensure_models(app, window);
         if !single_window_mode_enabled() {
             ensure_aux_window_requested(app, window);
@@ -146,12 +146,12 @@ impl View for ImUiEditorProofView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         render_view(cx.elements())
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
+fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements {
     let window = cx.window;
     let last_input: Arc<str> = embedded::models(&*cx.app, window)
         .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())
@@ -263,7 +263,7 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
 
                 let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
                     fret_imui::imui_build(cx, out, |ui| {
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                             ui,
                             "Reset layout",
                         )
@@ -272,7 +272,7 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
                             reset_dock_graph(ui.cx_mut().app, window);
                             dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
                         }
-                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
+                        if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<KernelApp>>::button(
                             ui,
                             "Center floatings",
                         )
@@ -1202,7 +1202,7 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
 }
 
 fn render_authoring_parity_surface(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1259,7 +1259,7 @@ fn render_authoring_parity_surface(
 }
 
 fn render_authoring_parity_shared_state(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1325,7 +1325,7 @@ fn render_authoring_parity_shared_state(
 }
 
 fn render_authoring_parity_declarative_group(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1465,7 +1465,7 @@ fn render_authoring_parity_declarative_group(
 }
 
 fn render_authoring_parity_imui_group(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     slider_model: Model<f64>,
@@ -1880,20 +1880,23 @@ fn authoring_parity_shading_model<H: UiHost>(
     )
 }
 
-fn install_dock_panel_registry(app: &mut App) {
-    let registry: Arc<dyn DockPanelRegistry<App>> = Arc::new(ImUiEditorProofPanelRegistry);
-    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(registry);
-    });
+fn install_dock_panel_registry(app: &mut KernelApp) {
+    let registry: Arc<dyn DockPanelRegistry<KernelApp>> = Arc::new(ImUiEditorProofPanelRegistry);
+    app.with_global_mut(
+        DockPanelRegistryService::<KernelApp>::default,
+        |svc, _app| {
+            svc.set(registry);
+        },
+    );
 }
 
 struct ImUiEditorProofPanelRegistry;
 
-impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
+impl DockPanelRegistry<KernelApp> for ImUiEditorProofPanelRegistry {
     fn render_panel(
         &self,
-        ui: &mut UiTree<App>,
-        app: &mut App,
+        ui: &mut UiTree<KernelApp>,
+        app: &mut KernelApp,
         services: &mut dyn UiServices,
         window: AppWindowId,
         bounds: fret_core::Rect,
@@ -1950,11 +1953,11 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
     }
 }
 
-fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
+fn ensure_dock_graph(app: &mut KernelApp, window: AppWindowId) {
     ensure_dock_graph_inner(app, window, false);
 }
 
-fn reset_dock_graph(app: &mut App, window: AppWindowId) {
+fn reset_dock_graph(app: &mut KernelApp, window: AppWindowId) {
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.graph.remove_window_root(window);
         dock.graph.floating_windows_mut(window).clear();
@@ -1962,7 +1965,7 @@ fn reset_dock_graph(app: &mut App, window: AppWindowId) {
     ensure_dock_graph_inner(app, window, true);
 }
 
-fn ensure_dock_graph_inner(app: &mut App, window: AppWindowId, force: bool) {
+fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool) {
     app.with_global_mut(DockManager::default, |dock, app| {
         let logical_window_id = app
             .global::<WindowBootstrapService>()
@@ -2060,7 +2063,7 @@ struct WindowBootstrapService {
     logical_by_window: HashMap<AppWindowId, String>,
 }
 
-fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
+fn ensure_aux_window_requested(app: &mut KernelApp, window: AppWindowId) {
     app.with_global_mut(WindowBootstrapService::default, |svc, app| {
         if svc.main_window.is_none() {
             svc.main_window = Some(window);
@@ -2092,12 +2095,12 @@ fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
     });
 }
 
-fn on_dock_op(app: &mut App, op: fret_core::DockOp) {
+fn on_dock_op(app: &mut KernelApp, op: fret_core::DockOp) {
     let _ = dock_runtime::handle_dock_op(app, op);
 }
 
 fn window_create_spec(
-    _app: &mut App,
+    _app: &mut KernelApp,
     request: &fret_app::CreateWindowRequest,
 ) -> Option<fret_launch::WindowCreateSpec> {
     match &request.kind {
@@ -2114,7 +2117,11 @@ fn window_create_spec(
     }
 }
 
-fn window_created(app: &mut App, request: &fret_app::CreateWindowRequest, new_window: AppWindowId) {
+fn window_created(
+    app: &mut KernelApp,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
     if let CreateWindowKind::DockRestore { logical_window_id } = &request.kind {
         app.with_global_mut(WindowBootstrapService::default, |svc, _app| {
             svc.logical_by_window
@@ -2137,7 +2144,7 @@ fn window_created(app: &mut App, request: &fret_app::CreateWindowRequest, new_wi
     let _ = dock_runtime::handle_dock_window_created(app, request, new_window);
 }
 
-fn before_close_window(app: &mut App, closing_window: AppWindowId) -> bool {
+fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool {
     let target_window = app
         .global::<WindowBootstrapService>()
         .and_then(|svc| svc.main_window)

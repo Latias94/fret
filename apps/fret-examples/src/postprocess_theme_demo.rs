@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
@@ -159,7 +159,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program
         .ensure_registered(effects)
@@ -184,7 +184,7 @@ impl ThemePostprocessState {
 }
 
 impl View for ThemePostprocessView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: ThemePostprocessState {
                 enabled: app.models_mut().insert(true),
@@ -207,7 +207,7 @@ impl View for ThemePostprocessView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
             return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
         };
@@ -307,7 +307,11 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(
+    cx: &mut ElementContext<'_, KernelApp>,
+    model: &Model<Vec<f32>>,
+    default: f32,
+) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -316,7 +320,7 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut ThemePostprocessState,
     theme: &str,
     chromatic_offset_px: f32,
@@ -364,7 +368,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+            let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String| {
                 ui::h_row(|cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),
@@ -524,7 +528,7 @@ fn inspector(
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     compare: bool,
     theme: &str,
@@ -655,7 +659,7 @@ fn stage(
 }
 
 fn stage_body(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     postprocess_applied: bool,
     label: &str,
 ) -> AnyElement {
@@ -744,10 +748,10 @@ fn stage_body(
     )
 }
 
-fn stage_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn stage_cards(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let card = |cx: &mut ElementContext<'_, App>, title: &str, subtitle: &str| {
+    let card = |cx: &mut ElementContext<'_, KernelApp>, title: &str, subtitle: &str| {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(Px(320.0));
         layout.size.height = Length::Px(Px(220.0));

@@ -126,7 +126,7 @@ We should intentionally define **three** public authoring layers.
 Important rule:
 
 - `fret::app::prelude::*` must become the canonical app import.
-- `fret::prelude::*` may exist only as a temporary in-repo migration bridge and must stop acting as a transitive "everything prelude".
+- the legacy root-level `fret::prelude::*` bridge is removed rather than retained as a migration crutch.
 
 ## Naming Reset
 

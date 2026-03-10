@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, UvRect,
@@ -122,11 +122,11 @@ fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilde
         .on_gpu_ready(upload_input_image)
 }
 
-fn install_app_globals(app: &mut App) {
+fn install_app_globals(app: &mut KernelApp) {
     app.set_global(DemoEffectPack::new());
 }
 
-fn register_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+fn register_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
     app.with_global_mut(DemoEffectPack::new, |pack, _app| {
         pack.program
             .ensure_registered(effects)
@@ -134,7 +134,7 @@ fn register_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffe
     });
 }
 
-fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_input_image(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
     let size = (64u32, 64u32);
     let filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v2_demo input texture"),
@@ -230,7 +230,7 @@ impl CustomEffectV2State {
 }
 
 impl View for CustomEffectV2View {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: CustomEffectV2State {
                 enabled: app.models_mut().insert(true),
@@ -246,7 +246,7 @@ impl View for CustomEffectV2View {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
@@ -283,7 +283,11 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(
+    cx: &mut ElementContext<'_, KernelApp>,
+    model: &Model<Vec<f32>>,
+    default: f32,
+) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -300,7 +304,7 @@ fn sampling_hint(value: &str) -> ImageSamplingHint {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) -> Elements {
     let (effect, filterable_input_image, non_filterable_input_image) = {
         let pack = cx.app.global::<DemoEffectPack>();
         (
@@ -368,7 +372,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Eleme
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -507,7 +511,7 @@ fn stage(
 }
 
 fn lens_row(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     enabled: bool,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -546,7 +550,7 @@ fn lens_row(
 }
 
 fn lens_shell(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: Arc<str>,
     radius: Px,
     body: AnyElement,
@@ -606,7 +610,7 @@ fn lens_shell(
 }
 
 fn plain_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: impl Into<Arc<str>>,
     radius: Px,
 ) -> AnyElement {
@@ -627,7 +631,7 @@ fn plain_lens(
 }
 
 fn custom_effect_lens(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     label: impl Into<Arc<str>>,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -697,7 +701,7 @@ fn custom_effect_lens(
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     st: &mut CustomEffectV2State,
     sampling_value: &str,
     uv_span: f32,
@@ -737,7 +741,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+            let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String| {
                 ui::h_flex(move |cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),

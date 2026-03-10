@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
@@ -127,7 +127,7 @@ struct DropShadowDemoView {
 }
 
 impl View for DropShadowDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             st: DropShadowDemoState {
                 enabled: app.models_mut().insert(false),
@@ -136,7 +136,7 @@ impl View for DropShadowDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let enabled = cx.watch_model(&self.st.enabled).layout().value_or_default();
         let stress = cx.watch_model(&self.st.stress).layout().value_or_default();
 

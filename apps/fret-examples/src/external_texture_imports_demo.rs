@@ -963,7 +963,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::App::new("external-texture-imports")
+    let builder = fret::FretApp::new("external-texture-imports")
         .window(
             "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
             (960.0, 640.0),

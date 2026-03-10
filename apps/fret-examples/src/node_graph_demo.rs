@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::scene::DashPatternV1;
 use fret_core::{Color, Px};
 use fret_node::core::{
@@ -32,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for NodeGraphDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let graph = app.models_mut().insert(demo_graph());
         let view = app.models_mut().insert(NodeGraphViewState::default());
         let paint_overrides = demo_paint_overrides();
@@ -43,7 +43,7 @@ impl View for NodeGraphDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         cx.elements()
             .observe_model(&self.graph, Invalidation::Paint);
         cx.elements().observe_model(&self.view, Invalidation::Paint);

@@ -4,9 +4,8 @@ use std::rc::Rc;
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
 use delinea::{Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale};
-use fret::prelude::*;
+use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_bootstrap::ui_app_driver::ViewElements;
 use fret_chart::ChartCanvas;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::CommandId;
@@ -115,7 +114,7 @@ fn zoom_window(base: DataWindow, current: DataWindow, factor: f64) -> DataWindow
     out
 }
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
 
     app.commands_mut().register(
@@ -165,7 +164,7 @@ struct ChartInteractionsWindowState {
     selected: Option<u32>,
 }
 
-fn init_window(_app: &mut App, _window: AppWindowId) -> ChartInteractionsWindowState {
+fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsWindowState {
     let ids = chart_ids();
 
     let x: Vec<f64> = (0..12).map(|i| i as f64).collect();
@@ -271,14 +270,17 @@ fn init_window(_app: &mut App, _window: AppWindowId) -> ChartInteractionsWindowS
     }
 }
 
-fn chart_canvas(cx: &mut ElementContext<'_, App>, st: &ChartInteractionsWindowState) -> AnyElement {
+fn chart_canvas(
+    cx: &mut ElementContext<'_, KernelApp>,
+    st: &ChartInteractionsWindowState,
+) -> AnyElement {
     let engine = st.engine.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
 
-    let props = RetainedSubtreeProps::new::<App>(move |ui| {
+    let props = RetainedSubtreeProps::new::<KernelApp>(move |ui| {
         use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
         let mut canvas = ChartCanvas::new_shared(engine.clone());
@@ -296,7 +298,10 @@ fn chart_canvas(cx: &mut ElementContext<'_, App>, st: &ChartInteractionsWindowSt
     })
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState) -> ViewElements {
+fn view(
+    cx: &mut ElementContext<'_, KernelApp>,
+    st: &mut ChartInteractionsWindowState,
+) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let (x_span, hover_index) = {
@@ -431,10 +436,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
 }
 
 fn on_command(
-    _app: &mut App,
+    _app: &mut KernelApp,
     _services: &mut dyn fret_core::UiServices,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     st: &mut ChartInteractionsWindowState,
     command: &CommandId,
 ) {
@@ -490,13 +495,13 @@ fn on_command(
 }
 
 fn configure_driver(
-    driver: fret_bootstrap::ui_app_driver::UiAppDriver<ChartInteractionsWindowState>,
-) -> fret_bootstrap::ui_app_driver::UiAppDriver<ChartInteractionsWindowState> {
+    driver: UiAppDriver<ChartInteractionsWindowState>,
+) -> UiAppDriver<ChartInteractionsWindowState> {
     driver.on_command(on_command)
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = fret_bootstrap::ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
+    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-chart-interactions-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
         .install_app(install_commands)

@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 
 struct ImUiHelloView;
 
@@ -10,11 +10,11 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ImUiHelloView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let count_state = cx.use_local_with(|| 0u32);
         let enabled_state = cx.use_local_with(|| false);
 

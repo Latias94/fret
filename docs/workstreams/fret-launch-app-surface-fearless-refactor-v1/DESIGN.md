@@ -93,7 +93,8 @@ This is powerful, but it is not a great long-term **single stable config object*
 
 ### H4) The golden path is desktop-first, but the naming can suggest broader symmetry than exists today
 
-The high-level `fret::App` / `UiAppBuilder` story is excellent for native desktop work, but it is not yet a fully symmetric cross-platform authoring surface.
+The high-level `fret::FretApp` / `UiAppBuilder` story is excellent for native desktop work, but it
+is not yet a fully symmetric cross-platform authoring surface.
 
 That is fine for now, as long as the docs are explicit and the contract surface does not over-promise.
 

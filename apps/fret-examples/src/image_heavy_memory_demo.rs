@@ -2,8 +2,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
-use fret_app::App;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{
     AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap,
 };
@@ -33,7 +32,7 @@ impl Default for ImageHeavyImages {
 struct ImageHeavyMemoryView;
 
 pub fn run() -> anyhow::Result<()> {
-    fret::App::new("image-heavy-memory-demo")
+    FretApp::new("image-heavy-memory-demo")
         .window("image_heavy_memory_demo", (980.0, 720.0))
         .view_with_hooks::<ImageHeavyMemoryView>(|driver| {
             driver.record_engine_frame(record_engine_frame)
@@ -45,19 +44,19 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ImageHeavyMemoryView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         render_view(cx.elements())
     }
 }
 
 fn record_engine_frame(
-    app: &mut App,
+    app: &mut KernelApp,
     _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     _st: &mut fret::view::ViewWindowState<ImageHeavyMemoryView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
@@ -103,7 +102,7 @@ fn record_engine_frame(
     fret_launch::EngineFrameUpdate::default()
 }
 
-fn upload_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
     let count: usize = std::env::var("FRET_IMAGE_HEAVY_DEMO_COUNT")
         .ok()
         .and_then(|v| v.trim().parse::<usize>().ok())
@@ -182,7 +181,7 @@ fn upload_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) 
     });
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>) -> fret_ui::element::Elements {
+fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> fret_ui::element::Elements {
     let images = cx
         .app
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());

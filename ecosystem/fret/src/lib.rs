@@ -12,6 +12,9 @@
 //! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path.
 //! - `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
 //!   app-author path when driver hooks are required.
+//! - `fret::advanced::ui_app(...)` and `fret::advanced::ui_app_with_hooks(...)` are the
+//!   recommended explicit manual-assembly entry points when you want the golden-path UI app
+//!   builder without depending on `fret-bootstrap` directly.
 //! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
 //!   hatches when you need runner-level customization but
@@ -73,11 +76,7 @@ mod pending_shortcut_overlay;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub use app_entry::App;
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub use app_entry::App as AppBuilder;
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub use app_entry::App as FretApp;
+pub use app_entry::FretApp;
 
 /// Canonical app-facing UI context alias for the default authoring surface.
 pub type AppUi<'cx, 'a, H> = view::ViewCx<'cx, 'a, H>;
@@ -260,10 +259,52 @@ pub mod advanced {
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver, ViewElements};
 
+    /// Create a golden-path native UI app builder on the explicit advanced surface.
+    ///
+    /// This mirrors `fret-bootstrap`'s `ui_app(...)` helper while keeping author-facing code on
+    /// the `fret::advanced` surface.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub fn ui_app<S: 'static>(
+        root_name: &'static str,
+        init_window: fn(&mut crate::KernelApp, fret_core::AppWindowId) -> S,
+        view: for<'a> fn(
+            &mut fret_ui::ElementContext<'a, crate::KernelApp>,
+            &mut S,
+        ) -> crate::ViewElements,
+    ) -> crate::UiAppBuilder<S> {
+        ui_app_with_hooks(root_name, init_window, view, |driver| driver)
+    }
+
+    /// Create a golden-path native UI app builder on the explicit advanced surface, preserving
+    /// the driver hook configuration seam.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub fn ui_app_with_hooks<S: 'static>(
+        root_name: &'static str,
+        init_window: fn(&mut crate::KernelApp, fret_core::AppWindowId) -> S,
+        view: for<'a> fn(
+            &mut fret_ui::ElementContext<'a, crate::KernelApp>,
+            &mut S,
+        ) -> crate::ViewElements,
+        configure: fn(crate::UiAppDriver<S>) -> crate::UiAppDriver<S>,
+    ) -> crate::UiAppBuilder<S> {
+        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view);
+        let driver = configure(crate::UiAppDriver::new(driver))
+            .into_inner()
+            .into_fn_driver();
+        crate::UiAppBuilder::from_bootstrap(fret_bootstrap::BootstrapBuilder::new(
+            crate::KernelApp::new(),
+            driver,
+        ))
+    }
+
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
         pub use crate::KernelApp;
         pub use crate::advanced::*;
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::interop::embedded_viewport::{
+            EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
+        };
         pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, SemanticsRole};
@@ -272,48 +313,6 @@ pub mod advanced {
         pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
         pub use fret_ui_kit::prelude::*;
     }
-}
-
-/// Common imports for application code using `fret`.
-///
-/// Recommended: `use fret::app::prelude::*;`
-pub mod prelude {
-    pub use fret_ui_kit::prelude::*;
-    pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::AppBuilder;
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::App as FretApp;
-    pub use crate::{AppUi, KernelApp, Ui};
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::interop::embedded_viewport::{
-        EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
-    };
-
-    pub use crate::workspace_menu::{
-        InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime,
-        menubar_from_runtime_with_focus_handle,
-    };
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::ViewElements;
-    pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
-    pub use fret_app::{App, Effect};
-    pub use fret_core::{Event, SemanticsRole};
-    pub use fret_ui::ThemeSnapshot;
-    pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::interop;
-
-    #[cfg(feature = "shadcn")]
-    pub use crate::shadcn;
-
-    #[cfg(feature = "state-query")]
-    pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -531,6 +530,33 @@ impl<S: 'static> UiAppBuilder<S> {
         Self { inner }
     }
 
+    pub fn with_command_default_keybindings(self) -> Self {
+        Self {
+            inner: self.inner.with_command_default_keybindings(),
+        }
+    }
+
+    pub fn with_default_config_files(self) -> Result<Self> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_default_config_files()
+                .map_err(BootstrapError::from)?,
+        })
+    }
+
+    pub fn with_default_config_files_for_root(
+        self,
+        project_root: impl AsRef<std::path::Path>,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_default_config_files_for_root(project_root)
+                .map_err(BootstrapError::from)?,
+        })
+    }
+
     pub fn with_main_window(self, title: impl Into<String>, size: (f64, f64)) -> Self {
         Self {
             inner: self.inner.with_main_window(title, size),
@@ -564,7 +590,7 @@ impl<S: 'static> UiAppBuilder<S> {
     /// Install custom GPU effects at the renderer boundary (ADR 0299).
     ///
     /// Note: the callback receives the **kernel** app type (`fret_app::App`, re-exported here as
-    /// `KernelApp`), not the `fret::App` builder-chain facade.
+    /// `KernelApp`), not the `fret::FretApp` builder-chain facade.
     pub fn install_custom_effects(
         self,
         install: fn(&mut KernelApp, &mut dyn fret_core::CustomEffectService),
@@ -577,6 +603,13 @@ impl<S: 'static> UiAppBuilder<S> {
     pub fn register_icon_pack(self, register: fn(&mut IconRegistry)) -> Self {
         Self {
             inner: self.inner.register_icon_pack(register),
+        }
+    }
+
+    #[cfg(feature = "icons")]
+    pub fn with_lucide_icons(self) -> Self {
+        Self {
+            inner: self.inner.with_lucide_icons(),
         }
     }
 
@@ -598,6 +631,13 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    #[cfg(feature = "preload-icon-svgs")]
+    pub fn preload_icon_svgs_on_gpu_ready(self) -> Self {
+        Self {
+            inner: self.inner.preload_icon_svgs_on_gpu_ready(),
+        }
+    }
+
     pub fn on_gpu_ready(
         self,
         f: impl FnOnce(
@@ -608,6 +648,13 @@ impl<S: 'static> UiAppBuilder<S> {
     ) -> Self {
         Self {
             inner: self.inner.on_gpu_ready(f),
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn with_default_diagnostics(self) -> Self {
+        Self {
+            inner: self.inner.with_default_diagnostics(),
         }
     }
 
@@ -692,7 +739,7 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
 
 /// Run a native desktop app using the compatibility driver path.
 ///
-/// Prefer `fret::App` / `UiAppBuilder` for general applications and
+/// Prefer `fret::FretApp` / `UiAppBuilder` for general applications and
 /// `run_native_with_fn_driver(...)` for new advanced integrations. This helper exists for
 /// low-level integrations that still implement `fret_launch::WinitAppDriver` directly while
 /// wanting the higher-level defaults/bootstrap story from `fret`.
@@ -812,9 +859,10 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
-    use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp};
+    use super::{FretApp, IconRegistry, KernelApp};
+    use crate::app::prelude::FretApp as AppPreludeFretApp;
     use crate::view::View;
-    use crate::{AppUi, Defaults, Ui, prelude::FretApp as PreludeFretApp};
+    use crate::{AppUi, Defaults, Ui, ViewElements};
     use fret_app::CreateWindowRequest;
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
@@ -889,6 +937,18 @@ mod builder_surface_tests {
 
     fn dock_op(_app: &mut KernelApp, _op: DockOp) {}
 
+    fn init_window_state(_app: &mut KernelApp, _window: AppWindowId) -> u8 {
+        0
+    }
+
+    fn hook_view(_cx: &mut fret_ui::ElementContext<'_, KernelApp>, _st: &mut u8) -> ViewElements {
+        ViewElements::default()
+    }
+
+    fn configure_hook_driver(driver: crate::UiAppDriver<u8>) -> crate::UiAppDriver<u8> {
+        driver.handle_global_command(handle_global_command)
+    }
+
     struct SmokeView;
 
     impl View for SmokeView {
@@ -933,7 +993,7 @@ mod builder_surface_tests {
 
     #[test]
     fn app_builder_view_smoke() {
-        let _builder = AppBuilder::new("builder-view-basic")
+        let _builder = FretApp::new("builder-view-basic")
             .defaults(Defaults::desktop_app())
             .window("Builder View Basic", (800.0, 600.0))
             .view::<SmokeView>()
@@ -949,7 +1009,7 @@ mod builder_surface_tests {
 
     #[test]
     fn app_builder_view_smoke_uses_default_main_window() {
-        let _builder = PreludeFretApp::new("builder-view-default-main-window")
+        let _builder = AppPreludeFretApp::new("builder-view-default-main-window")
             .minimal_defaults()
             .view::<SmokeView>()
             .expect("view should build")
@@ -958,6 +1018,24 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_size.width, 960.0);
                 assert_eq!(config.main_window_size.height, 720.0);
             });
+    }
+
+    #[test]
+    fn advanced_ui_app_with_hooks_smoke() {
+        let _builder = crate::advanced::ui_app_with_hooks(
+            "advanced-ui-app-hooks-smoke",
+            init_window_state,
+            hook_view,
+            configure_hook_driver,
+        )
+        .with_main_window("Advanced UI App Hooks Smoke", (720.0, 420.0))
+        .install_app(install_app)
+        .install(install)
+        .configure(|config| {
+            assert_eq!(config.main_window_title, "Advanced UI App Hooks Smoke");
+            assert_eq!(config.main_window_size.width, 720.0);
+            assert_eq!(config.main_window_size.height, 420.0);
+        });
     }
 }
 
@@ -1027,6 +1105,7 @@ mod tests {
 
 #[cfg(test)]
 mod authoring_surface_policy_tests {
+    const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
     const README: &str = include_str!("../README.md");
     const LIB_RS: &str = include_str!("lib.rs");
 
@@ -1087,5 +1166,25 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("UiServices"));
         assert!(!app_prelude.contains("UiHost"));
         assert!(!app_prelude.contains("AnyElement"));
+    }
+
+    #[test]
+    fn legacy_root_prelude_is_deleted() {
+        assert!(!LIB_RS.contains("pub mod prelude {\n    pub use fret_ui_kit::prelude::*;"));
+    }
+
+    #[test]
+    fn root_builder_aliases_are_deleted() {
+        let lines = LIB_RS.lines().map(str::trim).collect::<Vec<_>>();
+        assert!(!lines.contains(&"pub use app_entry::App;"));
+        assert!(!lines.contains(&"pub use app_entry::App as AppBuilder;"));
+        assert!(!lines.contains(&"pub use app_entry::App as FretApp;"));
+        assert!(lines.contains(&"pub use app_entry::FretApp;"));
+    }
+
+    #[test]
+    fn app_entry_builder_name_is_fret_app_only() {
+        assert!(APP_ENTRY_RS.contains("pub struct FretApp"));
+        assert!(!APP_ENTRY_RS.contains("pub struct App"));
     }
 }

@@ -1,4 +1,4 @@
-//! `fret::App` builder-chain entry points.
+//! `fret::FretApp` builder-chain entry points.
 //!
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
@@ -11,9 +11,8 @@ use crate::{Defaults, Result, UiAppBuilder, UiAppDriver};
 /// - This is an ecosystem-level convenience layer (not a kernel contract).
 /// - The builder composes existing `fret` entry points (the view/runtime + driver wiring) and
 ///   applies a default main window if none is configured.
-#[doc(alias = "AppBuilder")]
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub struct App {
+pub struct FretApp {
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
@@ -24,7 +23,7 @@ pub struct App {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-impl App {
+impl FretApp {
     /// Create a new app builder with a stable root name.
     ///
     /// `root_name` is used by the golden-path driver for IDs, diagnostics, and dev tooling.
@@ -131,7 +130,7 @@ impl App {
             UiAppDriver<crate::view::ViewWindowState<V>>,
         ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
     ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {
-        let App {
+        let FretApp {
             root_name,
             main_window,
             defaults,

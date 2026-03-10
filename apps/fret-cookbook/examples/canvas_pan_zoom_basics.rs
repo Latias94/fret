@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_canvas::ui::{
     PanZoomCanvasSurfacePanelProps, PanZoomInputPreset, pan_zoom_canvas_surface_panel,
 };
@@ -54,7 +54,7 @@ struct CanvasPanZoomBasicsView {
 }
 
 impl View for CanvasPanZoomBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             view: app.models_mut().insert(PanZoom2D::default()),
             node_origin: app.models_mut().insert(Point::new(Px(120.0), Px(120.0))),
@@ -63,7 +63,7 @@ impl View for CanvasPanZoomBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let view_value = cx.watch_model(&self.view).paint().value_or_default();

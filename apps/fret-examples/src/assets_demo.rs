@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret::kernel::core::{ImageColorSpace, SvgId};
 use fret::kernel::ui::element::{ImageProps, SvgIconProps};
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
@@ -51,20 +51,20 @@ pub fn run() -> anyhow::Result<()> {
 struct AssetsDemoView;
 
 impl View for AssetsDemoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         render_view(cx.elements())
     }
 }
 
 fn on_event(
-    app: &mut App,
+    app: &mut KernelApp,
     _services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut UiTree<App>,
+    _ui: &mut UiTree<KernelApp>,
     _state: &mut fret::view::ViewWindowState<AssetsDemoView>,
     event: &Event,
 ) {
@@ -131,7 +131,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
+fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> fret::ViewElements {
     let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
@@ -259,7 +259,7 @@ fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     theme: &Theme,
     frame: u64,
     image: Option<fret_core::ImageId>,
@@ -328,7 +328,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     theme: &Theme,
     svg: Option<fret_core::SvgId>,
 ) -> AnyElement {

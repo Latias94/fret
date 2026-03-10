@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{AppWindowId, Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_render::{Renderer, RendererPerfFrameStore, WgpuContext};
 use fret_runtime::{
@@ -227,7 +227,7 @@ fn current_since_launch_ms() -> u64 {
 }
 
 fn capture_element_runtime_frame_sample(
-    app: &mut App,
+    app: &mut KernelApp,
     window: AppWindowId,
 ) -> Option<ElementRuntimeFrameSample> {
     let snapshot = app
@@ -258,7 +258,7 @@ fn capture_element_runtime_frame_sample(
     })
 }
 
-fn update_runtime_frame_sample_state(cx: &mut ViewCx<'_, '_, App>) {
+fn update_runtime_frame_sample_state(cx: &mut ViewCx<'_, '_, KernelApp>) {
     if !runtime_sampling_enabled() {
         return;
     }
@@ -740,7 +740,7 @@ fn write_internal_report(path: &Path, payload: &serde_json::Value) {
     }
 }
 
-fn on_gpu_ready(app: &mut App, context: &WgpuContext, _renderer: &mut Renderer) {
+fn on_gpu_ready(app: &mut KernelApp, context: &WgpuContext, _renderer: &mut Renderer) {
     let Some(config) = internal_gpu_sampling_config() else {
         return;
     };
@@ -1008,7 +1008,7 @@ struct HelloWorldCompareView {
 }
 
 impl View for HelloWorldCompareView {
-    fn init(_app: &mut App, window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, window: AppWindowId) -> Self {
         remember_compare_window(window);
         Self {
             flags: CompareFlags::from_env(),
@@ -1016,7 +1016,7 @@ impl View for HelloWorldCompareView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());
         if self.flags.uses_animation_frame_loop() {
             cx.request_animation_frame();
@@ -1040,17 +1040,19 @@ impl View for HelloWorldCompareView {
                 8.0
             };
 
-        let swatch =
-            |cx: &mut ElementContext<'_, App>, fill_rgb: u32, border_rgb: u32| -> AnyElement {
-                ui::container(|_cx| Vec::<AnyElement>::new())
-                    .w_px(Px(32.0))
-                    .h_px(Px(32.0))
-                    .bg(ColorRef::Color(Color::from_srgb_hex_rgb(fill_rgb)))
-                    .rounded(Radius::Md)
-                    .border_1()
-                    .border_color(ColorRef::Color(Color::from_srgb_hex_rgb(border_rgb)))
-                    .into_element(cx)
-            };
+        let swatch = |cx: &mut ElementContext<'_, KernelApp>,
+                      fill_rgb: u32,
+                      border_rgb: u32|
+         -> AnyElement {
+            ui::container(|_cx| Vec::<AnyElement>::new())
+                .w_px(Px(32.0))
+                .h_px(Px(32.0))
+                .bg(ColorRef::Color(Color::from_srgb_hex_rgb(fill_rgb)))
+                .rounded(Radius::Md)
+                .border_1()
+                .border_color(ColorRef::Color(Color::from_srgb_hex_rgb(border_rgb)))
+                .into_element(cx)
+        };
         let layout_probe = ui::container(|_cx| Vec::<AnyElement>::new())
             .w_px(Px(160.0))
             .h_px(Px(layout_probe_height_px))

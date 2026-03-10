@@ -454,7 +454,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::App::new("external-video-imports-mf")
+    let builder = fret::FretApp::new("external-video-imports-mf")
         .window(
             "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
             (980.0, 720.0),
