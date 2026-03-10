@@ -397,13 +397,13 @@ pub mod advanced {
         pub use crate::interop::embedded_viewport::{
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
-        pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
+        pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, SemanticsRole};
         pub use fret_runtime::{ActionId, CommandId, TypedAction};
         pub use fret_ui::ThemeSnapshot;
-        pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
+        pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps};
         pub use fret_ui_kit::prelude::*;
     }
 }
@@ -1203,8 +1203,25 @@ mod authoring_surface_policy_tests {
         &LIB_RS[start..end]
     }
 
+    fn advanced_prelude_source() -> &'static str {
+        let advanced_start = LIB_RS
+            .find("/// Explicit advanced/manual-assembly imports for power users and integration code.")
+            .expect("advanced module marker should exist in fret facade");
+        let error_start = LIB_RS
+            .find("#[derive(Debug, thiserror::Error)]")
+            .expect("error type marker should exist in fret facade");
+        &LIB_RS[advanced_start..error_start]
+    }
+
     fn app_prelude_exports_symbol(symbol: &str) -> bool {
         app_prelude_source()
+            .split(';')
+            .filter(|statement| statement.contains("pub use "))
+            .any(|statement| statement_mentions_symbol(statement, symbol))
+    }
+
+    fn advanced_prelude_exports_symbol(symbol: &str) -> bool {
+        advanced_prelude_source()
             .split(';')
             .filter(|statement| statement.contains("pub use "))
             .any(|statement| statement_mentions_symbol(statement, symbol))
@@ -1332,7 +1349,20 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn advanced_prelude_reexports_app_facing_view_aliases() {
+        let advanced_prelude = advanced_prelude_source();
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui};"));
+        assert!(advanced_prelude_exports_symbol("AppUi"));
+        assert!(advanced_prelude_exports_symbol("Ui"));
+        assert!(advanced_prelude_exports_symbol("ViewElements"));
+        assert!(!advanced_prelude_exports_symbol("ViewCx"));
+        assert!(!advanced_prelude_exports_symbol("Elements"));
+        assert!(
+            !advanced_prelude
+                .contains("pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};")
+        );
+        assert!(!advanced_prelude.contains(
+            "pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};"
+        ));
     }
 
     #[test]
