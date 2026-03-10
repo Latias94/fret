@@ -729,6 +729,10 @@ real editors.
   `ui/canvas/widget/move_ops/align_distribute/support.rs` seam, so
   `move_ops/align_distribute/plan.rs` now mainly keeps the top-level planning orchestration
   explicit.
+- nudge move planning now also routes moved-set collection, shared extent clamps, and group/node
+  op application through the private `ui/canvas/widget/move_ops/nudge_support.rs` seam, so
+  `move_ops/nudge.rs` now mainly keeps delta normalization, snap-to-grid primary selection
+  handling, and top-level orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

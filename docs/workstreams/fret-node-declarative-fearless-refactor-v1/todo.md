@@ -1180,6 +1180,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/move_ops/align_distribute/support.rs` seam, so
     `move_ops/align_distribute/plan.rs` now mainly keeps the top-level planning orchestration
     explicit.
+  - Progress: nudge move planning now also routes moved-set collection, shared extent clamps, and
+    group/node op application through the private
+    `ui/canvas/widget/move_ops/nudge_support.rs` seam, so `move_ops/nudge.rs` now mainly keeps
+    delta normalization, snap-to-grid primary selection handling, and top-level orchestration
+    explicit.
 
 ## M5 - Compatibility retained convergence
 
