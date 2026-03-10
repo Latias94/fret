@@ -35,6 +35,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/OPTIONAL_COMPACT_PACK_FOR_SHARING_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REASON_CODE_CONSUMER_ALIGNMENT_AUDIT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_DEFINITION_EXTERNALIZATION_DECISION_V1.md`
 
 Related workstreams and context:
 

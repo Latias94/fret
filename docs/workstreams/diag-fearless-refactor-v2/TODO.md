@@ -266,7 +266,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [x] Decide whether to introduce a first-class “campaign” orchestration layer.
   - [x] Land a minimal aggregation/index consumer first via `fretboard diag summarize`.
   - [x] Land a first `fretboard diag campaign` surface that composes existing `suite` + `summarize` flows.
-  - [ ] Decide when campaign definitions should move from built-in Rust registry to external manifests.
+  - [x] Decide when campaign definitions should move from built-in Rust registry to external manifests.
+    - evidence: `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_DEFINITION_EXTERNALIZATION_DECISION_V1.md`
+    - implementation: repo-owned JSON manifests under `tools/diag-campaigns/` are now treated as
+      the primary authoring surface, while `CampaignRegistry::load_from_workspace_root` keeps
+      built-in Rust definitions as fallback/bootstrap entries with same-id manifest override
 - [ ] Define expected outputs for orchestrated runs:
   - [x] one machine-readable summary,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
