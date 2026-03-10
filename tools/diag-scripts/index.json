@@ -7156,8 +7156,8 @@
         "workspace_shell"
       ],
       "target_hints": [
-        "Sets the theme preset to zinc/dark explicitly.",
-        "Opens Settings, enables the workspace tab strip, and waits for the shell chrome surfaces.",
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
         "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
       ]
     },
@@ -7177,7 +7177,7 @@
         "workspace_shell"
       ],
       "target_hints": [
-        "Sets the theme preset to zinc/dark explicitly and enables the workspace tab strip.",
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
         "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
         "Presses Escape and asserts focus returns to the workspace content surface."
       ]
@@ -7199,7 +7199,7 @@
         "workspace_shell"
       ],
       "target_hints": [
-        "Sets the theme preset to zinc/dark explicitly and enables the workspace tab strip.",
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
         "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
         "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
       ]

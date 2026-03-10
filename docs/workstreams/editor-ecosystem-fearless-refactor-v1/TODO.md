@@ -124,7 +124,10 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
       that locks `workspace.tab.next`, `workspace.tab.prev`, and `workspace.tab.close` against the
       mirrored single-pane `WorkspaceWindowLayout` with the default MRU cycling semantics from
-      `fret-workspace`; edit-session commit/cancel coverage still remains open.
+      `fret-workspace`; the `ui_gallery` workspace-shell scripts now self-seed a shared
+      `workspace_shell` diagnostics profile via `meta.env_defaults`, and
+      `apps/fret-ui-gallery/src/driver/render_flow.rs` now carries a focused Rust regression test
+      for the layout-to-model mirror ordering; edit-session commit/cancel coverage still remains open.
 - [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
       Current status: the `imui` proof surface and the `ui_gallery` workspace-shell proof surface
       now both have anchored code + gate evidence, but the `apps/fret-editor` side still needs the

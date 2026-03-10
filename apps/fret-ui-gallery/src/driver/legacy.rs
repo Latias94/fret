@@ -1149,9 +1149,13 @@ impl UiGalleryDriver {
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
         let page_router = build_ui_gallery_page_router();
+        let diag_profile = ui_gallery_diag_profile();
+        let workspace_shell_diag_profile =
+            diag_profile.as_deref() == Some(UI_GALLERY_DIAG_PROFILE_WORKSPACE_SHELL);
 
         let start_page = ui_gallery_start_page().unwrap_or_else(|| {
-            if std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            if workspace_shell_diag_profile
+                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
             {
                 Arc::<str>::from(PAGE_OVERLAY)
@@ -1211,9 +1215,14 @@ impl UiGalleryDriver {
             .filter(|value| !value.is_empty())
             .unwrap_or_default();
         let nav_query = app.models_mut().insert(nav_query_default);
+        let initial_theme_preset = if workspace_shell_diag_profile {
+            Arc::<str>::from("zinc/dark")
+        } else {
+            Arc::<str>::from("zinc/light")
+        };
         let theme_preset = app
             .models_mut()
-            .insert(Option::<Arc<str>>::Some(Arc::from("zinc/light")));
+            .insert(Option::<Arc<str>>::Some(initial_theme_preset));
         let theme_preset_open = app.models_mut().insert(false);
         let motion_preset = app
             .models_mut()
@@ -1245,7 +1254,7 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
-        let chrome_show_workspace_tab_strip = app.models_mut().insert(false);
+        let chrome_show_workspace_tab_strip = app.models_mut().insert(workspace_shell_diag_profile);
         let undo_doc: DocumentId = "ui_gallery.window".into();
         let combobox_value = app.models_mut().insert(None::<Arc<str>>);
         let combobox_open = app.models_mut().insert(false);

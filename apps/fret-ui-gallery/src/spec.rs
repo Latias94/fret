@@ -6,6 +6,8 @@ use fret_runtime::CommandId;
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
 pub(crate) const ENV_UI_GALLERY_NAV_QUERY: &str = "FRET_UI_GALLERY_NAV_QUERY";
+pub(crate) const ENV_UI_GALLERY_DIAG_PROFILE: &str = "FRET_UI_GALLERY_DIAG_PROFILE";
+pub(crate) const UI_GALLERY_DIAG_PROFILE_WORKSPACE_SHELL: &str = "workspace_shell";
 
 pub(crate) const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
 pub(crate) const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
@@ -48,6 +50,14 @@ pub(crate) fn ui_gallery_start_page() -> Option<Arc<str>> {
         let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
         ui_gallery_start_page_from_id(&id)
     }
+}
+
+pub(crate) fn ui_gallery_diag_profile() -> Option<Arc<str>> {
+    std::env::var(ENV_UI_GALLERY_DIAG_PROFILE)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(Arc::<str>::from)
 }
 
 fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {

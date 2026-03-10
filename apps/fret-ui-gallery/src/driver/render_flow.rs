@@ -621,6 +621,73 @@ mod tests {
         )
     }
 
+    #[test]
+    fn begin_frame_mirrors_workspace_layout_commands_before_rebuilding_from_models() {
+        let mut rendered = render_gallery_page(PAGE_INTRO);
+
+        let selected_before = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after initial render");
+        assert_eq!(selected_before.as_ref(), PAGE_INTRO);
+
+        let _ =
+            rendered
+                .app
+                .models_mut()
+                .update(&rendered.state.workspace_window_layout, |layout| {
+                    let pane = layout
+                        .pane_tree
+                        .find_pane_mut(super::super::UI_GALLERY_WORKSPACE_PANE_ID)
+                        .expect("workspace pane should exist");
+                    assert!(
+                        pane.tabs.close(PAGE_INTRO),
+                        "expected intro tab to exist before close"
+                    );
+                    assert!(
+                        pane.tabs.activate(Arc::<str>::from(PAGE_COMMAND)),
+                        "expected command tab activation to succeed"
+                    );
+                });
+
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after mirrored layout update");
+        let workspace_tabs_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_tabs)
+            .expect("workspace tabs model should exist after mirrored layout update");
+        let workspace_dirty_tabs_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_dirty_tabs)
+            .expect("workspace dirty tabs model should exist after mirrored layout update");
+        let layout_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after mirrored layout update");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+            .expect("workspace layout snapshot should remain supported");
+
+        assert_eq!(selected_after.as_ref(), PAGE_COMMAND);
+        assert!(
+            workspace_tabs_after
+                .iter()
+                .all(|tab_id| tab_id.as_ref() != PAGE_INTRO),
+            "expected closed intro tab to be mirrored back into the workspace tab models: tabs={workspace_tabs_after:?}"
+        );
+        assert_eq!(layout_snapshot.0, workspace_tabs_after);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
+        assert_eq!(layout_snapshot.2, workspace_dirty_tabs_after);
+    }
+
     fn scroll_gallery_page_to_bottom(
         rendered: &mut RenderedGalleryPage,
         page: &str,

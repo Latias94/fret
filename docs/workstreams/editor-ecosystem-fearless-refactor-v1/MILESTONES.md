@@ -185,3 +185,8 @@ Progress:
   - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
     This gate now locks the promoted default MRU semantics for
     `workspace.tab.next/prev` plus close-mirror fallback in the `ui_gallery` workspace shell.
+- The `ui_gallery` workspace-shell diagnostics scripts now declare a shared
+  `FRET_UI_GALLERY_DIAG_PROFILE=workspace_shell` default so the proof surface starts in the
+  expected dark/tabstrip state without repeating theme/settings prep in every script.
+- `apps/fret-ui-gallery/src/driver/render_flow.rs` now includes a focused regression test that
+  locks the begin-frame mirror order after command-driven `WorkspaceWindowLayout` updates.

@@ -2,7 +2,10 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-workspace-tabstrip-overflow-select-command",
-    "tags": ["ui_gallery", "workspace_tabstrip", "overflow"]
+    "tags": ["ui_gallery", "workspace_tabstrip", "overflow"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
+    }
   },
   "steps": [
     {
@@ -57,4 +60,3 @@
     }
   ]
 }
-
