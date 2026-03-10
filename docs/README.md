@@ -129,9 +129,9 @@ now taught as `LocalState` + view runtime + typed actions.
 - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
-  - `cx.on_action_notify_locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
-  - `cx.on_action_notify_models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
-  - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
+  - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
+  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
+  - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
   - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, router availability sync, background scheduling, RAF effects).
 - Surface taxonomy:
