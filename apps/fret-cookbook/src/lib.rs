@@ -24,9 +24,11 @@ mod authoring_surface_policy_tests {
     const DATA_TABLE_EXAMPLE: &str = include_str!("../examples/data_table_basics.rs");
     const DATE_PICKER_EXAMPLE: &str = include_str!("../examples/date_picker_basics.rs");
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
+    const IMUI_ACTION_EXAMPLE: &str = include_str!("../examples/imui_action_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
     const HELLO_COUNTER_EXAMPLE: &str = include_str!("../examples/hello_counter.rs");
+    const MARKDOWN_AND_CODE_EXAMPLE: &str = include_str!("../examples/markdown_and_code_basics.rs");
     const OVERLAY_EXAMPLE: &str = include_str!("../examples/overlay_basics.rs");
     const PAYLOAD_ACTIONS_EXAMPLE: &str = include_str!("../examples/payload_actions_basics.rs");
     const QUERY_EXAMPLE: &str = include_str!("../examples/query_basics.rs");
@@ -39,6 +41,7 @@ mod authoring_surface_policy_tests {
     const TEXT_INPUT_EXAMPLE: &str = include_str!("../examples/text_input_basics.rs");
     const TOAST_EXAMPLE: &str = include_str!("../examples/toast_basics.rs");
     const TOGGLE_EXAMPLE: &str = include_str!("../examples/toggle_basics.rs");
+    const UNDO_EXAMPLE: &str = include_str!("../examples/undo_basics.rs");
     const VIRTUAL_LIST_EXAMPLE: &str = include_str!("../examples/virtual_list_basics.rs");
 
     fn assert_uses_app_surface(src: &str) {
@@ -91,6 +94,9 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(QUERY_EXAMPLE);
         assert_uses_app_surface(ROUTER_EXAMPLE);
         assert_uses_app_surface(DATA_TABLE_EXAMPLE);
+        assert_uses_app_surface(UNDO_EXAMPLE);
+        assert_uses_app_surface(MARKDOWN_AND_CODE_EXAMPLE);
+        assert_uses_app_surface(IMUI_ACTION_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
@@ -142,6 +148,19 @@ mod authoring_surface_policy_tests {
             DATA_TABLE_EXAMPLE
                 .contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui")
         );
+
+        assert!(UNDO_EXAMPLE.contains("use fret_app::Effect;"));
+        assert!(UNDO_EXAMPLE.contains("models::<act::Inc>"));
+        assert!(UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
+
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<KernelApp>::default()"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
+
+        assert!(
+            IMUI_ACTION_EXAMPLE
+                .contains("use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};")
+        );
+        assert!(IMUI_ACTION_EXAMPLE.contains("local_update::<act::Inc, u32>"));
     }
 
     #[test]

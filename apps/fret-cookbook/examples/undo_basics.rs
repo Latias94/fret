@@ -1,9 +1,11 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
+use fret_app::Effect;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
     PlatformFilter, format_sequence,
 };
 use fret_core::{FontWeight, KeyCode, Modifiers};
+use fret_runtime::Model;
 use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 use fret_undo::{CMD_EDIT_REDO, CMD_EDIT_UNDO, UndoHistory, UndoRecord, ValueTx};
 
@@ -36,7 +38,7 @@ struct UndoBasicsView {
     coalesce: Model<bool>,
 }
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let undo_cmd = CommandId::from(CMD_EDIT_UNDO);
     let redo_cmd = CommandId::from(CMD_EDIT_REDO);
 
@@ -157,7 +159,7 @@ fn record_value_tx(
 }
 
 impl View for UndoBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             value: app.models_mut().insert(0),
             history: app.models_mut().insert(UndoHistory::with_limit(64)),
@@ -165,13 +167,13 @@ impl View for UndoBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let undo_cmd: CommandId = act::Undo.into();
         let redo_cmd: CommandId = act::Redo.into();
 
-        let value = cx.watch_model(&self.value).paint().value_or_default();
-        let history = cx.watch_model(&self.history).paint().value_or_default();
+        let value = self.value.watch(cx).paint().value_or_default();
+        let history = self.history.watch(cx).paint().value_or_default();
         let can_undo = history.can_undo();
         let can_redo = history.can_redo();
 
@@ -184,7 +186,7 @@ impl View for UndoBasicsView {
             .and_then(|rec| rec.label.as_deref())
             .unwrap_or("None");
 
-        let coalesce = cx.watch_model(&self.coalesce).paint().value_or_default();
+        let coalesce = self.coalesce.watch(cx).paint().value_or_default();
         let coalesce_label = if coalesce { "On" } else { "Off" };
 
         let undo_shortcut = cx
@@ -337,7 +339,7 @@ impl View for UndoBasicsView {
         .w_full()
         .max_w(Px(760.0));
 
-        cx.on_action_notify_models::<act::Inc>({
+        cx.actions().models::<act::Inc>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
@@ -359,7 +361,7 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_notify_models::<act::Dec>({
+        cx.actions().models::<act::Dec>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
@@ -381,7 +383,7 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_notify_models::<act::Reset>({
+        cx.actions().models::<act::Reset>({
             let value = self.value.clone();
             let history = self.history.clone();
             move |models| {
@@ -446,7 +448,7 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Undo>({
+        cx.actions().availability::<act::Undo>({
             let history = self.history.clone();
             move |host, _acx| {
                 let can = host
@@ -462,7 +464,7 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Redo>({
+        cx.actions().availability::<act::Redo>({
             let history = self.history.clone();
             move |host, _acx| {
                 let can = host
