@@ -8,7 +8,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
+use fret::view::ViewCx;
 use fret_ui::CommandAvailability;
+use fret_ui::element::Elements;
 use fret_ui_shadcn::{self as shadcn};
 
 mod act {
