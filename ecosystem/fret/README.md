@@ -90,7 +90,7 @@ use fret::prelude::*;
 struct HelloView;
 
 impl View for HelloView {
-    fn render(&mut self, _cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, _ui: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         shadcn::Label::new("Hello from Fret!").into()
     }
 }
@@ -107,7 +107,7 @@ fn main() -> fret::Result<()> {
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers for `ViewCx` (`use_selector`, `use_query`).
+- `state`: enable selector/query helpers for `AppUi` (`data().selector(...)`, `data().query(...)`; currently backed by `ViewCx`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -132,8 +132,8 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 ## Choosing a native entry path
 
-- App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
-- App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
+- App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`
+- App authors with driver hooks: `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`

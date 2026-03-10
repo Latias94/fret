@@ -9,8 +9,8 @@
 //!
 //! ## Choosing a native entry path
 //!
-//! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path.
-//! - `fret::App::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
+//! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path.
+//! - `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
 //!   app-author path when driver hooks are required.
 //! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
@@ -28,25 +28,24 @@
 //! struct HelloView;
 //!
 //! impl View for HelloView {
-//!     fn init(_app: &mut App, _window: AppWindowId) -> Self {
+//!     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
 //!         Self
 //!     }
 //!
-//!     fn render(&mut self, _cx: &mut ViewCx<'_, '_, App>) -> Elements {
+//!     fn render(&mut self, _ui: &mut AppUi<'_, '_, KernelApp>) -> Ui {
 //!         shadcn::Label::new("Fret!").into()
 //!     }
 //! }
 //!
 //! fn main() -> fret::Result<()> {
-//!     fret::App::new("hello")
+//!     FretApp::new("hello")
 //!         .window("Hello", (560.0, 360.0))
 //!         .view::<HelloView>()?
 //!         .run()
 //! }
 //! ```
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-use fret_app::App as KernelApp;
+pub use fret_app::App as KernelApp;
 
 /// Re-export the default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
@@ -77,6 +76,14 @@ mod app_entry;
 pub use app_entry::App;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::App as AppBuilder;
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use app_entry::App as FretApp;
+
+/// Canonical app-facing UI context alias for the default authoring surface.
+pub type AppUi<'cx, 'a, H> = view::ViewCx<'cx, 'a, H>;
+
+/// Canonical app-facing render return alias for the default authoring surface.
+pub type Ui = fret_ui::element::Elements;
 
 /// Runtime defaults applied by the `fret` facade (within the enabled crate features).
 ///
@@ -183,6 +190,64 @@ pub mod dev {
 #[cfg(feature = "desktop")]
 pub use fret_framework as kernel;
 
+/// App-facing imports for ordinary Fret application code.
+pub mod app {
+    /// Common imports for app code on the default authoring surface.
+    pub mod prelude {
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::FretApp;
+        #[cfg(feature = "shadcn")]
+        pub use crate::shadcn;
+        pub use crate::view::{LocalState, TrackedStateExt, View};
+        pub use crate::{AppUi, KernelApp, Ui};
+        pub use crate::{actions, workspace_menu};
+        pub use fret_core::{AppWindowId, Event, SemanticsRole};
+        pub use fret_runtime::{ActionId, CommandId, TypedAction};
+        pub use fret_ui::ThemeSnapshot;
+        pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps};
+        pub use fret_ui_kit::ui;
+        pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
+
+        #[cfg(feature = "state-query")]
+        pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
+    }
+}
+
+/// Component-author imports for reusable, portable UI crates.
+pub mod component {
+    /// Common imports for reusable component crates built on Fret.
+    pub mod prelude {
+        pub use fret_ui_kit::prelude::*;
+        pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
+
+        #[cfg(feature = "shadcn")]
+        pub use crate::shadcn;
+    }
+}
+
+/// Explicit advanced/manual-assembly imports for power users and integration code.
+pub mod advanced {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::interop;
+    #[cfg(feature = "desktop")]
+    pub use crate::kernel;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::{UiAppBuilder, UiAppDriver, ViewElements};
+
+    /// Common imports for advanced/manual-assembly application code.
+    pub mod prelude {
+        pub use crate::KernelApp;
+        pub use crate::advanced::*;
+        pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};
+        pub use fret_app::Effect;
+        pub use fret_core::{AppWindowId, Event, SemanticsRole};
+        pub use fret_runtime::{ActionId, CommandId, TypedAction};
+        pub use fret_ui::ThemeSnapshot;
+        pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
+        pub use fret_ui_kit::prelude::*;
+    }
+}
+
 /// Common imports for application code using `fret`.
 ///
 /// Recommended: `use fret::prelude::*;`
@@ -195,6 +260,7 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::App as FretApp;
+    pub use crate::{AppUi, KernelApp, Ui};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
@@ -950,18 +1016,19 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(README.contains(
-            "App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`"
+            "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
-        assert!(!README.contains("fret::App::new(...).window(...).ui(...)?"));
+        assert!(!README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
     }
 
     #[test]
     fn crate_docs_only_teach_view_entry() {
         let rustdoc = crate_rustdoc();
         assert!(rustdoc.contains(
-            "//! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path."
+            "//! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path."
         ));
-        assert!(rustdoc.contains(".view::<HelloView>()?"));
+        assert!(rustdoc.contains("FretApp::new(\"hello\")"));
+        assert!(rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
     }
 }
