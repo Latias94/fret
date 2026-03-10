@@ -240,7 +240,6 @@ fn render_root_contents(
         frame.cache_sidebar,
         &frame.nav_query,
         &frame.selected_page,
-        &frame.workspace_tabs,
     );
     let content = shell::content_view(
         cx,
@@ -423,11 +422,13 @@ fn render_root_contents(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::{CommandId, Effect};
     use fret_core::{
         AppWindowId, Event, Modifiers, MouseButton, MouseButtons, PathCommand, PathConstraints,
         PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType,
         Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
+    use fret_launch::WinitAppDriver;
     use fret_runtime::{FrameId, TickId};
 
     #[derive(Default)]
@@ -513,7 +514,48 @@ mod tests {
         bounds: Rect,
     }
 
+    fn drain_command_effects(rendered: &mut RenderedGalleryPage) {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+
+        loop {
+            let effects = rendered.app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window, command }
+                        if window.is_none() || window == Some(rendered.window) =>
+                    {
+                        UiGalleryDriver::default().handle_command(
+                            fret_launch::WinitCommandContext {
+                                app: &mut rendered.app,
+                                services: &mut rendered.services,
+                                window: rendered.window,
+                                state: &mut rendered.state,
+                            },
+                            command,
+                        );
+                        applied_any_command = true;
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
+
+            if !applied_any_command {
+                break;
+            }
+        }
+
+        for effect in deferred_effects {
+            rendered.app.push_effect(effect);
+        }
+    }
+
     fn render_gallery_frame(rendered: &mut RenderedGalleryPage) {
+        drain_command_effects(rendered);
         rendered.frame_index = rendered.frame_index.saturating_add(1);
         rendered.app.set_tick_id(TickId(rendered.frame_index));
         rendered.app.set_frame_id(FrameId(rendered.frame_index));
@@ -542,6 +584,18 @@ mod tests {
             &mut rendered.services,
             rendered.bounds,
             1.0,
+        );
+    }
+
+    fn dispatch_command(rendered: &mut RenderedGalleryPage, command: impl Into<CommandId>) {
+        UiGalleryDriver::default().handle_command(
+            fret_launch::WinitCommandContext {
+                app: &mut rendered.app,
+                services: &mut rendered.services,
+                window: rendered.window,
+                state: &mut rendered.state,
+            },
+            command.into(),
         );
     }
 
@@ -588,9 +642,8 @@ mod tests {
             .or(Some(node.bounds))
     }
 
-    fn render_gallery_page_with_bounds(page: &str, bounds: Rect) -> RenderedGalleryPage {
+    fn render_gallery_page_with_app(page: &str, bounds: Rect, mut app: App) -> RenderedGalleryPage {
         let window = AppWindowId::default();
-        let mut app = App::new();
         let state = UiGalleryDriver::build_ui(&mut app, window);
         let _ = app.models_mut().update(&state.selected_page, |selected| {
             *selected = Arc::<str>::from(page)
@@ -609,6 +662,21 @@ mod tests {
         render_gallery_frame(&mut rendered);
         render_gallery_frame(&mut rendered);
         rendered
+    }
+
+    fn render_gallery_page_with_bounds(page: &str, bounds: Rect) -> RenderedGalleryPage {
+        render_gallery_page_with_app(page, bounds, App::new())
+    }
+
+    fn render_gallery_page_with_bootstrapped_app(page: &str) -> RenderedGalleryPage {
+        render_gallery_page_with_app(
+            page,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(1080.0), Px(720.0)),
+            ),
+            super::super::build_app(),
+        )
     }
 
     fn render_gallery_page(page: &str) -> RenderedGalleryPage {
@@ -686,6 +754,116 @@ mod tests {
         assert_eq!(layout_snapshot.0, workspace_tabs_after);
         assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
         assert_eq!(layout_snapshot.2, workspace_dirty_tabs_after);
+    }
+
+    #[test]
+    fn sidebar_click_navigates_and_persists_into_workspace_layout() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        click_test_id_center(&mut rendered, "ui-gallery-nav-layout");
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after sidebar click");
+        let layout_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after sidebar click");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+            .expect("workspace layout snapshot should remain supported after sidebar click");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the selected sidebar page");
+        let semantics_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after sidebar click");
+
+        assert_eq!(selected_after.as_ref(), PAGE_LAYOUT);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_LAYOUT));
+        assert_eq!(routed_page.as_ref(), PAGE_LAYOUT);
+        assert!(
+            find_node_by_test_id(semantics_snapshot, "ui-gallery-page-layout").is_some(),
+            "expected layout page semantics after clicking the sidebar"
+        );
+    }
+
+    #[test]
+    fn workspace_tab_next_command_updates_selected_page_and_layout() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        dispatch_command(
+            &mut rendered,
+            fret_workspace::commands::CMD_WORKSPACE_TAB_NEXT,
+        );
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after workspace tab next");
+        let layout_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after workspace tab next");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+            .expect("workspace layout snapshot should remain supported after workspace tab next");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the selected workspace tab page");
+
+        assert_eq!(selected_after.as_ref(), PAGE_LAYOUT);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_LAYOUT));
+        assert_eq!(routed_page.as_ref(), PAGE_LAYOUT);
+    }
+
+    #[test]
+    fn workspace_tab_close_selected_command_updates_selected_page_and_layout() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        dispatch_command(
+            &mut rendered,
+            fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE,
+        );
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after workspace tab close");
+        let workspace_tabs_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_tabs)
+            .expect("workspace tabs model should exist after workspace tab close");
+        let layout_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after workspace tab close");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+            .expect("workspace layout snapshot should remain supported after workspace tab close");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the next selected workspace tab page");
+
+        assert_eq!(selected_after.as_ref(), PAGE_LAYOUT);
+        assert!(
+            workspace_tabs_after
+                .iter()
+                .all(|tab_id| tab_id.as_ref() != PAGE_INTRO),
+            "expected closed intro tab to be removed from workspace tabs: tabs={workspace_tabs_after:?}"
+        );
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_LAYOUT));
+        assert_eq!(routed_page.as_ref(), PAGE_LAYOUT);
     }
 
     fn scroll_gallery_page_to_bottom(

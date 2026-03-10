@@ -1006,15 +1006,57 @@ impl UiGalleryDriver {
     ) {
         state.workspace_tab_close_by_command.clear();
         for tab_id in workspace_tabs {
-            let cmd: Arc<str> = Arc::from(format!(
-                "{}{}",
-                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                tab_id.as_ref()
-            ));
+            let cmd = Self::workspace_tab_close_command(tab_id.as_ref());
             state
                 .workspace_tab_close_by_command
                 .insert(cmd, tab_id.clone());
         }
+    }
+
+    fn workspace_tab_close_command(tab_id: &str) -> Arc<str> {
+        Arc::from(format!("{}{}", CMD_WORKSPACE_TAB_CLOSE_PREFIX, tab_id))
+    }
+
+    fn select_gallery_page_in_models(
+        app: &mut App,
+        state: &mut UiGalleryWindowState,
+        page: Arc<str>,
+    ) {
+        let page_for_selected = page.clone();
+        let page_for_tabs = page.clone();
+        let _ = app.models_mut().update(&state.selected_page, |selected| {
+            *selected = page_for_selected
+        });
+        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+            if !tabs
+                .iter()
+                .any(|tab_id| tab_id.as_ref() == page_for_tabs.as_ref())
+            {
+                tabs.push(page_for_tabs.clone());
+            }
+        });
+        state
+            .workspace_tab_close_by_command
+            .insert(Self::workspace_tab_close_command(page.as_ref()), page);
+        Self::sync_workspace_window_layout_from_models(app, state);
+    }
+
+    fn navigate_to_gallery_page(
+        app: &mut App,
+        state: &mut UiGalleryWindowState,
+        window: AppWindowId,
+        page: Arc<str>,
+        action: NavigationAction,
+    ) {
+        let page_for_router = page.clone();
+        Self::select_gallery_page_in_models(app, state, page);
+        apply_page_route_side_effects_via_router(
+            app,
+            window,
+            action,
+            page_for_router,
+            &mut state.page_router,
+        );
     }
 
     fn sync_workspace_window_layout_from_models(app: &mut App, state: &UiGalleryWindowState) {
@@ -1190,15 +1232,11 @@ impl UiGalleryDriver {
             workspace_tabs_init.push(start_page.clone());
         }
 
-        let mut workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>> = HashMap::new();
-        for tab_id in workspace_tabs_init.iter() {
-            let cmd: Arc<str> = Arc::from(format!(
-                "{}{}",
-                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                tab_id.as_ref()
-            ));
-            workspace_tab_close_by_command.insert(cmd, tab_id.clone());
-        }
+        let workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>> = workspace_tabs_init
+            .iter()
+            .cloned()
+            .map(|tab_id| (Self::workspace_tab_close_command(tab_id.as_ref()), tab_id))
+            .collect();
         let workspace_tabs_init_for_layout = workspace_tabs_init.clone();
         let workspace_dirty_tabs_init = vec![Arc::<str>::from(PAGE_OVERLAY)];
         let workspace_window_layout_init = Self::build_workspace_window_layout(
@@ -1694,29 +1732,7 @@ impl UiGalleryDriver {
 
         let next_page = page_from_gallery_location(&state.page_router.state().location)
             .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-        let next_page_for_selected = next_page.clone();
-        let next_page_for_tabs = next_page.clone();
-
-        let _ = app
-            .models_mut()
-            .update(&state.selected_page, |v| *v = next_page_for_selected);
-        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
-            if !tabs
-                .iter()
-                .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
-            {
-                tabs.push(next_page_for_tabs.clone());
-            }
-        });
-
-        let cmd: Arc<str> = Arc::from(format!(
-            "{}{}",
-            CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-            next_page_for_tabs.as_ref()
-        ));
-        state
-            .workspace_tab_close_by_command
-            .insert(cmd, next_page_for_tabs);
+        Self::select_gallery_page_in_models(app, state, next_page.clone());
 
         apply_page_router_update_side_effects(
             app,
@@ -1752,29 +1768,7 @@ impl UiGalleryDriver {
 
             let next_page = page_from_gallery_location(&state.page_router.state().location)
                 .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-            let next_page_for_selected = next_page.clone();
-            let next_page_for_tabs = next_page.clone();
-
-            let _ = app
-                .models_mut()
-                .update(&state.selected_page, |v| *v = next_page_for_selected);
-            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
-                if !tabs
-                    .iter()
-                    .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
-                {
-                    tabs.push(next_page_for_tabs.clone());
-                }
-            });
-
-            let cmd: Arc<str> = Arc::from(format!(
-                "{}{}",
-                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                next_page_for_tabs.as_ref()
-            ));
-            state
-                .workspace_tab_close_by_command
-                .insert(cmd, next_page_for_tabs);
+            Self::select_gallery_page_in_models(app, state, next_page.clone());
 
             apply_page_router_update_side_effects(
                 app,
@@ -1800,33 +1794,7 @@ impl UiGalleryDriver {
         };
 
         let page: Arc<str> = Arc::from(page);
-        let page_for_selected = page.clone();
-        let page_for_tabs = page.clone();
-        let _ = app
-            .models_mut()
-            .update(&state.selected_page, |v| *v = page_for_selected);
-        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
-            if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
-                tabs.push(page_for_tabs.clone());
-            }
-        });
-
-        let cmd: Arc<str> = Arc::from(format!(
-            "{}{}",
-            CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-            page_for_tabs.as_ref()
-        ));
-        state
-            .workspace_tab_close_by_command
-            .insert(cmd, page_for_tabs);
-
-        apply_page_route_side_effects_via_router(
-            app,
-            window,
-            NavigationAction::Push,
-            page.clone(),
-            &mut state.page_router,
-        );
+        Self::navigate_to_gallery_page(app, state, window, page, NavigationAction::Push);
         true
     }
 
@@ -1836,68 +1804,56 @@ impl UiGalleryDriver {
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
-        let close_tab_by_id =
-            |app: &mut App, state: &mut UiGalleryWindowState, tab_id: Arc<str>| -> bool {
-                let selected = app
-                    .models()
-                    .get_cloned(&state.selected_page)
-                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let close_tab_by_id = |app: &mut App,
+                               state: &mut UiGalleryWindowState,
+                               tab_id: Arc<str>|
+         -> bool {
+            let selected = app
+                .models()
+                .get_cloned(&state.selected_page)
+                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
 
-                let mut closed = false;
-                let mut next_selected: Option<Arc<str>> = None;
+            let mut closed = false;
+            let mut next_selected: Option<Arc<str>> = None;
 
-                let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
-                    let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref())
-                    else {
-                        return;
-                    };
-                    if tabs.len() <= 1 {
-                        return;
-                    }
+            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref()) else {
+                    return;
+                };
+                if tabs.len() <= 1 {
+                    return;
+                }
 
-                    tabs.remove(index);
-                    closed = true;
+                tabs.remove(index);
+                closed = true;
 
-                    if selected.as_ref() == tab_id.as_ref() {
-                        let next_index = index.min(tabs.len().saturating_sub(1));
-                        next_selected = tabs.get(next_index).cloned();
-                    }
+                if selected.as_ref() == tab_id.as_ref() {
+                    let next_index = index.min(tabs.len().saturating_sub(1));
+                    next_selected = tabs.get(next_index).cloned();
+                }
+            });
+
+            if !closed {
+                return false;
+            }
+
+            let cmd = Self::workspace_tab_close_command(tab_id.as_ref());
+            state.workspace_tab_close_by_command.remove(cmd.as_ref());
+
+            let _ = app
+                .models_mut()
+                .update(&state.workspace_dirty_tabs, |dirty| {
+                    dirty.retain(|t| t.as_ref() != tab_id.as_ref());
                 });
 
-                if !closed {
-                    return false;
-                }
+            if let Some(next) = next_selected {
+                Self::navigate_to_gallery_page(app, state, window, next, NavigationAction::Replace);
+            } else {
+                Self::sync_workspace_window_layout_from_models(app, state);
+            }
 
-                let cmd: Arc<str> = Arc::from(format!(
-                    "{}{}",
-                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                    tab_id.as_ref()
-                ));
-                state.workspace_tab_close_by_command.remove(cmd.as_ref());
-
-                let _ = app
-                    .models_mut()
-                    .update(&state.workspace_dirty_tabs, |dirty| {
-                        dirty.retain(|t| t.as_ref() != tab_id.as_ref());
-                    });
-
-                if let Some(next) = next_selected {
-                    let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
-                    let current_page = app
-                        .models()
-                        .get_cloned(&state.selected_page)
-                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                    apply_page_route_side_effects_via_router(
-                        app,
-                        window,
-                        NavigationAction::Replace,
-                        current_page,
-                        &mut state.page_router,
-                    );
-                }
-
-                true
-            };
+            true
+        };
 
         match command.as_str() {
             CMD_WORKSPACE_TAB_NEXT | CMD_WORKSPACE_TAB_PREV => {
@@ -1922,17 +1878,12 @@ impl UiGalleryDriver {
                     (index + tabs.len() - 1) % tabs.len()
                 };
                 if let Some(next) = tabs.get(next_index).cloned() {
-                    let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
-                    let current_page = app
-                        .models()
-                        .get_cloned(&state.selected_page)
-                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                    apply_page_route_side_effects_via_router(
+                    Self::navigate_to_gallery_page(
                         app,
+                        state,
                         window,
+                        next,
                         NavigationAction::Replace,
-                        current_page,
-                        &mut state.page_router,
                     );
                     return true;
                 }
