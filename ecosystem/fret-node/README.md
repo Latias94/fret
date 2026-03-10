@@ -9,6 +9,32 @@ surfaces for node-graph editors.
 
 Experimental learning project (not production-ready).
 
+## Recommended usage (declarative-first)
+
+New app code should prefer the declarative surface:
+
+- `NodeGraphSurfaceBinding` (canonical app-facing bundle: graph + view state mirrors + controller)
+- `node_graph_surface(...)` (declarative UI entry point)
+
+Minimal composition pattern:
+
+```rust
+use fret_node::io::NodeGraphViewState;
+use fret_node::Graph;
+use fret_node::ui::{NodeGraphSurfaceBinding, node_graph_surface};
+
+fn init(app: &mut fret::App, graph: Graph) -> NodeGraphSurfaceBinding {
+    NodeGraphSurfaceBinding::new(app.models_mut(), graph, NodeGraphViewState::default())
+}
+
+fn view(cx: &mut fret_ui::ElementContext<'_, fret::App>, surface: &NodeGraphSurfaceBinding) {
+    surface.observe(cx);
+    node_graph_surface(cx, surface.surface_props());
+}
+```
+
+See `apps/fret-examples/src/node_graph_demo.rs` for a runnable example.
+
 ## Features
 
 - `ui` / `fret-ui`: enable `crates/fret-ui` integration helpers (canvas widget, styling surfaces)
@@ -16,6 +42,7 @@ Experimental learning project (not production-ready).
 - `canvas-rstar`: opt into an R-tree spatial index backend for large graphs
 - `app-integration`: optional `fret-app` helpers (commands/default bindings)
 - `headless`: build headless-only graph model surfaces
+- `compat-retained-canvas`: retained widget/editor stack (compatibility-only; delete-planned)
 
 ## Upstream references (non-normative)
 
