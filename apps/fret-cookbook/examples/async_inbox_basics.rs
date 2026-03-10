@@ -6,10 +6,11 @@ use std::{
     time::Duration,
 };
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_executor::{
     BackgroundTask, CancellationToken, Executors, Inbox, InboxConfig, InboxDrainer,
 };
+use fret_runtime::Model;
 use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrainRegistry};
 
 mod act {
@@ -73,7 +74,7 @@ struct AsyncInboxBasicsView {
 }
 
 impl View for AsyncInboxBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         let dispatcher = app.global::<DispatcherHandle>().cloned();
 
         let current_job = Arc::new(AtomicU64::new(0));
@@ -196,15 +197,17 @@ impl View for AsyncInboxBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let status = cx
-            .watch_model(&self.st.status)
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let status = self
+            .st
+            .status
+            .watch(cx)
             .layout()
             .read_ref(|v| Arc::clone(v))
             .ok()
             .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let running = cx.watch_model(&self.st.running).layout().value_or(false);
-        let progress = cx.watch_model(&self.st.progress).layout().value_or(0.0);
+        let running = self.st.running.watch(cx).layout().value_or(false);
+        let progress = self.st.progress.watch(cx).layout().value_or(0.0);
         let inbox_stats = self.st.inbox.stats();
 
         let start_button = shadcn::Button::new("Start background job")
@@ -252,8 +255,8 @@ impl View for AsyncInboxBasicsView {
         let progress_el = shadcn::Progress::new(self.st.progress.clone())
             .a11y_label("Background job progress")
             .range(0.0, 100.0)
-            .test_id(TEST_ID_PROGRESS)
-            .into_element(cx);
+            .into_element(cx)
+            .test_id(TEST_ID_PROGRESS);
 
         let progress_label = cx.text(format!("{progress:.0}%"));
         let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
@@ -298,12 +301,12 @@ impl View for AsyncInboxBasicsView {
         .w_full()
         .max_w(Px(720.0));
 
-        cx.on_action_notify_model_update::<act::ClearLog, String>(
-            self.st.log.clone(),
-            String::clear,
-        );
+        cx.actions().models::<act::ClearLog>({
+            let log = self.st.log.clone();
+            move |models| models.update(&log, String::clear).is_ok()
+        });
 
-        cx.on_action_notify_models::<act::Cancel>({
+        cx.actions().models::<act::Cancel>({
             let task = self.st.task.clone();
             let running = self.st.running.clone();
             let status = self.st.status.clone();

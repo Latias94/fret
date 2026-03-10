@@ -21,6 +21,7 @@ mod authoring_surface_policy_tests {
     const ROOT_README: &str = include_str!("../../../README.md");
     const GOLDEN_PATH_DOC: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
     const COMMANDS_KEYMAP_EXAMPLE: &str = include_str!("../examples/commands_keymap_basics.rs");
+    const DATA_TABLE_EXAMPLE: &str = include_str!("../examples/data_table_basics.rs");
     const DATE_PICKER_EXAMPLE: &str = include_str!("../examples/date_picker_basics.rs");
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
@@ -28,9 +29,12 @@ mod authoring_surface_policy_tests {
     const HELLO_COUNTER_EXAMPLE: &str = include_str!("../examples/hello_counter.rs");
     const OVERLAY_EXAMPLE: &str = include_str!("../examples/overlay_basics.rs");
     const PAYLOAD_ACTIONS_EXAMPLE: &str = include_str!("../examples/payload_actions_basics.rs");
+    const QUERY_EXAMPLE: &str = include_str!("../examples/query_basics.rs");
+    const ROUTER_EXAMPLE: &str = include_str!("../examples/router_basics.rs");
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
+    const ASYNC_INBOX_EXAMPLE: &str = include_str!("../examples/async_inbox_basics.rs");
     const THEME_SWITCHING_EXAMPLE: &str = include_str!("../examples/theme_switching_basics.rs");
     const TEXT_INPUT_EXAMPLE: &str = include_str!("../examples/text_input_basics.rs");
     const TOAST_EXAMPLE: &str = include_str!("../examples/toast_basics.rs");
@@ -83,6 +87,10 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(THEME_SWITCHING_EXAMPLE);
         assert_uses_app_surface(TOAST_EXAMPLE);
         assert_uses_app_surface(VIRTUAL_LIST_EXAMPLE);
+        assert_uses_app_surface(ASYNC_INBOX_EXAMPLE);
+        assert_uses_app_surface(QUERY_EXAMPLE);
+        assert_uses_app_surface(ROUTER_EXAMPLE);
+        assert_uses_app_surface(DATA_TABLE_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
@@ -118,6 +126,22 @@ mod authoring_surface_policy_tests {
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
+
+        assert!(ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
+
+        assert!(QUERY_EXAMPLE.contains("cx.data().query("));
+        assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
+
+        assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
+        assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
+
+        assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(
+            DATA_TABLE_EXAMPLE
+                .contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui")
+        );
     }
 
     #[test]

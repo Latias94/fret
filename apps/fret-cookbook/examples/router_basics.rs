@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_router::{
     HistoryAdapter as _, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
     RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, SearchMap,
@@ -44,7 +44,7 @@ struct RouterBasicsView {
 }
 
 impl View for RouterBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         let tree = Arc::new(RouteTree::new(
             RouteNode::new(RouteId::Home, "/")
                 .unwrap()
@@ -108,7 +108,7 @@ impl View for RouterBasicsView {
         Self { store }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let window = cx.window;
 
         let router_model = self.store.router_model().downgrade();
@@ -178,7 +178,7 @@ impl View for RouterBasicsView {
         cx.on_action_notify::<act::RouterForward>(navigate_history_action(
             NavigationAction::Forward,
         ));
-        cx.on_action_notify_models::<act::ClearIntents>({
+        cx.actions().models::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
             move |models| {
                 let Some(intents) = intents.upgrade() else {
@@ -188,18 +188,19 @@ impl View for RouterBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::RouterBack>(|_host, _acx| CommandAvailability::Available);
-        cx.on_action_availability::<act::RouterForward>(|_host, _acx| {
-            CommandAvailability::Available
-        });
-        cx.on_action_availability::<act::ClearIntents>(|_host, _acx| {
-            CommandAvailability::Available
-        });
+        cx.actions()
+            .availability::<act::RouterBack>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::RouterForward>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::ClearIntents>(|_host, _acx| CommandAvailability::Available);
 
-        let snapshot = cx
-            .get_model_cloned(&snapshot_model, Invalidation::Layout)
+        let snapshot = snapshot_model
+            .watch(cx)
+            .invalidation(Invalidation::Layout)
+            .cloned()
             .expect("router snapshot should be readable");
-        let intents = cx.watch_model(&intents_model).layout().value_or_default();
+        let intents = intents_model.watch(cx).layout().value_or_default();
 
         let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
         let can_back = self.store.can_navigate(cx.app, NavigationAction::Back);
@@ -463,7 +464,7 @@ impl View for RouterBasicsView {
     }
 }
 
-fn install_router_commands(app: &mut App) {
+fn install_router_commands(app: &mut KernelApp) {
     fret_router_ui::register_router_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(app);
 }
