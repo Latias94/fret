@@ -281,7 +281,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
       `RegressionEvidenceV1`, keep aggregate `summary_path` / `index_path` /
       `share_manifest_path` / `capabilities_check_path` distinct from item evidence, and retain
       additive alias compatibility for legacy reader spellings
-  - [ ] optional compact pack for sharing.
+  - [x] optional compact pack for sharing,
+    - evidence: `docs/workstreams/diag-fearless-refactor-v2/OPTIONAL_COMPACT_PACK_FOR_SHARING_V1.md`
+    - implementation: campaign/batch share flows emit `share/share.manifest.json` plus optional
+      `share/combined-failures.zip`, per-item `share_artifact` remains the bounded compact-pack
+      pointer, and repro flows keep `repro.ai.zip` / `repro.zip` as the same optional pack family
 
 ## M4 — DevTools GUI alignment
 
