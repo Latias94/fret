@@ -48,8 +48,10 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains(".payload::<act::Toggle>()"));
         assert!(
-            SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
+            SIMPLE_TODO_EXAMPLE
+                .contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {")
         );
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));

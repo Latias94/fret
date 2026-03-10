@@ -498,6 +498,12 @@ pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut ViewCx<'cx, 'a, H>,
 }
 
+/// Grouped payload-action helpers for the default app authoring surface.
+pub struct AppUiPayloadActions<'view, 'cx, 'a, H: UiHost, A> {
+    cx: &'view mut ViewCx<'cx, 'a, H>,
+    _marker: std::marker::PhantomData<A>,
+}
+
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
     where
@@ -543,6 +549,16 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         self.cx.on_action_notify_transient::<A>(transient_key);
     }
 
+    pub fn payload<A>(self) -> AppUiPayloadActions<'view, 'cx, 'a, H, A>
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        AppUiPayloadActions {
+            cx: self.cx,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
     pub fn payload_local_update_if<A, T>(
         self,
         local: &LocalState<T>,
@@ -575,6 +591,26 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::TypedAction,
     {
         self.cx.on_action_availability::<A>(f);
+    }
+}
+
+impl<'view, 'cx, 'a, H: UiHost, A> AppUiPayloadActions<'view, 'cx, 'a, H, A>
+where
+    A: crate::actions::TypedPayloadAction,
+{
+    pub fn local_update_if<T>(
+        self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        T: Any,
+    {
+        self.cx
+            .on_payload_action_notify_local_update_if::<A, T>(local, update);
+    }
+
+    pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static) {
+        self.cx.on_payload_action_notify_locals::<A>(f);
     }
 }
 

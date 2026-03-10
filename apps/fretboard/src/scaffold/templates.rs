@@ -417,17 +417,16 @@ impl View for TodoView {
             TodoFilter::Completed,
         );
 
-        cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(
-            &todos_state,
-            |rows, id| {
+        cx.actions()
+            .payload::<act::Toggle>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
                 } else {
                     false
                 }
-            },
-        );
+            });
 
         let todos_model = todos_state.clone_model();
         let filter_model = filter_state.clone_model();
@@ -902,17 +901,16 @@ impl View for TodoView {
             }
         });
 
-        cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(
-            &todos_state,
-            |rows, id| {
+        cx.actions()
+            .payload::<act::Toggle>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
                 } else {
                     false
                 }
-            },
-        );
+            });
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary);
@@ -1294,7 +1292,8 @@ mod tests {
         assert!(
             src.contains("cx.actions()\n            .local_set::<act::FilterAll, TodoFilter>(")
         );
-        assert!(src.contains("cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
+        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
         assert!(src.contains("cx.data().selector("));
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
@@ -1355,7 +1354,8 @@ mod tests {
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
-        assert!(src.contains("cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
+        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));

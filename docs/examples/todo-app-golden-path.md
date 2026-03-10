@@ -215,7 +215,7 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload_locals(...)` over `cx.actions().models(...)`.
+  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload::<A>().locals(...)` over `cx.actions().models(...)`.
 
 ## Actions (UI -> app logic)
 

@@ -204,7 +204,8 @@ impl View for SimpleTodoV2TargetView {
         });
 
         cx.actions()
-            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload::<act::Toggle>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -214,7 +215,8 @@ impl View for SimpleTodoV2TargetView {
             });
 
         cx.actions()
-            .payload_local_update_if::<act::Remove, Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload::<act::Remove>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before
