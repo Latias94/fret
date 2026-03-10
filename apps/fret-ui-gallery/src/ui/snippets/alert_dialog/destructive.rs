@@ -36,35 +36,39 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
         },
         move |cx| {
-            let icon = shadcn::icon::icon_with(
-                cx,
-                fret_icons::IconId::new_static("lucide.trash-2"),
-                Some(Px(32.0)),
-                None,
-            );
+            shadcn::AlertDialogContent::build(move |cx, children| {
+                let icon = shadcn::icon::icon_with(
+                    cx,
+                    fret_icons::IconId::new_static("lucide.trash-2"),
+                    Some(Px(32.0)),
+                    None,
+                );
 
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Delete chat?").into_element(cx),
-                shadcn::AlertDialogDescription::new(
-                    "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
-                )
-                .into_element(cx),
-            ])
-            .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
-            .into_element(cx);
-
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
-                    .test_id("ui-gallery-alert-dialog-destructive-cancel")
+                children.push(
+                    shadcn::AlertDialogHeader::new(vec![
+                        shadcn::AlertDialogTitle::new("Delete chat?").into_element(cx),
+                        shadcn::AlertDialogDescription::new(
+                            "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
                     .into_element(cx),
-                shadcn::AlertDialogAction::new("Delete", open_for_children.clone())
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .test_id("ui-gallery-alert-dialog-destructive-action")
+                );
+                children.push(
+                    shadcn::AlertDialogFooter::new(vec![
+                        shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                            .test_id("ui-gallery-alert-dialog-destructive-cancel")
+                            .into_element(cx),
+                        shadcn::AlertDialogAction::new("Delete", open_for_children.clone())
+                            .variant(shadcn::ButtonVariant::Destructive)
+                            .test_id("ui-gallery-alert-dialog-destructive-action")
+                            .into_element(cx),
+                    ])
                     .into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer])
+                );
+            })
+                .size(shadcn::AlertDialogContentSize::Sm)
                 .into_element(cx)
                 .test_id("ui-gallery-alert-dialog-destructive-content")
         },

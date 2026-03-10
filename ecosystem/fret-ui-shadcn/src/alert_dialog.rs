@@ -968,28 +968,14 @@ impl AlertDialogContent {
             .p(Space::N6)
             .merge(self.chrome);
 
-        let default_max_w = match self.size {
-            AlertDialogContentSize::Default => Px(512.0),
-            AlertDialogContentSize::Sm => Px(320.0),
-        };
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(default_max_w)
+            .max_w(alert_dialog_content_default_max_width(self.size))
             .min_w_0()
             .min_h_0()
             .merge(self.layout);
 
-        if let Some(max_w) = layout
-            .size
-            .as_ref()
-            .and_then(|s| s.max_width.as_ref())
-            .and_then(|m| match m {
-                fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(&theme)),
-                _ => None,
-            })
-        {
-            crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
-        }
+        register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
@@ -1053,6 +1039,15 @@ where
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).snapshot();
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .max_w(alert_dialog_content_default_max_width(self.size))
+            .min_w_0()
+            .min_h_0()
+            .merge(self.layout.clone());
+        register_alert_dialog_content_max_width_hint(cx, &theme, &layout);
+
         let content = AlertDialogContent::new(collect_built_alert_dialog_children(
             cx,
             self.build
@@ -1067,6 +1062,31 @@ where
         } else {
             content
         }
+    }
+}
+
+fn alert_dialog_content_default_max_width(size: AlertDialogContentSize) -> Px {
+    match size {
+        AlertDialogContentSize::Default => Px(512.0),
+        AlertDialogContentSize::Sm => Px(320.0),
+    }
+}
+
+fn register_alert_dialog_content_max_width_hint<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &ThemeSnapshot,
+    layout: &LayoutRefinement,
+) {
+    if let Some(max_w) = layout
+        .size
+        .as_ref()
+        .and_then(|s| s.max_width.as_ref())
+        .and_then(|m| match m {
+            fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(theme)),
+            _ => None,
+        })
+    {
+        crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
     }
 }
 
@@ -1386,7 +1406,31 @@ impl AlertDialogFooter {
         );
 
         let mut children = children;
-        if sm_breakpoint {
+        if content_is_sm {
+            // Tailwind (size=sm): `grid grid-cols-2 gap-2`
+            // This size-specific layout wins over viewport row stacking; otherwise desktop `sm:`
+            // would incorrectly collapse back to an intrinsic-width flex row.
+            let children: Vec<AnyElement> = children
+                .into_iter()
+                .map(|child| {
+                    let child = apply_alert_dialog_footer_fill_width(child);
+                    ui::v_flex(move |_cx| vec![child])
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                        .into_element(cx)
+                })
+                .collect();
+
+            cx.container(props, move |cx| {
+                vec![
+                    ui::h_flex(move |_cx| children)
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                ]
+            })
+        } else if sm_breakpoint {
             shadcn_layout::container_hstack(
                 cx,
                 props,
@@ -1395,35 +1439,6 @@ impl AlertDialogFooter {
                     .layout(LayoutRefinement::default().w_full())
                     .justify_end()
                     .items_center(),
-                children,
-            )
-        } else if content_is_sm {
-            // Tailwind (size=sm): `grid grid-cols-2 gap-2`
-            let theme = Theme::global(&*cx.app).snapshot();
-            let layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().flex_1().min_w_0().w_full(),
-            );
-            let children: Vec<AnyElement> = children
-                .into_iter()
-                .map(|child| {
-                    cx.container(
-                        ContainerProps {
-                            layout,
-                            ..Default::default()
-                        },
-                        move |_cx| vec![child],
-                    )
-                })
-                .collect();
-
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                shadcn_layout::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_stretch(),
                 children,
             )
         } else {
@@ -1591,6 +1606,44 @@ fn apply_alert_dialog_header_text_alignment(
         .children
         .into_iter()
         .map(|child| apply_alert_dialog_header_text_alignment(child, align))
+        .collect();
+    element
+}
+
+fn apply_alert_dialog_footer_fill_width(mut element: AnyElement) -> AnyElement {
+    let apply_layout = |layout: &mut LayoutStyle| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+        if layout.flex.grow == 0.0 {
+            layout.flex.grow = 1.0;
+        }
+        if layout.flex.shrink == 0.0 {
+            layout.flex.shrink = 1.0;
+        }
+        if matches!(layout.flex.basis, Length::Auto) {
+            layout.flex.basis = Length::Px(Px(0.0));
+        }
+    };
+
+    match &mut element.kind {
+        ElementKind::Container(props) => apply_layout(&mut props.layout),
+        ElementKind::SemanticFlex(props) => apply_layout(&mut props.flex.layout),
+        ElementKind::Pressable(props) => apply_layout(&mut props.layout),
+        ElementKind::Flex(props) => apply_layout(&mut props.layout),
+        ElementKind::Row(props) => apply_layout(&mut props.layout),
+        ElementKind::Column(props) => apply_layout(&mut props.layout),
+        ElementKind::Stack(props) => apply_layout(&mut props.layout),
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(apply_alert_dialog_footer_fill_width)
         .collect();
     element
 }
@@ -2561,6 +2614,7 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        content_size: AlertDialogContentSize,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
@@ -2636,7 +2690,9 @@ mod tests {
                         );
 
                         let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
+                        AlertDialogContent::new(vec![footer])
+                            .size(content_size)
+                            .into_element(cx)
                     },
                 );
 
@@ -2655,6 +2711,7 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        content_size: AlertDialogContentSize,
         content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
@@ -2697,28 +2754,33 @@ mod tests {
                     cx,
                     |_cx| trigger,
                     move |cx| {
-                        let title =
-                            AlertDialogTitle::new("Delete the production project?").into_element(cx);
-                        let description = AlertDialogDescription::new(
-                            "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently, and the content should wrap within the alert dialog panel instead of measuring against the window width.",
-                        )
-                        .into_element(cx);
-                        description_id_out.set(Some(description.id));
-
-                        let header =
-                            AlertDialogHeader::new(vec![title, description]).into_element(cx);
-
-                        let cancel =
-                            AlertDialogCancel::new("Cancel", open_for_cancel.clone()).into_element(cx);
-                        cancel_id_out.set(Some(cancel.id));
-
-                        let action = AlertDialogAction::new("Delete", open_for_action.clone())
-                            .variant(ButtonVariant::Destructive)
+                        let content = AlertDialogContent::build(move |cx, children| {
+                            let title = AlertDialogTitle::new("Delete the production project?")
+                                .into_element(cx);
+                            let description = AlertDialogDescription::new(
+                                "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently, and the content should wrap within the alert dialog panel instead of measuring against the window width.",
+                            )
                             .into_element(cx);
-                        action_id_out.set(Some(action.id));
+                            description_id_out.set(Some(description.id));
+                            children.push(
+                                AlertDialogHeader::new(vec![title, description]).into_element(cx),
+                            );
 
-                        let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
-                        let content = AlertDialogContent::new(vec![header, footer]).into_element(cx);
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+
+                            let action = AlertDialogAction::new("Delete", open_for_action.clone())
+                                .variant(ButtonVariant::Destructive)
+                                .into_element(cx);
+                            action_id_out.set(Some(action.id));
+
+                            children.push(
+                                AlertDialogFooter::new(vec![cancel, action]).into_element(cx),
+                            );
+                        })
+                        .size(content_size)
+                        .into_element(cx);
                         content_id_out.set(Some(content.id));
                         content
                     },
@@ -2785,35 +2847,40 @@ mod tests {
                     cx,
                     |_cx| trigger,
                     move |cx| {
-                        let title = AlertDialogTitle::new("Delete chat?").into_element(cx);
-                        title_id_out.set(Some(title.id));
+                        let content = AlertDialogContent::build(move |cx, children| {
+                            let title = AlertDialogTitle::new("Delete chat?").into_element(cx);
+                            title_id_out.set(Some(title.id));
 
-                        let description = AlertDialogDescription::new(
-                            "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
-                        )
+                            let description = AlertDialogDescription::new(
+                                "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
+                            )
+                            .into_element(cx);
+                            description_id_out.set(Some(description.id));
+
+                            let media = AlertDialogMedia::new(ui::text("!").into_element(cx))
+                                .into_element(cx);
+
+                            children.push(
+                                AlertDialogHeader::new(vec![title, description])
+                                    .media(media)
+                                    .into_element(cx),
+                            );
+
+                            let cancel = AlertDialogCancel::new("Cancel", open_for_cancel.clone())
+                                .into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+
+                            let action = AlertDialogAction::new("Delete", open_for_action.clone())
+                                .variant(ButtonVariant::Destructive)
+                                .into_element(cx);
+                            action_id_out.set(Some(action.id));
+
+                            children.push(
+                                AlertDialogFooter::new(vec![cancel, action]).into_element(cx),
+                            );
+                        })
+                        .size(content_size)
                         .into_element(cx);
-                        description_id_out.set(Some(description.id));
-
-                        let media = AlertDialogMedia::new(ui::text("!").into_element(cx))
-                            .into_element(cx);
-
-                        let header = AlertDialogHeader::new(vec![title, description])
-                            .media(media)
-                            .into_element(cx);
-
-                        let cancel =
-                            AlertDialogCancel::new("Cancel", open_for_cancel.clone()).into_element(cx);
-                        cancel_id_out.set(Some(cancel.id));
-
-                        let action = AlertDialogAction::new("Delete", open_for_action.clone())
-                            .variant(ButtonVariant::Destructive)
-                            .into_element(cx);
-                        action_id_out.set(Some(action.id));
-
-                        let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
-                        let content = AlertDialogContent::new(vec![header, footer])
-                            .size(content_size)
-                            .into_element(cx);
                         content_id_out.set(Some(content.id));
                         content
                     },
@@ -2856,6 +2923,7 @@ mod tests {
                 window,
                 base_bounds,
                 open.clone(),
+                AlertDialogContentSize::Default,
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -2890,6 +2958,7 @@ mod tests {
                 window,
                 sm_bounds,
                 open.clone(),
+                AlertDialogContentSize::Default,
                 cancel_id.clone(),
                 action_id.clone(),
             );
@@ -2909,6 +2978,66 @@ mod tests {
         )
         .expect("action bounds");
         assert!((cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5);
+        assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
+    }
+
+    #[test]
+    fn alert_dialog_small_footer_keeps_two_equal_columns_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                AlertDialogContentSize::Sm,
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        assert!(
+            (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
+            "expected small footer actions to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
+        assert!(
+            (cancel_bounds.size.width.0 - action_bounds.size.width.0).abs() < 1.0,
+            "expected small footer actions to keep equal-width columns, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
         assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
     }
 
@@ -2940,6 +3069,7 @@ mod tests {
                 window,
                 bounds,
                 open.clone(),
+                AlertDialogContentSize::Default,
                 content_id.clone(),
                 description_id.clone(),
                 cancel_id.clone(),
@@ -3373,6 +3503,14 @@ mod tests {
                 "expected {label} to stay inside small media alert dialog content; content={content_bounds:?} node={bounds:?}"
             );
         }
+        assert!(
+            (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5,
+            "expected small media footer buttons to share one row, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
+        assert!(
+            (cancel_bounds.size.width.0 - action_bounds.size.width.0).abs() < 1.0,
+            "expected small media footer buttons to keep equal widths, got cancel={cancel_bounds:?} action={action_bounds:?}"
+        );
     }
 
     fn render_alert_dialog_frame_with_auto_focus_hooks(

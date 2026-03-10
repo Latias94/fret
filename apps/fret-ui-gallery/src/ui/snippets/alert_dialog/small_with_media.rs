@@ -36,37 +36,41 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
         },
         move |cx| {
-            let icon = shadcn::icon::icon_with(
-                cx,
-                fret_icons::IconId::new_static("lucide.bluetooth"),
-                Some(Px(32.0)),
-                None,
-            );
+            shadcn::AlertDialogContent::build(move |cx, children| {
+                let icon = shadcn::icon::icon_with(
+                    cx,
+                    fret_icons::IconId::new_static("lucide.bluetooth"),
+                    Some(Px(32.0)),
+                    None,
+                );
 
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Allow accessory to connect?").into_element(cx),
-                shadcn::AlertDialogDescription::new(
-                    "Do you want to allow the USB accessory to connect to this device?",
-                )
-                .into_element(cx),
-            ])
-            .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
-            .into_element(cx);
-
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::new("Don't allow", open_for_children.clone())
-                    .test_id("ui-gallery-alert-dialog-small-media-cancel")
+                children.push(
+                    shadcn::AlertDialogHeader::new(vec![
+                        shadcn::AlertDialogTitle::new("Allow accessory to connect?")
+                            .into_element(cx),
+                        shadcn::AlertDialogDescription::new(
+                            "Do you want to allow the USB accessory to connect to this device?",
+                        )
+                        .into_element(cx),
+                    ])
+                    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
                     .into_element(cx),
-                shadcn::AlertDialogAction::new("Allow", open_for_children.clone())
-                    .test_id("ui-gallery-alert-dialog-small-media-action")
+                );
+                children.push(
+                    shadcn::AlertDialogFooter::new(vec![
+                        shadcn::AlertDialogCancel::new("Don't allow", open_for_children.clone())
+                            .test_id("ui-gallery-alert-dialog-small-media-cancel")
+                            .into_element(cx),
+                        shadcn::AlertDialogAction::new("Allow", open_for_children.clone())
+                            .test_id("ui-gallery-alert-dialog-small-media-action")
+                            .into_element(cx),
+                    ])
                     .into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer])
-                .size(shadcn::AlertDialogContentSize::Sm)
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-small-media-content")
+                );
+            })
+            .size(shadcn::AlertDialogContentSize::Sm)
+            .into_element(cx)
+            .test_id("ui-gallery-alert-dialog-small-media-content")
         },
     )
 }
