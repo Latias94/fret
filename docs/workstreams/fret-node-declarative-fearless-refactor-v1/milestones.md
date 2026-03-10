@@ -733,6 +733,10 @@ real editors.
   op application through the private `ui/canvas/widget/move_ops/nudge_support.rs` seam, so
   `move_ops/nudge.rs` now mainly keeps delta normalization, snap-to-grid primary selection
   handling, and top-level orchestration explicit.
+- node-resize math now also routes rect utilities and resize-handle geometry/clamp flow through
+  the private `ui/canvas/widget/node_resize/math/rects.rs` and
+  `ui/canvas/widget/node_resize/math/resize.rs` seams, so `node_resize/math.rs` now mainly keeps
+  the root re-exports and focused resize conformance tests explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
