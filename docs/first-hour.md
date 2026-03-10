@@ -53,7 +53,7 @@ The template is intentionally small:
 
 - `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
-- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.on_action_notify_models`, `cx.on_action_notify_transient`, plus local `on_activate*` only when widget glue truly needs it.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.on_action_notify_locals`, `cx.on_action_notify_transient`, plus local `on_activate*` only when widget glue truly needs it. Drop down to `cx.on_action_notify_models` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 ### Path taxonomy
@@ -93,7 +93,7 @@ In the onboarding path, stay on one small surface:
 
 - `LocalState` for view-owned state
 - typed actions for intent
-- `on_action_notify_models` for coordinated writes
+- `on_action_notify_locals` for coordinated LocalState writes
 - `on_action_notify_transient` only for App-bound effects
 - local `on_activate*` only when widget glue truly needs it
 
@@ -194,4 +194,4 @@ If you are unsure, start with `Layout` and tighten later.
 | --- | --- | --- | --- |
 | `hello` | `cargo run -p fretboard -- new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
 | `simple-todo` | `cargo run -p fretboard -- new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
-| `todo` | `cargo run -p fretboard -- new todo` | “best practice baseline” with selectors/queries | being minimal |
+| `todo` | `cargo run -p fretboard -- new todo` | best-practice baseline: selectors + queries + LocalState transactions | being minimal |
