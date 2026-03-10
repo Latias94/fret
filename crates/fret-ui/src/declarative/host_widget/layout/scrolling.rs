@@ -333,6 +333,9 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 break;
             }
             let child = children[0];
+            if tree.node_is_absolute(child) || tree.node_clips_descendant_scroll_overflow(child) {
+                break;
+            }
             let Some(parent_bounds) = tree.node_bounds(observe_root) else {
                 break;
             };
@@ -2652,13 +2655,14 @@ mod tests {
     use super::*;
     use fret_core::{Point, Rect};
     use slotmap::SlotMap;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     #[derive(Default)]
     struct TestOverflowTree {
         children: HashMap<NodeId, Vec<NodeId>>,
         bounds: HashMap<NodeId, Rect>,
-        absolute: std::collections::HashSet<NodeId>,
+        absolute: HashSet<NodeId>,
+        clip_overflow: HashSet<NodeId>,
     }
 
     impl ScrollOverflowTree for TestOverflowTree {
@@ -2674,8 +2678,8 @@ mod tests {
             self.absolute.contains(&node)
         }
 
-        fn node_clips_descendant_scroll_overflow(&mut self, _node: NodeId) -> bool {
-            false
+        fn node_clips_descendant_scroll_overflow(&mut self, node: NodeId) -> bool {
+            self.clip_overflow.contains(&node)
         }
     }
 
@@ -2903,6 +2907,71 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             false,
+            true,
+        );
+
+        assert_eq!(observed.trusted.height, Px(100.0));
+    }
+
+    #[test]
+    fn scroll_observed_overflow_wrapper_peel_stops_before_nested_viewport_boundary() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let nested_viewport = ids.insert(());
+        let deep_overflow = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![nested_viewport]);
+        tree.children.insert(nested_viewport, vec![deep_overflow]);
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(nested_viewport, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(deep_overflow, rect_xywh(0.0, 0.0, 100.0, 320.0));
+        tree.clip_overflow.insert(nested_viewport);
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
+            true,
+        );
+
+        assert!(telemetry.deep_scan_enabled);
+        assert_eq!(observed.trusted.height, Px(100.0));
+    }
+
+    #[test]
+    fn scroll_observed_overflow_wrapper_peel_stops_before_absolute_child() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let absolute_child = ids.insert(());
+        let deep_overflow = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![absolute_child]);
+        tree.children.insert(absolute_child, vec![deep_overflow]);
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(absolute_child, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(deep_overflow, rect_xywh(0.0, 0.0, 100.0, 320.0));
+        tree.absolute.insert(absolute_child);
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, _telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
