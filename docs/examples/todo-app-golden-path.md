@@ -269,8 +269,6 @@ memoizing these computations with selectors instead of:
 High-level sketch:
 
 ```rust,ignore
-use fret_selector::ui::DepsBuilder;
-
 let derived = cx.data().selector(
     |cx| {
         let mut deps = DepsBuilder::new(cx);

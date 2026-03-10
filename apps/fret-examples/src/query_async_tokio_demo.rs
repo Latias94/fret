@@ -94,7 +94,7 @@ impl View for QueryAsyncTokioDemoView {
 
         let fail_mode = fail_mode_state.watch(cx).layout().value_or_default();
 
-        let query_handle = cx.use_query_async(
+        let query_handle = cx.data().query_async(
             demo_key(),
             query_policy(),
             move |token: CancellationToken| async move {

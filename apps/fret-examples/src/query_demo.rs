@@ -65,7 +65,7 @@ impl View for QueryDemoView {
 
         let fail_mode = fail_mode_state.watch(cx).layout().value_or_default();
 
-        let query_handle = cx.use_query(demo_key(), query_policy(), move |_token| {
+        let query_handle = cx.data().query(demo_key(), query_policy(), move |_token| {
             if fail_mode {
                 return Err(QueryError::transient("simulated fetch error"));
             }

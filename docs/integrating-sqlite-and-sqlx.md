@@ -14,6 +14,9 @@ This document shows a practical “golden path” for using `sqlx` (SQLite) with
 - `ecosystem/fret-query` for **read caching** (loading/error/cache/invalidate), and
 - `ecosystem/fret-executor` for **mutations** (write operations + driver-boundary apply).
 
+On the default `fret` app surface, prefer the grouped query helpers (`cx.data().query_async(...)`)
+instead of the raw `ElementContext` extension traits.
+
 ## 0) Provide your DB pool as an app global
 
 Recommended: store the pool in a newtype to make intent explicit.
@@ -60,7 +63,7 @@ Lifecycle reminder (ADR 0225 semantics):
 ```rust
 use std::time::Duration;
 
-use fret_query::ui::QueryElementContextExt as _;
+use fret::app::prelude::*;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
 
 #[derive(Clone)]
@@ -70,7 +73,7 @@ struct TodoRow {
     done: bool,
 }
 
-fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
+fn render_todos(cx: &mut AppUi<'_, '_>) -> Ui {
     let pool = cx
         .app
         .global::<DbPool>()
@@ -89,7 +92,7 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
         ..Default::default()
     };
 
-    let _handle = cx.use_query_async(key, policy, move |_token| async move {
+    let _handle = cx.data().query_async(key, policy, move |_token| async move {
         // Keep fetch closures data-only: return the rows; apply happens on the UI thread.
         let rows = sqlx::query_as!(
             TodoRow,
@@ -110,12 +113,16 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
 
         Ok(rows)
     });
+
+    ui::raw_text("todos").into()
 }
 ```
 
 Notes:
 
-- Enable `fret-query/ui` if you want `ElementContext` sugar like `cx.use_query_async(...)`.
+- On the default app path, enable `fret`'s `state` feature and prefer `cx.data().query_async(...)`.
+- Enable `fret-query/ui` only if you are working directly with `ElementContext` helpers like
+  `cx.use_query_async(...)`.
 - Use a dot-separated namespace with a version suffix (`...v1`) so you can bulk-invalidate safely.
 - SQLite often produces “database is locked” under write contention; treat it as `Transient` and
   rely on retry/backoff instead of surfacing it as a hard failure.
@@ -140,7 +147,8 @@ Use this as the default contract for SQLx + `fret-query`:
 1. Run mutation in background.
 2. Send `MutationCommitted` to inbox.
 3. At driver boundary apply, call `invalidate_namespace("my_app.db.todos.v1")`.
-4. On next render, active `use_query(...)` handles refetch because data is stale.
+4. On next render, active `cx.data().query(...)` / `cx.data().query_async(...)` handles refetch
+   because data is stale.
 
 This keeps read keys stable and avoids key churn.
 

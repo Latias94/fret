@@ -291,6 +291,19 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".run_view::<"));
     }
 
+    fn assert_prefers_grouped_data_surface(src: &str) {
+        assert!(
+            src.contains("cx.data().selector(")
+                || src.contains("cx.data().query(")
+                || src.contains("cx.data().query_async(")
+                || src.contains("cx.data().query_async_local(")
+        );
+        assert!(!src.contains("cx.use_selector("));
+        assert!(!src.contains("cx.use_query("));
+        assert!(!src.contains("cx.use_query_async("));
+        assert!(!src.contains("cx.use_query_async_local("));
+    }
+
     fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
         let expected = format!(
             "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> ViewElements"
@@ -418,6 +431,13 @@ mod authoring_surface_policy_tests {
             TODO_DEMO,
         ] {
             assert_prefers_view_builder_then_run(src);
+        }
+    }
+
+    #[test]
+    fn app_facing_state_examples_prefer_grouped_data_surface() {
+        for src in [QUERY_ASYNC_TOKIO_DEMO, QUERY_DEMO, TODO_DEMO] {
+            assert_prefers_grouped_data_surface(src);
         }
     }
 

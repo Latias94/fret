@@ -316,9 +316,13 @@ consistent inbox + cancellation vocabulary.
 **What it is:** selector-style derived state helpers:
 
 - memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
-- optional UI sugar (`ElementContext::use_selector(...)`) to keep view code readable.
+- optional UI sugar (`ElementContext::use_selector(...)`) plus the `fret` app-surface bridge
+  (`cx.data().selector(...)`) to keep view code readable.
 
-**Feature note:** enable `fret-selector/ui` to use `ElementContext` helpers.
+**Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer
+`cx.data().selector(...)`; `fret::app::prelude::*` also re-exports `DepsBuilder` /
+`DepsSignature`. Enable `fret-selector/ui` only when you are working directly with
+`ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
 introducing “tick models” or storing every derived value in the model store.
@@ -335,10 +339,12 @@ introducing “tick models” or storing every derived value in the model store.
 **Use it when:** you need loading/error/cache/invalidation semantics for remote resources or expensive
 computations.
 
-**Async fetch:** install a `FutureSpawnerHandle` global and use `use_query_async` /
-`use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
+**Async fetch:** install a `FutureSpawnerHandle` global and use `cx.data().query_async(...)` /
+`cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
 
-**Feature note:** enable `fret-query/ui` to use `ElementContext` helpers like `cx.use_query_async(...)`.
+**Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
+grouped `AppUi` data helpers. Enable `fret-query/ui` only when you are working directly with
+`ElementContext` helpers like `cx.use_query_async(...)`.
 
 ### `fret-router` + `fret-router-ui`
 
@@ -350,6 +356,8 @@ UI gallery-scale harnesses.
 Notes:
 
 - `fret-router-ui` provides `RouterUiStore` (router + snapshot model) and pressable-based link/outlet helpers.
+- Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
+  explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).
 
 ### `fret-canvas`

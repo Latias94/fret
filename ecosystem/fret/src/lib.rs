@@ -248,6 +248,8 @@ pub mod app {
 
         #[cfg(feature = "state-query")]
         pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
+        #[cfg(feature = "state-selector")]
+        pub use fret_selector::{DepsSignature, ui::DepsBuilder};
     }
 }
 
@@ -1175,7 +1177,13 @@ mod authoring_surface_policy_tests {
     const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
     const TODO_APP_GOLDEN_PATH: &str =
         include_str!("../../../docs/examples/todo-app-golden-path.md");
+    const AUTHORING_GOLDEN_PATH_V2: &str =
+        include_str!("../../../docs/authoring-golden-path-v2.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
+    const INTEGRATING_TOKIO_AND_REQWEST: &str =
+        include_str!("../../../docs/integrating-tokio-and-reqwest.md");
+    const INTEGRATING_SQLITE_AND_SQLX: &str =
+        include_str!("../../../docs/integrating-sqlite-and-sqlx.md");
     const FEARLESS_REFACTORING: &str = include_str!("../../../docs/fearless-refactoring.md");
     const LIB_RS: &str = include_str!("lib.rs");
 
@@ -1341,6 +1349,21 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
+    }
+
+    #[test]
+    fn integration_docs_prefer_grouped_query_helpers_for_app_surface() {
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async(...)`"));
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async_local(...)`"));
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().query_async(...)`"));
+    }
+
+    #[test]
     fn fearless_refactoring_docs_distinguish_default_and_advanced_surfaces() {
         assert!(FEARLESS_REFACTORING.contains(
             "`impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`"
@@ -1374,6 +1397,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_icons::IconId;"));
         assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
         assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+        assert!(app_prelude.contains("pub use fret_selector::{DepsSignature, ui::DepsBuilder};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("UiIntoElementA11yExt"));
         assert!(app_prelude.contains("UiIntoElementKeyContextExt"));

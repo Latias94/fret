@@ -8,8 +8,10 @@ Fret intentionally does **not** force a specific async runtime. Instead, async w
 - return results as **data-only** messages,
 - be applied on the UI thread at a **driver boundary** (ADR 0175).
 
-`ecosystem/fret-query` supports this by exposing async variants of `use_query`, while keeping the
-apply boundary the same (`InboxDrainRegistry`).
+`ecosystem/fret-query` supports this by exposing async query hooks while keeping the apply
+boundary the same (`InboxDrainRegistry`). On the default `fret` app surface, prefer the grouped
+helpers (`cx.data().query_async(...)`, `cx.data().query_async_local(...)`). The lower-level
+`fret-query/ui` helpers remain available for raw `ElementContext` surfaces.
 
 ## 0) Lifecycle semantics (stale != polling)
 
@@ -35,7 +37,7 @@ without taking a dependency on any particular runtime.
 
 Cargo features:
 
-- enable `fret-query/ui` (for `ElementContext` sugar),
+- enable `fret`'s `state` feature if you want `AppUi` helpers (`cx.data().query_async(...)`),
 - enable `fret-query/tokio` (for `TokioSpawner`), and
 - add a direct `tokio` dependency in your app crate.
 
@@ -64,7 +66,7 @@ Notes:
 
 Cargo features:
 
-- enable `fret-query/ui` (for `ElementContext` sugar),
+- enable `fret`'s `state` feature if you want `AppUi` helpers (`cx.data().query_async_local(...)`),
 - enable `fret-query/wasm` (for `WasmSpawner`).
 
 Install:
@@ -80,18 +82,17 @@ fn install_wasm_spawner(app: &mut fret_app::App) {
 }
 ```
 
-## 2) Use `use_query_async` / `use_query_async_local`
+## 2) Use `cx.data().query_async(...)` / `cx.data().query_async_local(...)`
 
-### Tokio + Reqwest example
+### Tokio + Reqwest example (default app surface)
 
 ```rust
 use std::time::Duration;
 
-use fret_query::ui::QueryElementContextExt as _;
+use fret::app::prelude::*;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
-use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
-fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
+fn render_user_card(cx: &mut AppUi<'_, '_>) -> Ui {
     let key = QueryKey::<String>::new("my_app.http.user.v1", &123u64);
     let policy = QueryPolicy {
         retry: QueryRetryPolicy::exponential(
@@ -102,7 +103,7 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
         ..Default::default()
     };
 
-    let handle = cx.use_query_async(key, policy, |_token| async move {
+    let handle = cx.data().query_async(key, policy, |_token| async move {
         let resp = reqwest::get("https://example.com")
             .await
             .map_err(|e| QueryError::transient(e.to_string()))?;
@@ -113,33 +114,37 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
         Ok(text)
     });
 
-    let state = handle.paint_query(cx).value_or_default();
+    let state = handle.watch(cx).paint().value_or_default();
     match state.status {
         QueryStatus::Loading => { /* render loading */ }
         QueryStatus::Success => { /* render data */ }
         QueryStatus::Error => { /* render error */ }
         QueryStatus::Idle => {}
     }
+
+    ui::raw_text("user card").into()
 }
 ```
 
-For `ElementContext`-based declarative surfaces, prefer keeping query reads on the handle side via
-`QueryHandleWatchExt` (`handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
-instead of reopening `handle.model()`.
+If you are authoring directly against `ElementContext`, the equivalent low-level helpers are
+`cx.use_query_async(...)` and `cx.use_query_async_local(...)` from `fret-query/ui`.
 
-### wasm local futures
+### wasm local futures (default app surface)
 
-On wasm, many futures are `!Send` (because they capture JS handles). Use `use_query_async_local`:
+On wasm, many futures are `!Send` (because they capture JS handles). Use
+`cx.data().query_async_local(...)`:
 
 ```rust
-use fret_query::ui::QueryElementContextExt as _;
+use fret::app::prelude::*;
 use fret_query::{QueryKey, QueryPolicy};
 
-fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
+fn render_local_value(cx: &mut AppUi<'_, '_>) -> Ui {
     let key = QueryKey::<u32>::new("my_app.wasm.resource.v1", &0u32);
-    let _ = cx.use_query_async_local(key, QueryPolicy::default(), |_token| async {
+    let _ = cx.data().query_async_local(key, QueryPolicy::default(), |_token| async {
         Ok(42u32)
     });
+
+    ui::raw_text("local").into()
 }
 ```
 
@@ -169,6 +174,7 @@ debuggable.
 ## 4) Troubleshooting
 
 - If you see `QueryStatus::Error` with a message about a missing `FutureSpawnerHandle`, ensure you
-  installed the global before calling `use_query_async` / `use_query_async_local`.
+  installed the global before calling `cx.data().query_async(...)` /
+  `cx.data().query_async_local(...)` (or the equivalent low-level `cx.use_query_async*` helpers).
 - If you see stale results ignored: this is expected when multiple inflight requests complete out
   of order. Only the latest inflight ID is applied.

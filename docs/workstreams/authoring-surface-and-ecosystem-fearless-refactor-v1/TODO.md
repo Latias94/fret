@@ -106,8 +106,15 @@ Companion docs:
 - [ ] Migrate `fret-ui-shadcn` to the component surface + explicit optional app integration seams.
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
 - [ ] Migrate `fret-selector` to the grouped app data surface.
+  - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
+  - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
+  - [ ] Audit remaining advanced/component call sites and keep them explicit.
 - [ ] Migrate `fret-query` to the grouped app data surface.
+  - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.
+  - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
+  - [ ] Audit remaining advanced/component call sites and keep them explicit.
 - [ ] Migrate `fret-router` to the new explicit app/advanced extension seams.
+  - [ ] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
 - [ ] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
 
 ## M4 — Migrate docs, templates, and examples
@@ -138,6 +145,7 @@ Companion docs:
 - [x] Add a gate that templates only use blessed app-surface APIs.
 - [x] Add source gates that keep default docs/examples/templates on `view::<V>()?.run()`.
 - [x] Add a gate that README/docs/first-hour agree on the default action model.
+- [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
 - [ ] Keep layering checks green.
 

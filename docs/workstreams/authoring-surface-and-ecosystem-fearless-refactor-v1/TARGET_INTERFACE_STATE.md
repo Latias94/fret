@@ -57,6 +57,7 @@ Target exports:
 - `UiChild`
 - `ui`
 - `shadcn` (feature-gated)
+- `DepsBuilder` / `DepsSignature` (feature-gated with `state-selector`)
 - `ThemeSnapshot`
 - typed action/payload action macros plus `CommandId`
 
@@ -195,7 +196,10 @@ Target operations:
 Target operations:
 
 - `selector(...)`
+- selector dependency building through `DepsBuilder` from `fret::app::prelude::*`
 - `query(...)`
+- `query_async(...)`
+- `query_async_local(...)`
 - future router/state-library integration hooks
 
 ### `ui.effects()`
