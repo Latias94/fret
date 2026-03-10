@@ -1174,7 +1174,7 @@ impl AlertDialogHeader {
             .map(|child| apply_alert_dialog_header_text_alignment(child, text_align))
             .collect();
         let Some(media) = self.media else {
-            return shadcn_layout::container_vstack(
+            return shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
@@ -1190,7 +1190,7 @@ impl AlertDialogHeader {
         };
 
         if left_aligned {
-            let text = shadcn_layout::container_vstack(
+            let text = shadcn_layout::container_vstack_fill_width(
                 cx,
                 decl_style::container_props(
                     Theme::global(&*cx.app),
@@ -1216,7 +1216,7 @@ impl AlertDialogHeader {
         } else {
             let mut children = children;
             children.insert(0, media);
-            shadcn_layout::container_vstack(
+            shadcn_layout::container_vstack_fill_width(
                 cx,
                 props,
                 shadcn_layout::VStackProps::default()
@@ -2904,6 +2904,196 @@ mod tests {
                 && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
             "expected action button to stay inside alert dialog content; content={content_bounds:?} action={action_bounds:?}"
         );
+    }
+
+    #[test]
+    fn alert_dialog_panel_keeps_text_and_footer_within_compact_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "alert-dialog-compact-panel",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let open_for_children = open.clone();
+                    let alert = AlertDialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            let header = AlertDialogHeader::new(vec![
+                                AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                                AlertDialogDescription::new(
+                                    "This action cannot be undone. This will permanently delete your account from our servers.",
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx);
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::new("Cancel", open_for_children.clone())
+                                    .into_element(cx),
+                                AlertDialogAction::new("Continue", open_for_children.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx);
+
+                            AlertDialogContent::new(vec![header, footer]).into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            trigger_id.expect("trigger id")
+        };
+
+        let _trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alert_dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::AlertDialog)
+            .expect("alert dialog semantics node");
+        let title = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Heading
+                    && n.label.as_deref() == Some("Are you absolutely sure?")
+            })
+            .expect("title semantics node");
+        let description = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref()
+                        == Some(
+                            "This action cannot be undone. This will permanently delete your account from our servers.",
+                        )
+            })
+            .expect("description semantics node");
+        let cancel = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Cancel")
+            })
+            .expect("cancel button semantics node");
+        let action = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Continue")
+            })
+            .expect("action button semantics node");
+
+        let panel_left = alert_dialog.bounds.origin.x.0 - 0.5;
+        let panel_right = alert_dialog.bounds.origin.x.0 + alert_dialog.bounds.size.width.0 + 0.5;
+        let panel_top = alert_dialog.bounds.origin.y.0 - 0.5;
+        let panel_bottom = alert_dialog.bounds.origin.y.0 + alert_dialog.bounds.size.height.0 + 0.5;
+
+        assert!(
+            alert_dialog.bounds.size.width.0 <= 512.5,
+            "expected alert dialog width to stay near shadcn's sm:max-w-lg, got {:?}",
+            alert_dialog.bounds
+        );
+        assert!(
+            alert_dialog.bounds.size.height.0 <= 260.0,
+            "expected alert dialog height to remain compact for header+footer content, got {:?}",
+            alert_dialog.bounds
+        );
+        for (label, node) in [
+            ("title", title),
+            ("description", description),
+            ("cancel", cancel),
+            ("action", action),
+        ] {
+            assert!(
+                node.bounds.origin.x.0 >= panel_left
+                    && node.bounds.origin.x.0 + node.bounds.size.width.0 <= panel_right
+                    && node.bounds.origin.y.0 >= panel_top
+                    && node.bounds.origin.y.0 + node.bounds.size.height.0 <= panel_bottom,
+                "expected {label} to stay inside alert dialog panel; panel={:?} node={:?}",
+                alert_dialog.bounds,
+                node.bounds
+            );
+        }
     }
 
     fn render_alert_dialog_frame_with_auto_focus_hooks(
