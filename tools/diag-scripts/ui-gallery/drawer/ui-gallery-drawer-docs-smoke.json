@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-drawer-docs-smoke",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
   },
   "steps": [
     {
@@ -54,7 +54,6 @@
         "target": { "kind": "test_id", "id": "ui-gallery-section-notes-title" }
       }
     },
-
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-drawer-demo-trigger" }
@@ -84,7 +83,25 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-drawer-api-reference-content" },
+      "delta_y": 220.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-drawer-api-reference-content" }
+      }
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "ui-gallery-drawer-docs-api-reference" },
     { "type": "capture_bundle", "label": "ui-gallery-drawer-docs-smoke" }
   ]
 }
-
