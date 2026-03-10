@@ -391,7 +391,10 @@ Acceptance:
 Status:
 
 - Done for the minimal surface (`list` + `show` are implemented).
-- Still open: authoring documentation once campaign definitions stop being Rust-only.
+- Manifest-backed authoring is now documented in `tools/diag-campaigns/README.md`.
+- `diag campaign validate` now provides a first authoring-time validation path for repo-owned or
+  explicit ad hoc campaign manifests.
+- Still open: richer authoring UX only if the current JSON + validate flow proves insufficient.
 
 ## 12) Initial recommendation for naming
 

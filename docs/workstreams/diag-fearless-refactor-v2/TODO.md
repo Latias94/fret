@@ -368,6 +368,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [ ] Expand the campaign surface beyond the first skeleton:
   - [x] move campaign definitions behind an explicit resolver seam (`registry/campaigns.rs`),
   - [x] promote that seam from built-in-only registry to manifest-backed resolver (`tools/diag-campaigns/*.json`),
+  - [x] add a maintainer-facing manifest validation entrypoint (`diag campaign validate`) that can
+    validate either repo-owned manifests or explicit ad hoc manifest paths without preloading the
+    full workspace registry,
   - [ ] decide whether to keep JSON-only or add TOML / generated registry inputs later,
   - [x] add first-pass campaign metadata (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
   - [x] add direct script items in addition to suites,
@@ -389,6 +392,12 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] run suite/campaign,
   - [x] inspect aggregate summary,
   - [x] pack/share evidence.
+- [ ] Add one cheap repo-owned campaign authoring preflight:
+  - [x] land `diag campaign validate` for local authoring and ad hoc manifest checks,
+  - [ ] decide whether the first always-on enforcement should live in `diag doctor`, CI, or a
+    dedicated maintainer script,
+  - [ ] avoid inventing a richer manifest UX before the current JSON authoring flow proves
+    insufficient.
 
 
 ## M5 — Documentation consolidation

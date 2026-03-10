@@ -36,7 +36,9 @@ The following are now already true:
 - policy mismatches now surface as `skipped_policy` with `capability.missing`,
 - campaign/batch outputs now distinguish policy skips from ordinary failures,
 - campaign capability loading now reuses the shared filesystem capability loader,
-- `diag doctor` now reports normalized capabilities from that same resolved source.
+- `diag doctor` now reports normalized capabilities from that same resolved source,
+- campaign authoring now has a dedicated `diag campaign validate` entrypoint for repo-owned or
+  explicit ad hoc manifests.
 
 This means the highest-value next work is no longer "make campaign capability preflight exist".
 
@@ -62,6 +64,8 @@ Recommended work:
   - `campaigns_skipped_policy`,
   - `capabilities_check_path`,
   - capability source path reporting,
+- decide whether `diag campaign validate` should stay as a maintainer-only command or become the
+  first cheap always-on preflight in CI / doctor tooling,
 - audit any non-CLI consumer that reads campaign/batch outputs and make sure it does not collapse
   policy skips back into generic failures,
 - keep the wording aligned across CLI, docs, GUI, MCP, and machine-readable reports.

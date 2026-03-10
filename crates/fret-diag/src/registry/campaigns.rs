@@ -392,7 +392,9 @@ fn normalize_lowercase_string_list(values: Vec<String>) -> Vec<String> {
     values
 }
 
-fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition>, String> {
+pub(crate) fn load_manifest_campaigns_from_dir(
+    dir: &Path,
+) -> Result<Vec<CampaignDefinition>, String> {
     let mut manifest_paths: Vec<PathBuf> = fs::read_dir(dir)
         .map_err(|e| {
             format!(
@@ -406,10 +408,16 @@ fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition
         .collect();
     manifest_paths.sort();
 
+    load_manifest_campaigns_from_paths(&manifest_paths)
+}
+
+pub(crate) fn load_manifest_campaigns_from_paths(
+    manifest_paths: &[PathBuf],
+) -> Result<Vec<CampaignDefinition>, String> {
     let mut seen_paths_by_id = BTreeMap::<String, PathBuf>::new();
     let mut campaigns = Vec::new();
     for manifest_path in manifest_paths {
-        let campaign = load_manifest_campaign(&manifest_path)?;
+        let campaign = load_manifest_campaign(manifest_path)?;
         if let Some(previous) = seen_paths_by_id.insert(campaign.id.clone(), manifest_path.clone())
         {
             return Err(format!(
@@ -425,7 +433,7 @@ fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition
     Ok(campaigns)
 }
 
-fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
+pub(crate) fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
     let bytes = fs::read(path)
         .map_err(|e| format!("failed to read campaign manifest {}: {}", path.display(), e))?;
     let manifest: CampaignManifestV1 = serde_json::from_slice(&bytes)

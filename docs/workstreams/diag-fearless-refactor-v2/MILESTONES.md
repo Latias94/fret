@@ -319,6 +319,12 @@ Progress update:
     for selected `skipped_policy` summaries,
   - MCP dashboard coverage now locks shared `skipped_policy` counters and `non-passing summaries`
     wording,
+- campaign authoring now also has a first dedicated validation entrypoint:
+  - `diag campaign validate` reuses the manifest loader contract already used by registry loading,
+  - the command can validate either the repo-owned `tools/diag-campaigns/*.json` set or explicit
+    ad hoc manifest paths,
+  - subcommand dispatch now avoids preloading the full workspace registry for validation-only runs,
+  - maintainer docs now include validate examples instead of leaving manifest checks implicit,
 - a bounded DevTools/MCP raw-JSON defer audit now also exists, explicitly separating app-local text
   holders from shared persisted artifact vocabulary,
 - the next value in this area is finishing residual naming adoption rather than another terminology

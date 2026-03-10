@@ -2,7 +2,9 @@ use super::*;
 
 use crate::registry::campaigns::{
     CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
-    CampaignRegistry, campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
+    CampaignRegistry, campaign_to_json, campaigns_dir_from_workspace_root, item_kind_str,
+    lane_to_str, load_manifest_campaigns_from_dir, load_manifest_campaigns_from_paths, parse_lane,
+    source_kind_str,
 };
 use crate::regression_summary::{
     DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
@@ -16,6 +18,7 @@ const DIAG_CAMPAIGN_RESULT_KIND_V1: &str = "diag_campaign_result";
 const DIAG_CAMPAIGN_BATCH_MANIFEST_KIND_V1: &str = "diag_campaign_batch_manifest";
 const DIAG_CAMPAIGN_BATCH_RESULT_KIND_V1: &str = "diag_campaign_batch_result";
 const DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1: &str = "diag_campaign_share_manifest";
+const DIAG_CAMPAIGN_VALIDATE_RESULT_KIND_V1: &str = "diag_campaign_validate_result";
 
 #[derive(Debug, Clone)]
 pub(crate) struct CampaignCmdContext {
@@ -234,6 +237,7 @@ enum CampaignSubcommand {
     Show,
     Share,
     Run,
+    Validate,
 }
 
 #[derive(Debug, Clone)]
@@ -280,6 +284,18 @@ struct CampaignShareOptions {
 struct CampaignShareSelection {
     summary_path: PathBuf,
     root_dir: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+enum CampaignValidateSource {
+    Dir(PathBuf),
+    Paths(Vec<PathBuf>),
+}
+
+#[derive(Debug, Clone)]
+struct CampaignValidateSelection {
+    source: CampaignValidateSource,
+    campaigns: Vec<CampaignDefinition>,
 }
 
 #[derive(Debug, Clone)]
@@ -568,12 +584,9 @@ fn build_campaign_item_suite_context(
 }
 
 pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
-    let registry = CampaignRegistry::load_from_workspace_root(&ctx.workspace_root)?;
     let subcommand = resolve_campaign_subcommand(&ctx.rest)?;
 
     match subcommand {
-        CampaignSubcommand::List => cmd_campaign_list(&registry, &ctx.rest[1..], ctx.stats_json),
-        CampaignSubcommand::Show => cmd_campaign_show(&registry, &ctx.rest[1..], ctx.stats_json),
         CampaignSubcommand::Share => cmd_campaign_share(
             &ctx.rest[1..],
             &ctx.workspace_root,
@@ -581,9 +594,24 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
             ctx.stats_top,
             ctx.warmup_frames,
         ),
-        CampaignSubcommand::Run => {
-            let run_rest = ctx.rest[1..].to_vec();
-            cmd_campaign_run(&registry, &run_rest, ctx.into())
+        CampaignSubcommand::Validate => {
+            cmd_campaign_validate(&ctx.rest[1..], &ctx.workspace_root, ctx.stats_json)
+        }
+        CampaignSubcommand::List | CampaignSubcommand::Show | CampaignSubcommand::Run => {
+            let registry = CampaignRegistry::load_from_workspace_root(&ctx.workspace_root)?;
+            match subcommand {
+                CampaignSubcommand::List => {
+                    cmd_campaign_list(&registry, &ctx.rest[1..], ctx.stats_json)
+                }
+                CampaignSubcommand::Show => {
+                    cmd_campaign_show(&registry, &ctx.rest[1..], ctx.stats_json)
+                }
+                CampaignSubcommand::Run => {
+                    let run_rest = ctx.rest[1..].to_vec();
+                    cmd_campaign_run(&registry, &run_rest, ctx.into())
+                }
+                CampaignSubcommand::Share | CampaignSubcommand::Validate => unreachable!(),
+            }
         }
     }
 }
@@ -591,8 +619,7 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
 fn resolve_campaign_subcommand(rest: &[String]) -> Result<CampaignSubcommand, String> {
     let Some(sub) = rest.first().map(|value| value.as_str()) else {
         return Err(
-            "missing campaign subcommand (try: fretboard diag campaign list | show <id> | run <id>)"
-                .to_string(),
+            "missing campaign subcommand (try: fretboard diag campaign list | show <id> | validate [<manifest.json>...] | run <id>)".to_string(),
         );
     };
 
@@ -601,8 +628,109 @@ fn resolve_campaign_subcommand(rest: &[String]) -> Result<CampaignSubcommand, St
         "show" => Ok(CampaignSubcommand::Show),
         "share" => Ok(CampaignSubcommand::Share),
         "run" => Ok(CampaignSubcommand::Run),
+        "validate" => Ok(CampaignSubcommand::Validate),
         other => Err(format!("unknown diag campaign subcommand: {other}")),
     }
+}
+
+fn resolve_campaign_validate_selection(
+    rest: &[String],
+    workspace_root: &Path,
+) -> Result<CampaignValidateSelection, String> {
+    if rest.is_empty() {
+        let dir = campaigns_dir_from_workspace_root(workspace_root);
+        if !dir.is_dir() {
+            return Err(format!(
+                "campaign manifests dir does not exist: {}",
+                dir.display()
+            ));
+        }
+        let campaigns = load_manifest_campaigns_from_dir(&dir)?;
+        return Ok(CampaignValidateSelection {
+            source: CampaignValidateSource::Dir(dir),
+            campaigns,
+        });
+    }
+
+    let paths = rest
+        .iter()
+        .map(|raw| crate::resolve_path(workspace_root, PathBuf::from(raw)))
+        .collect::<Vec<_>>();
+    let campaigns = load_manifest_campaigns_from_paths(&paths)?;
+    Ok(CampaignValidateSelection {
+        source: CampaignValidateSource::Paths(paths),
+        campaigns,
+    })
+}
+
+fn campaign_validate_to_json(selection: &CampaignValidateSelection) -> serde_json::Value {
+    let mut payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": DIAG_CAMPAIGN_VALIDATE_RESULT_KIND_V1,
+        "count": selection.campaigns.len(),
+        "campaigns": selection
+            .campaigns
+            .iter()
+            .map(campaign_to_json)
+            .collect::<Vec<_>>(),
+    });
+    if let Some(object) = payload.as_object_mut() {
+        match &selection.source {
+            CampaignValidateSource::Dir(dir) => {
+                object.insert("source_kind".to_string(), serde_json::json!("dir"));
+                object.insert(
+                    "dir".to_string(),
+                    serde_json::json!(dir.display().to_string()),
+                );
+            }
+            CampaignValidateSource::Paths(paths) => {
+                object.insert("source_kind".to_string(), serde_json::json!("paths"));
+                object.insert(
+                    "paths".to_string(),
+                    serde_json::json!(
+                        paths
+                            .iter()
+                            .map(|path| path.display().to_string())
+                            .collect::<Vec<_>>()
+                    ),
+                );
+            }
+        }
+    }
+    payload
+}
+
+fn format_campaign_validate_success(selection: &CampaignValidateSelection) -> String {
+    match &selection.source {
+        CampaignValidateSource::Dir(dir) => format!(
+            "campaign validate: ok (count={}, dir={})",
+            selection.campaigns.len(),
+            dir.display()
+        ),
+        CampaignValidateSource::Paths(paths) if paths.len() == 1 => format!(
+            "campaign validate: ok (count=1, manifest={})",
+            paths[0].display()
+        ),
+        CampaignValidateSource::Paths(paths) => format!(
+            "campaign validate: ok (count={}, manifests={})",
+            selection.campaigns.len(),
+            paths.len()
+        ),
+    }
+}
+
+fn cmd_campaign_validate(rest: &[String], workspace_root: &Path, json: bool) -> Result<(), String> {
+    let selection = resolve_campaign_validate_selection(rest, workspace_root)?;
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&campaign_validate_to_json(&selection))
+                .map_err(|e| e.to_string())?
+        );
+    } else {
+        println!("{}", format_campaign_validate_success(&selection));
+    }
+    Ok(())
 }
 
 fn cmd_campaign_share(
@@ -3766,6 +3894,84 @@ mod tests {
 
         assert!(missing.contains("missing campaign subcommand"));
         assert!(unknown.contains("unknown diag campaign subcommand: mystery"));
+    }
+
+    #[test]
+    fn resolve_campaign_subcommand_accepts_validate() {
+        let subcommand = resolve_campaign_subcommand(&["validate".to_string()]).unwrap();
+        assert_eq!(subcommand, CampaignSubcommand::Validate);
+    }
+
+    #[test]
+    fn campaign_validate_explicit_paths_do_not_preload_workspace_registry() {
+        let root = temp_test_root("validate-explicit");
+        let manifests_dir = crate::registry::campaigns::campaigns_dir_from_workspace_root(&root);
+        std::fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        std::fs::write(
+            manifests_dir.join("broken.json"),
+            r#"{
+  "schema_version": 99,
+  "kind": "diag_campaign_manifest",
+  "id": "broken",
+  "description": "Broken manifest.",
+  "lane": "smoke",
+  "items": [{ "kind": "suite", "value": "ui-gallery-lite-smoke" }]
+}"#,
+        )
+        .expect("write broken manifest");
+
+        let explicit_manifest = root.join("adhoc-validate.json");
+        std::fs::write(
+            &explicit_manifest,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "adhoc-validate",
+  "description": "Ad-hoc manifest validation.",
+  "lane": "smoke",
+  "items": [{ "kind": "suite", "value": "ui-gallery-lite-smoke" }]
+}"#,
+        )
+        .expect("write explicit manifest");
+
+        let ctx = sample_campaign_cmd_context(
+            &root,
+            vec![
+                "validate".to_string(),
+                explicit_manifest.display().to_string(),
+            ],
+        );
+
+        let result = cmd_campaign(ctx);
+
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn campaign_validate_defaults_to_workspace_manifest_dir() {
+        let root = temp_test_root("validate-default");
+        let manifests_dir = crate::registry::campaigns::campaigns_dir_from_workspace_root(&root);
+        std::fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        std::fs::write(
+            manifests_dir.join("broken.json"),
+            r#"{
+  "schema_version": 99,
+  "kind": "diag_campaign_manifest",
+  "id": "broken",
+  "description": "Broken manifest.",
+  "lane": "smoke",
+  "items": [{ "kind": "suite", "value": "ui-gallery-lite-smoke" }]
+}"#,
+        )
+        .expect("write broken manifest");
+
+        let ctx = sample_campaign_cmd_context(&root, vec!["validate".to_string()]);
+        let err = cmd_campaign(ctx).unwrap_err();
+
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(err.contains("invalid campaign manifest schema_version"));
+        assert!(err.contains("broken.json"));
     }
 
     #[test]

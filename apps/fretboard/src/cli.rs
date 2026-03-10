@@ -191,6 +191,8 @@ Examples:
   fretboard diag summarize --dir target/fret-diag/campaigns/ui-gallery-pr
   fretboard diag dashboard --dir target/fret-diag/campaigns/ui-gallery-pr --top 10
   fretboard diag campaign list --lane smoke --tag ui-gallery --platform native
+  fretboard diag campaign validate
+  fretboard diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json --json
   fretboard diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag campaign share target/fret-diag/campaign-batches/filtered-lane-smoke-tag-ui-gallery-platform-native-2-campaigns/1234
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
