@@ -273,8 +273,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - implementation: `diag suite`, `diag repeat`, `diag perf`, and `diag matrix`
       now emit `regression.summary.json`
   - [x] stable reason-code contract documented at the repo level,
-    - in progress: adoption is now partially landed in shared summary/dashboard/campaign wording,
-      but residual consumer/path naming still needs one review pass
+    - evidence: `docs/workstreams/diag-fearless-refactor-v2/REASON_CODE_CONSUMER_ALIGNMENT_AUDIT_V1.md`
+    - implementation: `RegressionSummaryV1`, `diag_summarize`, `diag_dashboard`, DevTools GUI, and
+      MCP all consume normalized `reason_code` / `top_reason_codes` directly; residual
+      `error_reason_code` / `reason_code_counts` fields are now explicitly classified as
+      producer-local report naming rather than shared consumer drift
   - [x] evidence bundle/artifact paths,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
     - implementation: orchestrated outputs keep canonical item evidence fields in
