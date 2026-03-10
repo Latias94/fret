@@ -11,8 +11,6 @@ Related:
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
-- App-entry release evidence tracker: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
-- App-entry release handoff note: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
@@ -86,8 +84,8 @@ Adoption note (as of 2026-03-07):
   invalidation tracks are in maintenance mode, `AFA-postv1-001` remains the main architectural
   question, and the remaining cleanup work belongs to the staged hard-delete/quarantine sequence.
 - App-entry cleanup update (as of 2026-03-09): `APP_ENTRY_REMOVAL_PLAYBOOK.md` now records the
-  concrete delete-vs-quarantine execution steps for `App::ui*`, so the hard-delete track has a
-  ready-to-run patch plan once the deprecation window and published-release preconditions are met.
+  historical execution steps for `App::ui*`, so the repo keeps a concrete record of the pre-release
+  hard delete instead of reconstructing it from later diffs.
 - Compat-runner cleanup update (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now
   records the quarantine-first execution steps for `run_native_with_compat_driver(...)`, so future
   facade reduction no longer has to reconstruct how to move that advanced seam out of the default
@@ -108,19 +106,13 @@ Adoption note (as of 2026-03-07):
   entrypoint, so the repo has a single “start here” note before opening the deeper matrix/checklist
   docs.
 - Endgame outlook update (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now turns
-  the hard-delete/quarantine sequence into a blunt execution forecast: `App::ui*` is the only lane
-  that currently looks truly headed toward removal, while compat runner, `use_state`, and
-  command-first retained seams are all currently expected to stay unless a later explicit product
-  decision reopens them.
-- App-entry release-evidence update (as of 2026-03-09):
-  `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` now turns the remaining app-entry release
-  blocker into an explicit checklist: source deprecation and the 2026-06-09 minimum window are
-  already recorded, but the repo still needs one published deprecated `fret` release before the
-  final delete-vs-quarantine patch is eligible.
-- App-entry release-handoff update (as of 2026-03-10):
-  `APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md` now tells release operators exactly which
-  version/date/anchor fields must be copied back into the tracker after publish, and
-  `docs/release/v0.1.0-release-checklist.md` now includes that post-release verification step.
+  the hard-delete/quarantine sequence into a blunt execution forecast: `App::ui*` is now a closed
+  lane, while compat runner, `use_state`, and command-first retained seams are all currently
+  expected to stay unless a later explicit product decision reopens them.
+- App-entry hard-delete update (as of 2026-03-10):
+  `ecosystem/fret/src/app_entry.rs` no longer exports `App::ui*`, the crate README/rustdoc now
+  teach only the view-based entry path, and the app-entry lane is closed pre-release rather than
+  waiting on a published deprecation window.
 - Command-first retained-seam update (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
   pressure is split between permanent mechanism/catalog seams and intentionally retained
@@ -280,12 +272,12 @@ Post-v1 direction (recommended):
   - narrow UI macros only if builder-first authoring still leaves repeated structural boilerplate; they are optional polish, not a v2 prerequisite.
   - after default-path convergence, shift the next milestone from helper design to productization: onboarding clarity, comparison/advanced-surface positioning, visual defaults, and a future deprecation plan.
   - The current deprecation/hard-delete blockers are now named explicitly in `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`: app-entry closure surfaces, compat runner entry points, `use_state` as a user-visible alias, and `CommandId`-first widget contracts.
-  - The app-entry blocker now has a concrete recommended direction in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`: `view::<V>()` as the only default path, `.ui(...)` as a temporary advanced bridge on a staged path to deprecation/removal.
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` now records that the in-tree `App::ui*` callers have been migrated; the remaining work is deprecation/removal sequencing rather than demo conversion.
+  - The app-entry lane now has a concrete final direction in `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`: `view::<V>()` is the only app-entry path on `fret`, and the closure-root builder path is gone from the facade.
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md` records that the in-tree `App::ui*` callers had already been migrated before the hard delete landed.
   - Progress update (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now deprecates the closure-root app-entry methods, and `ecosystem/fret/src/lib.rs` plus `ecosystem/fret/README.md` are locked by an in-crate policy test so `view::<V>()` remains the only default path.
-  - Deprecation-window update (as of 2026-03-09): `APP_ENTRY_POLICY_DECISION_DRAFT.md` now fixes the minimum downstream window for `App::ui*` at 2026-03-09 → earliest removal 2026-06-09, and still requires at least one published release carrying the deprecation warnings before hard delete is allowed.
-  - Execution update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now turns those blockers into an ordered cleanup sequence, with `App::ui*` identified as the closest hard-delete/quarantine candidate and the compat runner / `use_state` / command-first widget decisions left as explicit next policy checkpoints.
-  - Status-matrix update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md` now sharpens that sequence further: `App::ui*` is waiting on deprecation timing rather than migration work, compat runner and `use_state` are currently retained advanced/non-default seams, and the remaining command-first widget family is the main implementation-scoped cleanup track.
+  - Hard-delete update (as of 2026-03-10): `ecosystem/fret/src/app_entry.rs` no longer exposes `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`, which closes the app-entry lane before the first public release.
+  - Execution update (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now treats `App::ui*` as a closed historical lane and leaves compat runner / `use_state` / command-first widgets as the remaining explicit policy checkpoints.
+  - Status-matrix update (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md` now shows `App::ui*` as removed pre-release, with compat runner and `use_state` retained and the remaining command-first widget family as the main implementation-scoped cleanup track.
   - Compat-runner update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md` now shows that `run_native_with_compat_driver(...)` still serves three real in-tree caller families (plot/chart demos, low-level renderer/asset demos, advanced shell demos), so the next step is a keep-vs-quarantine policy call rather than an immediate hard delete.
   - Compat-runner decision draft (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` as an advanced low-level interop seam for now, updating docs to mark it as non-default, and deferring any hard delete until a clearer quarantine boundary or replacement path exists.
   - Compat-runner wording update (as of 2026-03-09): the workstream checklist/gap-analysis side is now aligned with README/rustdoc, so Stage 3 is blocked only on future keep-vs-quarantine product decisions rather than wording drift.

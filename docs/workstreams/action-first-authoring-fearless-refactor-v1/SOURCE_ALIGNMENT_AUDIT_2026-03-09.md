@@ -29,7 +29,7 @@ Current audit result:
 
 | Lane | Docs / decision state | Source-facing state | Gate state | Audit result |
 | --- | --- | --- | --- | --- |
-| `App::ui*` | deprecate now, remove/quarantine later | `ecosystem/fret/README.md` + `ecosystem/fret/src/lib.rs` describe builder-first as default and `ui*` as deprecated advanced bridge | `tools/gate_fret_builder_only_surface.py` + in-crate `authoring_surface_policy_tests` | Aligned |
+| `App::ui*` | removed pre-release | `ecosystem/fret/README.md` + `ecosystem/fret/src/lib.rs` now document only `view::<V>()` / `view_with_hooks::<V>(...)` as the app-entry path | `tools/gate_fret_builder_only_surface.py` + in-crate `authoring_surface_policy_tests` | Aligned |
 | compat runner | keep as advanced low-level interop seam for now | `ecosystem/fret/README.md` + `ecosystem/fret/src/lib.rs` already use advanced/non-default wording | `tools/gate_compat_runner_default_surface.py` now locks the wording + keeps first-contact docs free of compat-runner entrypoints | Aligned after this audit |
 | `use_state` | keep as explicit raw-model seam, non-default | starter/reference code and `todo-app-golden-path` already moved to `use_local*` | `tools/gate_no_use_state_in_default_teaching_surfaces.py` + scaffold template assertions | Aligned |
 | command-first retained seams | maintenance mode; reopen only on leak/deprecation | default-facing menu/snackbar/navigation aliases already landed; remaining command-shaped seams are catalog/advanced/internal | `tools/gate_menu_action_default_surfaces.py`, `tools/gate_menu_action_curated_internal_surfaces.py`, `tools/gate_material3_snackbar_default_surface.py` | Aligned |
@@ -54,9 +54,9 @@ Aligned evidence:
 
 Reading:
 
-- docs and rustdoc already say `view::<V>()` / `view_with_hooks::<V>(...)` are the default path,
-- deprecated closure-root bridge wording is present but fenced as advanced/non-default,
-- and the gate already keeps the crate root from drifting back to old root helpers.
+- docs and rustdoc now teach only `view::<V>()` / `view_with_hooks::<V>(...)` on `fret`,
+- the closure-root bridge is gone from the public facade,
+- and the gate now prevents both old root helpers and old builder-entry symbols from drifting back.
 
 ### 2) compat runner
 

@@ -64,7 +64,7 @@ Recommended default:
 
 Not default:
 
-- `App::ui*`
+- `App::ui*` (removed from the `fret` facade)
 - compat driver entrypoints unless the app is intentionally low-level/advanced
 
 ### 2. State
@@ -145,7 +145,7 @@ In short:
 
 | Area | Current best practice | v2 target | Gap level | Recommended next move |
 | --- | --- | --- | --- | --- |
-| App entry | `view::<V>()` is already the only default path | same | Low | Hold docs/gates; wait out deprecation window for old entries |
+| App entry | `view::<V>()` is already the only default path | same | Low | Hold docs/gates; keep the removed `App::ui*` surface from drifting back |
 | Action naming | default-facing widget families already expose `action(...)` and teaching surfaces prefer it | same | Low | Maintenance only; reopen only if a new default-facing leak appears |
 | Local state reads | `use_local*` + `value_*` path is coherent | same | Low | Keep stable |
 | Local state storage model | `use_local*` is the default path, but `LocalState<T>` is still model-backed and some widget/runtime seams still bridge through `clone_model()` | plain-Rust/self-owned local state with the same runtime guarantees | Medium | Treat as an architectural/runtime question, not as another helper-expansion pass |

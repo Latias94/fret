@@ -49,8 +49,7 @@ Reference anchors:
 
 Current prioritization (2026-03-09):
 
-- `App::ui*` is no longer blocked by in-tree migration work; it is now mostly waiting on the
-  deprecation window and final delete-vs-quarantine timing.
+- `App::ui*` is no longer a blocker; the pre-release hard delete has already landed.
 - `run_native_with_compat_driver(...)` and `use_state::<T>()` are both currently better framed as
   intentional advanced/non-default seams than as near-term hard-delete targets.
 - The command-first widget family is no longer the repo’s default next broad implementation pass.
@@ -59,14 +58,13 @@ Current prioritization (2026-03-09):
   the remaining visible cases are mostly intentional retained surfaces now recorded in
   `COMMAND_FIRST_INTENTIONAL_SURFACES.md`.
 
-## 1) App-entry closure surface still exists as a supported public path
+## 1) App-entry closure surface is now closed on the public facade
 
 Current state:
 
-- `fret::App::{ui, ui_with_hooks}` still exist as public entry points.
-- `view::<V>()` is now the documented default.
-- Progress update (as of 2026-03-09): in-tree example/demo callers have moved off the closure entry path, `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` now carry deprecation warnings, and the minimum downstream deprecation window is now documented as 2026-03-09 → earliest removal 2026-06-09 plus one published deprecated release.
-- README/rustdoc policy is now locked by an in-crate test so first-contact docs stop reintroducing `.ui(...)` as the default path.
+- `fret::App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` no longer exist on the public facade.
+- `view::<V>()` / `view_with_hooks::<V>(...)` are the only documented app-entry paths on `fret`.
+- README/rustdoc policy is locked by an in-crate test plus `tools/gate_fret_builder_only_surface.py`.
 
 Evidence anchors:
 
@@ -75,16 +73,16 @@ Evidence anchors:
 - `ecosystem/fret/README.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
 
-Why this blocks deletion:
+Why this no longer blocks cleanup:
 
-- The repo-level direction is now clear (`view::<V>()` default, `ui(...)` deprecated bridge), but removal timing is still a public-surface policy question.
-- Downstream users may still exist outside the monorepo, so hard delete still needs a deprecation window rather than an immediate removal.
+- no in-tree callers remained before the patch,
+- the surface had not shipped in a published `fret` release,
+- and the repo chose to eliminate the split mental model before public release.
 
-Required before hard delete:
+Required after hard delete:
 
-- Keep the deprecation window long enough for downstream cleanup (current baseline: at least until 2026-06-09, plus one published deprecated release).
-- Decide whether the final end-state is hard delete from `fret` or quarantine behind a more explicit compat surface.
-- Preserve the docs/test gate so `view::<V>()` remains the only default teaching path during the deprecation window.
+- preserve the docs/test gate so `view::<V>()` remains the only default teaching path,
+- treat any future restoration of closure-root app entry as a new product decision.
 
 ---
 
@@ -249,17 +247,15 @@ These surfaces may still be noisy, but they are **not** the same as the remainin
 
 ## Recommended hard-delete sequence from here
 
-1. **Decide app-entry policy**
-   - Is `App::ui(...)` advanced-but-supported, or on a path to deprecation?
-2. **Decide compat-driver policy**
+1. **Decide compat-driver policy**
    - Keep as advanced interop, or quarantine/remove?
-3. **Decide `use_state` fate**
+2. **Decide `use_state` fate**
    - Permanent shorthand, or deprecated alias in favor of `use_local*`?
-4. **Decide command-contract policy**
+3. **Decide command-contract policy**
    - Permanent mechanism-level `CommandId`, or migrate more widgets toward typed-action-first adapters?
-5. **Then add targeted gates + deprecations**
+4. **Then add targeted gates + deprecations**
    - only after the above four decisions are explicit.
-6. **Only then hard-delete what is truly legacy**
+5. **Only then hard-delete what is truly legacy**
    - keep advanced/interop surfaces if they are intentional product choices.
 
 ---
@@ -270,7 +266,7 @@ The repo is now much closer to a clean hard-delete phase than it was during the 
 
 What remains is mostly:
 
-- **one app-entry decision**,
+- **one closed app-entry lane that now serves as precedent**,
 - **one compat-runner decision**,
 - **one local-state alias decision**,
 - **one command-contract decision**,

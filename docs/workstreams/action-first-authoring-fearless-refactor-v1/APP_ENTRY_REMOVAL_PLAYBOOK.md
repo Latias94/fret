@@ -1,13 +1,12 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — `App::ui*` Removal Playbook
 
-Status: draft, execution playbook
-Last updated: 2026-03-09
+Status: completed, historical execution note
+Last updated: 2026-03-10
 
 Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
-- `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 
@@ -22,7 +21,8 @@ This note is the execution playbook for the day the repo is actually ready to re
 - `App::run_ui(...)`
 - `App::run_ui_with_hooks(...)`
 
-It exists so the eventual cleanup is a short, reviewable patch rather than a fresh policy debate.
+It now records the patch shape that actually landed, so future reviewers do not have to reconstruct
+why this lane was closed pre-release.
 
 ---
 
@@ -30,15 +30,14 @@ It exists so the eventual cleanup is a short, reviewable patch rather than a fre
 
 Do **not** execute this playbook until all of the following are true:
 
-1. date is on or after **2026-06-09**,
-2. at least one published `fret` release has shipped with the deprecation warnings,
-3. `APP_ENTRY_CALLER_INVENTORY.md` still shows no in-tree example/demo callers,
-4. default docs/tests still point only to `view::<V>()` / `view_with_hooks::<V>(...)`.
+1. `APP_ENTRY_CALLER_INVENTORY.md` still shows no in-tree example/demo callers,
+2. default docs/tests still point only to `view::<V>()` / `view_with_hooks::<V>(...)`,
+3. no published `fret` release carried the closure-root app-entry surface.
 
 If any precondition fails, stop.
 
-Use `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` as the release-proof checklist rather than
-reconstructing that evidence ad hoc during the final patch review.
+The historical point of this section is simple: the repo deleted the surface before any public
+release made a downstream compatibility promise.
 
 ---
 
@@ -158,7 +157,7 @@ The goal is to leave no document saying “deprecated bridge” once the actual 
 
 Abort the removal/quarantine patch if review finds either:
 
-- a real downstream compatibility need that was not represented in the current deprecation window,
+- a real downstream compatibility need that was not represented in the pre-release decision,
 - or a remaining in-tree/default-path surface that still depends on `App::ui*`.
 
 If that happens, update the inventory/policy docs first and reopen the decision explicitly.

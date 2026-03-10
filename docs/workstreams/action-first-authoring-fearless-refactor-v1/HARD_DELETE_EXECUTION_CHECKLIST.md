@@ -9,7 +9,6 @@ Related:
 - Status matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - App-entry policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
 - App-entry inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
-- App-entry release evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
@@ -34,8 +33,9 @@ It answers a narrower operational question:
 
 ## Scope
 
-This checklist only covers the remaining post-v1 compatibility surfaces that are still visible to
-users or still influence default teaching paths:
+This checklist covers the remaining post-v1 compatibility surfaces that are still visible to users
+or still influence default teaching paths, plus one recently closed lane kept here for historical
+context:
 
 1. `fret::App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`
 2. `fret::run_native_with_compat_driver(...)`
@@ -55,14 +55,14 @@ Non-scope:
 
 | Surface | Current status | Default-path risk | Hard-delete readiness |
 | --- | --- | --- | --- |
-| `App::ui*` closure-root entry | Deprecated in code; no in-tree example/demo callers remain; minimum deprecation window is now defined | Low once docs/tests stay locked | Medium |
+| `App::ui*` closure-root entry | Removed from code pre-release; docs/tests/gates now only teach `view::<V>()` / `view_with_hooks::<V>(...)` | Closed | Closed |
 | `run_native_with_compat_driver(...)` | Still public; now explicitly classified as advanced low-level interop | Low for default path, medium for facade size | Deferred |
 | `use_state::<T>()` alias | Still user-visible; now classified as explicit raw-model hook, not default local state | Low for default path, medium for facade clarity | Deferred |
 | `CommandId`-first widget contracts | Action-first aliases landed on the main public builder families, and the curated internal/app-facing menu residue now also prefers `action(...)`; remaining command-shaped usage is now mostly intentional advanced/internal surface area recorded in `COMMAND_FIRST_INTENTIONAL_SURFACES.md` | Medium | Low |
 
 Interpretation:
 
-- The app-entry surface is the closest to final cleanup.
+- The app-entry surface is no longer a blocker; it is now historical evidence for the closed lane.
 - The other three items still need explicit product-surface decisions before deletion would be
   defensible.
 - Of those three, command-first widgets are no longer a broad implementation pass by default; they
@@ -96,46 +96,32 @@ Why it comes first:
 
 ---
 
-### Stage 2 — Finish the app-entry closure removal plan
+### Stage 2 — Close the app-entry closure lane
 
-Status: **in progress**
-
-Decision still required:
-
-- final end-state is either:
-  1. hard delete from `fret`, or
-  2. move behind an explicit compat boundary that is intentionally not the default facade path.
+Status: **done (2026-03-10)**
 
 Checklist:
 
 | Item | Status | Notes |
 | --- | --- | --- |
 | In-tree example/demo migration complete | Done | See `APP_ENTRY_CALLER_INVENTORY.md` |
-| Public methods deprecated | Done | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` |
+| Public methods removed | Done | `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` no longer exist on `fret::App` |
 | Default docs/test gate added | Done | `authoring_surface_policy_tests` |
-| Downstream deprecation window defined | Done | start 2026-03-09; earliest removal 2026-06-09; require one published deprecated release; see `APP_ENTRY_POLICY_DECISION_DRAFT.md` |
-| Published-release evidence tracker exists | Done | `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` records what proof is still missing before removal/quarantine |
-| Final compat-vs-delete decision | Open | product-surface decision, not just cleanup |
-| Final removal/quarantine patch | Open | only after the two items above |
+| Hard-delete regression gate added | Done | `tools/gate_fret_builder_only_surface.py` now forbids the closure-root builder path from returning |
+| Final policy recorded | Done | `APP_ENTRY_POLICY_DECISION_DRAFT.md` now records the pre-release hard-delete outcome |
+| Historical execution note exists | Done | `APP_ENTRY_REMOVAL_PLAYBOOK.md` records the landed patch shape |
 
 Hard-delete exit criteria:
 
-- the deprecation window has elapsed (not before 2026-06-09),
 - no in-tree callers remain,
 - docs/tests still teach only `view::<V>()`,
-- at least one published release has shipped with the deprecation warnings,
-- either:
-  - the old methods are deleted, or
-  - they move to an explicitly named compat surface that is absent from default docs/templates.
+- the old methods are deleted from the public facade,
+- lower-level bootstrap/driver seams remain available for intentional advanced integrations.
 
 Recommended next action:
 
-- keep the docs/test gate stable and wait until the first published deprecated release has shipped
-  before proposing the removal/quarantine patch.
-- use `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` to record the released version/date and
-  release-note anchor once that external publish event happens.
-- once the window and release preconditions are satisfied, use
-  `APP_ENTRY_REMOVAL_PLAYBOOK.md` to execute the final delete-vs-quarantine patch.
+- keep the docs/test gate stable so the closure-root surface does not drift back,
+- treat any proposal to restore `App::ui*` as a fresh product decision rather than pending cleanup.
 
 ---
 
@@ -254,7 +240,7 @@ Checklist:
 
 | Gate | Depends on |
 | --- | --- |
-| Prevent first-contact docs from reintroducing `App::ui*` as default | already landed |
+| Prevent first-contact docs from reintroducing `App::ui*` as default | Landed and now doubled as a hard-delete regression gate |
 | Prevent default docs/templates from reintroducing `use_state` | Landed via `tools/gate_no_use_state_in_default_teaching_surfaces.py` + scaffold template unit assertions |
 | Prevent default docs/examples from teaching command-first widget contracts where avoidable | widget-contract policy decision |
 | Prevent default docs from drifting toward compat-runner entry points | compat-runner policy wording |
@@ -285,12 +271,11 @@ What should not remain:
 
 If the repo wants the next move to stay narrow and landable, the next concrete step should be:
 
-1. keep the `App::ui*` deprecation window visible and enforced in docs,
-2. finish documentation alignment for the compat-runner policy,
-3. keep `use_state` on its current non-default/raw-model policy unless the facade policy changes,
-4. use the next real implementation pass on remaining command-first widget adoption/gates,
+1. finish documentation alignment for the compat-runner policy,
+2. keep `use_state` on its current non-default/raw-model policy unless the facade policy changes,
+3. use the next real implementation pass on remaining command-first widget adoption/gates,
    especially `ContextMenu*` / `Menubar*` internal helper surfaces and default docs/examples,
-5. only revisit compat-runner quarantine later if facade-size pressure justifies it.
+4. only revisit compat-runner quarantine later if facade-size pressure justifies it.
 
 That order keeps the already-completed app-entry progress from stalling while avoiding premature
 deletions in the other three areas.

@@ -8,7 +8,6 @@ Related:
 - Gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
 - Execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - App-entry inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
-- App-entry release evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
 - App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
@@ -35,7 +34,7 @@ For the quickest one-page entrypoint before opening this matrix, start with
 
 | Surface | In-tree migration status | Default-path status | Current decision state | Hard-delete readiness | Next real action |
 | --- | --- | --- | --- | --- | --- |
-| `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | No in-tree example/demo callers remain | Removed from default docs; deprecated in code | Policy mostly closed: deprecate now, remove/quarantine later after window | **Closest** | Wait for deprecation window + one published deprecated release; track proof in `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`, then execute `APP_ENTRY_REMOVAL_PLAYBOOK.md` |
+| `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | No in-tree example/demo callers remained before delete | Removed from default docs and removed from code | Decision executed: hard-delete pre-release because the surface never shipped publicly | **Closed** | None; keep `APP_ENTRY_REMOVAL_PLAYBOOK.md` only as historical execution evidence |
 | `run_native_with_compat_driver(...)` | Still has 20 direct in-tree call sites across 3 real families | Explicitly non-default advanced interop seam | Policy draft says “keep for now” | **Deferred** | Do not force deletion; if future facade reduction is chosen, execute the quarantine-first move via `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` |
 | `ViewCx::use_state::<T>()` | 0 direct runtime/teaching-surface callers outside runtime/API substrate | Removed from starter/reference/default teaching path | Policy draft says “keep as explicit raw-model seam, non-default” | **Deferred** | Keep the default-path gate stable; if future facade reduction is chosen, use `USE_STATE_SURFACE_PLAYBOOK.md` to decide explicit-seam permanence vs deprecation |
 | Command-first widget builders (`DropdownMenu*`, `ContextMenu*`, `Menubar*`, remaining app-facing command APIs) | Public alias pass landed; curated internal/app-facing residue is now also aligned (`tab_strip` overflow, GenUI shadcn overlay) | Still partially visible only on intentional advanced/internal surfaces | Policy direction is clear; remaining visible cases are now mostly intentional retained seams | **Lowest delete readiness, low remaining code pressure** | Keep intentional advanced surfaces explicit, follow `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`, and only reopen migration on leak or deprecation |
@@ -46,15 +45,13 @@ For the quickest one-page entrypoint before opening this matrix, start with
 
 The four items no longer have equal weight.
 
-### 1. `App::ui*` is no longer a migration problem
+### 1. `App::ui*` is no longer an active endgame lane
 
-What remains is:
+What remains is only historical evidence:
 
-- deprecation timing,
-- downstream release sequencing,
-- and the final delete-vs-quarantine decision.
-
-It is **not** the next meaningful implementation target unless the deprecation window has elapsed.
+- why the facade could drop closure-root app entry pre-release,
+- which docs/tests/gates keep it from drifting back,
+- and where to look if someone proposes restoring it.
 
 ### 2. Compat runner is currently a product-boundary decision, not cleanup debt
 
@@ -93,10 +90,9 @@ actually enter deprecation/removal.
 
 ## Recommended order from here
 
-1. Keep `App::ui*` in deprecation mode until the documented window expires.
-2. Keep compat runner documented as advanced interop; do not spend near-term cleanup budget on it.
-3. Keep `use_state` as non-default/raw-model and preserve the default-path gate.
-4. Keep the command-first widget track in maintenance mode:
+1. Keep compat runner documented as advanced interop; do not spend near-term cleanup budget on it.
+2. Keep `use_state` as non-default/raw-model and preserve the default-path gate.
+3. Keep the command-first widget track in maintenance mode:
    - preserve the default-surface/docs gates,
    - treat the remaining advanced/internal surfaces as intentional unless product evidence says
      otherwise,
@@ -110,7 +106,7 @@ actually enter deprecation/removal.
 If the goal is “finish migration and eventually hard-delete old interfaces”, the repo is now in a
 much narrower endgame:
 
-- one blocker (`App::ui*`) is mostly waiting on time/release policy,
-- two blockers (`compat driver`, `use_state`) are currently intentional retained seams,
-- and one blocker (**command-first widget contracts**) is now mostly an intentional-retention and
+- one former blocker (`App::ui*`) is now closed pre-release,
+- two current blockers (`compat driver`, `use_state`) are currently intentional retained seams,
+- and one current blocker (**command-first widget contracts**) is now mostly an intentional-retention and
   future-deprecation-management track rather than obvious near-term implementation work.

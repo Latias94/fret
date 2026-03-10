@@ -38,7 +38,7 @@ For the current best guess of what will actually be deleted vs retained, pair th
 
 | Surface | Current stance | Why | Next real move | Execution note |
 | --- | --- | --- | --- | --- |
-| `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | Deprecated bridge waiting on time + release window | No in-tree callers remain; default docs already converged | Wait for the window and one published deprecated release, then choose delete vs compat quarantine | `APP_ENTRY_REMOVAL_PLAYBOOK.md` |
+| `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` | Removed from `fret` pre-release | No in-tree callers remained; default docs already converged; no published `fret` release carried the surface | None; lane is closed | `APP_ENTRY_REMOVAL_PLAYBOOK.md` |
 | `run_native_with_compat_driver(...)` | Intentionally retained advanced interop seam | Real caller families still exist; deletion would remove capability, not just debt | Keep wording stable; only move if the repo later chooses facade reduction | `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` |
 | `ViewCx::use_state::<T>()` | Intentionally retained explicit raw-model seam | Default teaching path is already on `use_local*`; remaining question is public-surface policy | Keep the default-path gate stable; only revisit if the repo wants to shrink the raw-model surface | `USE_STATE_SURFACE_PLAYBOOK.md` |
 | Command-first widget contracts | Mostly retained advanced/internal seams in maintenance mode | Broad alias pass is already done; remaining pressure is no longer default-surface migration | Reopen only if a new default-facing leak appears or a deprecation decision is made | `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` |
@@ -51,9 +51,8 @@ For the current best guess of what will actually be deleted vs retained, pair th
 
 Open the row-specific execution note first:
 
-1. `App::ui*` → `APP_ENTRY_REMOVAL_PLAYBOOK.md`
-2. compat runner → `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
-3. `use_state` → `USE_STATE_SURFACE_PLAYBOOK.md`
+1. compat runner → `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
+2. `use_state` → `USE_STATE_SURFACE_PLAYBOOK.md`
 
 Do **not** start from grep results alone.
 
@@ -61,12 +60,12 @@ Do **not** start from grep results alone.
 
 Read the rows in this order:
 
-1. `App::ui*`
-2. compat runner
-3. `use_state`
-4. command-first widget contracts
+1. compat runner
+2. `use_state`
+3. command-first widget contracts
 
-That order reflects real delete/quarantine readiness, not historical implementation effort.
+That order reflects the remaining real delete/quarantine readiness, not historical implementation
+effort.
 
 ---
 

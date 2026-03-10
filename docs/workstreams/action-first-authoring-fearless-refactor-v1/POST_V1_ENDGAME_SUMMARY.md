@@ -142,7 +142,7 @@ This is now a higher-value track than adding more API names.
 
 The repo still has real cleanup work, but it is narrower now:
 
-- app-entry deprecation/removal timing,
+- app-entry lane closed pre-release on the public facade,
 - compat runner keep-vs-quarantine policy,
 - `use_state` as an explicit raw-model seam,
 - remaining command-first widget contracts that are still intentionally retained or separately
@@ -154,10 +154,10 @@ the deeper matrix/checklist/playbooks.
 `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records the repo's current best execution outlook for
 which lanes are actually expected to delete, retain, or only conditionally shrink.
 
-That app-entry lane now has an execution note as well:
+That app-entry lane now has a historical execution note as well:
 
-- `APP_ENTRY_REMOVAL_PLAYBOOK.md` records the concrete delete-vs-quarantine patch shape so the repo
-  does not have to reconstruct the `App::ui*` cleanup plan when the deprecation window is met.
+- `APP_ENTRY_REMOVAL_PLAYBOOK.md` records the pre-release hard-delete patch shape so the repo does
+  not have to reconstruct why `App::ui*` was removed before the first published `fret` release.
 
 The compat-runner lane now has the same treatment:
 

@@ -1,23 +1,25 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — App Entry Policy Decision Draft
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
 - Caller inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_CALLER_INVENTORY.md`
 - Removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 
+> Update (2026-03-10): the repo chose the **pre-release hard-delete** path. `App::{ui,
+> ui_with_hooks, run_ui, run_ui_with_hooks}` are now removed from `fret`; any deprecation-window
+> or published-release wording below is historical context only.
+
 ## Decision summary
 
 Recommended decision:
 
 - `App::view::<V>()` / `App::view_with_hooks::<V>(...)` become the **only default app-author entry path**.
-- `App::ui(...)` / `App::ui_with_hooks(...)` are reclassified as **advanced bridge surfaces**, not part of the default teaching path.
-- The repo should plan a staged transition of `ui(...)` / `ui_with_hooks(...)` from:
-  1. documented-but-non-default advanced bridge,
-  2. deprecated advanced bridge,
-  3. removed (or moved behind an explicit compat boundary),
-  once the remaining advanced demos either migrate to `View` or intentionally move to lower-level bootstrap/driver entry points.
+- `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` were hard-deleted on **2026-03-10**
+  before the first published `fret` release.
+- Advanced closure-root integrations should use lower-level bootstrap/driver seams instead of
+  reviving a parallel top-level entry story on `fret`.
 
 This is the cleanest way to finish the authoring convergence without pretending every closure-style surface is already legacy-free.
 
@@ -141,41 +143,21 @@ Why this is second-best:
 
 ---
 
-## Deprecation window
+## Pre-release deletion rule
 
-Recommended window:
+The path that actually landed was simpler than the staged window:
 
-- **Deprecation start:** 2026-03-09
-  - this is when the in-tree story became coherent enough to freeze the default path:
-    - no in-tree example/demo callers remain on `App::ui*`,
-    - `ecosystem/fret/src/app_entry.rs` already marks the closure-root entry methods as deprecated,
-    - README/rustdoc policy tests already lock `view::<V>()` / `view_with_hooks::<V>(...)` as the
-      only default path.
-- **Earliest removal date:** 2026-06-09
-  - equivalent to a **minimum 90-day downstream migration window**.
-- **Additional release condition:** do not remove the APIs before **at least one published release**
-  of `fret` has shipped with the deprecation warnings and updated docs.
+- if no published `fret` release has shipped with the closure-root app-entry surface,
+- and no in-tree callers remain,
+- the repo should hard-delete the old entry path instead of carrying a temporary deprecation window.
 
-Practical interpretation:
-
-- The repo can keep cleaning docs, templates, and remaining advanced bridges immediately.
-- It should **not** hard-delete `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` before both
-  conditions are true:
-  1. the date is on or after **2026-06-09**, and
-  2. downstream users have had at least one published release carrying the deprecation.
-
-Why this window is the recommended baseline:
-
-- it is short enough to keep momentum,
-- long enough to be defensible for a public facade surface,
-- and it avoids turning “deprecated” into an indefinite state with no removal checkpoint.
+That is the rule the repo applied on 2026-03-10.
 
 ---
 
-## Exit criteria before deprecation starts
+## Exit criteria before hard delete
 
-These criteria are now satisfied for the start of the deprecation window; they remain the
-prerequisites for eventual hard delete:
+These criteria were satisfied before the hard delete landed:
 
 1. remaining in-tree advanced demos using `ui(...)` / `ui_with_hooks(...)` are inventoried,
 2. each such demo is classified as either:
@@ -201,14 +183,15 @@ prerequisites for eventual hard delete:
 ### Stage 3 — Gate + deprecation
 
 - add a narrow gate that prevents first-contact docs/templates from teaching `.ui(...)`,
-- keep the deprecation warnings in place through the minimum window above.
+- or, if no public release has shipped yet, hard-delete the closure-root surface instead of
+  carrying a temporary warning window.
 
 ### Stage 4 — Remove or quarantine
 
 - preferred: remove the public `.ui(...)` surface from `fret`,
 - fallback: quarantine it as explicitly advanced/compat if full removal is still too disruptive.
-- earliest hard-delete checkpoint: **2026-06-09 + one published deprecated release**.
-- use `APP_ENTRY_REMOVAL_PLAYBOOK.md` as the execution checklist once that checkpoint is reached.
+- the path actually taken on 2026-03-10 was the pre-release hard delete.
+- use `APP_ENTRY_REMOVAL_PLAYBOOK.md` as the historical execution note for that landed patch.
 
 ---
 
@@ -219,5 +202,5 @@ If the product goal is still **“finish the migration and eventually hard-delet
 The recommended decision is:
 
 - **default = `view::<V>()`**
-- **temporary bridge = `ui(...)`**
-- **destination = deprecate/remove once advanced demo migration is complete**
+- **advanced customization = lower-level bootstrap / fn-driver seams**
+- **closure-root `App::ui*` = removed pre-release**
