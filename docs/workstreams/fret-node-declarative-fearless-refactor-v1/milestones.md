@@ -753,6 +753,12 @@ real editors.
   `ui/canvas/widget/pointer_up_commit_resize/group.rs` seams, so
   `pointer_up_commit_resize.rs` now mainly keeps the root re-exports explicit while each resize
   planner keeps its own focused unit coverage.
+- left-button pointer-up routing now also routes edge-insert double-click activation and the
+  release arbitration chain through the private
+  `ui/canvas/widget/pointer_up_left_route/double_click.rs` and
+  `ui/canvas/widget/pointer_up_left_route/dispatch.rs` seams, so
+  `pointer_up_left_route.rs` now mainly keeps stop-auto-pan plus top-level orchestration explicit
+  while the plain-double-click gate keeps focused unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

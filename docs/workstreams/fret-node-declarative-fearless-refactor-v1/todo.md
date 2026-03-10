@@ -1205,6 +1205,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_up_commit_resize/group.rs` seams, so
     `pointer_up_commit_resize.rs` now mainly keeps the root re-exports explicit while each resize
     planner keeps its own focused unit coverage.
+  - Progress: left-button pointer-up routing now also routes edge-insert double-click activation
+    and the release arbitration chain through the private
+    `ui/canvas/widget/pointer_up_left_route/double_click.rs` and
+    `ui/canvas/widget/pointer_up_left_route/dispatch.rs` seams, so
+    `pointer_up_left_route.rs` now mainly keeps stop-auto-pan plus top-level orchestration
+    explicit while the plain-double-click gate keeps focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
