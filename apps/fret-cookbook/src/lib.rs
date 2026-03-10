@@ -91,14 +91,25 @@ mod authoring_surface_policy_tests {
         assert!(src.contains("advanced::prelude::*"));
         assert!(src.contains("KernelApp"));
         assert!(
-            src.contains("ViewCx<'_, '_, KernelApp>")
+            src.contains("AppUi<'_, '_>")
+                || src.contains("ViewCx<'_, '_, KernelApp>")
                 || src.contains("ElementContext<'_, KernelApp>")
         );
-        assert!(src.contains(") -> Elements {") || src.contains(") -> ViewElements {"));
+        assert!(
+            src.contains(") -> Ui {")
+                || src.contains(") -> Elements {")
+                || src.contains(") -> ViewElements {")
+        );
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("use fret::app::prelude::*;"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
-        assert!(!src.contains(") -> Ui {"));
+    }
+
+    fn assert_advanced_view_runtime_example_uses_app_ui_aliases(src: &str) {
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
+        assert!(
+            !src.contains("fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements")
+        );
     }
 
     #[test]
@@ -291,6 +302,21 @@ mod authoring_surface_policy_tests {
         );
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("status: Model<Arc<str>>"));
+    }
+
+    #[test]
+    fn advanced_view_examples_prefer_app_ui_and_ui_aliases() {
+        for src in [
+            DRAG_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
+            DROP_SHADOW_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+            CANVAS_PAN_ZOOM_EXAMPLE,
+            CUSTOM_V1_EXAMPLE,
+        ] {
+            assert_advanced_view_runtime_example_uses_app_ui_aliases(src);
+        }
     }
 
     #[test]

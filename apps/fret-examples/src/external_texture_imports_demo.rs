@@ -15,8 +15,7 @@ use fret_render::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    ViewportSurfaceProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
 
@@ -523,7 +522,7 @@ impl fret::view::View for ExternalTextureImportsView {
         }
     }
 
-    fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui {
         render_view(cx.elements(), self)
     }
 }
@@ -584,7 +583,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> Elements {
+fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui {
     cx.observe_model(&st.show, Invalidation::Layout);
 
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);

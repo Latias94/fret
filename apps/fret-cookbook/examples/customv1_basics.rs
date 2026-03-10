@@ -141,7 +141,7 @@ impl View for CustomV1BasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let enabled_state = cx.use_local_with(|| true);
         let strength_state = cx.use_local_with(|| 0.35f32);
 

@@ -215,6 +215,10 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
+    const EXTERNAL_VIDEO_IMPORTS_AVF_DEMO: &str =
+        include_str!("external_video_imports_avf_demo.rs");
+    const EXTERNAL_VIDEO_IMPORTS_MF_DEMO: &str = include_str!("external_video_imports_mf_demo.rs");
     const GENUI_DEMO: &str = include_str!("genui_demo.rs");
     const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
     const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
@@ -254,11 +258,20 @@ mod authoring_surface_policy_tests {
     }
 
     fn assert_view_runtime_example_uses_app_ui_aliases(src: &str) {
-        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
+        assert!(
+            src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui")
+                || src.contains(
+                    "fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui",
+                )
+        );
         assert!(
             !src.contains("fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements")
         );
+        assert!(!src.contains(
+            "fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements",
+        ));
         assert!(!src.contains("ViewCx<'_, '_, KernelApp>"));
+        assert!(!src.contains("ViewCx<'_, '_, App>"));
     }
 
     #[test]
@@ -306,6 +319,9 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V3_DEMO,
             DROP_SHADOW_DEMO,
             EMBEDDED_VIEWPORT_DEMO,
+            EXTERNAL_TEXTURE_IMPORTS_DEMO,
+            EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
+            EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
             GENUI_DEMO,
             HELLO_COUNTER_DEMO,
             HELLO_WORLD_COMPARE_DEMO,
