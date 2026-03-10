@@ -475,6 +475,52 @@ mod authoring_surface_policy_tests {
                 "|cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
             ],
         );
+
+        assert_advanced_helpers_prefer_uicx(
+            POSTPROCESS_THEME_DEMO,
+            &[
+                "fn watch_first_f32(cx: &mut UiCx<'_>,",
+                "fn inspector(cx: &mut UiCx<'_>,",
+                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
+                "fn stage(cx: &mut UiCx<'_>,",
+                "fn stage_body(cx: &mut UiCx<'_>,",
+                "fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement",
+                "let card = |cx: &mut UiCx<'_>, title: &str, subtitle: &str|",
+            ],
+            &[
+                "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
+                "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
+                "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn stage_body(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn stage_cards(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement",
+                "let card = |cx: &mut ElementContext<'_, KernelApp>, title: &str, subtitle: &str|",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "fn header_bar(cx: &mut UiCx<'_>,",
+                "fn body(cx: &mut UiCx<'_>,",
+                "fn catalog_panel(cx: &mut UiCx<'_>,",
+                "fn main_panel(cx: &mut UiCx<'_>,",
+                "fn query_panel_for_mode(cx: &mut UiCx<'_>,",
+                "fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode",
+                "fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement",
+                "fn snapshot_entry_for_key(cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "fn header_bar(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn body(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn catalog_panel(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn main_panel(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn query_panel_for_mode(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn active_mode(cx: &mut ElementContext<'_, KernelApp>, st: &AsyncPlaygroundState) -> FetchMode",
+                "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
+                "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
     }
 
     #[test]

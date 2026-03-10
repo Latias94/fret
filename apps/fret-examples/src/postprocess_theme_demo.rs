@@ -307,11 +307,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(
-    cx: &mut ElementContext<'_, KernelApp>,
-    model: &Model<Vec<f32>>,
-    default: f32,
-) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -320,7 +316,7 @@ fn watch_first_f32(
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut ThemePostprocessState,
     theme: &str,
     chromatic_offset_px: f32,
@@ -368,7 +364,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String| {
+            let label_row = |cx: &mut UiCx<'_>, label: &str, value: String| {
                 ui::h_row(|cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),
@@ -528,7 +524,7 @@ fn inspector(
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     enabled: bool,
     compare: bool,
     theme: &str,
@@ -658,11 +654,7 @@ fn stage(
     .into_element(cx)
 }
 
-fn stage_body(
-    cx: &mut ElementContext<'_, KernelApp>,
-    postprocess_applied: bool,
-    label: &str,
-) -> AnyElement {
+fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -748,10 +740,10 @@ fn stage_body(
     )
 }
 
-fn stage_cards(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement {
+fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let card = |cx: &mut ElementContext<'_, KernelApp>, title: &str, subtitle: &str| {
+    let card = |cx: &mut UiCx<'_>, title: &str, subtitle: &str| {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(Px(320.0));
         layout.size.height = Length::Px(Px(220.0));

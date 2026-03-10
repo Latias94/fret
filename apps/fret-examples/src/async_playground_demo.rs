@@ -363,7 +363,7 @@ impl View for AsyncPlaygroundView {
 }
 
 fn header_bar(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -413,7 +413,7 @@ fn header_bar(
 }
 
 fn body(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -440,7 +440,7 @@ fn body(
 }
 
 fn catalog_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -483,7 +483,7 @@ fn catalog_panel(
 }
 
 fn catalog_item(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -558,7 +558,7 @@ fn select_command_for_id(id: QueryId) -> CommandId {
 }
 
 fn main_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -670,7 +670,7 @@ fn main_panel(
 }
 
 fn inspector_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
@@ -763,7 +763,7 @@ fn inspector_panel(
 }
 
 fn policy_editor(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
@@ -827,7 +827,7 @@ fn policy_editor(
 }
 
 fn query_panel_for_mode(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
@@ -885,7 +885,7 @@ fn query_panel_for_mode(
 }
 
 fn query_inputs_row(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
@@ -930,7 +930,7 @@ fn query_inputs_row(
 }
 
 fn query_result_view(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     id: QueryId,
     key: QueryKey<Arc<str>>,
@@ -1021,7 +1021,7 @@ fn query_result_view(
     .into_element(cx)
 }
 
-fn active_mode(cx: &mut ElementContext<'_, KernelApp>, st: &AsyncPlaygroundState) -> FetchMode {
+fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
     let tab = cx.watch_model(&st.tabs).layout().value_or_default();
     match tab.as_deref() {
         Some("sync") => FetchMode::Sync,
@@ -1029,11 +1029,7 @@ fn active_mode(cx: &mut ElementContext<'_, KernelApp>, st: &AsyncPlaygroundState
     }
 }
 
-fn query_policy(
-    cx: &mut ElementContext<'_, KernelApp>,
-    st: &AsyncPlaygroundState,
-    id: QueryId,
-) -> QueryPolicy {
+fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
     let stale_s = cx
         .watch_model(&config.stale_time_s)
@@ -1067,11 +1063,7 @@ fn query_policy(
     }
 }
 
-fn query_fail_mode(
-    cx: &mut ElementContext<'_, KernelApp>,
-    st: &AsyncPlaygroundState,
-    id: QueryId,
-) -> bool {
+fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
     cx.watch_model(&config.fail_mode)
         .layout()
@@ -1099,7 +1091,7 @@ fn query_key_for_selected(
 }
 
 fn query_key_for_id(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &AsyncPlaygroundState,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
@@ -1138,7 +1130,7 @@ fn observe_query_diag(
     st.last_diag.insert(id, diag);
 }
 
-fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement {
+fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement {
     let Some(diag) = diag else {
         return shadcn::Badge::new("Not mounted")
             .variant(shadcn::BadgeVariant::Secondary)
@@ -1160,7 +1152,7 @@ fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>
 }
 
 fn snapshot_entry_for_key(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     key: QueryKey<Arc<str>>,
 ) -> Option<QuerySnapshotEntry> {
     let type_name = std::any::type_name::<Arc<str>>();
