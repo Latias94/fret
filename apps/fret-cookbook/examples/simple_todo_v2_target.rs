@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_ui::element::SemanticsDecoration;
 
 mod act {
@@ -36,11 +36,11 @@ struct TodoRow {
 struct SimpleTodoV2TargetView;
 
 impl View for SimpleTodoV2TargetView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
@@ -228,7 +228,7 @@ impl View for SimpleTodoV2TargetView {
     }
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<App> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<KernelApp> {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)

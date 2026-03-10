@@ -15,16 +15,16 @@ Companion docs:
 ## M0 — Freeze the target product surface
 
 - [ ] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.
-- [ ] Finalize `MIGRATION_MATRIX.md` as the single execution tracker for old surface removal.
+- [x] Finalize `MIGRATION_MATRIX.md` as the single execution tracker for old surface removal.
 - [ ] Decide and lock the canonical names:
-  - [ ] `FretApp`
-  - [ ] `KernelApp`
-  - [ ] `AppUi`
-  - [ ] `Ui`
+  - [x] `FretApp`
+  - [x] `KernelApp`
+  - [x] `AppUi`
+  - [x] `Ui`
 - [ ] Define the three public surface tiers:
-  - [ ] app surface
-  - [ ] component surface
-  - [ ] advanced surface
+  - [x] app surface
+  - [x] component surface
+  - [x] advanced surface
 - [ ] List every public-looking symbol that should be:
   - [ ] kept on the app surface
   - [ ] moved to the component surface
@@ -38,9 +38,9 @@ Companion docs:
 
 ## M1 — Split the public preludes and imports
 
-- [ ] Make `fret::prelude::*` app-only.
-- [ ] Add `fret::component::prelude::*`.
-- [ ] Add explicit advanced import modules under `fret::advanced::*`.
+- [ ] Make `fret::app::prelude::*` the only canonical app import and delete the broad `fret::prelude::*` bridge.
+- [x] Add `fret::component::prelude::*`.
+- [x] Add explicit advanced import modules under `fret::advanced::*`.
 - [ ] Remove broad transitive re-export of `fret_ui_kit::prelude::*` from the app surface.
 - [ ] Remove low-level mechanism types from the default app prelude:
   - [ ] `ElementContext`
@@ -77,11 +77,11 @@ Companion docs:
 
 ## M4 — Migrate docs, templates, and examples
 
-- [ ] Update `README.md`.
+- [x] Update `README.md`.
 - [ ] Update `docs/README.md`.
 - [ ] Update `docs/first-hour.md`.
-- [ ] Update the golden-path todo docs.
-- [ ] Update scaffold templates in `apps/fretboard`.
+- [x] Update the golden-path todo docs.
+- [x] Update scaffold templates in `apps/fretboard`.
 - [ ] Update official cookbook examples to use the new app surface.
 - [ ] Move advanced examples to explicit advanced imports when needed.
 - [ ] Remove or rewrite examples that still teach superseded patterns.

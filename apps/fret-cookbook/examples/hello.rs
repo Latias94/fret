@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_ui::CommandAvailability;
 
 mod act {
@@ -14,11 +14,11 @@ const TEST_ID_RENDER_MARKER: &str = "cookbook.hello.render_marker";
 struct HelloView;
 
 impl View for HelloView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let rendered_once = cx.with_state(
             || false,
             |v| {

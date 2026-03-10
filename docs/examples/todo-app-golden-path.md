@@ -104,7 +104,7 @@ edition = "2024"
 anyhow = "1"
 fret = { path = "../../ecosystem/fret", features = ["state"] }
 
-# Optional: depend on these directly only if you need their APIs outside of `ViewCx`.
+# Optional: depend on these directly only if you need their APIs outside of `AppUi`.
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"], optional = true }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"], optional = true }
 ```
@@ -112,7 +112,7 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"], optional 
 ## Minimal startup
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
@@ -128,9 +128,9 @@ The builder chain is ecosystem-level and intentionally provides a few stable sea
 apps without dropping down to `fret-bootstrap`:
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
-fn install_app(app: &mut App) {
+fn install_app(app: &mut KernelApp) {
     // Register app-owned globals, commands, services, etc.
     // Example:
     // app.set_global(MyService::default());
@@ -227,18 +227,16 @@ Use typed unit actions with stable IDs as the default boundary between UI intent
 High-level sketch:
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 mod act {
     fret::actions!([Add = "todo.todo.add.v1"]);
 }
 
 impl View for TodoView {
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify_models::<act::Add>(move |models| {
-            // mutate models
-            true
-        });
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let draft = cx.use_local::<String>();
+        cx.on_action_notify_local_set::<act::Add, String>(&draft, String::new());
 
         shadcn::Button::new("Add")
             .action(act::Add)

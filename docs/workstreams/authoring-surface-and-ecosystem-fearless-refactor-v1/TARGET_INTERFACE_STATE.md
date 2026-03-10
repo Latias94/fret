@@ -16,7 +16,7 @@ It is intentionally concrete:
 
 | Tier | Intended audience | Canonical import | Allowed concepts |
 | --- | --- | --- | --- |
-| App | ordinary app authors | `use fret::prelude::*;` | app builder, app-facing state/actions/data/effects, default UI composition, default components |
+| App | ordinary app authors | `use fret::app::prelude::*;` | app builder, app-facing state/actions/data/effects, default UI composition, default components |
 | Component | reusable component authors | `use fret::component::prelude::*;` | component composition contracts, styling/layout patch APIs, semantics/layout helpers |
 | Advanced | power users / runners / interop | explicit `fret::advanced::*` imports | low-level runtime/driver/viewport/manual-assembly seams |
 
@@ -30,7 +30,7 @@ It is intentionally concrete:
 | rendered UI return alias | `Ui` | App | canonical alias over `Elements` |
 | reusable component context | `ComponentCx` or explicit component-surface alias | Component | wraps the mechanism context for reusable component work |
 
-## `fret::prelude` (App Surface)
+## `fret::app::prelude` (App Surface)
 
 Target exports:
 
@@ -57,7 +57,12 @@ Target non-exports:
 Target rule:
 
 - if a symbol is primarily useful for component authors or runner authors, it does not belong in
-  `fret::prelude`.
+  `fret::app::prelude`.
+
+Legacy bridge to delete:
+
+- `fret::prelude::*` may exist only as a short-lived in-repo migration bridge and is not the target
+  public import surface.
 
 ## `fret::component::prelude` (Component Surface)
 
@@ -162,13 +167,13 @@ These names/surfaces should disappear entirely if the replacement exists:
 
 | Area | Target status |
 | --- | --- |
-| app prelude is app-only | not started |
-| component prelude is explicit | not started |
-| advanced surface is explicit | not started |
-| canonical naming reset landed | not started |
+| app prelude is app-only | in progress |
+| component prelude is explicit | in progress |
+| advanced surface is explicit | in progress |
+| canonical naming reset landed | in progress |
 | grouped `AppUi` namespaces landed | not started |
-| first-party ecosystems migrated | not started |
-| templates/docs aligned | not started |
+| first-party ecosystems migrated | in progress |
+| templates/docs aligned | in progress |
 | old surface deleted | not started |
 | guards/gates added | not started |
 
@@ -180,4 +185,3 @@ This target state is complete when:
 2. official docs and templates teach the same names,
 3. first-party ecosystem crates use the same extension seams described here,
 4. the removed names are truly gone rather than merely discouraged.
-

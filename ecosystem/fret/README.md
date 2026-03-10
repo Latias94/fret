@@ -85,7 +85,7 @@ fret = { path = "../fret", default-features = false, features = ["desktop", "sha
 ## Minimal app skeleton
 
 ```rust,ignore
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 struct HelloView;
 

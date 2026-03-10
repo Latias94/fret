@@ -23,7 +23,7 @@
 //! ## Getting started (desktop)
 //!
 //! ```no_run
-//! use fret::prelude::*;
+//! use fret::app::prelude::*;
 //!
 //! struct HelloView;
 //!
@@ -254,7 +254,7 @@ pub mod advanced {
 
 /// Common imports for application code using `fret`.
 ///
-/// Recommended: `use fret::prelude::*;`
+/// Recommended: `use fret::app::prelude::*;`
 pub mod prelude {
     pub use fret_ui_kit::prelude::*;
     pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
@@ -791,12 +791,11 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
     use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp};
-    use crate::view::{View, ViewCx};
-    use crate::{Defaults, prelude::FretApp as PreludeFretApp};
+    use crate::view::View;
+    use crate::{AppUi, Defaults, Ui, prelude::FretApp as PreludeFretApp};
     use fret_app::CreateWindowRequest;
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
-    use fret_ui::element::Elements;
 
     fn install_app(_app: &mut KernelApp) {}
 
@@ -875,8 +874,8 @@ mod builder_surface_tests {
             Self
         }
 
-        fn render(&mut self, _cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
-            Elements::default()
+        fn render(&mut self, _cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+            Ui::default()
         }
     }
 
@@ -1031,6 +1030,7 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains(
             "//! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path."
         ));
+        assert!(rustdoc.contains("use fret::app::prelude::*;"));
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
         assert!(rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));

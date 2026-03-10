@@ -119,14 +119,14 @@ We should intentionally define **three** public authoring layers.
 
 | Surface | Audience | Import posture | What it exposes |
 | --- | --- | --- | --- |
-| App surface | ordinary app authors | `use fret::prelude::*;` | app builder, app-facing view runtime, default UI composition, default action/state patterns |
+| App surface | ordinary app authors | `use fret::app::prelude::*;` | app builder, app-facing view runtime, default UI composition, default action/state patterns |
 | Component surface | reusable component authors | `use fret::component::prelude::*;` | component composition contracts, styling/layout patch surface, semantics/layout helpers |
 | Advanced surface | runner/interop/power users | explicit `fret::advanced::*` imports | driver hooks, viewport/runner/manual assembly seams, low-level runtime types |
 
 Important rule:
 
-- `fret::prelude::*` must become **app-only**.
-- It must stop acting as a transitive "everything prelude".
+- `fret::app::prelude::*` must become the canonical app import.
+- `fret::prelude::*` may exist only as a temporary in-repo migration bridge and must stop acting as a transitive "everything prelude".
 
 ## Naming Reset
 
@@ -295,7 +295,7 @@ of carrying them forward.
 ### Delete or demote from the default app surface
 
 - broad transitive re-exports from `fret_ui_kit::prelude::*`
-- mechanism-layer types in `fret::prelude::*`
+- mechanism-layer types in `fret::app::prelude::*`
 - duplicate top-level aliases that increase naming ambiguity
 - flat action helper variants that are no longer part of the blessed path
 - old examples/docs that teach superseded authoring patterns
@@ -388,7 +388,7 @@ This workstream should leave behind enforcement, not only prose.
 
 Examples:
 
-- gate that `fret::prelude` does not expose low-level mechanism types,
+- gate that `fret::app::prelude` does not expose low-level mechanism types,
 - gate that templates use only the blessed app surface,
 - gate that README/docs/first-hour agree on the default action model,
 - gate that ecosystem crates use the documented extension seams instead of private shortcuts.
@@ -400,4 +400,3 @@ Examples:
 - First-party ecosystem crates no longer teach parallel authoring dialects.
 - The default prelude becomes materially smaller and more intentional.
 - Dead aliases and redundant helpers are removed, not merely hidden in prose.
-

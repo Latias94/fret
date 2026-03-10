@@ -4,14 +4,52 @@
 //! - helpers shared by `examples/`,
 //! - no reusable product APIs (those belong in ecosystem crates).
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 pub mod scaffold;
 
-pub fn install_cookbook_defaults(app: &mut App) {
+pub fn install_cookbook_defaults(app: &mut KernelApp) {
     shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
+}
+
+#[cfg(test)]
+mod authoring_surface_policy_tests {
+    const ROOT_README: &str = include_str!("../../../README.md");
+    const GOLDEN_PATH_DOC: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
+    const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
+    const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
+    const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
+        include_str!("../examples/simple_todo_v2_target.rs");
+
+    fn assert_uses_app_surface(src: &str) {
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("KernelApp"));
+        assert!(src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(src.contains("-> Ui"));
+        assert!(!src.contains("use fret::prelude::*;"));
+        assert!(!src.contains("ViewCx<'_, '_, App>"));
+        assert!(!src.contains("fn init(_app: &mut App"));
+        assert!(!src.contains("-> Elements"));
+    }
+
+    #[test]
+    fn onboarding_examples_use_the_new_app_surface() {
+        assert_uses_app_surface(HELLO_EXAMPLE);
+        assert_uses_app_surface(SIMPLE_TODO_EXAMPLE);
+        assert_uses_app_surface(SIMPLE_TODO_V2_TARGET_EXAMPLE);
+        assert!(SIMPLE_TODO_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
+    }
+
+    #[test]
+    fn onboarding_docs_use_the_new_app_surface() {
+        assert_uses_app_surface(ROOT_README);
+        assert_uses_app_surface(GOLDEN_PATH_DOC);
+        assert!(ROOT_README.contains("on_action_notify_local_set::<act::Add, String>"));
+        assert!(GOLDEN_PATH_DOC.contains("on_action_notify_local_set::<act::Add, String>"));
+    }
 }

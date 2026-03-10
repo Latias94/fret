@@ -28,13 +28,13 @@ Outcome:
 
 Deliverables:
 
-- `fret::prelude::*` becomes app-only.
+- `fret::app::prelude::*` becomes the canonical app import.
 - `fret::component::prelude::*` exists and is documented.
 - `fret::advanced::*` becomes the explicit place for low-level seams.
 
 Exit criteria:
 
-- A new app author cannot accidentally discover most advanced/runtime mechanisms through the default prelude.
+- A new app author cannot accidentally discover most advanced/runtime mechanisms through the app surface.
 
 ## Milestone 2 — Shrink the default app mental model
 
