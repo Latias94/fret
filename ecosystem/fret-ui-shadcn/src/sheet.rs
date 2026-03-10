@@ -2283,6 +2283,173 @@ mod tests {
         );
     }
 
+    fn render_sheet_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        side: SheetSide,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let open_for_sheet = open.clone();
+                let description_id_out = description_id_out.clone();
+                let cancel_id_out = cancel_id_out.clone();
+                let action_id_out = action_id_out.clone();
+                let content_id_out = content_id_out.clone();
+
+                let sheet = Sheet::new(open_for_sheet).side(side).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let title = SheetTitle::new("Edit profile").into_element(cx);
+                        let description = SheetDescription::new(
+                            "Make changes to your profile here. This content should wrap inside the sheet panel instead of measuring against unconstrained width on narrow viewports.",
+                        )
+                        .into_element(cx);
+                        description_id_out.set(Some(description.id));
+
+                        let header = SheetHeader::new(vec![title, description]).into_element(cx);
+
+                        let cancel = crate::Button::new("Cancel")
+                            .variant(crate::ButtonVariant::Outline)
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx);
+                        cancel_id_out.set(Some(cancel.id));
+
+                        let action = crate::Button::new("Save changes")
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx);
+                        action_id_out.set(Some(action.id));
+
+                        let footer = SheetFooter::new(vec![cancel, action]).into_element(cx);
+                        let content = SheetContent::new(vec![header, footer])
+                            .show_close_button(false)
+                            .into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![sheet]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn sheet_real_content_stays_within_panel_bounds_on_narrow_right_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(fret_runtime::FrameId(frame));
+            render_sheet_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                SheetSide::Right,
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = fret_ui::elements::current_bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside sheet content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside sheet content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside sheet content; content={content_bounds:?} action={action_bounds:?}"
+        );
+    }
+
     fn render_sheet_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
