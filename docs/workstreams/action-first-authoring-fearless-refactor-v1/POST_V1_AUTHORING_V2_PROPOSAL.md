@@ -1,7 +1,7 @@
 # Action-First Authoring - Post-v1 / v2 Authoring Proposal
 
 Status: Draft recommendation
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -52,6 +52,12 @@ The recommended v2 authoring surface is:
 - **GPUI-style authoring defaults** for actions, key contexts, caching, and rebuild semantics.
 - **Rust-first builder authoring** as the default path.
 - **Optional future DSL/frontend** as an additive layer compiling into the same IR/runtime.
+
+North-star clarification:
+
+- the primary v2 target is **GPUI's authoring/runtime feel**,
+- not gpui-component's component-library product shape,
+- though selected productization/builder ideas can still be borrowed as secondary references.
 
 In other words:
 

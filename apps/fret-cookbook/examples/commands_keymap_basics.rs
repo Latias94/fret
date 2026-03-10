@@ -224,18 +224,16 @@ impl View for CommandsKeymapBasicsView {
 
         cx.on_action_notify_toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
 
-        cx.on_action_notify_models::<act::TogglePanel>({
+        cx.on_action_notify_locals::<act::TogglePanel>({
             let panel_open_state = panel_open_state.clone();
             let allow_command_state = allow_command_state.clone();
-            move |models| {
-                let allowed = allow_command_state
-                    .read_in(models, |value| *value)
-                    .unwrap_or(true);
+            move |tx| {
+                let allowed = tx.value_or(&allow_command_state, true);
                 if !allowed {
                     return false;
                 }
 
-                panel_open_state.update_in(models, |value| *value = !*value)
+                tx.update(&panel_open_state, |value| *value = !*value)
             }
         });
 

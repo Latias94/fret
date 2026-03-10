@@ -195,7 +195,6 @@ impl App {
     ) -> Result<()> {
         self.view_with_hooks::<V>(configure)?.run()
     }
-
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

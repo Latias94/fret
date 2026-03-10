@@ -204,6 +204,41 @@ impl<T> LocalState<T> {
     }
 }
 
+/// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
+/// free of direct `ModelStore` plumbing.
+///
+/// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
+/// across shared `Model<T>` graphs, use `ViewCx::on_action_notify_models` directly.
+pub struct LocalTxn<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> LocalTxn<'a> {
+    pub fn value_or<T: Any + Clone>(&self, local: &LocalState<T>, default: T) -> T {
+        local.value_in_or(self.models, default)
+    }
+
+    pub fn value_or_else<T: Any + Clone>(&self, local: &LocalState<T>, f: impl FnOnce() -> T) -> T {
+        local.value_in_or_else(self.models, f)
+    }
+
+    pub fn set<T: Any>(&mut self, local: &LocalState<T>, value: T) -> bool {
+        local.set_in(self.models, value)
+    }
+
+    pub fn update<T: Any>(&mut self, local: &LocalState<T>, f: impl FnOnce(&mut T)) -> bool {
+        local.update_in(self.models, f)
+    }
+
+    pub fn update_if<T: Any>(
+        &mut self,
+        local: &LocalState<T>,
+        f: impl FnOnce(&mut T) -> bool,
+    ) -> bool {
+        local.update_in_if(self.models, f)
+    }
+}
+
 #[must_use]
 pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
     cx: &'cx mut ElementContext<'a, H>,
@@ -640,8 +675,8 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         key: fret_query::QueryKey<T>,
         policy: fret_query::QueryPolicy,
         fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
-        + Send
-        + 'static,
+            + Send
+            + 'static,
     ) -> fret_query::QueryHandle<T> {
         fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
     }
@@ -680,7 +715,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
@@ -694,7 +729,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.on_action::<A>(move |host, action_cx| {
             let handled = f(host, action_cx);
@@ -791,6 +826,21 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()))
     }
 
+    /// Register a typed unit action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the transaction only touches view-owned `LocalState<T>` slots.
+    pub fn on_action_notify_locals<A: crate::TypedAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static,
+    ) {
+        self.on_action_notify_models::<A>(move |models| {
+            let mut tx = LocalTxn { models };
+            f(&mut tx)
+        })
+    }
+
     /// Register a typed action handler that records a transient event for this dispatch cycle.
     ///
     /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
@@ -811,11 +861,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
@@ -826,11 +876,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.on_payload_action::<A>(move |host, action_cx, payload| {
             let handled = f(host, action_cx, payload);
@@ -862,14 +912,31 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         });
     }
 
+    /// Register a typed payload action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the handler only coordinates view-owned `LocalState<T>` slots.
+    pub fn on_payload_action_notify_locals<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
+    ) {
+        self.on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, payload)
+        })
+    }
+
     /// Register a typed unit action availability handler.
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
+                &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+                fret_ui::action::CommandAvailabilityActionCx,
+            ) -> fret_ui::CommandAvailability
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);

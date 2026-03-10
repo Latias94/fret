@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use crate::cli::{help, workspace_root};
 
@@ -97,6 +98,7 @@ fn init_empty(args: Vec<String>) -> Result<(), String> {
 
     let mut out_path: Option<PathBuf> = None;
     let mut name: Option<String> = None;
+    let mut run_check = true;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -114,6 +116,7 @@ fn init_empty(args: Vec<String>) -> Result<(), String> {
                 );
             }
             "--help" | "-h" => return help(),
+            "--no-check" => run_check = false,
             other => return Err(format!("unknown argument for init empty: {other}")),
         }
     }
@@ -121,7 +124,7 @@ fn init_empty(args: Vec<String>) -> Result<(), String> {
     let package_name = sanitize_package_name(name.as_deref().unwrap_or("my-app"))?;
 
     let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
-    init_empty_at(&out_dir, &package_name)
+    init_empty_at(&out_dir, &package_name, run_check)
 }
 
 fn init_todo(args: Vec<String>) -> Result<(), String> {
@@ -132,6 +135,7 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     let mut ui_assets = false;
     let mut icon_pack = IconPack::Lucide;
     let mut command_palette = false;
+    let mut run_check = true;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -158,6 +162,7 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
             "--no-icons" => icon_pack = IconPack::None,
             "--command-palette" => command_palette = true,
             "--help" | "-h" => return help(),
+            "--no-check" => run_check = false,
             other => return Err(format!("unknown argument for init todo: {other}")),
         }
     }
@@ -174,6 +179,7 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
             command_palette,
             ui_assets,
         },
+        run_check,
     )
 }
 
@@ -185,6 +191,7 @@ fn init_simple_todo(args: Vec<String>) -> Result<(), String> {
     let mut ui_assets = false;
     let mut icon_pack = IconPack::Lucide;
     let mut command_palette = false;
+    let mut run_check = true;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -211,6 +218,7 @@ fn init_simple_todo(args: Vec<String>) -> Result<(), String> {
             "--no-icons" => icon_pack = IconPack::None,
             "--command-palette" => command_palette = true,
             "--help" | "-h" => return help(),
+            "--no-check" => run_check = false,
             other => return Err(format!("unknown argument for init simple-todo: {other}")),
         }
     }
@@ -227,6 +235,7 @@ fn init_simple_todo(args: Vec<String>) -> Result<(), String> {
             command_palette,
             ui_assets,
         },
+        run_check,
     )
 }
 
@@ -235,6 +244,7 @@ fn init_simple_todo_at(
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
+    run_check: bool,
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
@@ -255,6 +265,8 @@ fn init_simple_todo_at(
         &simple_todo_template_readme_md(package_name, opts),
     )?;
 
+    maybe_cargo_check(out_dir, run_check)?;
+
     println!("Initialized simple-todo template at: {}", out_dir.display());
     println!("Next:");
     println!(
@@ -269,6 +281,7 @@ fn init_todo_at(
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
+    run_check: bool,
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
@@ -289,6 +302,8 @@ fn init_todo_at(
         &todo_template_readme_md(package_name, opts),
     )?;
 
+    maybe_cargo_check(out_dir, run_check)?;
+
     println!("Initialized todo template at: {}", out_dir.display());
     println!("Next:");
     println!(
@@ -305,6 +320,7 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
     let mut name: Option<String> = None;
     let mut icon_pack = IconPack::Lucide;
     let mut command_palette = false;
+    let mut run_check = true;
 
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -330,6 +346,7 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
             "--no-icons" => icon_pack = IconPack::None,
             "--command-palette" => command_palette = true,
             "--help" | "-h" => return help(),
+            "--no-check" => run_check = false,
             other => return Err(format!("unknown argument for init hello: {other}")),
         }
     }
@@ -346,6 +363,7 @@ fn init_hello(args: Vec<String>) -> Result<(), String> {
             command_palette,
             ui_assets: false,
         },
+        run_check,
     )
 }
 
@@ -354,6 +372,7 @@ fn init_hello_at(
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
+    run_check: bool,
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
@@ -374,6 +393,8 @@ fn init_hello_at(
         &hello_template_readme_md(package_name, opts),
     )?;
 
+    maybe_cargo_check(out_dir, run_check)?;
+
     println!("Initialized hello template at: {}", out_dir.display());
     println!("Next:");
     println!(
@@ -383,7 +404,7 @@ fn init_hello_at(
     Ok(())
 }
 
-fn init_empty_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
+fn init_empty_at(out_dir: &Path, package_name: &str, run_check: bool) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
     let cargo_toml = empty_template_cargo_toml(package_name);
@@ -398,6 +419,8 @@ fn init_empty_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
         &empty_template_readme_md(package_name),
     )?;
 
+    maybe_cargo_check(out_dir, run_check)?;
+
     println!("Initialized empty template at: {}", out_dir.display());
     println!("Next:");
     println!(
@@ -405,4 +428,23 @@ fn init_empty_at(out_dir: &Path, package_name: &str) -> Result<(), String> {
         out_dir.join("Cargo.toml").display()
     );
     Ok(())
+}
+
+fn maybe_cargo_check(out_dir: &Path, run_check: bool) -> Result<(), String> {
+    if !run_check {
+        return Ok(());
+    }
+
+    println!("Running cargo check...");
+    let status = Command::new("cargo")
+        .arg("check")
+        .current_dir(out_dir)
+        .status()
+        .map_err(|e| format!("failed to spawn cargo check: {e}"))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("cargo check failed with status: {status}"))
+    }
 }
