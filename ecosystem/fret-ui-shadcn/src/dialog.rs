@@ -2013,6 +2013,82 @@ mod tests {
         OverlayController::render(ui, app, services, window, bounds);
     }
 
+    fn render_dialog_frame_with_real_content(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        description_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(10.0));
+                            layout.size.height = Length::Px(Px(10.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let dialog = Dialog::new(open.clone()).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let title = DialogTitle::new("Edit profile").into_element(cx);
+                        let description = DialogDescription::new(
+                            "Make changes to your profile here. Click save when you're done, and keep the content wrapped inside the dialog panel instead of measuring against the window width.",
+                        )
+                        .into_element(cx);
+                        description_id_out.set(Some(description.id));
+
+                        let header = DialogHeader::new(vec![title, description]).into_element(cx);
+
+                        let cancel = crate::Button::new("Cancel")
+                            .variant(crate::ButtonVariant::Outline)
+                            .into_element(cx);
+                        cancel_id_out.set(Some(cancel.id));
+
+                        let action = crate::Button::new("Save changes").into_element(cx);
+                        action_id_out.set(Some(action.id));
+
+                        let footer = DialogFooter::new(vec![cancel, action]).into_element(cx);
+                        let close = DialogClose::from_scope().into_element(cx);
+
+                        let content =
+                            DialogContent::new(vec![header, footer, close]).into_element(cx);
+                        content_id_out.set(Some(content.id));
+                        content
+                    },
+                );
+
+                vec![dialog]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
     #[test]
     fn dialog_footer_stacks_on_base_viewport_and_rows_on_sm() {
         fn assert_footer_layout(bounds: Rect, expect_row: bool) {
@@ -2085,6 +2161,91 @@ mod tests {
                 Size::new(Px(800.0), Px(600.0)),
             ),
             true,
+        );
+    }
+
+    #[test]
+    fn dialog_real_content_stays_within_panel_bounds_on_sm_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_dialog_frame_with_real_content(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                content_id.clone(),
+                description_id.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let content_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content element id"),
+        )
+        .expect("content bounds");
+        let description_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description element id"),
+        )
+        .expect("description bounds");
+        let cancel_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = fret_ui::elements::bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+
+        let content_left = content_bounds.origin.x.0 - 0.5;
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
+
+        assert!(
+            content_bounds.size.width.0 <= 512.5,
+            "expected dialog content width to stay near shadcn's sm:max-w-lg, got {content_bounds:?}"
+        );
+        assert!(
+            description_bounds.origin.x.0 >= content_left
+                && description_bounds.origin.x.0 + description_bounds.size.width.0 <= content_right,
+            "expected description to stay inside dialog content; content={content_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            cancel_bounds.origin.x.0 >= content_left
+                && cancel_bounds.origin.x.0 + cancel_bounds.size.width.0 <= content_right,
+            "expected cancel button to stay inside dialog content; content={content_bounds:?} cancel={cancel_bounds:?}"
+        );
+        assert!(
+            action_bounds.origin.x.0 >= content_left
+                && action_bounds.origin.x.0 + action_bounds.size.width.0 <= content_right,
+            "expected action button to stay inside dialog content; content={content_bounds:?} action={action_bounds:?}"
         );
     }
 
