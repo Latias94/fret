@@ -1078,4 +1078,14 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
     }
+
+    #[test]
+    fn app_prelude_omits_low_level_mechanism_types() {
+        let app_prelude = app_prelude_source();
+        assert!(!app_prelude.contains("ElementContext"));
+        assert!(!app_prelude.contains("UiTree"));
+        assert!(!app_prelude.contains("UiServices"));
+        assert!(!app_prelude.contains("UiHost"));
+        assert!(!app_prelude.contains("AnyElement"));
+    }
 }

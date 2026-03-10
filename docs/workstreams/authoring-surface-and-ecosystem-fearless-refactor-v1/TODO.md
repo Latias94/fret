@@ -97,7 +97,7 @@ Companion docs:
 ## M6 — Add gates so the surface stays clean
 
 - [x] Add a gate that checks the app prelude stays app-only.
-- [ ] Add a gate that checks low-level mechanism types do not leak into the app prelude.
+- [x] Add a gate that checks low-level mechanism types do not leak into the app prelude.
 - [ ] Add a gate that templates only use blessed app-surface APIs.
 - [ ] Add a gate that README/docs/first-hour agree on the default action model.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
