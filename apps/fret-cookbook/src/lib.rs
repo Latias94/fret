@@ -51,8 +51,8 @@ mod authoring_surface_policy_tests {
         assert!(
             SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
         );
-        assert!(SIMPLE_TODO_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
-        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
     }
 

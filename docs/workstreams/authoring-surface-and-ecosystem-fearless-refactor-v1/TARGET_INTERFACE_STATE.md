@@ -28,6 +28,8 @@ It is intentionally concrete:
 | kernel runtime app | `KernelApp` | Advanced / component as needed | no longer taught as bare `App` in app prelude |
 | app-facing view context | `AppUi` | App | replaces `ViewCx` as the taught surface |
 | rendered UI return alias | `Ui` | App | canonical alias over `Elements` |
+| extracted app helper context | `UiCx` | App | hides `ElementContext<'_, KernelApp>` noise in default app code |
+| extracted app helper child return | `UiChild` | App | hides `UiChildIntoElement<KernelApp>` noise in default app code |
 | reusable component context | `ComponentCx` or explicit component-surface alias | Component | wraps the mechanism context for reusable component work |
 
 ## `fret::app::prelude` (App Surface)
@@ -37,8 +39,10 @@ Target exports:
 - `FretApp`
 - `View`
 - `AppUi`
+- `UiCx`
 - `LocalState`
 - `Ui`
+- `UiChild`
 - `ui`
 - `shadcn` (feature-gated)
 - `ThemeSnapshot`

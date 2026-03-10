@@ -224,7 +224,7 @@ impl View for SimpleTodoV2TargetView {
     }
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<KernelApp> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)

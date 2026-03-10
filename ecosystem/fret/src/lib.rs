@@ -85,6 +85,14 @@ pub type AppUi<'cx, 'a, H> = view::ViewCx<'cx, 'a, H>;
 /// Canonical app-facing render return alias for the default authoring surface.
 pub type Ui = fret_ui::element::Elements;
 
+/// App-facing helper context alias for extracted child-builder functions on the default surface.
+pub type UiCx<'a> = fret_ui::ElementContext<'a, KernelApp>;
+
+/// App-facing child return alias for extracted helper functions on the default surface.
+pub trait UiChild: fret_ui_kit::UiChildIntoElement<KernelApp> {}
+
+impl<T> UiChild for T where T: fret_ui_kit::UiChildIntoElement<KernelApp> {}
+
 /// Runtime defaults applied by the `fret` facade (within the enabled crate features).
 ///
 /// This is an ecosystem-level convenience (not a kernel contract).
@@ -203,7 +211,7 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::{LocalState, TrackedStateExt, View};
-        pub use crate::{AppUi, KernelApp, Ui};
+        pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};
         pub use crate::{actions, workspace_menu};
         pub use fret_core::{AppWindowId, Event, SemanticsRole};
         pub use fret_runtime::{ActionId, CommandId, TypedAction};

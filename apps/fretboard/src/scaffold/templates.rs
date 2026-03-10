@@ -634,10 +634,10 @@ __PALETTE_BUTTON__
 }
 
 fn filter_chip(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     filter: TodoFilter,
     current: TodoFilter,
-) -> impl UiChildIntoElement<KernelApp> {
+) -> impl UiChild {
     let selected = filter == current;
     shadcn::Button::new(filter.as_label())
         .variant(if selected {
@@ -653,7 +653,7 @@ fn filter_chip(
         })
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElement<KernelApp> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)
@@ -1017,7 +1017,7 @@ __PALETTE_BUTTON__
     }
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<KernelApp> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)
@@ -1270,8 +1270,8 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
-        assert!(src.contains("cx: &mut ElementContext<'_, KernelApp>,"));
-        assert!(src.contains("impl UiChildIntoElement<KernelApp>"));
+        assert!(src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
         assert!(src.contains("ui::children!["));
@@ -1338,7 +1338,7 @@ mod tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
-        assert!(src.contains("impl UiChildIntoElement<KernelApp>"));
+        assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
         assert!(src.contains("ui::keyed("));
         assert!(!src.contains("ui::container( |"));
