@@ -194,6 +194,10 @@ pub use fret_framework as kernel;
 pub mod app {
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
+        // Temporary bridge: keep app call sites moving onto the new import path before we tighten
+        // the surface contents and delete the broad legacy exports.
+        pub use crate::prelude::*;
+
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
         #[cfg(feature = "shadcn")]

@@ -241,7 +241,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};
 use fret_selector::ui::DepsBuilder;
 
@@ -326,11 +326,11 @@ struct TodoRowSnapshot {
 struct TodoView;
 
 impl View for TodoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
@@ -630,10 +630,10 @@ __PALETTE_BUTTON__
 }
 
 fn filter_chip(
-    cx: &mut ElementContext<'_, App>,
+    cx: &mut ElementContext<'_, KernelApp>,
     filter: TodoFilter,
     current: TodoFilter,
-) -> impl UiChildIntoElement<App> {
+) -> impl UiChildIntoElement<KernelApp> {
     let selected = filter == current;
     shadcn::Button::new(filter.as_label())
         .variant(if selected {
@@ -649,7 +649,7 @@ fn filter_chip(
         })
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElement<App> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElement<KernelApp> {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)
@@ -670,7 +670,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElem
         .w_full()
 }
 
-fn install_app(app: &mut App) {
+fn install_app(app: &mut KernelApp) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -710,7 +710,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     };
 
     format!(
-        r#"use fret::prelude::*;
+        r#"use fret::app::prelude::*;
 
 mod act {{
     fret::actions!([Click = "{package_name}.hello.click.v1"]);
@@ -719,11 +719,11 @@ mod act {{
 struct HelloView;
 
 impl View for HelloView {{
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {{
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {{
         Self
     }}
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {{
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {{
         let click_count_state = cx.use_local::<u32>();
         let click_count_value = click_count_state.layout(cx).value_or(0);
 
@@ -748,7 +748,7 @@ __PALETTE_BUTTON__
     }}
 }}
 
-fn install_app(app: &mut App) {{
+fn install_app(app: &mut KernelApp) {{
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }}
@@ -808,7 +808,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 mod act {
     fret::actions!([
@@ -829,11 +829,11 @@ struct TodoRow {
 struct TodoView;
 
 impl View for TodoView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
@@ -1013,7 +1013,7 @@ __PALETTE_BUTTON__
     }
 }
 
-fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<App> {
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<KernelApp> {
     let checkbox = shadcn::Checkbox::from_checked(row.done)
         .action(act::Toggle)
         .action_payload(row.id)
@@ -1034,7 +1034,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<App>
         .w_full()
 }
 
-fn install_app(app: &mut App) {
+fn install_app(app: &mut KernelApp) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -1263,6 +1263,11 @@ mod tests {
     #[test]
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
+        assert!(src.contains("cx: &mut ElementContext<'_, KernelApp>,"));
+        assert!(src.contains("impl UiChildIntoElement<KernelApp>"));
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
         assert!(src.contains("ui::children!["));
@@ -1310,6 +1315,9 @@ mod tests {
     #[test]
     fn hello_template_uses_default_authoring_dialect() {
         let src = hello_template_main_rs("hello-app", opts());
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
         assert!(src.contains("ui::v_flex("));
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
@@ -1325,6 +1333,10 @@ mod tests {
     #[test]
     fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
+        assert!(src.contains("impl UiChildIntoElement<KernelApp>"));
         assert!(src.contains("ui::children!["));
         assert!(src.contains("ui::keyed("));
         assert!(!src.contains("ui::container( |"));
