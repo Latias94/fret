@@ -60,24 +60,26 @@ impl View for FormBasicsView {
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.on_action_notify_models::<act::Submit>({
+        cx.on_action_notify_locals::<act::Submit>({
             let name_state = name_state.clone();
             let email_state = email_state.clone();
             let error_state = error_state.clone();
-            move |models| {
-                let err = FormBasicsView::validate_in(models, &name_state, &email_state);
-                error_state.set_in(models, err)
+            move |tx| {
+                let name = tx.value_or_else(&name_state, String::new);
+                let email = tx.value_or_else(&email_state, String::new);
+                let err = FormBasicsView::validate(&name, &email);
+                tx.set(&error_state, err)
             }
         });
 
-        cx.on_action_notify_models::<act::Reset>({
+        cx.on_action_notify_locals::<act::Reset>({
             let name_state = name_state.clone();
             let email_state = email_state.clone();
             let error_state = error_state.clone();
-            move |models| {
-                let ok = name_state.set_in(models, String::new());
-                let ok = email_state.set_in(models, String::new()) && ok;
-                error_state.set_in(models, None) && ok
+            move |tx| {
+                let ok = tx.set(&name_state, String::new());
+                let ok = tx.set(&email_state, String::new()) && ok;
+                tx.set(&error_state, None) && ok
             }
         });
 
