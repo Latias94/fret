@@ -22,12 +22,13 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
+    let trigger = shadcn::AlertDialogTrigger::build(
+        shadcn::Button::new("Show Dialog").variant(shadcn::ButtonVariant::Outline),
+    );
 
     shadcn::AlertDialog::new(open)
         .compose()
-        .trigger(shadcn::AlertDialogTrigger::build(
-            shadcn::Button::new("Show Dialog").variant(shadcn::ButtonVariant::Outline),
-        ))
+        .trigger(trigger)
         .content_with(move |cx| {
             shadcn::AlertDialogContent::new([
                 shadcn::AlertDialogHeader::new([
