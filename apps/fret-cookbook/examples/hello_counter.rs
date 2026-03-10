@@ -45,15 +45,6 @@ fn parse_step(step_text: &str) -> (i64, bool) {
     (step, true)
 }
 
-fn read_effective_step(models: &fret_runtime::ModelStore, step: &LocalState<String>) -> i64 {
-    let step_text = step
-        .read_in(models, Clone::clone)
-        .ok()
-        .unwrap_or_else(|| "1".to_string());
-    let (step, _) = parse_step(&step_text);
-    step
-}
-
 impl View for HelloCounterView {
     fn init(_app: &mut App, _window: AppWindowId) -> Self {
         Self
@@ -77,25 +68,23 @@ impl View for HelloCounterView {
             theme.color_token("foreground")
         };
 
-        cx.on_action_notify_models::<act::Inc>({
+        cx.on_action_notify_locals::<act::Inc>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
-            move |models| {
-                let step = read_effective_step(models, &step_state);
-                count_state.update_in(models, |value| {
-                    *value = value.saturating_add(step);
-                })
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_add(step))
             }
         });
 
-        cx.on_action_notify_models::<act::Dec>({
+        cx.on_action_notify_locals::<act::Dec>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
-            move |models| {
-                let step = read_effective_step(models, &step_state);
-                count_state.update_in(models, |value| {
-                    *value = value.saturating_sub(step);
-                })
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_sub(step))
             }
         });
 

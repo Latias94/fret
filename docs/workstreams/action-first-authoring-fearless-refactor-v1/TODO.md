@@ -14,6 +14,7 @@ Related:
 - Post-app-entry retained-seam audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+- Default-path productization audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
@@ -593,6 +594,11 @@ Current sequencing note (as of 2026-03-09):
   underlies `use_local*`, and `run_native_with_compat_driver(...)` remains a retained advanced
   interop seam because its caller families still carry real capability; neither is the next
   delete-ready cleanup lane.
+- productization audit update (as of 2026-03-10):
+  `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now records that the ingress docs are broadly
+  aligned on the same default/comparison/advanced taxonomy, and that the remaining drift was only
+  wording-level in `README.md` and the `fret` crate README rather than evidence for more helper/API
+  expansion.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -839,6 +845,9 @@ Current sequencing note (as of 2026-03-09):
 - [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
   - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
   - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, and `docs/ui-ergonomics-and-interop.md` now repeat the same ladder/taxonomy at the repo-root, first-hour, crate-guidance, and ergonomics-guidance entry points, `docs/examples/README.md` states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` points back to the same ladder instead of presenting the facade README as the canonical example host.
+  - North-star clarification (as of 2026-03-10): this productization/document pass does **not**
+    change the v2 target. GPUI/Zed-style authoring/runtime remains the primary north-star;
+    gpui-component is at most a secondary source of selected builder/productization cues.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
     - `README.md`

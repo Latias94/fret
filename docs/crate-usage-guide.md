@@ -81,7 +81,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*`. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_locals`, `on_action_notify_transient`, and local `on_activate*`. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 

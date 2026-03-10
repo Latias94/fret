@@ -87,7 +87,7 @@ If you are unsure, start with `Layout` and tighten later.
 
 Dynamic lists should use stable keys:
 
-- Prefer `cx.keyed(id, |cx| ...)` for list rows.
+- Prefer `ui::keyed(id, |cx| ...)` for list rows.
 - If a list can insert/remove/reorder, assume it needs keys.
 
 ## Minimal `Cargo.toml`
@@ -152,15 +152,14 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
+- Start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, `on_action_notify_transient` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
-## App state (models)
+## App state (LocalState-first)
 
 ```rust,ignore
 use std::sync::Arc;
-use fret_runtime::Model;
 
 mod act {
     fret::actions!([
@@ -174,9 +173,9 @@ mod act {
 }
 
 #[derive(Clone)]
-struct TodoItem {
+struct TodoRow {
     id: u64,
-    done: Model<bool>,
+    done: bool,
     text: Arc<str>,
 }
 
@@ -187,13 +186,7 @@ enum TodoFilter {
     Completed,
 }
 
-struct TodoView {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    filter: Model<TodoFilter>,
-    next_id: Model<u64>,
-    tip_nonce: Model<u64>,
-}
+struct TodoView;
 ```
 
 
@@ -203,26 +196,16 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-Current status note (as of 2026-03-09): this document describes the **current practical baseline**
-for the full `todo` app and the richer `cargo run -p fretboard -- new todo` scaffold, not the
-smallest v2 default surface. The smaller `simple-todo` path is now the boring default for
-view-owned keyed lists: the cookbook comparison sample, `apps/fret-examples/src/todo_demo.rs`, and
-the `fretboard` simple-todo scaffold all use `LocalState<Vec<TodoRow>>`, payload row actions, and
-snapshot checkbox bindings. The remaining explicit collection examples are comparison-oriented or
-intentionally advanced rather than default-surface blockers.
+Current status note (as of 2026-03-10): the `todo` scaffold is **LocalState-first** (view-owned slots)
+and uses typed payload actions + keyed lists for per-row interaction, while still showcasing selector
+and query hooks.
 
-Why this richer baseline still stays explicit for now:
+The official baseline uses a 3-layer state split:
 
-- selector deps currently observe one explicit todo/filter graph, including nested row completion models,
-- query invalidation is intentionally shown through the same tracked graph (`tip_nonce` in the query key),
-- and the template is meant to teach multi-bucket coordination rather than the smallest keyed-list surface.
-
-The official baseline uses an explicit 3-layer model:
-
-1. Local mutable state (`Model<T>`):
-   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`, `tip_nonce`) in this richer baseline.
+1. Local mutable state (`LocalState<T>`):
+   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`, `tip_nonce`) in this baseline.
 2. Derived state (`fret-selector`):
-   - memoized projections/counters/filtered views derived from models.
+   - memoized projections/counters/filtered views derived from tracked locals.
 3. Async resource state (`fret-query`):
    - loading/error/success/cache lifecycle for remote or background resources.
 
@@ -231,7 +214,8 @@ Boundary rule:
 - keep domain mutations in typed action handlers,
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
-- do not treat this explicit model graph as the first-contact default for view-owned keyed lists; that role now belongs to `simple-todo`.
+- prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
+  - For multi-slot `LocalState<T>` coordination, prefer `on_action_notify_locals` / `on_payload_action_notify_locals` over `on_action_notify_models`.
 
 ## Actions (UI -> app logic)
 

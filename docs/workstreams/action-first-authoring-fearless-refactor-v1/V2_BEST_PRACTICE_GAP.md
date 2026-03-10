@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Current Best Practice vs v2 Target
 
 Status: draft, post-v1 guidance
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -26,6 +26,12 @@ The goal is to keep productization work honest by separating:
 - what is already good enough to teach as the default path,
 - what is still a real ergonomics gap,
 - and what is intentionally advanced rather than unfinished.
+
+Target clarification:
+
+- this note measures distance to **GPUI/Zed-style authoring/runtime**,
+- not to gpui-component's component-library product surface,
+- though productization work may borrow selected packaging ideas secondarily.
 
 ---
 

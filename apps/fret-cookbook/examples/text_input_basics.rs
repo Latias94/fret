@@ -43,14 +43,6 @@ impl TextInputBasicsView {
             .unwrap_or_default();
         !text.trim().is_empty()
     }
-
-    fn has_text_for_action_model_store(
-        models: &mut fret_runtime::ModelStore,
-        text: &LocalState<String>,
-    ) -> bool {
-        let text = text.read_in(models, Clone::clone).ok().unwrap_or_default();
-        !text.trim().is_empty()
-    }
 }
 
 impl View for TextInputBasicsView {
@@ -97,29 +89,31 @@ impl View for TextInputBasicsView {
             .cancel_command(act::Clear.into())
             .test_id(TEST_ID_INPUT);
 
-        cx.on_action_notify_models::<act::Submit>({
+        cx.on_action_notify_locals::<act::Submit>({
             let text_state = text_state.clone();
             let submitted_count_state = submitted_count_state.clone();
-            move |models| {
-                if !TextInputBasicsView::has_text_for_action_model_store(models, &text_state) {
+            move |tx| {
+                let text = tx.value_or_else(&text_state, String::new);
+                if text.trim().is_empty() {
                     return false;
                 }
 
-                let _ = submitted_count_state.update_in(models, |value| {
-                    *value = value.saturating_add(1);
+                let _ = tx.update(&submitted_count_state, |value| {
+                    *value = value.saturating_add(1)
                 });
-                text_state.set_in(models, String::new())
+                tx.set(&text_state, String::new())
             }
         });
 
-        cx.on_action_notify_models::<act::Clear>({
+        cx.on_action_notify_locals::<act::Clear>({
             let text_state = text_state.clone();
-            move |models| {
-                if !TextInputBasicsView::has_text_for_action_model_store(models, &text_state) {
+            move |tx| {
+                let text = tx.value_or_else(&text_state, String::new);
+                if text.trim().is_empty() {
                     return false;
                 }
 
-                text_state.set_in(models, String::new())
+                tx.set(&text_state, String::new())
             }
         });
 
