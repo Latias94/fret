@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Endgame Summary
 
 Status: draft, post-v1 summary
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -10,6 +10,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
@@ -175,6 +176,12 @@ The command-first lane now also has an explicit retained-seam rule:
 - `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` records that the remaining command-shaped
   surfaces are now split between permanent mechanism/catalog seams and intentionally retained
   advanced/internal residue, and should only be reopened on leak or deprecation.
+
+The post-app-entry retained-seam audit now makes the next-step reading even narrower:
+
+- `POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` records that, after `App::ui*` removal,
+  compat runner and `use_state` should both be read as intentionally retained seams rather than
+  near-term delete-ready residue.
 
 This is why the hard-delete sequence should stay explicit and staged rather than turning into one
 last grep-and-delete pass.

@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -9,6 +9,7 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Post-app-entry retained-seam audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
@@ -113,6 +114,10 @@ Adoption note (as of 2026-03-07):
   `ecosystem/fret/src/app_entry.rs` no longer exports `App::ui*`, the crate README/rustdoc now
   teach only the view-based entry path, and the app-entry lane is closed pre-release rather than
   waiting on a published deprecation window.
+- Retained-seam audit update (as of 2026-03-10):
+  `POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` now confirms that, after the app-entry lane
+  closed, compat runner and `use_state` are still intentional retained seams rather than the next
+  delete-ready cleanup targets.
 - Command-first retained-seam update (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
   pressure is split between permanent mechanism/catalog seams and intentionally retained
@@ -278,6 +283,7 @@ Post-v1 direction (recommended):
   - Hard-delete update (as of 2026-03-10): `ecosystem/fret/src/app_entry.rs` no longer exposes `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`, which closes the app-entry lane before the first public release.
   - Execution update (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now treats `App::ui*` as a closed historical lane and leaves compat runner / `use_state` / command-first widgets as the remaining explicit policy checkpoints.
   - Status-matrix update (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md` now shows `App::ui*` as removed pre-release, with compat runner and `use_state` retained and the remaining command-first widget family as the main implementation-scoped cleanup track.
+  - Retained-seam audit update (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` now records the post-app-entry readiness verdict: `use_state` remains a retained explicit raw-model seam because it is still runtime substrate for `use_local*`, and compat runner remains a retained advanced interop seam because the real caller families still exist.
   - Compat-runner update (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md` now shows that `run_native_with_compat_driver(...)` still serves three real in-tree caller families (plot/chart demos, low-level renderer/asset demos, advanced shell demos), so the next step is a keep-vs-quarantine policy call rather than an immediate hard delete.
   - Compat-runner decision draft (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md` now recommends keeping `run_native_with_compat_driver(...)` as an advanced low-level interop seam for now, updating docs to mark it as non-default, and deferring any hard delete until a clearer quarantine boundary or replacement path exists.
   - Compat-runner wording update (as of 2026-03-09): the workstream checklist/gap-analysis side is now aligned with README/rustdoc, so Stage 3 is blocked only on future keep-vs-quarantine product decisions rather than wording drift.

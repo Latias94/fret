@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -11,6 +11,7 @@ Related:
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Post-app-entry retained-seam audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
@@ -586,6 +587,12 @@ Current sequencing note (as of 2026-03-09):
 - app-entry hard-delete update (as of 2026-03-10): `ecosystem/fret/src/app_entry.rs` no longer
   exposes `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`, and the workstream docs now treat
   that lane as closed pre-release rather than waiting on a published deprecation window.
+- retained-seam audit update (as of 2026-03-10):
+  `POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` now records the narrower post-app-entry
+  verdict: `ViewCx::use_state::<T>()` remains a retained explicit raw-model seam because it still
+  underlies `use_local*`, and `run_native_with_compat_driver(...)` remains a retained advanced
+  interop seam because its caller families still carry real capability; neither is the next
+  delete-ready cleanup lane.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
