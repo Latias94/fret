@@ -36,7 +36,11 @@ pub(crate) fn poll_summarize_jobs(app: &mut App, st: &mut State) {
                 let _ = app.models_mut().update(&st.summarize_last_error, |v| {
                     *v = Some(Arc::<str>::from(err.clone()))
                 });
-                push_log(app, &st.log_lines, &format!("regression summarize failed: {err}"));
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("regression summarize failed: {err}"),
+                );
             }
         }
     }
@@ -66,11 +70,7 @@ pub(crate) fn start_regression_summarize(app: &mut App, st: &mut State) -> Resul
         repo_root.join(&out_dir_raw)
     };
 
-    let args = vec![
-        "--dir".to_string(),
-        out_dir_raw,
-        "summarize".to_string(),
-    ];
+    let args = vec!["--dir".to_string(), out_dir_raw, "summarize".to_string()];
 
     let tx = st.summarize_tx.clone();
     std::thread::spawn(move || {
@@ -88,7 +88,9 @@ pub(crate) fn start_regression_summarize(app: &mut App, st: &mut State) -> Resul
     Ok(())
 }
 
-pub(crate) fn new_summarize_channel(
-) -> (mpsc::Sender<SummarizeJobResult>, mpsc::Receiver<SummarizeJobResult>) {
+pub(crate) fn new_summarize_channel() -> (
+    mpsc::Sender<SummarizeJobResult>,
+    mpsc::Receiver<SummarizeJobResult>,
+) {
     mpsc::channel()
 }

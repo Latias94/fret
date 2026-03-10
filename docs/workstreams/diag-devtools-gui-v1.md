@@ -9,6 +9,11 @@ scope: diagnostics, automation, devtools, web-runner
 
 This workstream defines a user-facing Diagnostics DevTools GUI for Fret apps.
 
+For the newer umbrella framing that treats DevTools GUI as one diagnostics consumer lane within the
+broader runtime/tooling/artifact refactor, see:
+
+- `docs/workstreams/diag-fearless-refactor-v2/README.md`
+
 The key goal is to make the existing diagnostics workflow (bundles, inspect/pick, scripted repros, gates)
 available with **low-friction, real-time UX** for app/component authors — without weakening Fret’s layering
 and “contract-first” philosophy.

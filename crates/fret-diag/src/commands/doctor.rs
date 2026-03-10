@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptStageV1};
+use fret_diag_protocol::UiScriptStageV1;
 use serde_json::{Value, json};
 
 use super::args::resolve_latest_bundle_dir_path;
@@ -366,6 +366,13 @@ pub(crate) fn cmd_doctor(
     if rest.first().is_some_and(|s| s == "scripts") {
         return super::doctor_scripts::cmd_doctor_scripts(&rest[1..], workspace_root, stats_json);
     }
+    if rest.first().is_some_and(|s| s == "campaigns") {
+        return super::doctor_campaigns::cmd_doctor_campaigns(
+            &rest[1..],
+            workspace_root,
+            stats_json,
+        );
+    }
 
     let mut fix_bundle_json: bool = false;
     let mut fix_schema2: bool = false;
@@ -706,24 +713,6 @@ fn resolve_manifest_path(bundle_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-fn resolve_capabilities_path(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct = bundle_dir.join("capabilities.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    let root = bundle_dir.join("_root").join("capabilities.json");
-    if root.is_file() {
-        return Some(root);
-    }
-    if let Some(parent) = bundle_dir.parent() {
-        let from_parent = parent.join("capabilities.json");
-        if from_parent.is_file() {
-            return Some(from_parent);
-        }
-    }
-    None
-}
-
 fn read_json_value_result(path: &Path) -> Result<Value, String> {
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
@@ -830,12 +819,13 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             })
         });
 
-    let capabilities_path = resolve_capabilities_path(bundle_dir);
+    let capabilities_source = crate::resolve_filesystem_capabilities_source(bundle_dir);
+    let capabilities_path = capabilities_source.source_path().map(Path::to_path_buf);
     let capabilities = capabilities_path
         .as_deref()
-        .and_then(|path| std::fs::read(path).ok())
-        .and_then(|bytes| serde_json::from_slice::<FilesystemCapabilitiesV1>(&bytes).ok())
+        .and_then(crate::read_filesystem_capabilities_payload)
         .map(|c| {
+            let normalized_capabilities = crate::normalize_filesystem_capabilities(&c);
             json!({
                 "schema_version": c.schema_version,
                 "runner_kind": c.runner_kind,
@@ -843,6 +833,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 "hints": c.hints,
                 "capabilities_total": c.capabilities.len(),
                 "capabilities": c.capabilities,
+                "normalized_capabilities_total": normalized_capabilities.len(),
+                "normalized_capabilities": normalized_capabilities,
             })
         });
 
@@ -1023,6 +1015,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "script_result_path": script_result_path.as_ref().map(|p| p.display().to_string()),
         "script_result": script_result,
         "capabilities_path": capabilities_path.as_ref().map(|p| p.display().to_string()),
+        "capability_source": capabilities_source.to_json_value(),
         "capabilities": capabilities,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,

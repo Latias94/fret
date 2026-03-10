@@ -143,11 +143,12 @@ pub(crate) fn check_bundle_for_semantics_changed_repainted(
     if dump_json && !scan.findings.is_empty() {
         let out_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
         let out_path = out_dir.join("check.semantics_changed_repainted.json");
+        let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
         let payload = serde_json::json!({
             "schema_version": 1,
             "kind": "semantics_changed_repainted",
-            "bundle_artifact": bundle_path.display().to_string(),
-            "bundle_json": bundle_path.display().to_string(),
+            "bundle_artifact": bundle_artifact,
+            "bundle_json": bundle_json,
             "warmup_frames": warmup_frames,
             "findings": scan.findings,
         });
@@ -453,12 +454,13 @@ pub(crate) fn check_bundle_for_idle_no_paint_min(
     }
 
     let out_path = out_dir.join("check.idle_no_paint.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "idle_no_paint",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_idle_frames": min_idle_frames,

@@ -34,6 +34,8 @@ pub(crate) struct CampaignDefinition {
     pub tier: Option<String>,
     pub expected_duration_ms: Option<u64>,
     pub tags: Vec<String>,
+    pub requires_capabilities: Vec<String>,
+    pub flake_policy: Option<String>,
     pub source: CampaignDefinitionSource,
 }
 
@@ -81,6 +83,10 @@ struct CampaignManifestV1 {
     expected_duration_ms: Option<u64>,
     #[serde(default)]
     tags: Vec<String>,
+    #[serde(default)]
+    requires_capabilities: Vec<String>,
+    #[serde(default)]
+    flake_policy: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,6 +121,8 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 "smoke".to_string(),
                 "developer-loop".to_string(),
             ],
+            requires_capabilities: Vec::new(),
+            flake_policy: Some("fail_fast".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
         CampaignDefinition {
@@ -129,6 +137,8 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             tier: Some("correctness".to_string()),
             expected_duration_ms: Some(300_000),
             tags: vec!["ui-gallery".to_string(), "correctness".to_string()],
+            requires_capabilities: Vec::new(),
+            flake_policy: Some("retry_once".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
         CampaignDefinition {
@@ -143,6 +153,8 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             tier: Some("smoke".to_string()),
             expected_duration_ms: Some(120_000),
             tags: vec!["docking".to_string(), "smoke".to_string()],
+            requires_capabilities: Vec::new(),
+            flake_policy: Some("fail_fast".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
     ]
@@ -300,6 +312,8 @@ pub(crate) fn campaign_to_json(campaign: &CampaignDefinition) -> serde_json::Val
         "tier": campaign.tier,
         "expected_duration_ms": campaign.expected_duration_ms,
         "tags": campaign.tags,
+        "requires_capabilities": campaign.requires_capabilities,
+        "flake_policy": campaign.flake_policy,
         "source_kind": source_kind_str(&campaign.source),
         "source_path": match &campaign.source {
             CampaignDefinitionSource::Builtin => None,
@@ -362,7 +376,25 @@ fn suite_items(values: &[&str]) -> Vec<CampaignItemDefinition> {
         .collect()
 }
 
-fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition>, String> {
+fn normalize_optional_string(raw: Option<String>) -> Option<String> {
+    raw.map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn normalize_lowercase_string_list(values: Vec<String>) -> Vec<String> {
+    let mut values = values
+        .into_iter()
+        .map(|value| value.trim().to_ascii_lowercase())
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+    values.sort();
+    values.dedup();
+    values
+}
+
+pub(crate) fn load_manifest_campaigns_from_dir(
+    dir: &Path,
+) -> Result<Vec<CampaignDefinition>, String> {
     let mut manifest_paths: Vec<PathBuf> = fs::read_dir(dir)
         .map_err(|e| {
             format!(
@@ -376,10 +408,16 @@ fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition
         .collect();
     manifest_paths.sort();
 
+    load_manifest_campaigns_from_paths(&manifest_paths)
+}
+
+pub(crate) fn load_manifest_campaigns_from_paths(
+    manifest_paths: &[PathBuf],
+) -> Result<Vec<CampaignDefinition>, String> {
     let mut seen_paths_by_id = BTreeMap::<String, PathBuf>::new();
     let mut campaigns = Vec::new();
     for manifest_path in manifest_paths {
-        let campaign = load_manifest_campaign(&manifest_path)?;
+        let campaign = load_manifest_campaign(manifest_path)?;
         if let Some(previous) = seen_paths_by_id.insert(campaign.id.clone(), manifest_path.clone())
         {
             return Err(format!(
@@ -395,7 +433,7 @@ fn load_manifest_campaigns_from_dir(dir: &Path) -> Result<Vec<CampaignDefinition
     Ok(campaigns)
 }
 
-fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
+pub(crate) fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
     let bytes = fs::read(path)
         .map_err(|e| format!("failed to read campaign manifest {}: {}", path.display(), e))?;
     let manifest: CampaignManifestV1 = serde_json::from_slice(&bytes)
@@ -440,10 +478,7 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         ));
     }
 
-    let owner = manifest
-        .owner
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
+    let owner = normalize_optional_string(manifest.owner);
     let mut platforms = manifest
         .platforms
         .into_iter()
@@ -452,14 +487,8 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         .collect::<Vec<_>>();
     platforms.sort();
     platforms.dedup();
-    let tier = manifest
-        .tier
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
-    let profile = manifest
-        .profile
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
+    let tier = normalize_optional_string(manifest.tier);
+    let profile = normalize_optional_string(manifest.profile);
     let mut tags = manifest
         .tags
         .into_iter()
@@ -468,6 +497,9 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         .collect::<Vec<_>>();
     tags.sort();
     tags.dedup();
+    let requires_capabilities = normalize_lowercase_string_list(manifest.requires_capabilities);
+    let flake_policy =
+        normalize_optional_string(manifest.flake_policy).map(|value| value.to_ascii_lowercase());
 
     Ok(CampaignDefinition {
         id: id.to_string(),
@@ -480,6 +512,8 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         tier,
         expected_duration_ms: manifest.expected_duration_ms,
         tags,
+        requires_capabilities,
+        flake_policy,
         source: CampaignDefinitionSource::Manifest(path.to_path_buf()),
     })
 }
@@ -567,6 +601,8 @@ mod tests {
         assert_eq!(campaign.suite_count(), 2);
         assert!(matches!(campaign.source, CampaignDefinitionSource::Builtin));
         assert_eq!(campaign.tier.as_deref(), Some("smoke"));
+        assert_eq!(campaign.flake_policy.as_deref(), Some("fail_fast"));
+        assert!(campaign.requires_capabilities.is_empty());
     }
 
     #[test]
@@ -626,11 +662,121 @@ mod tests {
         assert_eq!(campaign.items[0].kind, CampaignItemKind::Script);
         assert_eq!(campaign.items[1].kind, CampaignItemKind::Suite);
         assert_eq!(campaign.expected_duration_ms, Some(12345));
+        assert!(campaign.requires_capabilities.is_empty());
+        assert!(campaign.flake_policy.is_none());
         assert!(matches!(
             campaign.source,
             CampaignDefinitionSource::Manifest(_)
         ));
 
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn manifest_campaign_normalizes_capabilities_and_flake_policy() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("ui-gallery-correctness.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "ui-gallery-correctness",
+  "description": "Manifest-backed correctness campaign.",
+  "lane": "correctness",
+  "items": [
+    { "kind": "suite", "value": "ui-gallery" }
+  ],
+  "requires_capabilities": [" diag.script_v2 ", "GPU_PICK", "gpu_pick"],
+  "flake_policy": " Retry_Once "
+}"#,
+        )
+        .expect("write manifest");
+
+        let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
+        let campaign = registry.resolve("ui-gallery-correctness").unwrap();
+        assert_eq!(
+            campaign.requires_capabilities,
+            vec!["diag.script_v2".to_string(), "gpu_pick".to_string()]
+        );
+        assert_eq!(campaign.flake_policy.as_deref(), Some("retry_once"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn workspace_registry_loads_legacy_top_level_suites_and_scripts_manifest() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("legacy-shape.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "legacy-shape",
+  "description": "Legacy top-level suite/script manifest shape.",
+  "lane": "smoke",
+  "suites": ["ui-gallery-lite-smoke", " ui-gallery-layout "],
+  "scripts": ["tools/diag-scripts/ui-gallery-layout.json", "  "]
+}"#,
+        )
+        .expect("write manifest");
+
+        let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
+        let campaign = registry.resolve("legacy-shape").unwrap();
+        assert_eq!(campaign.items.len(), 3);
+        assert_eq!(campaign.items[0].kind, CampaignItemKind::Suite);
+        assert_eq!(campaign.items[0].value, "ui-gallery-lite-smoke");
+        assert_eq!(campaign.items[1].kind, CampaignItemKind::Suite);
+        assert_eq!(campaign.items[1].value, "ui-gallery-layout");
+        assert_eq!(campaign.items[2].kind, CampaignItemKind::Script);
+        assert_eq!(
+            campaign.items[2].value,
+            "tools/diag-scripts/ui-gallery-layout.json"
+        );
+        assert_eq!(campaign.suite_count(), 2);
+        assert_eq!(campaign.script_count(), 1);
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn campaign_to_json_includes_campaign_metadata_contract_fields() {
+        let campaign = CampaignDefinition {
+            id: "campaign-json".to_string(),
+            description: "sample".to_string(),
+            lane: RegressionLaneV1::Smoke,
+            profile: Some("bounded".to_string()),
+            items: vec![CampaignItemDefinition {
+                kind: CampaignItemKind::Suite,
+                value: "ui-gallery-lite-smoke".to_string(),
+            }],
+            owner: Some("diag".to_string()),
+            platforms: vec!["native".to_string()],
+            tier: Some("smoke".to_string()),
+            expected_duration_ms: Some(10),
+            tags: vec!["ui-gallery".to_string()],
+            requires_capabilities: vec!["diag.script_v2".to_string()],
+            flake_policy: Some("fail_fast".to_string()),
+            source: CampaignDefinitionSource::Builtin,
+        };
+
+        let json = campaign_to_json(&campaign);
+        assert_eq!(
+            json.get("requires_capabilities")
+                .and_then(|value| value.as_array())
+                .cloned(),
+            Some(vec![serde_json::Value::String(
+                "diag.script_v2".to_string()
+            )])
+        );
+        assert_eq!(
+            json.get("flake_policy").and_then(|value| value.as_str()),
+            Some("fail_fast")
+        );
     }
 }

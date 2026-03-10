@@ -10,6 +10,11 @@ scope: diagnostics, devtools, mcp, automation
 This document describes an end-to-end diagnostics workflow driven via the `apps/fret-devtools-mcp`
 adapter (rmcp, stdio transport).
 
+For the newer umbrella framing that treats MCP as a diagnostics consumer lane rather than a parallel
+architecture center, see:
+
+- `docs/workstreams/diag-fearless-refactor-v2/README.md`
+
 The intent is to make the existing GUI/CLI diagnostics workflow easy to automate and easy for AI
 assistants to drive **without inventing new semantics**.
 

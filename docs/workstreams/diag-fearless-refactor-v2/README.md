@@ -13,11 +13,30 @@ Tracking files:
 
 - `docs/workstreams/diag-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`
 - `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
 - `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DOCUMENT_MIGRATION_INTENT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DEBT_RETIREMENT_TRACKER.md`
+- `docs/workstreams/diag-fearless-refactor-v2/SEAM_GATE_MATRIX.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RETIREMENT_CRITERIA.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RESIDUAL_NAMING_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/BUNDLE_ARTIFACT_ALIAS_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/LAYER_B_PAYLOAD_FAMILIES_AUDIT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RUN_MANIFEST_BUNDLE_JSON_CHUNK_INDEX_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/OPTIONAL_COMPACT_PACK_FOR_SHARING_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REASON_CODE_CONSUMER_ALIGNMENT_AUDIT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_DEFINITION_EXTERNALIZATION_DECISION_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/PRODUCER_LOCAL_REASON_CODE_NAMING_AUDIT_V1.md`
 
 Related workstreams and context:
 
@@ -240,6 +259,16 @@ Recommended order for landable work:
    - see `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`,
 4. align DevTools GUI to the same contracts,
 5. remove redundancy and close migration debt.
+
+Current emphasis after the latest `diag_suite` / `diag_run` landings:
+
+- `diag_campaign` is now the default next hotspot.
+- within `diag_campaign`, the next highest-ROI slice is still share/export artifact planning around
+  `write_campaign_share_manifest`, `write_campaign_combined_failure_zip_inner`, and
+  `build_campaign_share_manifest_item`.
+- `diag_run` is effectively parked unless a clearly reviewable sixth seam appears.
+- artifact/materialization and presentation-surface work should follow the next campaign slice,
+  not jump ahead of it.
 
 See `TODO.md` and `MILESTONES.md` for the staged plan.
 

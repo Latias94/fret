@@ -227,13 +227,14 @@ pub(crate) fn check_frames_index_for_idle_no_paint_min(
     }
 
     let out_path = out_dir.join("check.idle_no_paint.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!( {
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "idle_no_paint",
         "derived_from_frames_index": true,
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "frames_index": frames_index_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -320,13 +321,14 @@ pub(crate) fn check_frames_index_for_view_cache_reuse_stable_min(
     let any_view_cache_active = view_cache_active_snapshots > 0;
 
     let out_path = out_dir.join("check.view_cache_reuse_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "view_cache_reuse_stable",
         "derived_from_frames_index": true,
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "frames_index": frames_index_path.display().to_string(),
         "warmup_frames": warmup_frames,

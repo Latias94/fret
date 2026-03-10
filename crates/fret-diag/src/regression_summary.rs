@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub const DIAG_REGRESSION_SUMMARY_KIND_V1: &str = "diag_regression_summary";
 pub const DIAG_REGRESSION_SUMMARY_FILENAME_V1: &str = "regression.summary.json";
@@ -200,12 +200,16 @@ pub struct RegressionReasonCodeCountV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RegressionArtifactsV1 {
+    // Derived summary root for convenience navigation; not a source-of-truth payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary_dir: Option<String>,
+    // Optional packaged handoff rooted at the summary layer.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub packed_report: Option<String>,
+    // Canonical path to the derived summary/index artifact for first-open routing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub index_json: Option<String>,
+    // Presentation-facing static report projection.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub html_report: Option<String>,
 }
@@ -259,8 +263,7 @@ pub enum RegressionStatusV1 {
     Quarantined,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegressionLaneV1 {
     Smoke,
     Correctness,
@@ -268,6 +271,54 @@ pub enum RegressionLaneV1 {
     Perf,
     Nightly,
     Full,
+}
+
+impl RegressionLaneV1 {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Smoke => "smoke",
+            Self::Correctness => "correctness",
+            Self::Matrix => "matrix",
+            Self::Perf => "perf",
+            Self::Nightly | Self::Full => "nightly",
+        }
+    }
+
+    fn from_str(value: &str) -> Option<Self> {
+        match value.trim() {
+            "smoke" => Some(Self::Smoke),
+            "correctness" => Some(Self::Correctness),
+            "matrix" => Some(Self::Matrix),
+            "perf" => Some(Self::Perf),
+            "nightly" => Some(Self::Nightly),
+            "full" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+
+impl Serialize for RegressionLaneV1 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for RegressionLaneV1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::from_str(&value).ok_or_else(|| {
+            serde::de::Error::unknown_variant(
+                &value,
+                &["smoke", "correctness", "matrix", "perf", "nightly", "full"],
+            )
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -300,18 +351,42 @@ pub struct RegressionEvidenceV1 {
     pub bundle_artifact: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle_dir: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "triage_artifact",
+        alias = "triage_json"
+    )]
     pub triage_json: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "script_result",
+        alias = "script_result_json"
+    )]
     pub script_result_json: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "share_artifact",
+        alias = "ai_packet_dir"
+    )]
     pub ai_packet_dir: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "packed_report",
+        alias = "pack_path"
+    )]
     pub pack_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub screenshots_manifest: Option<String>,
+    // Projection-only perf summary path. Useful for perf triage, but not canonical cross-surface
+    // vocabulary for generic regression evidence.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub perf_summary_json: Option<String>,
+    // Projection-only compare/check artifact path. Useful for matrix/perf drill-down, but not part
+    // of the canonical artifact-path vocabulary shared across all regression rows.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compare_json: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -407,6 +482,26 @@ mod tests {
         );
         assert_eq!(value.get("lane").and_then(|v| v.as_str()), Some("perf"));
         assert!(value.get("source_reason_code").is_none());
+    }
+
+    #[test]
+    fn regression_lane_full_serializes_as_nightly_and_accepts_full_alias() {
+        assert_eq!(
+            serde_json::to_value(RegressionLaneV1::Full)
+                .expect("serialize lane")
+                .as_str(),
+            Some("nightly")
+        );
+        assert_eq!(
+            serde_json::from_value::<RegressionLaneV1>(serde_json::json!("full"))
+                .expect("deserialize lane alias"),
+            RegressionLaneV1::Full
+        );
+        assert_eq!(
+            serde_json::from_value::<RegressionLaneV1>(serde_json::json!("nightly"))
+                .expect("deserialize canonical lane"),
+            RegressionLaneV1::Nightly
+        );
     }
 
     #[test]
@@ -512,8 +607,94 @@ mod tests {
             value.pointer("/items/0/status").and_then(|v| v.as_str()),
             Some("failed_deterministic")
         );
+        assert_eq!(
+            value
+                .pointer("/items/0/evidence/triage_artifact")
+                .and_then(|v| v.as_str()),
+            Some("target/fret-diag/triage.json")
+        );
+        assert_eq!(
+            value
+                .pointer("/items/0/evidence/script_result")
+                .and_then(|v| v.as_str()),
+            Some("target/fret-diag/script.result.json")
+        );
         assert!(value.get("highlights").is_none());
         assert!(value.get("artifacts").is_none());
+    }
+
+    #[test]
+    fn regression_evidence_accepts_legacy_field_aliases() {
+        let parsed: RegressionEvidenceV1 = serde_json::from_value(serde_json::json!({
+            "bundle_artifact": "target/fret-diag/bundle.schema2.json",
+            "triage_json": "target/fret-diag/triage.json",
+            "script_result_json": "target/fret-diag/script.result.json",
+            "ai_packet_dir": "target/fret-diag/ai.packet",
+            "pack_path": "target/fret-diag/share.zip"
+        }))
+        .expect("deserialize evidence aliases");
+
+        assert_eq!(
+            parsed.triage_json.as_deref(),
+            Some("target/fret-diag/triage.json")
+        );
+        assert_eq!(
+            parsed.script_result_json.as_deref(),
+            Some("target/fret-diag/script.result.json")
+        );
+        assert_eq!(
+            parsed.ai_packet_dir.as_deref(),
+            Some("target/fret-diag/ai.packet")
+        );
+        assert_eq!(
+            parsed.pack_path.as_deref(),
+            Some("target/fret-diag/share.zip")
+        );
+    }
+
+    #[test]
+    fn regression_projection_fields_stay_additive_and_optional() {
+        let value = serde_json::to_value(RegressionItemSummaryV1 {
+            item_id: "perf:ui-gallery".to_string(),
+            kind: RegressionItemKindV1::PerfCase,
+            name: "ui-gallery".to_string(),
+            status: RegressionStatusV1::FailedDeterministic,
+            reason_code: Some("diag.perf.threshold_failed".to_string()),
+            source_reason_code: None,
+            lane: RegressionLaneV1::Perf,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: Some(RegressionEvidenceV1 {
+                bundle_artifact: Some("target/fret-diag/bundle.schema2.json".to_string()),
+                bundle_dir: None,
+                triage_json: None,
+                script_result_json: None,
+                ai_packet_dir: None,
+                pack_path: None,
+                screenshots_manifest: None,
+                perf_summary_json: Some("target/fret-diag/layout.perf.summary.json".to_string()),
+                compare_json: Some("target/fret-diag/check.perf.thresholds.json".to_string()),
+                extra: None,
+            }),
+            source: None,
+            notes: None,
+        })
+        .expect("serialize perf item");
+
+        assert_eq!(
+            value
+                .pointer("/evidence/perf_summary_json")
+                .and_then(|value| value.as_str()),
+            Some("target/fret-diag/layout.perf.summary.json")
+        );
+        assert_eq!(
+            value
+                .pointer("/evidence/compare_json")
+                .and_then(|value| value.as_str()),
+            Some("target/fret-diag/check.perf.thresholds.json")
+        );
     }
 
     #[test]

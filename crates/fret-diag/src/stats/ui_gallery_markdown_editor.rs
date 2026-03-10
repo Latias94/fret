@@ -169,12 +169,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_read_only_block
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_read_only_blocks_edits.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_read_only_blocks_edits",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -500,12 +501,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_disabled_blocks_edits.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_disabled_blocks_edits",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -763,12 +765,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggl
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_soft_wrap_toggle_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_soft_wrap_toggle_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -969,12 +972,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
 
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir.join("check.ui_gallery_markdown_editor_word_boundary.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_word_boundary",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -1124,12 +1128,13 @@ pub(crate) fn check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(
 
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir.join("check.ui_gallery_web_ime_bridge_enabled.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_web_ime_bridge_enabled",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -1337,12 +1342,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_line_boundary_triple_click.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_line_boundary_triple_click",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -1565,12 +1571,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_a11y_composition.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_a11y_composition",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -1819,12 +1826,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
         .join("check.ui_gallery_markdown_editor_source_a11y_composition_soft_wrap.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_a11y_composition_soft_wrap",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2111,12 +2119,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
     let evidence_path = evidence_dir.join(
         "check.ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable.json",
     );
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2246,12 +2255,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_placehold
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_folds_placeholder_present.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_folds_placeholder_present",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2385,12 +2395,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_placehold
     let evidence_path = evidence_dir.join(
         "check.ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap.json",
     );
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2544,12 +2555,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_placehold
     let evidence_path = evidence_dir.join(
         "check.ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit.json",
     );
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2669,12 +2681,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_inlays_present.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_inlays_present",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2807,12 +2820,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
         .join("check.ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -2965,12 +2979,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_u
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
         .join("check.ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -3211,12 +3226,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_st
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_folds_toggle_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_folds_toggle_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -3526,12 +3542,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_sel
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
         .join("check.ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -3771,12 +3788,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_s
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path =
         evidence_dir.join("check.ui_gallery_markdown_editor_source_inlays_toggle_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_inlays_toggle_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
@@ -4078,12 +4096,13 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_na
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
         .join("check.ui_gallery_markdown_editor_source_inlays_caret_navigation_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "ui_gallery_markdown_editor_source_inlays_caret_navigation_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
         "warmup_frames": warmup_frames,
