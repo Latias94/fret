@@ -1441,8 +1441,12 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_builder_uses_setup_language_on_default_surface() {
         assert!(APP_ENTRY_RS.contains("pub fn setup("));
+        assert!(APP_ENTRY_RS.contains("pub fn view("));
+        assert!(APP_ENTRY_RS.contains("pub fn view_with_hooks("));
         assert!(!APP_ENTRY_RS.contains("pub fn install_app("));
         assert!(!APP_ENTRY_RS.contains("pub fn install("));
+        assert!(!APP_ENTRY_RS.contains("pub fn run_view("));
+        assert!(!APP_ENTRY_RS.contains("pub fn run_view_with_hooks("));
 
         let ui_app_builder = ui_app_builder_impl_source();
         assert!(ui_app_builder.contains("pub fn setup_with("));

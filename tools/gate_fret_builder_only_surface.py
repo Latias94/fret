@@ -110,8 +110,8 @@ def main() -> None:
             app_entry_text,
             patterns=[
                 r"\bpub\s+struct\s+FretApp\b",
+                r"\bpub\s+fn\s+view\s*<",
                 r"\bpub\s+fn\s+view_with_hooks\s*<",
-                r"\bpub\s+fn\s+run_view_with_hooks\s*<",
                 r"\bfn\s+finish_builder\s*<",
             ],
         )
@@ -126,6 +126,8 @@ def main() -> None:
                 r"\bpub\s+fn\s+ui_with_hooks\s*<",
                 r"\bpub\s+fn\s+run_ui\s*<",
                 r"\bpub\s+fn\s+run_ui_with_hooks\s*<",
+                r"\bpub\s+fn\s+run_view\s*<",
+                r"\bpub\s+fn\s+run_view_with_hooks\s*<",
             ],
         )
     )

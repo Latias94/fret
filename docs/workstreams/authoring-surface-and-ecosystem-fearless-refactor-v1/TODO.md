@@ -123,6 +123,8 @@ Companion docs:
 
 ## M5 — Delete the old surface
 
+- [x] Remove `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from the default app surface once
+  docs/templates/examples and gates all prefer `view::<V>()?.run()`.
 - [ ] Remove old default-path names that are no longer canonical.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.
 - [ ] Remove redundant action helpers from the default app surface.

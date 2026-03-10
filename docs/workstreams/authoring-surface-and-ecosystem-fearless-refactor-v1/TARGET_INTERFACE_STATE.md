@@ -41,8 +41,8 @@ Canonical startup chain:
 - `FretApp::new("my-app").window("My App", (...)).view::<MyView>()?.run()`
 - default docs, templates, cookbook examples, and in-tree app examples must prefer the explicit
   builder-then-run chain over `run_view::<V>()`
-- `run_view::<V>()` / `run_view_with_hooks::<V>(...)` are temporary convenience APIs, not the
-  target teaching surface
+- `run_view::<V>()` / `run_view_with_hooks::<V>(...)` are deleted from the pre-release target
+  surface and must not reappear on the default app path
 
 Target exports:
 

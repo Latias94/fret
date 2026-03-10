@@ -171,21 +171,6 @@ impl FretApp {
         )
     }
 
-    /// Convenience: build a view-runtime app and run it immediately.
-    pub fn run_view<V: crate::view::View>(self) -> Result<()> {
-        self.view::<V>()?.run()
-    }
-
-    /// Convenience: build a view-runtime app with driver hooks and run it immediately.
-    pub fn run_view_with_hooks<V: crate::view::View>(
-        self,
-        configure: fn(
-            UiAppDriver<crate::view::ViewWindowState<V>>,
-        ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
-    ) -> Result<()> {
-        self.view_with_hooks::<V>(configure)?.run()
-    }
-
     pub(crate) fn install_services(
         mut self,
         install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),

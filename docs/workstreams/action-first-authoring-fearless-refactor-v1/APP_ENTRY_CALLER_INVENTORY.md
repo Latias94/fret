@@ -28,7 +28,7 @@ Decision context:
 - `migrate-to-view` — should move to `App::view::<V>()` or `App::view_with_hooks::<V>(...)`
 - `move-lower-level` — should likely stop using the facade entry API and drop to bootstrap/driver-level wiring
 - `keep-temporarily` — acceptable bridge user for now, but should not remain in first-contact surfaces
-- `done` ? already migrated to `App::view::<V>()` / `run_view::<V>()`; retained here until the full inventory is burned down
+- `done` ? already migrated to `App::view::<V>()?.run()` or `App::view_with_hooks::<V>(...)?.run()`; retained here until the full inventory is burned down
 
 Current conclusion:
 
@@ -53,13 +53,13 @@ Current conclusion:
 
 | File | Current role | Recommended class | Notes |
 |---|---|---|---|
-| `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `done` | migrated on 2026-03-08 to `run_view::<ChartDeclarativeView>()`; confirms a plain declarative chart demo also does not need closure-root `App::ui(...)` |
-| `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiFloatingWindowsView>()`; confirms a floating-window IMUI surface also does not need closure-root app entry |
-| `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiHelloView>()`; keep as the first Batch A proof point until the remaining callers are burned down |
-| `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiNodeGraphView>()`; confirms retained IMUI node-graph demos also fit the default view entry path |
-| `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `done` | migrated on 2026-03-08 to `run_view::<ImUiResponseSignalsView>()`; proves response-signal-heavy IMUI demos also fit the default view entry path |
-| `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `done` | migrated on 2026-03-09 to `run_view::<ImUiShadcnAdapterView>()`; confirms adapter-heavy IMUI demos also fit the default view entry path |
-| `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `done` | migrated on 2026-03-08 to `run_view::<NodeGraphDemoView>()`; confirms a retained-model canvas demo also fits the default view entry path |
+| `apps/fret-examples/src/chart_declarative_demo.rs` | declarative chart demo | `done` | migrated on 2026-03-08 to the view-runtime path and normalized on 2026-03-11 to `view::<ChartDeclarativeView>()?.run()`; confirms a plain declarative chart demo also does not need closure-root `App::ui(...)` |
+| `apps/fret-examples/src/imui_floating_windows_demo.rs` | IMUI demo | `done` | migrated on 2026-03-09 to the view-runtime path and normalized on 2026-03-11 to `view::<ImUiFloatingWindowsView>()?.run()`; confirms a floating-window IMUI surface also does not need closure-root app entry |
+| `apps/fret-examples/src/imui_hello_demo.rs` | minimal IMUI demo | `done` | migrated on 2026-03-08 to the view-runtime path and normalized on 2026-03-11 to `view::<ImUiHelloView>()?.run()`; keep as the first Batch A proof point until the remaining callers are burned down |
+| `apps/fret-examples/src/imui_node_graph_demo.rs` | IMUI + node-graph demo | `done` | migrated on 2026-03-09 to the view-runtime path and normalized on 2026-03-11 to `view::<ImUiNodeGraphView>()?.run()`; confirms retained IMUI node-graph demos also fit the default view entry path |
+| `apps/fret-examples/src/imui_response_signals_demo.rs` | IMUI response demo | `done` | migrated on 2026-03-08 to the view-runtime path and normalized on 2026-03-11 to `view::<ImUiResponseSignalsView>()?.run()`; proves response-signal-heavy IMUI demos also fit the default view entry path |
+| `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` | IMUI + shadcn adapter demo | `done` | migrated on 2026-03-09 to the view-runtime path and normalized on 2026-03-11 to `view::<ImUiShadcnAdapterView>()?.run()`; confirms adapter-heavy IMUI demos also fit the default view entry path |
+| `apps/fret-examples/src/node_graph_demo.rs` | node-graph demo | `done` | migrated on 2026-03-08 to the view-runtime path and normalized on 2026-03-11 to `view::<NodeGraphDemoView>()?.run()`; confirms a retained-model canvas demo also fits the default view entry path |
 
 ---
 

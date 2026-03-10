@@ -1,7 +1,7 @@
 # Authoring Surface + Ecosystem (Fearless Refactor v1) — Migration Matrix
 
 Status: execution tracker
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 This file is the execution-oriented companion to:
 
@@ -93,6 +93,7 @@ These are the concrete "remove this" lanes.
 | `KernelApp` on the default app surface | `App` | app prelude no longer exports `KernelApp` and official app-path call sites are migrated | In progress |
 | `ViewCx` as the taught app-facing context name | `AppUi` | grouped context APIs are live and official surfaces migrated | In progress |
 | `Elements` as the taught app-facing return alias | `Ui` | official examples/docs migrated | In progress |
+| `run_view::<V>()` / `run_view_with_hooks::<V>(...)` convenience entry | `view::<V>()?.run()` / `view_with_hooks::<V>(...)?.run()` | default docs/templates/examples are migrated and a gate forbids the convenience APIs from returning | Deleted |
 | flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | In progress |
 | flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated | In progress |
 | broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | Deleted |
