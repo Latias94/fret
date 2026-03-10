@@ -253,7 +253,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("query-async-tokio-demo")
         .window("query-async-tokio-demo", (560.0, 360.0))
         .config_files(false)
-        .install_app(|app| {
+        .setup(|app| {
             install_tokio_spawner(app);
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,

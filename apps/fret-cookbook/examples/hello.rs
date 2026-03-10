@@ -69,7 +69,7 @@ impl View for HelloView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-hello")
         .window("cookbook-hello", (560.0, 360.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<HelloView>()
         .map_err(anyhow::Error::from)
 }

@@ -103,6 +103,14 @@ Target rule:
 - `fret::app::prelude` must use curated exports; it does not blanket re-export
   `fret_ui_kit::declarative::prelude::*`.
 
+App-level ecosystem integration seam:
+
+- `FretApp::setup(fn(&mut App))` is the canonical builder hook for app-level integrations such as
+  command registration, theme/bootstrap setup, optional shadcn installs, router/query defaults,
+  and other non-reusable product wiring.
+- callbacks that require `UiServices`, custom effect services, runner hooks, or manual assembly
+  stay outside the default app path and should remain explicit advanced seams.
+
 Legacy bridge status:
 
 - `fret::prelude::*` is deleted; the target public import surfaces are `fret::app`,

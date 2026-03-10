@@ -75,7 +75,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-toggle-basics")
         .window("cookbook-toggle-basics", (720.0, 420.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<ToggleBasicsView>()
         .map_err(anyhow::Error::from)
 }

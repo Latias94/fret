@@ -206,7 +206,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("async-playground")
         .window("async-playground", (1180.0, 720.0))
         .config_files(false)
-        .install_app(|app| {
+        .setup(|app| {
             install_tokio_spawner(app);
             apply_theme(app, false);
         })

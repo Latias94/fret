@@ -194,7 +194,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-markdown-and-code-basics")
         .window("cookbook-markdown-and-code-basics", (1080.0, 820.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<MarkdownAndCodeBasicsView>()
         .map_err(anyhow::Error::from)
 }

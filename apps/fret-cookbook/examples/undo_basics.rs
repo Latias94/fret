@@ -488,8 +488,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-undo-basics")
         .window("cookbook-undo-basics", (900.0, 560.0))
         .config_files(false)
-        .install_app(install_commands)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_commands)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<UndoBasicsView>()
         .map_err(anyhow::Error::from)
 }

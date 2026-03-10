@@ -448,7 +448,7 @@ fn main() -> anyhow::Result<()> {
         // Register Lucide vendor icons during bootstrap so the icon SVG preload step (if enabled)
         // includes them.
         .register_icon_pack(fret_icons_lucide::register_vendor_icons)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<IconsAndAssetsBasicsView>()
         .map_err(anyhow::Error::from)
 }

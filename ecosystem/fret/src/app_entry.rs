@@ -17,7 +17,7 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
-    install_app_hooks: Vec<fn(&mut crate::app::App)>,
+    setup_hooks: Vec<fn(&mut crate::app::App)>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
 }
@@ -33,7 +33,7 @@ impl FretApp {
             main_window: None,
             defaults: Defaults::default(),
             command_palette: false,
-            install_app_hooks: Vec::new(),
+            setup_hooks: Vec::new(),
             install_hooks: Vec::new(),
             register_icon_pack_hooks: Vec::new(),
         }
@@ -83,12 +83,12 @@ impl FretApp {
         self
     }
 
-    /// Install app-owned services/globals/commands during bootstrap.
+    /// Run app-level setup during bootstrap.
     ///
-    /// Prefer calling this before enabling config files so command defaults/keymap layering see
-    /// the full command registry.
-    pub fn install_app(mut self, install: fn(&mut crate::app::App)) -> Self {
-        self.install_app_hooks.push(install);
+    /// This is the canonical ecosystem integration seam for app-level add-ons such as command
+    /// registration, theme/bootstrap setup, or optional recipe-crate globals.
+    pub fn setup(mut self, setup: fn(&mut crate::app::App)) -> Self {
+        self.setup_hooks.push(setup);
         self
     }
 
@@ -135,7 +135,7 @@ impl FretApp {
             main_window,
             defaults,
             command_palette,
-            install_app_hooks,
+            setup_hooks,
             install_hooks,
             register_icon_pack_hooks,
         } = self;
@@ -173,7 +173,7 @@ impl FretApp {
             root_name,
             main_window,
             defaults,
-            install_app_hooks,
+            setup_hooks,
             install_hooks,
             register_icon_pack_hooks,
             driver,
@@ -201,7 +201,7 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
-    install_app_hooks: Vec<fn(&mut crate::app::App)>,
+    setup_hooks: Vec<fn(&mut crate::app::App)>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
     driver: UiAppDriver<S>,
@@ -211,7 +211,7 @@ fn finish_builder<S: 'static>(
         driver.into_inner().into_fn_driver(),
     );
 
-    for f in install_app_hooks {
+    for f in setup_hooks {
         builder = builder.install_app(f);
     }
     for f in install_hooks {

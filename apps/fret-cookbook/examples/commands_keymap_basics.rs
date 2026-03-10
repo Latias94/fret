@@ -266,8 +266,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-commands-keymap-basics")
         .window("cookbook-commands-keymap-basics", (920.0, 560.0))
         .config_files(false)
-        .install_app(install_commands)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_commands)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<CommandsKeymapBasicsView>()
         .map_err(anyhow::Error::from)
 }

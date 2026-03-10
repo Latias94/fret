@@ -269,7 +269,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-simple-todo-v2-target")
         .window("cookbook-simple-todo-v2-target", (720.0, 600.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<SimpleTodoV2TargetView>()
         .map_err(anyhow::Error::from)
 }

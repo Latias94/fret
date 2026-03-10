@@ -588,9 +588,9 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn install_app(self, install: fn(&mut crate::app::App)) -> Self {
+    pub fn setup(self, setup: fn(&mut crate::app::App)) -> Self {
         Self {
-            inner: self.inner.install_app(install),
+            inner: self.inner.install_app(setup),
         }
     }
 
@@ -982,7 +982,7 @@ mod builder_surface_tests {
     fn app_builder_view_with_hooks_smoke() {
         let _builder = FretApp::new("builder-view-smoke")
             .window("Builder View Smoke", (640.0, 480.0))
-            .install_app(install_app)
+            .setup(install_app)
             .install(install)
             .register_icon_pack(register_icon_pack)
             .view_with_hooks::<SmokeView>(|driver| {
@@ -1046,7 +1046,7 @@ mod builder_surface_tests {
             configure_hook_driver,
         )
         .with_main_window("Advanced UI App Hooks Smoke", (720.0, 420.0))
-        .install_app(install_app)
+        .setup(install_app)
         .install(install)
         .configure(|config| {
             assert_eq!(config.main_window_title, "Advanced UI App Hooks Smoke");
@@ -1176,6 +1176,7 @@ mod authoring_surface_policy_tests {
         assert!(README.contains(
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
+        assert!(!README.contains(".install_app("));
         assert!(!README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
     }
 
@@ -1272,6 +1273,12 @@ mod authoring_surface_policy_tests {
         assert!(!lines.contains(&"pub use app_entry::App as AppBuilder;"));
         assert!(!lines.contains(&"pub use app_entry::App as FretApp;"));
         assert!(lines.contains(&"pub use app_entry::FretApp;"));
+    }
+
+    #[test]
+    fn app_builder_uses_setup_language_on_default_surface() {
+        assert!(APP_ENTRY_RS.contains("pub fn setup("));
+        assert!(!APP_ENTRY_RS.contains("pub fn install_app("));
     }
 
     #[test]

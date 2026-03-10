@@ -32,7 +32,7 @@ mod act {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("genui-demo")
         .window("genui-demo", (980.0, 720.0))
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

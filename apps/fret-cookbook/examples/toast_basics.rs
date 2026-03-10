@@ -128,7 +128,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-toast-basics")
         .window("cookbook-toast-basics", (720.0, 360.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<ToastBasicsView>()
         .map_err(anyhow::Error::from)
 }

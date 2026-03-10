@@ -139,7 +139,7 @@ fn install_app(app: &mut App) {
  fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .install_app(install_app)
+        .setup(install_app)
         // Disable filesystem config loading for embedding/minimal builds:
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:
@@ -386,7 +386,7 @@ Recommended for apps:
 
 - `fret` enables a default icon pack via `fret/icons` (Lucide).
 - To use another pack, add it as an explicit dependency and install it via the entry seams:
-  - `.install_app(fret_icons_radix::install_app)`, or
+  - `.setup(fret_icons_radix::install_app)`, or
   - `.register_icon_pack(fret_icons_radix::register_vendor_icons)`.
 
 If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.

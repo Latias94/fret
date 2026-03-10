@@ -146,7 +146,7 @@ struct ThemePostprocessView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("postprocess-theme-demo")
         .window("postprocess-theme-demo", (1200.0, 760.0))
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

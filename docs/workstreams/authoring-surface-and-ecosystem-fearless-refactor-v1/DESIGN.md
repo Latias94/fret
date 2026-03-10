@@ -181,6 +181,18 @@ It should **not** expose:
 - low-level runner/viewport traits
 - broad component-author or maintainer-only helpers
 
+### Default app integration seam
+
+App-level ecosystem integrations should converge on one default builder hook:
+
+- `FretApp::setup(fn(&mut App))`
+
+This is where command registration, default theme/bootstrap installation, and optional app-level
+ecosystem wiring should attach.
+
+If a callback needs `UiServices`, custom effect registration, runner hooks, or manual assembly, it
+is no longer part of the default app story and should stay on an explicit advanced path.
+
 ### Default `AppUi` shape
 
 Instead of dozens of flat helpers, the default app-facing API should be grouped by intent:

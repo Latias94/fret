@@ -28,7 +28,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("hello-counter-demo")
         .window("hello-counter-demo", (520.0, 420.0))
         .config_files(false)
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

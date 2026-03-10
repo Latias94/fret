@@ -292,7 +292,7 @@ impl View for DropShadowDemoView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("drop-shadow-demo")
         .window("drop-shadow-demo", (1280.0, 720.0))
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

@@ -202,7 +202,7 @@ struct CustomEffectV1View {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("custom-effect-v1-demo")
         .window("custom-effect-v1-demo", (1100.0, 720.0))
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

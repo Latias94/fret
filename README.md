@@ -189,7 +189,7 @@ fn main() -> fret::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
         .config_files(false)
-        .install_app(install_app)
+        .setup(install_app)
         .run_view::<TodoView>()
 }
 ```

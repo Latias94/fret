@@ -168,7 +168,7 @@ impl View for ImUiActionBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-imui-action-basics")
         .window("cookbook-imui-action-basics", (720.0, 420.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .command_palette(true)
         .run_view::<ImUiActionBasicsView>()
         .map_err(anyhow::Error::from)

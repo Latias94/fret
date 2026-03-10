@@ -87,7 +87,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-date-picker-basics")
         .window("cookbook-date-picker-basics", (720.0, 420.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<DatePickerBasicsView>()
         .map_err(anyhow::Error::from)
 }

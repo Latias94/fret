@@ -208,8 +208,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-overlay-basics")
         .window("cookbook-overlay-basics", (560.0, 420.0))
         .config_files(false)
-        .install_app(install_commands)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_commands)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<OverlayBasicsView>()
         .map_err(anyhow::Error::from)
 }

@@ -444,7 +444,7 @@ impl View for VirtualListBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-virtual-list-basics")
         .window("cookbook-virtual-list-basics", (1020.0, 720.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<VirtualListBasicsView>()
         .map_err(anyhow::Error::from)
 }

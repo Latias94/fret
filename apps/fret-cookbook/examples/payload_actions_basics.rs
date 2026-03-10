@@ -106,7 +106,7 @@ impl View for PayloadActionsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-payload-actions-basics")
         .window("cookbook-payload-actions-basics", (640.0, 360.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<PayloadActionsView>()
         .map_err(anyhow::Error::from)
 }

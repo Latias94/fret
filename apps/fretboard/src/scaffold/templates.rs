@@ -681,7 +681,7 @@ __INSTALL_ICONS__
 fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
-        .install_app(install_app)
+        .setup(install_app)
         .run_view::<TodoView>()
         .map_err(anyhow::Error::from)
 }
@@ -759,7 +759,7 @@ __INSTALL_ICONS__
 fn main() -> anyhow::Result<()> {{
     FretApp::new("{package_name}")
         .window("{package_name}", (560.0, 360.0))
-        .install_app(install_app)
+        .setup(install_app)
         .run_view::<HelloView>()
         .map_err(anyhow::Error::from)
 }}
@@ -1044,7 +1044,7 @@ __INSTALL_ICONS__
 fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
-        .install_app(install_app)
+        .setup(install_app)
         .run_view::<TodoView>()
         .map_err(anyhow::Error::from)
 }

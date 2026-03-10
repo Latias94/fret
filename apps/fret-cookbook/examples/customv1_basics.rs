@@ -348,7 +348,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new(ROOT_NAME)
         .window("cookbook-customv1-basics", (1180.0, 820.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .view::<CustomV1BasicsView>()?
         .install_custom_effects(install_custom_effect)
         .run()

@@ -802,7 +802,7 @@ pub fn run() -> anyhow::Result<()> {
 
     FretApp::new("markdown-demo")
         .window("markdown-demo", (920.0, 720.0))
-        .install_app(apply_markdown_demo_theme_tokens)
+        .setup(apply_markdown_demo_theme_tokens)
         .config_files(false)
         .run_view::<MarkdownDemoView>()
         .with_context(|| "failed to run markdown demo")

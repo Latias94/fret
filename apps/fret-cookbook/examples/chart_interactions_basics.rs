@@ -504,9 +504,9 @@ fn main() -> anyhow::Result<()> {
     let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-chart-interactions-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
-        .install_app(install_commands)
-        .install_app(shadcn::install_app)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_commands)
+        .setup(shadcn::install_app)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons();
 

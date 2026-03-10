@@ -211,7 +211,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-drag-basics")
         .window("cookbook-drag-basics", (760.0, 520.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<DragBasicsView>()
         .map_err(anyhow::Error::from)
 }

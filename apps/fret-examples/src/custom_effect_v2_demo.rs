@@ -97,7 +97,7 @@ struct CustomEffectV2View {
 pub fn run() -> anyhow::Result<()> {
     let builder = FretApp::new("custom-effect-v2-demo")
         .window("custom-effect-v2-demo", (1100.0, 720.0))
-        .install_app(|app| {
+        .setup(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -117,7 +117,7 @@ pub fn run() -> anyhow::Result<()> {
 /// - upload/register any input textures on GPU-ready.
 fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
     builder
-        .install_app(install_app_globals)
+        .setup(install_app_globals)
         .install_custom_effects(register_custom_effect)
         .on_gpu_ready(upload_input_image)
 }

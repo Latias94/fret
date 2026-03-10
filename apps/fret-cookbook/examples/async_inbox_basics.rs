@@ -422,7 +422,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-async-inbox-basics")
         .window("cookbook-async-inbox-basics", (860.0, 680.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<AsyncInboxBasicsView>()
         .map_err(anyhow::Error::from)
 }

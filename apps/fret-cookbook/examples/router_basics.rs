@@ -473,8 +473,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-router-basics")
         .window("cookbook-router-basics", (1040.0, 620.0))
         .config_files(false)
-        .install_app(install_router_commands)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(install_router_commands)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<RouterBasicsView>()
         .map_err(anyhow::Error::from)
 }

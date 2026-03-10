@@ -209,7 +209,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-form-basics")
         .window("cookbook-form-basics", (720.0, 520.0))
         .config_files(false)
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<FormBasicsView>()
         .map_err(anyhow::Error::from)
 }

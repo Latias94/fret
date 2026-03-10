@@ -184,7 +184,7 @@ impl View for EffectsLayerBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-effects-layer-basics")
         .window("cookbook-effects-layer-basics", (680.0, 460.0))
-        .install_app(fret_cookbook::install_cookbook_defaults)
+        .setup(fret_cookbook::install_cookbook_defaults)
         .run_view::<EffectsLayerBasicsView>()
         .map_err(anyhow::Error::from)
 }
