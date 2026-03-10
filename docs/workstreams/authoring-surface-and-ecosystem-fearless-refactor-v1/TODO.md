@@ -18,6 +18,7 @@ Companion docs:
 - [x] Finalize `MIGRATION_MATRIX.md` as the single execution tracker for old surface removal.
 - [ ] Decide and lock the canonical names:
   - [x] `FretApp`
+  - [x] `App`
   - [x] `KernelApp`
   - [x] `WindowId`
   - [x] `AppUi`

@@ -90,7 +90,7 @@ use fret::app::prelude::*;
 struct HelloView;
 
 impl View for HelloView {
-    fn render(&mut self, _ui: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, _ui: &mut AppUi<'_, '_>) -> Ui {
         shadcn::Label::new("Hello from Fret!").into()
     }
 }

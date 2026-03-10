@@ -38,7 +38,7 @@ struct UndoBasicsView {
     coalesce: Model<bool>,
 }
 
-fn install_commands(app: &mut KernelApp) {
+fn install_commands(app: &mut App) {
     let undo_cmd = CommandId::from(CMD_EDIT_UNDO);
     let redo_cmd = CommandId::from(CMD_EDIT_REDO);
 
@@ -159,7 +159,7 @@ fn record_value_tx(
 }
 
 impl View for UndoBasicsView {
-    fn init(app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
             value: app.models_mut().insert(0),
             history: app.models_mut().insert(UndoHistory::with_limit(64)),

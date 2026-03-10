@@ -74,7 +74,7 @@ struct AsyncInboxBasicsView {
 }
 
 impl View for AsyncInboxBasicsView {
-    fn init(app: &mut KernelApp, window: WindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         let dispatcher = app.global::<DispatcherHandle>().cloned();
 
         let current_job = Arc::new(AtomicU64::new(0));

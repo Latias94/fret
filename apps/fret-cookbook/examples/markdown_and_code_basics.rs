@@ -44,7 +44,7 @@ mod act {
 struct MarkdownAndCodeBasicsView;
 
 impl View for MarkdownAndCodeBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -69,7 +69,7 @@ impl View for MarkdownAndCodeBasicsView {
 
         let max_height = if cap_height { Some(Px(220.0)) } else { None };
 
-        let mut components = markdown::MarkdownComponents::<KernelApp>::default()
+        let mut components = markdown::MarkdownComponents::<App>::default()
             .with_open_url()
             .with_code_block_wrap(wrap_mode)
             .with_code_block_max_height(max_height);

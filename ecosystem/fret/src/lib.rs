@@ -31,7 +31,7 @@
 //! struct HelloView;
 //!
 //! impl View for HelloView {
-//!     fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+//!     fn init(_app: &mut App, _window: WindowId) -> Self {
 //!         Self
 //!     }
 //!
@@ -202,14 +202,17 @@ pub use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
+    pub use fret_app::App;
+
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
+        pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::{LocalState, TrackedStateExt, View};
-        pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx, WindowId};
+        pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
         pub use crate::{actions, workspace_menu};
         pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
         pub use fret_icons::IconId;
@@ -579,19 +582,22 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn init_app(self, f: impl FnOnce(&mut KernelApp)) -> Self {
+    pub fn init_app(self, f: impl FnOnce(&mut crate::app::App)) -> Self {
         Self {
             inner: self.inner.init_app(f),
         }
     }
 
-    pub fn install_app(self, install: fn(&mut KernelApp)) -> Self {
+    pub fn install_app(self, install: fn(&mut crate::app::App)) -> Self {
         Self {
             inner: self.inner.install_app(install),
         }
     }
 
-    pub fn install(self, install: fn(&mut KernelApp, &mut dyn fret_core::UiServices)) -> Self {
+    pub fn install(
+        self,
+        install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
+    ) -> Self {
         Self {
             inner: self.inner.install(install),
         }
@@ -870,6 +876,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
     use super::{FretApp, IconRegistry, KernelApp};
+    use crate::app::App;
     use crate::app::prelude::FretApp as AppPreludeFretApp;
     use crate::view::View;
     use crate::{AppUi, Defaults, Ui, ViewElements, WindowId};
@@ -877,9 +884,9 @@ mod builder_surface_tests {
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
 
-    fn install_app(_app: &mut KernelApp) {}
+    fn install_app(_app: &mut App) {}
 
-    fn install(_app: &mut KernelApp, _services: &mut dyn UiServices) {}
+    fn install(_app: &mut App, _services: &mut dyn UiServices) {}
 
     fn register_icon_pack(_registry: &mut IconRegistry) {}
 
@@ -962,7 +969,7 @@ mod builder_surface_tests {
     struct SmokeView;
 
     impl View for SmokeView {
-        fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+        fn init(_app: &mut App, _window: WindowId) -> Self {
             Self
         }
 
@@ -1180,8 +1187,10 @@ mod authoring_surface_policy_tests {
         ));
         assert!(rustdoc.contains("use fret::app::prelude::*;"));
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
+        assert!(rustdoc.contains("&mut App"));
         assert!(rustdoc.contains("WindowId"));
         assert!(!rustdoc.contains("AppWindowId"));
+        assert!(!rustdoc.contains("KernelApp"));
         assert!(rustdoc.contains("AppUi<'_, '_>"));
         assert!(!rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
@@ -1192,8 +1201,10 @@ mod authoring_surface_policy_tests {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
         assert!(app_prelude.contains("pub use crate::{"));
+        assert!(app_prelude.contains("pub use crate::app::App;"));
+        assert!(app_prelude_exports_symbol("App"));
         assert!(app_prelude.contains("AppUi"));
-        assert!(app_prelude.contains("KernelApp"));
+        assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
         assert!(app_prelude.contains("WindowId"));
         assert!(app_prelude.contains("pub use fret_icons::IconId;"));

@@ -17,8 +17,8 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
-    install_app_hooks: Vec<fn(&mut fret_app::App)>,
-    install_hooks: Vec<fn(&mut fret_app::App, &mut dyn fret_core::UiServices)>,
+    install_app_hooks: Vec<fn(&mut crate::app::App)>,
+    install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
 }
 
@@ -87,7 +87,7 @@ impl FretApp {
     ///
     /// Prefer calling this before enabling config files so command defaults/keymap layering see
     /// the full command registry.
-    pub fn install_app(mut self, install: fn(&mut fret_app::App)) -> Self {
+    pub fn install_app(mut self, install: fn(&mut crate::app::App)) -> Self {
         self.install_app_hooks.push(install);
         self
     }
@@ -95,7 +95,7 @@ impl FretApp {
     /// Install wiring that needs `UiServices` during bootstrap.
     pub fn install(
         mut self,
-        install: fn(&mut fret_app::App, &mut dyn fret_core::UiServices),
+        install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
     ) -> Self {
         self.install_hooks.push(install);
         self
@@ -201,8 +201,8 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
-    install_app_hooks: Vec<fn(&mut fret_app::App)>,
-    install_hooks: Vec<fn(&mut fret_app::App, &mut dyn fret_core::UiServices)>,
+    install_app_hooks: Vec<fn(&mut crate::app::App)>,
+    install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
     driver: UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {

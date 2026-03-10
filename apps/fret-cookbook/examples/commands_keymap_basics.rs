@@ -22,7 +22,7 @@ const TEST_ID_PANEL_STATE: &str = "cookbook.commands_keymap_basics.panel_state";
 const TEST_ID_PANEL_OPEN: &str = "cookbook.commands_keymap_basics.panel_open";
 const TEST_ID_PANEL: &str = "cookbook.commands_keymap_basics.panel";
 
-fn install_commands(app: &mut KernelApp) {
+fn install_commands(app: &mut App) {
     let cmd: CommandId = act::TogglePanel.into();
     let meta = CommandMeta::new("Toggle panel")
         .with_description("Toggles a panel via a registered action ID + default keybinding.")
@@ -63,7 +63,7 @@ fn install_commands(app: &mut KernelApp) {
 struct CommandsKeymapBasicsView;
 
 impl View for CommandsKeymapBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

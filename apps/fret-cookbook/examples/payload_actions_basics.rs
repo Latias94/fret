@@ -26,7 +26,7 @@ struct Row {
 struct PayloadActionsView;
 
 impl View for PayloadActionsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

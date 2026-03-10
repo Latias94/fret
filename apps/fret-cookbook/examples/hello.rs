@@ -14,7 +14,7 @@ const TEST_ID_RENDER_MARKER: &str = "cookbook.hello.render_marker";
 struct HelloView;
 
 impl View for HelloView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

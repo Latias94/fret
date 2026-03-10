@@ -151,7 +151,7 @@ mod act {
 
 struct TodoView;
 
-fn install_app(app: &mut KernelApp) {
+fn install_app(app: &mut App) {
     shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -160,7 +160,7 @@ fn install_app(app: &mut KernelApp) {
 }
 
 impl View for TodoView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

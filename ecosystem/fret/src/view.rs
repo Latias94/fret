@@ -14,7 +14,6 @@
 use std::any::Any;
 use std::hash::Hash;
 
-use fret_app::App;
 use fret_core::AppWindowId;
 use fret_runtime::{Model, ModelStore, ModelUpdateError};
 use fret_ui::action::{OnCommand, OnCommandAvailability};
@@ -26,12 +25,12 @@ use std::future::Future;
 /// A stateful view object that renders into the existing declarative IR (`Elements`).
 pub trait View: 'static {
     /// Initialize the view for a specific window.
-    fn init(app: &mut App, window: AppWindowId) -> Self
+    fn init(app: &mut crate::app::App, window: crate::WindowId) -> Self
     where
         Self: Sized;
 
     /// Render the view into declarative elements.
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements;
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, crate::app::App>) -> Elements;
 }
 
 pub struct LocalState<T> {
@@ -1241,7 +1240,10 @@ pub struct ViewWindowState<V: View> {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
-pub fn view_init_window<V: View>(app: &mut App, window: AppWindowId) -> ViewWindowState<V> {
+pub fn view_init_window<V: View>(
+    app: &mut fret_app::App,
+    window: AppWindowId,
+) -> ViewWindowState<V> {
     ViewWindowState {
         view: V::init(app, window),
         cached_handlers: None,
@@ -1251,7 +1253,7 @@ pub fn view_init_window<V: View>(app: &mut App, window: AppWindowId) -> ViewWind
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
 pub fn view_view<'a, V: View>(
-    cx: &mut ElementContext<'a, App>,
+    cx: &mut ElementContext<'a, fret_app::App>,
     st: &mut ViewWindowState<V>,
 ) -> Elements {
     let action_root = cx.root_id();
@@ -1289,9 +1291,9 @@ pub fn view_view<'a, V: View>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
 pub fn view_record_engine_frame<V: View>(
-    _app: &mut App,
+    _app: &mut fret_app::App,
     _window: AppWindowId,
-    ui: &mut fret_ui::UiTree<App>,
+    ui: &mut fret_ui::UiTree<fret_app::App>,
     _state: &mut ViewWindowState<V>,
     _context: &crate::kernel::render::WgpuContext,
     _renderer: &mut crate::kernel::render::Renderer,

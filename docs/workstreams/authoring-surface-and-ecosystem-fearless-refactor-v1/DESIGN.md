@@ -135,6 +135,7 @@ Because we do not need compatibility, this workstream should make the names unam
 ### Target names
 
 - `FretApp`: the canonical app builder entry point.
+- `App`: the default app-surface runtime handle under `fret::app`.
 - `KernelApp`: the app runtime type currently known as `fret_app::App`.
 - `AppUi`: the app-facing render/action/state context currently exposed as `ViewCx`.
 - `Ui`: canonical app-facing return alias for rendered UI (`Elements` underneath).
@@ -142,7 +143,7 @@ Because we do not need compatibility, this workstream should make the names unam
 ### Names to stop teaching
 
 - `fret::App` as the default user-facing entry name.
-- bare `App` in the default app prelude when it refers to the kernel runtime.
+- `KernelApp` on the default app prelude when the app-facing alias `App` is enough.
 - `ViewElements` as a first-contact alias.
 - broad mechanism names in app-level docs when a narrower app-facing alias exists.
 
@@ -162,6 +163,7 @@ The app prelude should expose only:
 
 - `FretApp`
 - `View`
+- `App`
 - `AppUi`
 - `LocalState`
 - `Ui`

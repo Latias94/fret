@@ -47,7 +47,7 @@ fn parse_step(step_text: &str) -> (i64, bool) {
 }
 
 impl View for HelloCounterView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

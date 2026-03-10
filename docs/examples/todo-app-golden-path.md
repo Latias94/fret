@@ -130,7 +130,7 @@ apps without dropping down to `fret-bootstrap`:
 ```rust,ignore
 use fret::app::prelude::*;
 
-fn install_app(app: &mut KernelApp) {
+fn install_app(app: &mut App) {
     // Register app-owned globals, commands, services, etc.
     // Example:
     // app.set_global(MyService::default());

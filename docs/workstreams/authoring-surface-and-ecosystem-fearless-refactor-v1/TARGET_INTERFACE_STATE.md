@@ -25,7 +25,8 @@ It is intentionally concrete:
 | Concept | Target name | Audience | Notes |
 | --- | --- | --- | --- |
 | app builder | `FretApp` | App | canonical user-facing entry point |
-| kernel runtime app | `KernelApp` | Advanced / component as needed | no longer taught as bare `App` in app prelude |
+| app runtime handle | `App` | App | default app-surface alias under `fret::app`; hides `KernelApp` on the common path |
+| kernel runtime app | `KernelApp` | Advanced / component as needed | explicit advanced/component name; not taught on the default app path |
 | app window identity | `WindowId` | App | hides `AppWindowId` noise in default app code |
 | app-facing view context | `AppUi` | App | replaces `ViewCx` as the taught surface |
 | rendered UI return alias | `Ui` | App | canonical alias over `Elements` |
@@ -39,6 +40,7 @@ Target exports:
 
 - `FretApp`
 - `View`
+- `App`
 - `WindowId`
 - `AppUi`
 - `UiCx`
@@ -53,6 +55,7 @@ Target exports:
 Target non-exports:
 
 - `Event`
+- `KernelApp`
 - `AppWindowId`
 - `ElementContext`
 - `UiTree`

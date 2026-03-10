@@ -13,7 +13,7 @@ const TEST_ID_SAMPLE_CARD: &str = "cookbook.theme_switching_basics.sample_card";
 const SCHEME_LIGHT: &str = "light";
 const SCHEME_DARK: &str = "dark";
 
-fn apply_scheme(app: &mut KernelApp, scheme: &str) {
+fn apply_scheme(app: &mut App, scheme: &str) {
     shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -30,7 +30,7 @@ struct ThemeSwitchingBasicsView {
 }
 
 impl View for ThemeSwitchingBasicsView {
-    fn init(app: &mut KernelApp, window: WindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         apply_scheme(app, SCHEME_LIGHT);
 
         Self {

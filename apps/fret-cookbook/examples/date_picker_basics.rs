@@ -8,7 +8,7 @@ const TEST_ID_SELECTED: &str = "cookbook.date_picker_basics.selected";
 struct DatePickerBasicsView;
 
 impl View for DatePickerBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

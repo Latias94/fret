@@ -50,7 +50,7 @@ An old surface is eligible for deletion only when all of the following are true:
 | Component prelude | mixed import posture via `fret-ui-kit` / recipe crates | `fret::component::prelude::*` | add explicit component module before moving call sites | first-party reusable crates no longer need app prelude | Scaffolding only | `TARGET_INTERFACE_STATE.md` |
 | Advanced imports | accidental discovery through default imports | `fret::advanced::*` | explicit modules that forward to current low-level seams | app docs/templates no longer import low-level seams | In progress | `ecosystem/fret/src/lib.rs`, `apps/fret-cookbook/examples/` |
 | App builder naming | `fret::App`, `AppBuilder`, `FretApp` mixed posture | `FretApp` canonical | migrate call sites/docs to `FretApp`, then delete old aliases | docs/templates stop teaching `fret::App` | Deleted | `ecosystem/fret/src/app_entry.rs`, `TARGET_INTERFACE_STATE.md` |
-| Kernel runtime naming | bare `App` in app-facing imports | `KernelApp` | type alias only for migration, then stop exporting bare `App` on app path | app prelude no longer exposes kernel runtime as bare `App` | In progress | `TARGET_INTERFACE_STATE.md` |
+| App runtime naming | `KernelApp` on the default app surface | `fret::app::App` | add an app-surface alias, then migrate docs/templates/examples | app prelude exports `App` and no longer exports `KernelApp` | In progress | `TARGET_INTERFACE_STATE.md` |
 | App UI context | `ViewCx` | `AppUi` | type alias first, grouped API second, delete old teaching last | templates/examples use `AppUi` and grouped namespaces | In progress | `ecosystem/fret/src/view.rs`, `TARGET_INTERFACE_STATE.md` |
 | UI return alias | `Elements` as default taught return type | `Ui` | alias `Ui = Elements` | official examples/docs use `Ui` | In progress | `TARGET_INTERFACE_STATE.md` |
 | Flat state helpers | `use_local*`, `use_state*` mixed default posture | `ui.state()` | wrapper namespace over current methods | default docs/templates stop teaching flat calls | In progress | `ecosystem/fret/src/view.rs` |
@@ -89,7 +89,7 @@ These are the concrete "remove this" lanes.
 | Old symbol / posture | Replacement | Delete when | Status |
 | --- | --- | --- | --- |
 | `fret::App` as default taught builder name | `FretApp` | app docs/templates/examples all migrated | Deleted |
-| bare `App` in app-facing prelude for kernel runtime | `KernelApp` | app prelude no longer exports it bare and call sites are migrated | In progress |
+| `KernelApp` on the default app surface | `App` | app prelude no longer exports `KernelApp` and official app-path call sites are migrated | In progress |
 | `ViewCx` as the taught app-facing context name | `AppUi` | grouped context APIs are live and official surfaces migrated | In progress |
 | `Elements` as the taught app-facing return alias | `Ui` | official examples/docs migrated | In progress |
 | flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | In progress |

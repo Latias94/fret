@@ -14,7 +14,7 @@ const TEST_ID_INPUT: &str = "cookbook.text_input_basics.input";
 const TEST_ID_LEN: &str = "cookbook.text_input_basics.len";
 const TEST_ID_SUBMITTED_COUNT: &str = "cookbook.text_input_basics.submitted_count";
 
-fn install_commands(app: &mut KernelApp) {
+fn install_commands(app: &mut App) {
     let submit: CommandId = act::Submit.into();
     let submit_meta = CommandMeta::new("Submit input")
         .with_description("Submits the current input value (clears on submit).")
@@ -46,7 +46,7 @@ impl TextInputBasicsView {
 }
 
 impl View for TextInputBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

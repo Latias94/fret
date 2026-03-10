@@ -8,7 +8,7 @@ use fret::app::prelude::*;
 
 pub mod scaffold;
 
-pub fn install_cookbook_defaults(app: &mut KernelApp) {
+pub fn install_cookbook_defaults(app: &mut App) {
     shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -63,15 +63,15 @@ mod authoring_surface_policy_tests {
 
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("KernelApp"));
+        assert!(src.contains("&mut App"));
         assert!(src.contains("WindowId"));
         assert!(!src.contains("AppWindowId"));
+        assert!(!src.contains("KernelApp"));
         assert!(src.contains("AppUi<'_, '_>"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
         assert!(src.contains(") -> Ui {"));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("ViewCx<'_, '_, App>"));
-        assert!(!src.contains("fn init(_app: &mut App"));
         assert!(!src.contains(") -> Elements {"));
         assert!(!src.contains("cx.use_local"));
         assert!(!src.contains("cx.on_action_notify_"));
@@ -82,6 +82,7 @@ mod authoring_surface_policy_tests {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("AppUi<'_, '_>"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(!src.contains("KernelApp"));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("ViewCx<'_, '_, App>"));
     }
@@ -192,7 +193,7 @@ mod authoring_surface_policy_tests {
         assert!(UNDO_EXAMPLE.contains("models::<act::Inc>"));
         assert!(UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
 
-        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<KernelApp>::default()"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<App>::default()"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
 
         assert!(

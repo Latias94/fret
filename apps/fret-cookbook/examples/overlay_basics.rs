@@ -21,7 +21,7 @@ const TEST_ID_UNDERLAY_SHORTCUT: &str = "cookbook.overlays.underlay.shortcut";
 const TEST_ID_UNDERLAY_BUMPS: &str = "cookbook.overlays.underlay.bumps";
 const TEST_ID_UNDERLAY_BUMP: &str = "cookbook.overlays.underlay.bump";
 
-fn install_commands(app: &mut KernelApp) {
+fn install_commands(app: &mut App) {
     let cmd: CommandId = act::BumpUnderlay.into();
     let meta = CommandMeta::new("Bump underlay")
         .with_description(
@@ -61,7 +61,7 @@ fn install_commands(app: &mut KernelApp) {
 struct OverlayBasicsView;
 
 impl View for OverlayBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

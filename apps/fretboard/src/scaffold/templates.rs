@@ -326,11 +326,11 @@ struct TodoRowSnapshot {
 struct TodoView;
 
 impl View for TodoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
@@ -673,7 +673,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
         .w_full()
 }
 
-fn install_app(app: &mut KernelApp) {
+fn install_app(app: &mut App) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -722,11 +722,11 @@ mod act {{
 struct HelloView;
 
 impl View for HelloView {{
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {{
+    fn init(_app: &mut App, _window: WindowId) -> Self {{
         Self
     }}
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {{
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {{
         let click_count_state = cx.state().local::<u32>();
         let click_count_value = cx.state().watch(&click_count_state).layout().value_or(0);
 
@@ -751,7 +751,7 @@ __PALETTE_BUTTON__
     }}
 }}
 
-fn install_app(app: &mut KernelApp) {{
+fn install_app(app: &mut App) {{
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }}
@@ -832,11 +832,11 @@ struct TodoRow {
 struct TodoView;
 
 impl View for TodoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
@@ -1036,7 +1036,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         .w_full()
 }
 
-fn install_app(app: &mut KernelApp) {
+fn install_app(app: &mut App) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -1266,8 +1266,8 @@ mod tests {
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
-        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::container("));
@@ -1317,8 +1317,8 @@ mod tests {
     fn hello_template_uses_default_authoring_dialect() {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
-        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("ui::v_flex("));
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
@@ -1335,8 +1335,8 @@ mod tests {
     fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self"));
-        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui"));
+        assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
         assert!(src.contains("ui::keyed("));

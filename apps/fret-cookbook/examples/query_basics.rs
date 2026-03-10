@@ -36,7 +36,7 @@ fn demo_key() -> QueryKey<DemoData> {
 struct QueryBasicsView;
 
 impl View for QueryBasicsView {
-    fn init(_app: &mut KernelApp, _window: WindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

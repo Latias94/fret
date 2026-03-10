@@ -44,7 +44,7 @@ struct RouterBasicsView {
 }
 
 impl View for RouterBasicsView {
-    fn init(app: &mut KernelApp, window: WindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         let tree = Arc::new(RouteTree::new(
             RouteNode::new(RouteId::Home, "/")
                 .unwrap()
@@ -464,7 +464,7 @@ impl View for RouterBasicsView {
     }
 }
 
-fn install_router_commands(app: &mut KernelApp) {
+fn install_router_commands(app: &mut App) {
     fret_router_ui::register_router_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(app);
 }
