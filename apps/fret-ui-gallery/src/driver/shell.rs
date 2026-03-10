@@ -17,7 +17,6 @@ pub(super) fn sidebar_view(
     cache_sidebar: bool,
     nav_query: &Model<String>,
     selected_page: &Model<Arc<str>>,
-    workspace_tabs: &Model<Vec<Arc<str>>>,
 ) -> AnyElement {
     // When the sidebar is view-cached, the input widget can still update its own subtree without
     // forcing the cached page list to be recomputed. Read `nav_query` at this outer level so a
@@ -52,8 +51,6 @@ pub(super) fn sidebar_view(
                         selected.as_ref(),
                         query.as_str(),
                         nav_query.clone(),
-                        selected_page.clone(),
-                        workspace_tabs.clone(),
                     )
                 }
             });
@@ -96,8 +93,6 @@ pub(super) fn sidebar_view(
                         selected.as_ref(),
                         query.as_str(),
                         nav_query.clone(),
-                        selected_page.clone(),
-                        workspace_tabs.clone(),
                     )
                 }]
             },
@@ -129,8 +124,6 @@ pub(super) fn sidebar_view(
                     selected.as_ref(),
                     query.as_str(),
                     nav_query.clone(),
-                    selected_page.clone(),
-                    workspace_tabs.clone(),
                 )
             }
         })

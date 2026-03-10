@@ -4,10 +4,11 @@
 
 - [x] Web URL flags for UI Gallery view-cache configuration on `wasm32`.
   - Evidence:
-    - `apps/fret-ui-gallery/src/driver/legacy.rs` (`bool_from_window_query`, `config_bool`)
+    - `apps/fret-ui-gallery/src/driver/runtime_driver.rs` (`bool_from_window_query`)
+    - `apps/fret-ui-gallery/src/driver/window_bootstrap.rs` (`config_bool`)
     - `apps/fret-ui-gallery/Cargo.toml` (enable `web-sys/UrlSearchParams`)
 - [x] On `wasm32`, when view-cache is explicitly enabled, default shell view-cache on (unless overridden).
-  - Evidence: `apps/fret-ui-gallery/src/driver/legacy.rs` (view-cache shell default)
+  - Evidence: `apps/fret-ui-gallery/src/driver/window_bootstrap.rs` (view-cache shell default)
 - [x] Avoid per-frame model churn for undo/redo availability (keeps view-cache roots stable and reduces layout invalidations).
   - Evidence: `apps/fret-ui-gallery/src/driver/render_flow.rs` (write only on change)
 
