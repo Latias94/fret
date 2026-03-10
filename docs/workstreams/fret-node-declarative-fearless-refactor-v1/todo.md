@@ -1233,6 +1233,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/focus_session/selection.rs` seams, so `focus_session.rs` now mainly keeps
     root re-exports explicit while edge/port/node focus bookkeeping stops sharing one inline
     helper file.
+  - Progress: cancel-session helpers now also route residual interaction cleanup and pan-release
+    state helpers through the private `ui/canvas/widget/cancel_session/residuals.rs` and
+    `ui/canvas/widget/cancel_session/pan.rs` seams, so `cancel_session.rs` now mainly keeps root
+    re-exports explicit while sticky-wire/right-click cleanup and pan-release matching stop sharing
+    one inline helper file.
 
 ## M5 - Compatibility retained convergence
 

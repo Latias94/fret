@@ -779,6 +779,11 @@ real editors.
   `ui/canvas/widget/focus_session/focus.rs`, and
   `ui/canvas/widget/focus_session/selection.rs` seams, so `focus_session.rs` now mainly keeps root
   re-exports explicit while edge/port/node focus bookkeeping stops sharing one inline helper file.
+- cancel-session helpers now also route residual interaction cleanup and pan-release state helpers
+  through the private `ui/canvas/widget/cancel_session/residuals.rs` and
+  `ui/canvas/widget/cancel_session/pan.rs` seams, so `cancel_session.rs` now mainly keeps root
+  re-exports explicit while sticky-wire/right-click cleanup and pan-release matching stop sharing
+  one inline helper file.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
