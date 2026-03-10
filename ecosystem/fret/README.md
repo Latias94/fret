@@ -38,7 +38,14 @@ If you are learning the repo's default path, follow this ladder in order:
 - Use `fretboard new todo` when you want the richer third-rung baseline, not as a replacement for
   the first two rungs.
 
-Generate a runnable starter:
+Generate a runnable starter (minimal baseline first):
+
+```bash
+cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run --manifest-path local/my-simple-todo/Cargo.toml
+```
+
+Then move to the richer third rung when you actually want selectors + queries:
 
 ```bash
 cargo run -p fretboard -- new todo --name my-todo

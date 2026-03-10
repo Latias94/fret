@@ -15,6 +15,7 @@ Related:
 - Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+- Default-path productization audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
@@ -118,6 +119,10 @@ Adoption note (as of 2026-03-07):
   `POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` now confirms that, after the app-entry lane
   closed, compat runner and `use_state` are still intentional retained seams rather than the next
   delete-ready cleanup targets.
+- Productization audit update (as of 2026-03-10):
+  `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now records that the default-path ingress docs
+  are already structurally aligned, and that the remaining productization work is wording
+  discipline plus ladder stability rather than another authoring-surface expansion pass.
 - Command-first retained-seam update (as of 2026-03-09):
   `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now states that the remaining command-first
   pressure is split between permanent mechanism/catalog seams and intentionally retained
@@ -306,6 +311,7 @@ Post-v1 direction (recommended):
   - `notify()` default-path gate update (as of 2026-03-09): `tools/gate_no_notify_in_default_teaching_surfaces.py` now keeps the default cookbook ladder plus scaffold templates off explicit `cx.notify(...)` / `host.notify(...)`, and `tools/pre_release.py` runs that policy alongside the other teaching-surface checks.
   - Richer `todo` template audit update (as of 2026-03-09): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit because the template is still teaching selector deps across nested row models plus query invalidation/filter coordination on one tracked graph; this is now documented in `docs/examples/todo-app-golden-path.md` and the generated template README so it does not look like an accidental lagging migration.
   - Productization ingress update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md`, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, `docs/examples/README.md`, `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `apps/fret-ui-gallery/README.md`, and `ecosystem/fret/README.md` now repeat the same default/comparison/advanced framing plus the same `hello` -> `simple-todo` -> `todo` ladder, reducing the remaining post-v1 work from taxonomy drift to keeping those ingress docs stable.
+  - Productization audit follow-up (as of 2026-03-10): `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now confirms that reading, and the only landed follow-up fixes in this pass were wording-level alignment in `README.md` plus making `ecosystem/fret/README.md` show `simple-todo` before `todo` in the quick-start commands.
   - Medium-surface builder follow-up (as of 2026-03-09): `Alert::build(...)` plus `AlertAction::build(...)` now close one deliberately narrow alert-family seam in `ecosystem/fret-ui-shadcn/src/alert.rs`, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, and the main ui-gallery alert snippets) now use that late-landing path instead of pre-collecting alert children.
   - Medium-surface builder follow-up (as of 2026-03-09): `ScrollArea::build(...)` now closes the next narrow runtime-owned seam in `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, and the first real surfaces (`markdown_and_code_basics`, `async_playground_demo`, and the main ui-gallery scroll-area demo) now keep viewport children on the late-landing path without widening the helper surface.
   - Medium-surface builder follow-up (as of 2026-03-09): `FieldSet::build(...)`, `FieldGroup::build(...)`, and `Field::build(...)` now close the next dense form-layout seam in `ecosystem/fret-ui-shadcn/src/field.rs`, and the first real surfaces (`ui-gallery` field `input`, field `fieldset`, and form `demo`) now keep field-family children on the late-landing path instead of pre-collecting them.

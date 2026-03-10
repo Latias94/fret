@@ -1,12 +1,13 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Default-Path Productization
 
 Status: active post-v1 productization note
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- Productization audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - Examples index: `docs/examples/README.md`
@@ -28,6 +29,10 @@ Current status:
 - the main first-contact docs now mostly agree on the same taxonomy,
 - the remaining work is to keep that framing stable across repo entry points rather than widening
   the default API surface.
+- Audit update (as of 2026-03-10): `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now records
+  that the remaining drift is wording-level, not structural; the root README and `fret` crate
+  README were the only ingress surfaces needing small ladder/action-first alignment fixes in this
+  pass.
 
 ---
 

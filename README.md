@@ -26,7 +26,7 @@ Long-term, ecosystem crates may move to a separate components repository.
 ## Why Fret (high-signal features)
 
 - **Editor-grade interaction substrate (not just widgets)**: docking + tear-off windows, multi-root overlays, focus/capture arbitration, and viewport embedding as first-class contracts. *(docking, multi-window, overlays, focus/capture, viewports)*
-- **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with typed state (`Model<T>`) and typed messages/routing. *(declarative elements, state, routing)*
+- **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with the view runtime, `LocalState`, typed actions, and explicit advanced escape hatches. *(declarative elements, local state, actions)*
 - **Ecosystem included (batteries, but modular)**: shadcn/ui v4-aligned component taxonomy + recipes, icons, docking UI, markdown, tables, node graph, charts, and more. *(fret-ui-kit, fret-ui-shadcn, icons, docking)*
 - **Mechanism vs policy separation**: the core runtime stays mechanism-only; interaction policies and defaults live in ecosystem crates so apps can stay opinionated without locking the engine. *(runtime contracts, policy in components)*
 - **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation)*
