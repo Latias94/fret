@@ -1221,6 +1221,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_up_state/release.rs` seams, so `pointer_up_state.rs` now mainly
     keeps root re-exports explicit while pointer-state projection and sticky-wire/pan release
     branches stop living inline together.
+  - Progress: pointer-up session helpers now also route generic release-slot handling and
+    interaction cleanup through the private `ui/canvas/widget/pointer_up_session/release.rs` and
+    `ui/canvas/widget/pointer_up_session/cleanup.rs` seams, so `pointer_up_session.rs` now mainly
+    keeps root re-exports explicit while pending-release and snap-guide cleanup helpers stop
+    sharing one inline module body.
 
 ## M5 - Compatibility retained convergence
 
