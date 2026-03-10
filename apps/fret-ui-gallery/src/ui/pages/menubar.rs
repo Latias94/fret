@@ -55,8 +55,7 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Parts", parts)
                 .test_id_prefix("ui-gallery-menubar-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .test_id_prefix("ui-gallery-menubar-notes"),
+            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-menubar-notes"),
         ],
     );
 

@@ -6,8 +6,8 @@ use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::{Color, Px};
 use fret_docking::{
-    runtime as dock_runtime, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
-    ViewportPanel,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
+    runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{

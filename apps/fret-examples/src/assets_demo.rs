@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret::kernel::core::{ImageColorSpace, SvgId};
 use fret::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::prelude::*;
-use fret_ui_assets::{image_asset_state, svg_asset_state, UiAssets};
+use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
 

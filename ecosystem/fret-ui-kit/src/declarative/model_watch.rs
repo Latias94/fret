@@ -1,8 +1,8 @@
 use std::any::Any;
 
-use fret_runtime::{Model, ModelUpdateError};
 #[cfg(feature = "state-query")]
 use fret_query::{QueryHandle, QueryState};
+use fret_runtime::{Model, ModelUpdateError};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 /// Ergonomic helpers for observing-and-reading models during declarative rendering.
@@ -159,7 +159,6 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
         self.cx.read_model(self.model, self.invalidation, f)
     }
 }
-
 
 #[cfg(feature = "state-query")]
 pub trait QueryHandleWatchExt<T: 'static> {

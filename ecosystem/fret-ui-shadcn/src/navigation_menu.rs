@@ -35,9 +35,9 @@ use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    resolve_override_slot, resolve_override_slot_opt, ui, ChromeRefinement, ColorRef,
-    LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverrideSlot, Space,
-    WidgetState, WidgetStateProperty, WidgetStates,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverrideSlot, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt, ui,
 };
 
 use crate::overlay_motion;
@@ -2646,9 +2646,9 @@ mod tests {
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
-    use fret_ui_kit::OverlayController;
     use std::collections::HashMap;
 
     #[derive(Default)]
@@ -3041,12 +3041,14 @@ mod tests {
                             )],
                         )];
 
-                        vec![NavigationMenu::new(model_for_frame.clone())
-                            .items(items)
-                            .viewport_test_id("nav.viewport")
-                            .md_breakpoint_query(md_breakpoint_query_for_frame)
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)]
+                        vec![
+                            NavigationMenu::new(model_for_frame.clone())
+                                .items(items)
+                                .viewport_test_id("nav.viewport")
+                                .md_breakpoint_query(md_breakpoint_query_for_frame)
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx),
+                        ]
                     });
 
                     vec![wrapper.attach_semantics(
@@ -3164,9 +3166,11 @@ mod tests {
                     NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
                     NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                 ];
-                vec![NavigationMenu::new(model.clone())
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3245,10 +3249,12 @@ mod tests {
                     NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
                     NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                 ];
-                vec![NavigationMenu::new(model.clone())
-                    .viewport(false)
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .viewport(false)
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3327,9 +3333,11 @@ mod tests {
                     NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
                     NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                 ];
-                vec![NavigationMenu::new(model.clone())
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3441,9 +3449,11 @@ mod tests {
                     NavigationMenuItem::new("alpha", "Alpha", std::iter::empty()),
                     NavigationMenuItem::new("beta", "Beta", std::iter::empty()),
                 ];
-                vec![NavigationMenu::new(model.clone())
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3537,9 +3547,11 @@ mod tests {
                         NavigationMenuItem::new("alpha", "Alpha", content),
                         NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
                     ];
-                    vec![NavigationMenu::new(model_for_render.clone())
-                        .items(items)
-                        .into_element(cx)]
+                    vec![
+                        NavigationMenu::new(model_for_render.clone())
+                            .items(items)
+                            .into_element(cx),
+                    ]
                 },
             );
             ui.set_root(root);
@@ -3663,9 +3675,11 @@ mod tests {
             bounds,
             "navigation-menu-link",
             |cx| {
-                vec![NavigationMenuLink::new(model.clone(), vec![cx.text("Go")])
-                    .label("Go")
-                    .into_element(cx)]
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Go")])
+                        .label("Go")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3809,10 +3823,12 @@ mod tests {
                     NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
                     NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                 ];
-                vec![NavigationMenu::new(model.clone())
-                    .indicator(false)
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .indicator(false)
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -3902,10 +3918,12 @@ mod tests {
                             NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
                             NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                         ];
-                        vec![NavigationMenu::new(model_for_render.clone())
-                            .config(nav_cfg_for_render)
-                            .items(items)
-                            .into_element(cx)]
+                        vec![
+                            NavigationMenu::new(model_for_render.clone())
+                                .config(nav_cfg_for_render)
+                                .items(items)
+                                .into_element(cx),
+                        ]
                     },
                 );
                 ui.set_root(root);
@@ -4061,33 +4079,35 @@ mod tests {
             );
             let mut services = FakeServices::default();
 
-            let render_frame =
-                |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-                    bump_frame(app);
-                    OverlayController::begin_frame(app, window);
-                    let model_for_render = model.clone();
-                    let root = fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "navigation-menu-dir",
-                        move |cx| {
-                            direction_prim::with_direction_provider(cx, dir, |cx| {
-                                let theme = Theme::global(&*cx.app).snapshot();
-                                let region_props = LayoutQueryRegionProps {
-                                    layout: decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default().w_full().min_w_0(),
-                                    ),
-                                    name: None,
-                                };
+            let render_frame = |ui: &mut UiTree<App>,
+                                app: &mut App,
+                                services: &mut FakeServices| {
+                bump_frame(app);
+                OverlayController::begin_frame(app, window);
+                let model_for_render = model.clone();
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "navigation-menu-dir",
+                    move |cx| {
+                        direction_prim::with_direction_provider(cx, dir, |cx| {
+                            let theme = Theme::global(&*cx.app).snapshot();
+                            let region_props = LayoutQueryRegionProps {
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                                name: None,
+                            };
 
-                                vec![cx.layout_query_region_with_id(
-                                    region_props,
-                                    move |cx, region_id| {
-                                        vec![cx.container(
+                            vec![cx.layout_query_region_with_id(
+                                region_props,
+                                move |cx, region_id| {
+                                    vec![
+                                        cx.container(
                                             ContainerProps {
                                                 layout: LayoutStyle {
                                                     size: SizeStyle {
@@ -4118,22 +4138,25 @@ mod tests {
                                                         vec![cx.text("B")],
                                                     ),
                                                 ];
-                                                vec![NavigationMenu::new(model_for_render.clone())
-                                                    .container_query_region(region_id)
-                                                    .items(items)
-                                                    .into_element(cx)]
+                                                vec![
+                                                    NavigationMenu::new(model_for_render.clone())
+                                                        .container_query_region(region_id)
+                                                        .items(items)
+                                                        .into_element(cx),
+                                                ]
                                             },
-                                        )]
-                                    },
-                                )]
-                            })
-                        },
-                    );
-                    ui.set_root(root);
-                    OverlayController::render(ui, app, services, window, bounds);
-                    ui.request_semantics_snapshot();
-                    ui.layout_all(app, services, bounds, 1.0);
-                };
+                                        ),
+                                    ]
+                                },
+                            )]
+                        })
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
 
             // Three frames:
             // - frame 1 establishes trigger/root bounds,
@@ -4506,17 +4529,19 @@ mod tests {
             bounds,
             "navigation-menu-item-href-open-url",
             |cx| {
-                vec![NavigationMenu::new(model.clone())
-                    .list(NavigationMenuList::new([NavigationMenuItem::new(
-                        "docs",
-                        "Documentation",
-                        std::iter::empty(),
-                    )
-                    .href("https://example.com/docs")
-                    .target("_blank")
-                    .rel("noopener noreferrer")
-                    .trigger_test_id("navigation-menu-item-href")]))
-                    .into_element(cx)]
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .list(NavigationMenuList::new([NavigationMenuItem::new(
+                            "docs",
+                            "Documentation",
+                            std::iter::empty(),
+                        )
+                        .href("https://example.com/docs")
+                        .target("_blank")
+                        .rel("noopener noreferrer")
+                        .trigger_test_id("navigation-menu-item-href")]))
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

@@ -639,40 +639,41 @@ impl CustomEffectV2GlassChromeWebDriver {
             let _ = models.update(&reset_controls.debug_input, |v| *v = false);
         });
 
-        let content = shadcn::CardContent::new([ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
-            [
-                ui::h_flex(|cx| {
-                    [
-                        shadcn::Switch::new(enabled_model.clone())
-                            .a11y_label("Enable glass/chrome effect")
-                            .test_id("customv2.glass_chrome.enabled")
-                            .into_element(cx),
-                        shadcn::Label::new("Enable").into_element(cx),
-                    ]
-                })
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                mode_row,
-                quality_row,
-                sampling_row,
-                shadcn::Separator::new().into_element(cx),
-                uv_span_row,
-                strength_row,
-                shininess_row,
-                mix_row,
-                debug_row,
-                shadcn::Button::new("Reset")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .on_activate(reset.clone())
-                    .test_id("customv2.glass_chrome.reset")
+        let content =
+            shadcn::CardContent::new([ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
+                [
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(enabled_model.clone())
+                                .a11y_label("Enable glass/chrome effect")
+                                .test_id("customv2.glass_chrome.enabled")
+                                .into_element(cx),
+                            shadcn::Label::new("Enable").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
                     .into_element(cx),
-            ]
-        })
-        .gap(Space::N3)
-        .items_stretch()
-        .into_element(cx)])
-        .into_element(cx);
+                    mode_row,
+                    quality_row,
+                    sampling_row,
+                    shadcn::Separator::new().into_element(cx),
+                    uv_span_row,
+                    strength_row,
+                    shininess_row,
+                    mix_row,
+                    debug_row,
+                    shadcn::Button::new("Reset")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .on_activate(reset.clone())
+                        .test_id("customv2.glass_chrome.reset")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx)])
+            .into_element(cx);
 
         shadcn::Card::new([header, content])
             .ui()

@@ -3,8 +3,8 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_core::{
-    time::{SystemTime, UNIX_EPOCH},
     AppWindowId, FrameId,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

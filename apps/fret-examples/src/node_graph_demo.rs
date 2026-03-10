@@ -9,8 +9,8 @@ use fret_node::core::{
 };
 use fret_node::io::NodeGraphViewState;
 use fret_node::ui::{
-    node_graph_surface_paint_only, EdgePaintOverrideV1, NodeGraphPaintOverridesMap,
-    NodeGraphPaintOverridesRef, NodeGraphSurfacePaintOnlyProps,
+    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
+    NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only,
 };
 use serde_json::Value;
 

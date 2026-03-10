@@ -8,7 +8,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with
     // `Trigger(asChild)` in the header and `Content` later in the tree.
     cx.scope(|cx| {
-
         shadcn_col::Collapsible::new()
             .default_open(false)
             .gap(Space::N2)
