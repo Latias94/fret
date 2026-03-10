@@ -1,0 +1,534 @@
+use super::*;
+use fret_ui::PaintCachePolicy;
+
+fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
+    let raw = raw.trim();
+    let (year, rest) = raw.split_once('-')?;
+    let (month, day) = rest.split_once('-')?;
+
+    let year: i32 = year.parse().ok()?;
+    let month: u8 = month.parse().ok()?;
+    let day: u8 = day.parse().ok()?;
+
+    let month = time::Month::try_from(month).ok()?;
+    Date::from_calendar_date(year, month, day).ok()
+}
+
+fn env_bool(name: &str, default: bool) -> bool {
+    let Some(value) = std::env::var_os(name).filter(|value| !value.is_empty()) else {
+        return default;
+    };
+
+    let value = value.to_string_lossy().trim().to_ascii_lowercase();
+    !(value == "0" || value == "false" || value == "no" || value == "off")
+}
+
+fn config_bool(env_name: &str, query_name: &str, default: bool) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(value) = bool_from_window_query(query_name) {
+            return value;
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = query_name;
+
+    env_bool(env_name, default)
+}
+
+fn config_paint_cache_policy(env_name: &str, query_name: &str) -> PaintCachePolicy {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(value) = bool_from_window_query(query_name) {
+            return if value {
+                PaintCachePolicy::Enabled
+            } else {
+                PaintCachePolicy::Disabled
+            };
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = query_name;
+
+    let Some(value) = std::env::var_os(env_name).filter(|value| !value.is_empty()) else {
+        return PaintCachePolicy::Auto;
+    };
+
+    match value.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+        "0" | "false" | "no" | "off" | "disabled" => PaintCachePolicy::Disabled,
+        "1" | "true" | "yes" | "on" | "enabled" => PaintCachePolicy::Enabled,
+        "auto" => PaintCachePolicy::Auto,
+        _ => PaintCachePolicy::Auto,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGalleryWindowState) {
+    app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+        store.per_window.insert(
+            window,
+            UiGalleryHarnessModelIds {
+                selected_page: state.selected_page.clone(),
+                workspace_tabs: state.workspace_tabs.clone(),
+                workspace_dirty_tabs: state.workspace_dirty_tabs.clone(),
+                nav_query: state.nav_query.clone(),
+                settings_menu_bar_os: state.settings_menu_bar_os.clone(),
+                settings_menu_bar_in_window: state.settings_menu_bar_in_window.clone(),
+                chrome_show_workspace_tab_strip: state.chrome_show_workspace_tab_strip.clone(),
+                cmdk_query: state.cmdk_query.clone(),
+                last_action: state.last_action.clone(),
+                input_file_value: state.input_file_value.clone(),
+                code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
+                code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
+                code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                code_editor_folds: state.code_editor_folds.clone(),
+                code_editor_inlays: state.code_editor_inlays.clone(),
+                text_input: state.text_input.clone(),
+                text_area: state.text_area.clone(),
+            },
+        );
+        if store.focused_window.is_none() {
+            store.focused_window = Some(window);
+        }
+    });
+}
+
+impl UiGalleryDriver {
+    pub(crate) fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
+        let page_router = build_ui_gallery_page_router();
+        let diag_profile = ui_gallery_diag_profile();
+        let workspace_shell_diag_profile =
+            diag_profile.as_deref() == Some(UI_GALLERY_DIAG_PROFILE_WORKSPACE_SHELL);
+
+        let start_page = ui_gallery_start_page().unwrap_or_else(|| {
+            if workspace_shell_diag_profile
+                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
+            {
+                Arc::<str>::from(PAGE_OVERLAY)
+            } else {
+                Arc::<str>::from(PAGE_INTRO)
+            }
+        });
+
+        #[cfg(target_arch = "wasm32")]
+        let start_page = page_from_gallery_location(&page_router.state().location)
+            .unwrap_or_else(|| start_page.clone());
+
+        let selected_page = app.models_mut().insert(start_page.clone());
+
+        let mut workspace_tabs_init = vec![
+            Arc::<str>::from(PAGE_INTRO),
+            Arc::<str>::from(PAGE_LAYOUT),
+            Arc::<str>::from(PAGE_VIEW_CACHE),
+            Arc::<str>::from(PAGE_BUTTON),
+            Arc::<str>::from(PAGE_CARD),
+            Arc::<str>::from(PAGE_BADGE),
+            Arc::<str>::from(PAGE_AVATAR),
+            Arc::<str>::from(PAGE_ICONS),
+            Arc::<str>::from(PAGE_FIELD),
+            Arc::<str>::from(PAGE_OVERLAY),
+            Arc::<str>::from(PAGE_COMMAND),
+        ];
+        if !workspace_tabs_init
+            .iter()
+            .any(|page| page.as_ref() == start_page.as_ref())
+        {
+            workspace_tabs_init.push(start_page.clone());
+        }
+
+        let workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>> = workspace_tabs_init
+            .iter()
+            .cloned()
+            .map(|tab_id| (Self::workspace_tab_close_command(tab_id.as_ref()), tab_id))
+            .collect();
+        let workspace_tabs_init_for_layout = workspace_tabs_init.clone();
+        let workspace_dirty_tabs_init = vec![Arc::<str>::from(PAGE_OVERLAY)];
+        let workspace_window_layout_init = Self::build_workspace_window_layout(
+            start_page.clone(),
+            &workspace_tabs_init_for_layout,
+            &workspace_dirty_tabs_init,
+        );
+        let workspace_tabs = app.models_mut().insert(workspace_tabs_init);
+        let workspace_dirty_tabs = app.models_mut().insert(workspace_dirty_tabs_init);
+        let workspace_window_layout = app.models_mut().insert(workspace_window_layout_init);
+        let nav_query_default = std::env::var_os(ENV_UI_GALLERY_NAV_QUERY)
+            .and_then(|value| (!value.is_empty()).then_some(value))
+            .map(|value| value.to_string_lossy().trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_default();
+        let nav_query = app.models_mut().insert(nav_query_default);
+        let initial_theme_preset = if workspace_shell_diag_profile {
+            Arc::<str>::from("zinc/dark")
+        } else {
+            Arc::<str>::from("zinc/light")
+        };
+        let theme_preset = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(initial_theme_preset));
+        let theme_preset_open = app.models_mut().insert(false);
+        let motion_preset = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("theme")));
+        let motion_preset_open = app.models_mut().insert(false);
+        let popover_open = app.models_mut().insert(false);
+        let dialog_open = app.models_mut().insert(false);
+        let dialog_glass_open = app.models_mut().insert(false);
+        let alert_dialog_open = app.models_mut().insert(false);
+        let sheet_open = app.models_mut().insert(false);
+        let portal_geometry_popover_open = app.models_mut().insert(false);
+
+        let mut settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let is_diag = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
+        if is_diag {
+            settings.menu_bar.os = MenuBarIntegrationModeV1::Off;
+            settings.menu_bar.in_window = MenuBarIntegrationModeV1::On;
+            Self::apply_menu_bar_settings(app, settings.menu_bar.os, settings.menu_bar.in_window);
+        }
+        let settings_open = app.models_mut().insert(false);
+        let settings_menu_bar_os = app
+            .models_mut()
+            .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.os)));
+        let settings_menu_bar_os_open = app.models_mut().insert(false);
+        let settings_menu_bar_in_window = app
+            .models_mut()
+            .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.in_window)));
+        let settings_menu_bar_in_window_open = app.models_mut().insert(false);
+        let settings_edit_can_undo = app.models_mut().insert(true);
+        let settings_edit_can_redo = app.models_mut().insert(true);
+        let chrome_show_workspace_tab_strip = app.models_mut().insert(workspace_shell_diag_profile);
+        let undo_doc: DocumentId = "ui_gallery.window".into();
+        let combobox_value = app.models_mut().insert(None::<Arc<str>>);
+        let combobox_open = app.models_mut().insert(false);
+        let combobox_query = app.models_mut().insert(String::new());
+
+        let date_picker_open = app.models_mut().insert(false);
+        let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
+            .ok()
+            .and_then(|raw| parse_iso_date_ymd(&raw))
+            .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
+        let date_picker_month = app
+            .models_mut()
+            .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
+        let date_picker_selected = app.models_mut().insert(None::<Date>);
+        let time_picker_open = app.models_mut().insert(false);
+        let time_picker_selected = app
+            .models_mut()
+            .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
+
+        let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+        let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
+
+        let mut data_table_state_value = fret_ui_headless::table::TableState::default();
+        data_table_state_value.pagination.page_size = 25;
+        let data_table_state = app.models_mut().insert(data_table_state_value);
+        let data_grid_selected_row = app.models_mut().insert(None::<u64>);
+        let tabs_value = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("overview")));
+        let accordion_value = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("item-1")));
+
+        Self::ensure_image_source_demo_assets_installed(app);
+
+        let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
+        let avatar_demo_image_token = app.next_image_upload_token();
+        Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
+
+        let image_fit_demo_wide_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_wide_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_wide_token,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE,
+            (120, 190, 255),
+        );
+
+        let image_fit_demo_tall_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_tall_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_tall_token,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE,
+            (255, 160, 120),
+        );
+
+        let image_fit_demo_streaming_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_streaming_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_streaming_token,
+            Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
+            (140, 230, 170),
+        );
+
+        let progress = app.models_mut().insert(35.0f32);
+        let checkbox = app.models_mut().insert(false);
+        let switch = app.models_mut().insert(true);
+        let code_editor_syntax_rust = app.models_mut().insert(true);
+        let code_editor_boundary_identifier = app.models_mut().insert(true);
+        let code_editor_soft_wrap = app.models_mut().insert(false);
+        let code_editor_folds = app.models_mut().insert(false);
+        let code_editor_inlays = app.models_mut().insert(false);
+        let markdown_link_gate_last_activation = app.models_mut().insert(None::<Arc<str>>);
+        let material3_checkbox = app.models_mut().insert(false);
+        let material3_switch = app.models_mut().insert(false);
+        let material3_slider_value = app.models_mut().insert(0.3f32);
+        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
+        let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
+        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
+        let material3_expressive = app.models_mut().insert(false);
+        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
+        let material3_dialog_open = app.models_mut().insert(false);
+        let material3_text_field_value = app.models_mut().insert(String::new());
+        let material3_text_field_disabled = app.models_mut().insert(false);
+        let material3_text_field_error = app.models_mut().insert(false);
+        let material3_autocomplete_value = app.models_mut().insert(String::new());
+        let material3_autocomplete_disabled = app.models_mut().insert(false);
+        let material3_autocomplete_error = app.models_mut().insert(false);
+        let material3_autocomplete_dialog_open = app.models_mut().insert(false);
+        let material3_menu_open = app.models_mut().insert(false);
+        let text_input = app.models_mut().insert(String::new());
+        let text_area = app.models_mut().insert(String::new());
+        let input_file_value = app.models_mut().insert(String::new());
+        let dropdown_open = app.models_mut().insert(false);
+        let context_menu_open = app.models_mut().insert(false);
+        let context_menu_edge_open = app.models_mut().insert(false);
+        let cmdk_open = app.models_mut().insert(false);
+        let cmdk_query = app.models_mut().insert(String::new());
+        let last_action = app.models_mut().insert(Arc::<str>::from("ready"));
+        let sonner_position = app.models_mut().insert(shadcn::ToastPosition::BottomRight);
+        let menu_bar_seq = app.models_mut().insert(0u64);
+        let virtual_list_torture_jump = app.models_mut().insert(String::new());
+        let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
+        let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
+        let virtual_list_torture_scroll = VirtualListScrollHandle::new();
+
+        let view_cache_enabled = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_ENABLE_INNER_CONTROL",
+            "fret_ui_gallery_view_cache_enable_inner_control",
+            false,
+        ));
+        let view_cache_shell_default = if workspace_shell_diag_profile {
+            true
+        } else {
+            false
+        };
+        let view_cache_cache_shell = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+            "fret_ui_gallery_view_cache_shell",
+            view_cache_shell_default,
+        ));
+        let view_cache_cache_content = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
+            "fret_ui_gallery_view_cache_content",
+            true,
+        ));
+        let view_cache_inner_enabled = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_INNER",
+            "fret_ui_gallery_view_cache_inner",
+            true,
+        ));
+        let view_cache_popover_open = app.models_mut().insert(false);
+        let view_cache_continuous = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
+            "fret_ui_gallery_view_cache_continuous",
+            false,
+        ));
+        let view_cache_counter = app.models_mut().insert(0u64);
+
+        let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        let inspector_enabled = app.models_mut().insert(
+            std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+                || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
+        );
+        let inspector_last_pointer = app.models_mut().insert(None::<fret_core::Point>);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE",
+            "fret_ui_gallery_view_cache",
+            false,
+        ));
+        ui.set_paint_cache_policy(config_paint_cache_policy(
+            "FRET_UI_GALLERY_PAINT_CACHE",
+            "fret_ui_gallery_paint_cache",
+        ));
+        ui.set_debug_enabled(
+            std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
+                || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
+        );
+
+        Self::sync_undo_availability(app, window, &undo_doc);
+
+        let mut state = UiGalleryWindowState {
+            ui,
+            root: None,
+            debug_hud: DebugHudState::default(),
+            pending_taffy_dump: None,
+            pending_file_dialog: None,
+            page_router,
+            selected_page,
+            workspace_tabs,
+            workspace_dirty_tabs,
+            workspace_window_layout,
+            workspace_tab_close_by_command,
+            nav_query,
+            theme_preset,
+            theme_preset_open,
+            applied_theme_preset: None,
+            motion_preset,
+            motion_preset_open,
+            applied_motion_preset: None,
+            applied_motion_preset_theme_preset: None,
+            view_cache_enabled,
+            view_cache_cache_shell,
+            view_cache_cache_content,
+            view_cache_inner_enabled,
+            view_cache_popover_open,
+            view_cache_continuous,
+            view_cache_counter,
+            inspector_enabled,
+            inspector_last_pointer,
+            popover_open,
+            dialog_open,
+            dialog_glass_open,
+            alert_dialog_open,
+            sheet_open,
+            portal_geometry_popover_open,
+            settings_open,
+            settings_menu_bar_os,
+            settings_menu_bar_os_open,
+            settings_menu_bar_in_window,
+            settings_menu_bar_in_window_open,
+            settings_edit_can_undo,
+            settings_edit_can_redo,
+            chrome_show_workspace_tab_strip,
+            undo_doc,
+            combobox_value,
+            combobox_open,
+            combobox_query,
+            date_picker_open,
+            date_picker_month,
+            date_picker_selected,
+            time_picker_open,
+            time_picker_selected,
+            resizable_h_fractions,
+            resizable_v_fractions,
+            data_table_state,
+            data_grid_selected_row,
+            tabs_value,
+            accordion_value,
+            avatar_demo_image,
+            avatar_demo_image_token: Some(avatar_demo_image_token),
+            avatar_demo_image_retry_count: 0,
+            image_fit_demo_wide_image,
+            image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
+            image_fit_demo_tall_image,
+            image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
+            image_fit_demo_streaming_image,
+            image_fit_demo_streaming_token: Some(image_fit_demo_streaming_token),
+            image_fit_demo_streaming_frame: 0,
+            image_fit_demo_streaming_size: Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
+            progress,
+            checkbox,
+            switch,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+            code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
+            markdown_link_gate_last_activation,
+            material3_checkbox,
+            material3_switch,
+            material3_slider_value,
+            material3_radio_value,
+            material3_tabs_value,
+            material3_list_value,
+            material3_expressive,
+            material3_navigation_bar_value,
+            material3_navigation_rail_value,
+            material3_navigation_drawer_value,
+            material3_modal_navigation_drawer_open,
+            material3_dialog_open,
+            material3_text_field_value,
+            material3_text_field_disabled,
+            material3_text_field_error,
+            material3_autocomplete_value,
+            material3_autocomplete_disabled,
+            material3_autocomplete_error,
+            material3_autocomplete_dialog_open,
+            material3_menu_open,
+            text_input,
+            text_area,
+            input_file_value,
+            dropdown_open,
+            context_menu_open,
+            context_menu_edge_open,
+            cmdk_open,
+            cmdk_query,
+            last_action,
+            sonner_position,
+            menu_bar_seq,
+            virtual_list_torture_jump,
+            virtual_list_torture_edit_row,
+            virtual_list_torture_edit_text,
+            virtual_list_torture_scroll,
+            last_config_files_status_seq: 0,
+        };
+
+        if let Some(selected) = app.models().get_cloned(&state.selected_page) {
+            #[cfg(target_arch = "wasm32")]
+            {
+                let current_page = page_from_gallery_location(&state.page_router.state().location);
+                if current_page.is_some_and(|page| page.as_ref() == selected.as_ref()) {
+                    let update = state.page_router.init_with_prefetch_intents();
+                    apply_page_router_update_side_effects(
+                        app,
+                        window,
+                        selected,
+                        &mut state.page_router,
+                        update,
+                    );
+                } else {
+                    apply_page_route_side_effects_via_router(
+                        app,
+                        window,
+                        NavigationAction::Replace,
+                        selected,
+                        &mut state.page_router,
+                    );
+                }
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            apply_page_route_side_effects_via_router(
+                app,
+                window,
+                NavigationAction::Replace,
+                selected,
+                &mut state.page_router,
+            );
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        register_harness_model_ids(app, window, &state);
+
+        Self::sync_menu_bar_after_state_change(app, window);
+        Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+
+        state
+    }
+}
