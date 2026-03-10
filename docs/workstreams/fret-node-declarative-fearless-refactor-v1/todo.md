@@ -1238,6 +1238,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/cancel_session/pan.rs` seams, so `cancel_session.rs` now mainly keeps root
     re-exports explicit while sticky-wire/right-click cleanup and pan-release matching stop sharing
     one inline helper file.
+  - Progress: gesture-cancel handling now also routes wire-drag cancel callbacks and the remaining
+    session clears through the private `ui/canvas/widget/cancel_gesture_state/wire.rs` and
+    `ui/canvas/widget/cancel_gesture_state/sessions.rs` seams, so
+    `cancel_gesture_state.rs` now mainly keeps top-level orchestration explicit while the bulk
+    session reset logic gains focused state-only coverage.
 
 ## M5 - Compatibility retained convergence
 

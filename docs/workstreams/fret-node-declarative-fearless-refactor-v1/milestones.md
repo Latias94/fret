@@ -784,6 +784,11 @@ real editors.
   `ui/canvas/widget/cancel_session/pan.rs` seams, so `cancel_session.rs` now mainly keeps root
   re-exports explicit while sticky-wire/right-click cleanup and pan-release matching stop sharing
   one inline helper file.
+- gesture-cancel handling now also routes wire-drag cancel callbacks and the remaining session
+  clears through the private `ui/canvas/widget/cancel_gesture_state/wire.rs` and
+  `ui/canvas/widget/cancel_gesture_state/sessions.rs` seams, so `cancel_gesture_state.rs` now
+  mainly keeps top-level orchestration explicit while the bulk session reset logic gains focused
+  state-only coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
