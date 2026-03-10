@@ -283,11 +283,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(
-    cx: &mut ElementContext<'_, KernelApp>,
-    model: &Model<Vec<f32>>,
-    default: f32,
-) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -372,7 +368,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
 }
 
 fn stage(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     enabled: bool,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -511,7 +507,7 @@ fn stage(
 }
 
 fn lens_row(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     enabled: bool,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -549,12 +545,7 @@ fn lens_row(
     .into_element(cx)
 }
 
-fn lens_shell(
-    cx: &mut ElementContext<'_, KernelApp>,
-    label: Arc<str>,
-    radius: Px,
-    body: AnyElement,
-) -> AnyElement {
+fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
     outer_layout.size.height = Length::Px(Px(240.0));
@@ -609,11 +600,7 @@ fn lens_shell(
     )
 }
 
-fn plain_lens(
-    cx: &mut ElementContext<'_, KernelApp>,
-    label: impl Into<Arc<str>>,
-    radius: Px,
-) -> AnyElement {
+fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -631,7 +618,7 @@ fn plain_lens(
 }
 
 fn custom_effect_lens(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     label: impl Into<Arc<str>>,
     effect: EffectId,
     input_image: Option<ImageId>,
@@ -701,7 +688,7 @@ fn custom_effect_lens(
 }
 
 fn inspector(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &mut CustomEffectV2State,
     sampling_value: &str,
     uv_span: f32,
@@ -741,7 +728,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String| {
+            let label_row = |cx: &mut UiCx<'_>, label: &str, value: String| {
                 ui::h_flex(move |cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),

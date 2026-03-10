@@ -186,11 +186,7 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
-fn watch_first_f32(
-    cx: &mut ElementContext<'_, KernelApp>,
-    model: &Model<Vec<f32>>,
-    default: f32,
-) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
     cx.watch_model(model)
         .layout()
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -1084,7 +1080,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    let mk_card = |cx: &mut ElementContext<'_, KernelApp>,
+                                    let mk_card = |cx: &mut UiCx<'_>,
                                                    title: &'static str,
                                                    bg: Color,
                                                    border: Color| {
@@ -1519,7 +1515,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 ]);
 
                                 let label_row =
-                                    |cx: &mut ElementContext<'_, KernelApp>,
+                                    |cx: &mut UiCx<'_>,
                                      label: &str,
                                      value: String| {
                                         ui::h_row(move |cx| {

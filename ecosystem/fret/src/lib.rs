@@ -398,7 +398,7 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::view::{LocalState, TrackedStateExt, View};
-        pub use crate::{AppUi, Ui};
+        pub use crate::{AppUi, Ui, UiCx};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, SemanticsRole};
         pub use fret_runtime::{ActionId, CommandId, TypedAction};
@@ -1350,12 +1350,14 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_prelude_reexports_app_facing_view_aliases() {
         let advanced_prelude = advanced_prelude_source();
-        assert!(LIB_RS.contains("pub use crate::{AppUi, Ui};"));
+        assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
+        assert!(advanced_prelude_exports_symbol("UiCx"));
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(!advanced_prelude_exports_symbol("ViewCx"));
         assert!(!advanced_prelude_exports_symbol("Elements"));
+        assert!(!advanced_prelude_exports_symbol("ElementContext"));
         assert!(
             !advanced_prelude
                 .contains("pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};")

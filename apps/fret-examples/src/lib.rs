@@ -295,6 +295,26 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains(&legacy));
     }
 
+    fn assert_advanced_helpers_prefer_uicx(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains("UiCx<'_>"));
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -382,6 +402,79 @@ mod authoring_surface_policy_tests {
         ] {
             assert_advanced_entry_prefers_view_elements_alias(src, state);
         }
+    }
+
+    #[test]
+    fn advanced_helper_contexts_prefer_uicx_aliases() {
+        assert_advanced_helpers_prefer_uicx(
+            CUSTOM_EFFECT_V1_DEMO,
+            &[
+                "fn watch_first_f32(cx: &mut UiCx<'_>,",
+                "fn stage(cx: &mut UiCx<'_>,",
+                "fn lens_row(cx: &mut UiCx<'_>,",
+                "fn inspector(cx: &mut UiCx<'_>,",
+                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
+            ],
+            &[
+                "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
+                "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            CUSTOM_EFFECT_V2_DEMO,
+            &[
+                "fn watch_first_f32(cx: &mut UiCx<'_>,",
+                "fn stage(cx: &mut UiCx<'_>,",
+                "fn lens_row(cx: &mut UiCx<'_>,",
+                "fn inspector(cx: &mut UiCx<'_>,",
+                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
+            ],
+            &[
+                "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
+                "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            CUSTOM_EFFECT_V3_DEMO,
+            &[
+                "fn stage(cx: &mut UiCx<'_>,",
+                "fn stage_controls(cx: &mut UiCx<'_>,",
+                "fn animated_backdrop(cx: &mut UiCx<'_>) -> AnyElement",
+                "fn lens_row(cx: &mut UiCx<'_>,",
+                "fn lens_shell(cx: &mut UiCx<'_>,",
+                "fn custom_effect_user01_probe_lens(cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn stage_controls(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn animated_backdrop(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement",
+                "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn lens_shell(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn custom_effect_user01_probe_lens(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            LIQUID_GLASS_DEMO,
+            &[
+                "fn watch_first_f32(cx: &mut UiCx<'_>,",
+                "let mk_card = |cx: &mut UiCx<'_>,",
+                "|cx: &mut UiCx<'_>, label: &str, value: String|",
+            ],
+            &[
+                "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
+                "let mk_card = |cx: &mut ElementContext<'_, KernelApp>,",
+                "|cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
+            ],
+        );
     }
 
     #[test]
