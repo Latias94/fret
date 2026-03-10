@@ -15,9 +15,20 @@ pub(super) fn preview_hover_card(
     let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let api_reference = doc_layout::notes(
+        cx,
+        [
+            "`HoverCard::open_delay(...)` and `HoverCard::close_delay(...)` match the upstream timing controls described in the docs.",
+            "`HoverCard::side(...)` / `align(...)` set placement defaults, and `HoverCardContent` also exposes `side_offset(...)` and `align_offset(...)` for explicit geometry tuning.",
+            "`HoverCard::new(trigger, content)` remains the recipe-level entry point; no extra compose layer is required for the documented usage surface.",
+        ],
+    );
+
     let notes = doc_layout::notes(
         cx,
         [
+            "API reference: `ecosystem/fret-ui-shadcn/src/hover_card.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx` and Radix Hover Card docs.",
+            "Preview mirrors the shadcn Hover Card docs path after `Installation`: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`.",
             "Hover card already exposes shadcn-style part names (`HoverCardTrigger`, `HoverCardContent`), and `HoverCard::new(trigger, content)` is the recipe-level composition entry point.",
             "Gallery sections mirror the upstream docs order directly: `Trigger Delays` and `Positioning` are upstream API sections, not Fret-only extras.",
             "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
@@ -29,7 +40,7 @@ pub(super) fn preview_hover_card(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Hover Card docs order directly: Demo, Usage, Trigger Delays, Positioning, Basic, Sides, RTL.",
+            "Preview mirrors the shadcn Hover Card docs path after `Installation`: `Demo`, `Usage`, `Trigger Delays`, `Positioning`, `Basic`, `Sides`, `RTL`, and `API Reference`.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -56,7 +67,12 @@ pub(super) fn preview_hover_card(
             DocSection::new("RTL", rtl)
                 .description("Hover card should respect right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .test_id_prefix("ui-gallery-hover-card-api-reference")
+                .description("Public surface summary and placement/timing ownership notes."),
             DocSection::new("Notes", notes)
+                .no_shell()
                 .description("Implementation notes and regression guidelines.")
                 .test_id_prefix("ui-gallery-hover-card-notes"),
         ],

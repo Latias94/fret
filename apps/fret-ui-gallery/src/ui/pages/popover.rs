@@ -11,10 +11,20 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let with_form = snippets::with_form::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let api_reference = doc_layout::notes(
+        cx,
+        [
+            "`Popover::side(...)` and `Popover::align(...)` cover the placement vocabulary documented by Radix/shadcn.",
+            "`side_offset(...)` and `align_offset(...)` are available when placement needs fine-grained tuning beyond the default popper gap.",
+            "`PopoverContent::refine_layout(...)` remains the caller-owned path for explicit widths such as the default 288px example or the wider form demo.",
+        ],
+    );
+
     let notes = doc_layout::notes(
         cx,
         [
-            "Gallery sections mirror shadcn Popover docs directly: Demo, Usage, Basic, Align, With Form, RTL.",
+            "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` and Radix Popover docs.",
+            "Preview mirrors the shadcn Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`.",
             "Popover keeps an anchor-aware content path (`into_element_with_anchor(...)`), so Fret intentionally keeps closure-based authoring as the primary API instead of forcing a generic compose builder.",
             "Keep content width explicit (for example `w-72` / 288px in default content, or 320px in the form demo) for predictable layout.",
             "For dense input rows, prefer `Field` / `FieldGroup` recipes to keep spacing consistent with other form surfaces.",
@@ -24,7 +34,7 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Popover docs order directly, using the dimensions form demo as the lead example.",
+            "Preview mirrors the shadcn Popover docs path after `Installation`, using the dimensions form demo as the lead example.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -46,7 +56,13 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-popover-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-popover-notes"),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .test_id_prefix("ui-gallery-popover-api-reference")
+                .description("Public surface summary and placement ownership notes."),
+            DocSection::new("Notes", notes)
+                .no_shell()
+                .test_id_prefix("ui-gallery-popover-notes"),
         ],
     );
 
