@@ -81,7 +81,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_locals`, `on_action_notify_transient`, and local `on_activate*`. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, and local `on_activate*`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` as cookbook/reference-only host-side glue.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 
@@ -105,7 +105,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
-| Add derived + async state helpers | `["state"]` | Enables `ViewCx::use_selector` and `ViewCx::use_query` helpers. |
+| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -118,7 +118,7 @@ Minimal / explicit profile (useful for embed/minimal builds that must avoid file
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 ```
 
-Enable selector/query helpers (for `ViewCx::use_selector` / `ViewCx::use_query`):
+Enable selector/query helpers (for `cx.data().selector(...)` / `cx.data().query(...)` on `AppUi`):
 
 ```toml
 [dependencies]

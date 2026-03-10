@@ -1170,6 +1170,9 @@ mod tests {
 mod authoring_surface_policy_tests {
     const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
     const README: &str = include_str!("../README.md");
+    const DOCS_README: &str = include_str!("../../../docs/README.md");
+    const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
+    const FEARLESS_REFACTORING: &str = include_str!("../../../docs/fearless-refactoring.md");
     const LIB_RS: &str = include_str!("lib.rs");
 
     fn crate_rustdoc() -> String {
@@ -1232,8 +1235,20 @@ mod authoring_surface_policy_tests {
         assert!(README.contains(
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
+        assert!(README.contains("`state`: enable selector/query helpers on `AppUi`"));
         assert!(!README.contains(".install_app("));
         assert!(!README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
+        assert!(!README.contains("currently backed by `ViewCx`"));
+    }
+
+    #[test]
+    fn readme_keeps_advanced_builder_hooks_off_default_surface() {
+        assert!(README.contains("`fret::advanced::FretAppAdvancedExt::install(...)`"));
+        assert!(README.contains(
+            "`fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`"
+        ));
+        assert!(!README.contains("`UiAppBuilder::on_gpu_ready(...)`"));
+        assert!(!README.contains("`UiAppBuilder::install_custom_effects(...)`"));
     }
 
     #[test]
@@ -1251,6 +1266,46 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("AppUi<'_, '_>"));
         assert!(!rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
+    }
+
+    #[test]
+    fn repo_docs_prefer_app_ui_language_for_golden_path() {
+        assert!(DOCS_README.contains("`ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)"));
+        assert!(DOCS_README.contains("`cx.actions().payload::<A>()`"));
+        assert!(!DOCS_README.contains("`ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)"));
+        assert!(!DOCS_README.contains("ViewCx::on_payload_action*"));
+    }
+
+    #[test]
+    fn usage_docs_prefer_grouped_app_ui_actions() {
+        assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
+        assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
+    }
+
+    #[test]
+    fn fearless_refactoring_docs_distinguish_default_and_advanced_surfaces() {
+        assert!(FEARLESS_REFACTORING.contains(
+            "`impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`"
+        ));
+        assert!(
+            FEARLESS_REFACTORING
+                .contains("`fn(&mut ElementContext<'_, App>, &mut State) -> ViewElements`")
+        );
+        assert!(
+            FEARLESS_REFACTORING.contains("Return `Ui` (the app-facing alias over `Elements`)")
+        );
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_locals`"));
+        assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_models`"));
+        assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_transient`"));
     }
 
     #[test]

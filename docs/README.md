@@ -123,10 +123,10 @@ now taught as `LocalState` + view runtime + typed actions.
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
 - Recommended building blocks:
-  - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
+  - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
-- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
+- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `cx.actions().payload::<A>()` / `cx.actions().payload_locals::<A>(...)` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
   - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.

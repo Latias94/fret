@@ -107,7 +107,7 @@ fn main() -> fret::Result<()> {
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers for `AppUi` (`data().selector(...)`, `data().query(...)`; currently backed by `ViewCx`).
+- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -144,15 +144,16 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
-- `App::{view::<V>, view_with_hooks::<V>}`
-- `UiAppBuilder::configure(...)` for launch/window config
-- `UiAppBuilder::on_gpu_ready(...)`
-- `UiAppBuilder::install_custom_effects(...)`
+- `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...)}`
+- `fret::advanced::FretAppAdvancedExt::install(...)`
+- `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
 - `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
 
-The builder chain is now the only app-author entry story on `fret`. Advanced users still keep
-real extension seams without dropping to `fret-launch` immediately.
+The default builder chain stays small and app-facing on `fret`. Advanced users still keep the same
+extension seams without dropping to `fret-launch` immediately, but the GPU/effects/bootstrap hooks
+now live explicitly under `fret::advanced` instead of the default inherent builder surface.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
