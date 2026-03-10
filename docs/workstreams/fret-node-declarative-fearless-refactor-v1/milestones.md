@@ -741,6 +741,13 @@ real editors.
   profiles through the private `ui/canvas/widget/press_session/clear.rs` and
   `ui/canvas/widget/press_session/prepare.rs` seams, so `press_session.rs` now mainly keeps the
   root re-exports and focused interaction-state fixture tests explicit.
+- pending pointer-up release routing now also routes click-selection, generic pending release, and
+  click-connect promotion through the private
+  `ui/canvas/widget/pointer_up_pending/click_select.rs`,
+  `ui/canvas/widget/pointer_up_pending/release.rs`, and
+  `ui/canvas/widget/pointer_up_pending/wire_drag.rs` seams, so `pointer_up_pending.rs` now mainly
+  keeps the root re-exports explicit while the click-threshold and click-connect policy helpers
+  gain focused unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
