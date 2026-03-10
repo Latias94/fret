@@ -254,12 +254,14 @@ mod act {
         FilterActive = "__PACKAGE_NAME__.todo.filter_active.v1",
         FilterCompleted = "__PACKAGE_NAME__.todo.filter_completed.v1"
     ]);
+
+    fret::payload_actions!([Toggle(u64) = "__PACKAGE_NAME__.todo.toggle.v1"]);
 }
 
 #[derive(Clone)]
-struct TodoItem {
+struct TodoRow {
     id: u64,
-    done: Model<bool>,
+    done: bool,
     text: Arc<str>,
 }
 
@@ -318,165 +320,131 @@ struct TodoDerived {
 struct TodoRowSnapshot {
     id: u64,
     done: bool,
-    done_model: Model<bool>,
     text: Arc<str>,
 }
 
-struct TodoView {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    filter: Model<TodoFilter>,
-    next_id: Model<u64>,
-    tip_nonce: Model<u64>,
-}
+struct TodoView;
 
 impl View for TodoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        let done_1 = app.models_mut().insert(false);
-        let done_2 = app.models_mut().insert(true);
-        let todos = app.models_mut().insert(vec![
-            TodoItem {
-                id: 1,
-                done: done_1,
-                text: Arc::from("Try the shadcn New York style"),
-            },
-            TodoItem {
-                id: 2,
-                done: done_2,
-                text: Arc::from("Validate selector derived state"),
-            },
-        ]);
-
-        Self {
-            todos,
-            draft: app.models_mut().insert(String::new()),
-            filter: app.models_mut().insert(TodoFilter::All),
-            next_id: app.models_mut().insert(3u64),
-            tip_nonce: app.models_mut().insert(0u64),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
+        let theme_for_rows = theme.clone();
 
-        let draft_value = cx
-            .watch_model(&self.draft)
-            .layout()
-            .value_or_default();
-        let filter_value = cx
-            .watch_model(&self.filter)
-            .layout()
-            .value_or(TodoFilter::All);
+        let draft_state = cx.use_local::<String>();
+        let filter_state = cx.use_local_with(|| TodoFilter::All);
+        let next_id_state = cx.use_local_with(|| 3u64);
+        let tip_nonce_state = cx.use_local_with(|| 0u64);
+        let todos_state = cx.use_local_with(|| {
+            vec![
+                TodoRow {
+                    id: 1,
+                    done: false,
+                    text: Arc::from("Try the shadcn New York style"),
+                },
+                TodoRow {
+                    id: 2,
+                    done: true,
+                    text: Arc::from("Validate selector derived state"),
+                },
+            ]
+        });
+
+        let draft_value = draft_state.layout(cx).value_or_default();
+        let filter_value = filter_state.layout(cx).value_or(TodoFilter::All);
 
         let add_enabled = !draft_value.trim().is_empty();
 
         cx.on_action_notify_models::<act::Add>({
-            let todos = self.todos.clone();
-            let draft = self.draft.clone();
-            let next_id = self.next_id.clone();
+            let draft_state = draft_state.clone();
+            let next_id_state = next_id_state.clone();
+            let todos_state = todos_state.clone();
             move |models| {
-                let text = models
-                    .read(&draft, |s| s.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+                let text = draft_state
+                    .value_in_or_else(models, String::new)
+                    .trim()
+                    .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let id = models
-                    .read(&next_id, |v| *v)
-                    .ok()
-                    .unwrap_or(1);
-                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
+                let id = next_id_state.value_in_or(models, 1);
+                let _ = next_id_state.update_in(models, |v| *v = v.saturating_add(1));
 
-                let done = models.insert(false);
-                let item = TodoItem {
+                let item = TodoRow {
                     id,
-                    done,
+                    done: false,
                     text: Arc::from(text),
                 };
 
-                let _ = models.update(&todos, |todos| {
-                    todos.insert(0, item);
-                });
-                let _ = models.update(&draft, |s| s.clear());
-                true
+                if !todos_state.update_in(models, |todos| todos.insert(0, item)) {
+                    return false;
+                }
+
+                draft_state.set_in(models, String::new())
             }
         });
 
         cx.on_action_notify_models::<act::ClearDone>({
-            let todos = self.todos.clone();
+            let todos_state = todos_state.clone();
             move |models| {
-                let snapshot = models
-                    .read(&todos, |v| v.clone())
-                    .ok()
-                    .unwrap_or_default();
-
-                let mut keep: Vec<TodoItem> = Vec::new();
-                for t in snapshot {
-                    let done = models
-                        .read(&t.done, |v| *v)
-                        .ok()
-                        .unwrap_or(false);
-                    if !done {
-                        keep.push(t);
-                    }
-                }
-
-                let _ = models.update(&todos, |todos| {
-                    *todos = keep;
-                });
-
-                true
+                todos_state.update_in_if(models, |rows| {
+                    let before = rows.len();
+                    rows.retain(|row| !row.done);
+                    rows.len() != before
+                })
             }
         });
 
-        cx.on_action_notify_models::<act::RefreshTip>({{
-            let tip_nonce = self.tip_nonce.clone();
-            move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
-        }});
+        cx.on_action_notify_local_update::<act::RefreshTip, u64>(&tip_nonce_state, |v| {
+            *v = v.saturating_add(1);
+        });
 
-        cx.on_action_notify_models::<act::FilterAll>({{
-            let filter = self.filter.clone();
-            move |models| models.update(&filter, |v| *v = TodoFilter::All).is_ok()
-        }});
-        cx.on_action_notify_models::<act::FilterActive>({{
-            let filter = self.filter.clone();
-            move |models| models.update(&filter, |v| *v = TodoFilter::Active).is_ok()
-        }});
-        cx.on_action_notify_models::<act::FilterCompleted>({{
-            let filter = self.filter.clone();
-            move |models| models.update(&filter, |v| *v = TodoFilter::Completed).is_ok()
-        }});
+        cx.on_action_notify_local_set::<act::FilterAll, TodoFilter>(&filter_state, TodoFilter::All);
+        cx.on_action_notify_local_set::<act::FilterActive, TodoFilter>(
+            &filter_state,
+            TodoFilter::Active,
+        );
+        cx.on_action_notify_local_set::<act::FilterCompleted, TodoFilter>(
+            &filter_state,
+            TodoFilter::Completed,
+        );
+
+        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            },
+        );
+
+        let todos_model = todos_state.clone_model();
+        let filter_model = filter_state.clone_model();
+        let deps_todos_model = todos_model.clone();
+        let deps_filter_model = filter_model.clone();
 
         let derived: TodoDerived = cx.use_selector(
-            |cx| {
-                let todos = cx
-                    .watch_model(&self.todos)
-                    .layout()
-                    .value_or_default();
+            move |cx| {
                 let mut deps = DepsBuilder::new(cx);
-                deps.model_rev(&self.todos);
-                deps.model_rev(&self.filter);
-                for t in &todos {
-                    deps.model_rev(&t.done);
-                }
+                deps.model_rev(&deps_todos_model);
+                deps.model_rev(&deps_filter_model);
                 deps.finish()
             },
-            |cx| {
-                let todos = cx
-                    .watch_model(&self.todos)
-                    .layout()
-                    .value_or_default();
-                let filter = cx
-                    .watch_model(&self.filter)
-                    .layout()
-                    .value_or(TodoFilter::All);
+            move |cx| {
+                let todos = cx.watch_model(&todos_model).layout().value_or_default();
+                let filter = cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);
 
                 let mut rows = Vec::new();
                 let mut completed = 0usize;
-                for t in &todos {
-                    let done = cx.watch_model(&t.done).paint().value_or_default();
+                for t in todos.iter() {
+                    let done = t.done;
                     if done {
                         completed += 1;
                     }
@@ -484,7 +452,6 @@ impl View for TodoView {
                         rows.push(TodoRowSnapshot {
                             id: t.id,
                             done,
-                            done_model: t.done.clone(),
                             text: t.text.clone(),
                         });
                     }
@@ -499,7 +466,7 @@ impl View for TodoView {
             },
         );
 
-        let tip_nonce_value = cx.watch_model(&self.tip_nonce).paint().value_or(0);
+        let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
         let tip_handle =
             cx.use_query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -582,7 +549,24 @@ __ADD_BTN_DEF__
         .items_center();
 
         let rows = ui::v_flex_build(|cx, out| {
+            if derived.rows.is_empty() {
+                let text = match filter_value {
+                    TodoFilter::All => "No tasks yet. Add one above.",
+                    TodoFilter::Active => "No active tasks.",
+                    TodoFilter::Completed => "No completed tasks.",
+                };
+
+                out.push_ui(
+                    cx,
+                    ui::text(text)
+                        .text_sm()
+                        .text_color(ColorRef::Color(theme_for_rows.color_token("muted-foreground"))),
+                );
+                return;
+            }
+
             for row in derived.rows.iter() {
+                let theme = theme_for_rows.clone();
                 out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
             }
         })
@@ -666,26 +650,23 @@ fn filter_chip(
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChildIntoElement<App> {
-    let checkbox = shadcn::Checkbox::new(row.done_model.clone());
+    let checkbox = shadcn::Checkbox::from_checked(row.done)
+        .action(act::Toggle)
+        .action_payload(row.id)
+        .a11y_label(row.text.clone());
 
-    let label = ui::raw_text(row.text.clone())
-        .text_color(ColorRef::Color(theme.color_token(if row.done {
-            "muted-foreground"
+    let text = ui::text(row.text.clone())
+        .truncate()
+        .text_sm()
+        .text_color(ColorRef::Color(if row.done {
+            theme.color_token("muted-foreground")
         } else {
-            "foreground"
-        })))
-        .truncate();
+            theme.color_token("foreground")
+        }));
 
-    let row = ui::h_flex(|cx| ui::children![cx; checkbox, label])
-        .gap(Space::N3)
+    ui::h_flex(|cx| ui::children![cx; checkbox, text])
+        .gap(Space::N2)
         .items_center()
-        .w_full();
-
-    ui::container(|cx| ui::children![cx; row])
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .rounded(Radius::Md)
-        .p(Space::N3)
         .w_full()
 }
 
@@ -1126,10 +1107,10 @@ cargo run --release
 {icons_line}{palette_line}
 {ui_assets_line}
 - Ladder position: third rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
-- Authoring: view runtime + typed unit actions (action-first, v1)
+- Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
-- Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership for the todo/filter/query graph so selector deps, query invalidation keys, and shared row state stay obvious; prefer `simple-todo` if you only need a view-owned keyed list.
-- Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
+- State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
+- Default entrypoints: start with `on_action_notify_models` for coordinated writes, use `on_action_notify_local_set/update` for single-slot handlers, and payload actions for per-row list interactions.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `on_action_notify_transient` in the handler and consume the transient in `render()`.
@@ -1292,6 +1273,7 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
+        assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
@@ -1299,9 +1281,17 @@ mod tests {
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
-        assert!(src.contains("cx.on_action_notify_models::<act::RefreshTip>"));
-        assert!(!src.contains("cx.on_action_notify_model_update::<act::RefreshTip"));
-        assert!(!src.contains("cx.on_action_notify_model_set::<act::Filter"));
+        assert!(src.contains("cx.on_action_notify_local_update::<act::RefreshTip, u64>("));
+        assert!(src.contains("cx.on_action_notify_local_set::<act::FilterAll, TodoFilter>("));
+        assert!(src.contains("cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(src.contains("cx.use_selector("));
+        assert!(src.contains("cx.use_query("));
+        assert!(src.contains("let draft_state = cx.use_local::<String>();"));
+        assert!(src.contains("let filter_state = cx.use_local_with(|| TodoFilter::All);"));
+        assert!(src.contains("let todos_state = cx.use_local_with(|| {"));
+        assert!(!src.contains("Model<Vec<TodoItem>>"));
+        assert!(!src.contains("Model<bool>"));
+        assert!(!src.contains(".models_mut().insert("));
         assert!(!src.contains("decl_style::container_props"));
         assert!(!src.contains(".refine_style("));
         assert!(!src.contains(".refine_layout("));
@@ -1396,10 +1386,8 @@ mod tests {
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
         assert!(todo.contains("cookbook/reference-only host-side glue"));
-        assert!(todo.contains(
-            "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
-        ));
-        assert!(todo.contains("Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership"));
+        assert!(todo.contains("Default entrypoints: start with `on_action_notify_models`"));
+        assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
     }
 }
