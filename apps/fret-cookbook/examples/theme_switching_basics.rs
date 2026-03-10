@@ -39,7 +39,7 @@ impl View for ThemeSwitchingBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let scheme_state = cx
             .state()
             .local_init(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));

@@ -30,7 +30,7 @@ impl View for PayloadActionsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let rows_state = cx.state().local_init(|| {
             vec![
                 Row {

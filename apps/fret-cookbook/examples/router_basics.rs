@@ -108,7 +108,7 @@ impl View for RouterBasicsView {
         Self { store }
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let window = cx.window;
 
         let router_model = self.store.router_model().downgrade();

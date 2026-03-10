@@ -55,7 +55,7 @@ impl View for DataTableBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let header = shadcn::CardHeader::build(|cx, out| {

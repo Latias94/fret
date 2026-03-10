@@ -35,7 +35,7 @@
 //!         Self
 //!     }
 //!
-//!     fn render(&mut self, _ui: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+//!     fn render(&mut self, _ui: &mut AppUi<'_, '_>) -> Ui {
 //!         shadcn::Label::new("Fret!").into()
 //!     }
 //! }
@@ -79,7 +79,7 @@ mod app_entry;
 pub use app_entry::FretApp;
 
 /// Canonical app-facing UI context alias for the default authoring surface.
-pub type AppUi<'cx, 'a, H> = view::ViewCx<'cx, 'a, H>;
+pub type AppUi<'cx, 'a, H = KernelApp> = view::ViewCx<'cx, 'a, H>;
 
 /// Canonical app-facing render return alias for the default authoring surface.
 pub type Ui = fret_ui::element::Elements;
@@ -216,29 +216,24 @@ pub mod app {
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::declarative::{
-            AnyElementSemanticsExt, ContainerQueryHysteresis, ElementContextThemeExt,
-            UiIntoElementA11yExt, UiIntoElementKeyContextExt, UiIntoElementTestIdExt,
-            ViewportOrientation, ViewportQueryHysteresis, accent_color, container_breakpoints,
-            container_query_region, container_query_region_with_id, container_width_at_least,
-            contrast_preference, forced_colors_active, forced_colors_mode, occlusion_insets,
-            occlusion_insets_or_zero, preferred_color_scheme, prefers_dark_color_scheme,
-            prefers_more_contrast, prefers_reduced_motion, prefers_reduced_transparency,
-            primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
-            safe_area_insets, safe_area_insets_or_zero, tailwind, text_scale_factor,
-            viewport_aspect_ratio, viewport_breakpoints, viewport_height_at_least,
-            viewport_height_breakpoints, viewport_is_landscape, viewport_is_portrait,
-            viewport_orientation, viewport_tailwind, viewport_width_at_least,
+            AnyElementSemanticsExt, ElementContextThemeExt, UiIntoElementA11yExt,
+            UiIntoElementKeyContextExt, UiIntoElementTestIdExt, accent_color,
+            container_breakpoints, container_query_region, container_query_region_with_id,
+            container_width_at_least, contrast_preference, forced_colors_active,
+            forced_colors_mode, occlusion_insets, occlusion_insets_or_zero, preferred_color_scheme,
+            prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
+            prefers_reduced_transparency, primary_pointer_can_hover, primary_pointer_is_coarse,
+            primary_pointer_type, safe_area_insets, safe_area_insets_or_zero, tailwind,
+            text_scale_factor, viewport_aspect_ratio, viewport_breakpoints,
+            viewport_height_at_least, viewport_height_breakpoints, viewport_is_landscape,
+            viewport_is_portrait, viewport_orientation, viewport_tailwind, viewport_width_at_least,
             window_insets_padding_refinement_or_zero,
         };
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
-            ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
-            ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
-            OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-            WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
-            resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
-            resolve_override_slot_with, resolve_slot,
+            ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size,
+            Space, StyledExt, UiExt,
         };
         pub use fret_ui_kit::{
             on_activate, on_activate_notify, on_activate_request_redraw,
@@ -968,7 +963,7 @@ mod builder_surface_tests {
             Self
         }
 
-        fn render(&mut self, _cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        fn render(&mut self, _cx: &mut AppUi<'_, '_>) -> Ui {
             Ui::default()
         }
     }
@@ -1182,7 +1177,8 @@ mod authoring_surface_policy_tests {
         ));
         assert!(rustdoc.contains("use fret::app::prelude::*;"));
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
-        assert!(rustdoc.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(rustdoc.contains("AppUi<'_, '_>"));
+        assert!(!rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
     }
 
@@ -1217,6 +1213,30 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
+        assert!(!app_prelude_exports_symbol("ContainerQueryHysteresis"));
+        assert!(!app_prelude_exports_symbol("ViewportQueryHysteresis"));
+        assert!(!app_prelude_exports_symbol("ImageMetadata"));
+        assert!(!app_prelude_exports_symbol("ImageMetadataStore"));
+        assert!(!app_prelude_exports_symbol("ImageSamplingExt"));
+        assert!(!app_prelude_exports_symbol("MarginEdge"));
+        assert!(!app_prelude_exports_symbol("OverrideSlot"));
+        assert!(!app_prelude_exports_symbol("WidgetState"));
+        assert!(!app_prelude_exports_symbol("WidgetStateProperty"));
+        assert!(!app_prelude_exports_symbol("WidgetStates"));
+        assert!(!app_prelude_exports_symbol("merge_override_slot"));
+        assert!(!app_prelude_exports_symbol("merge_slot"));
+        assert!(!app_prelude_exports_symbol("resolve_override_slot"));
+        assert!(!app_prelude_exports_symbol("resolve_override_slot_opt"));
+        assert!(!app_prelude_exports_symbol(
+            "resolve_override_slot_opt_with"
+        ));
+        assert!(!app_prelude_exports_symbol("resolve_override_slot_with"));
+        assert!(!app_prelude_exports_symbol("resolve_slot"));
+        assert!(!app_prelude_exports_symbol("ColorFallback"));
+        assert!(!app_prelude_exports_symbol("SignedMetricRef"));
+        assert!(!app_prelude_exports_symbol("Corners4"));
+        assert!(!app_prelude_exports_symbol("Edges4"));
+        assert!(!app_prelude_exports_symbol("ViewportOrientation"));
     }
 
     #[test]

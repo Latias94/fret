@@ -64,7 +64,8 @@ mod authoring_surface_policy_tests {
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("KernelApp"));
-        assert!(src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(src.contains("AppUi<'_, '_>"));
+        assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
         assert!(src.contains(") -> Ui {"));
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("ViewCx<'_, '_, App>"));
@@ -175,10 +176,7 @@ mod authoring_surface_policy_tests {
         assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
 
         assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
-        assert!(
-            DATA_TABLE_EXAMPLE
-                .contains("fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui")
-        );
+        assert!(DATA_TABLE_EXAMPLE.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
 
         assert!(UNDO_EXAMPLE.contains("use fret_app::Effect;"));
         assert!(UNDO_EXAMPLE.contains("models::<act::Inc>"));

@@ -67,7 +67,7 @@ impl View for CommandsKeymapBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let panel_open_state = cx.state().local_init(|| false);
         let allow_command_state = cx.state().local_init(|| true);
 

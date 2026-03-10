@@ -65,7 +65,7 @@ impl View for OverlayBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let cmd_bump: CommandId = act::BumpUnderlay.into();
 
         let dialog_open_state = cx.state().local::<bool>();

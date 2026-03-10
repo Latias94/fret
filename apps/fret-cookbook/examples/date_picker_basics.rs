@@ -12,7 +12,7 @@ impl View for DatePickerBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let open_state = cx.state().local_init(|| false);
         let selected_state = cx.state().local_init(|| {
             Some(Date::from_calendar_date(2026, Month::January, 15).expect("valid date"))

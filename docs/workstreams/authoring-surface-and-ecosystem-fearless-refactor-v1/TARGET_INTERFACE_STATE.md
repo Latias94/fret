@@ -64,6 +64,28 @@ Target non-exports:
 - `Length`
 - `SemanticsProps`
 - `HoverRegionProps`
+- `ContainerQueryHysteresis`
+- `ViewportQueryHysteresis`
+- `ImageMetadata`
+- `ImageMetadataStore`
+- `ImageSamplingExt`
+- `MarginEdge`
+- `OverrideSlot`
+- `WidgetState`
+- `WidgetStateProperty`
+- `WidgetStates`
+- `merge_override_slot`
+- `merge_slot`
+- `resolve_override_slot`
+- `resolve_override_slot_opt`
+- `resolve_override_slot_opt_with`
+- `resolve_override_slot_with`
+- `resolve_slot`
+- `ColorFallback`
+- `SignedMetricRef`
+- `Corners4`
+- `Edges4`
+- `ViewportOrientation`
 - runner/driver traits
 - viewport/interop traits
 - broad component-author internals

@@ -234,7 +234,7 @@ mod act {
 }
 
 impl View for TodoView {
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let draft = cx.state().local::<String>();
         cx.actions().local_set::<act::Add, String>(&draft, String::new());
 

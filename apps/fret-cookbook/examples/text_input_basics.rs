@@ -50,7 +50,7 @@ impl View for TextInputBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let text_state = cx.state().local::<String>();
         let submitted_count_state = cx.state().local::<u32>();
 

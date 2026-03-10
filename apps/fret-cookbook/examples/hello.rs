@@ -18,7 +18,7 @@ impl View for HelloView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let rendered_once = cx.with_state(
             || false,
             |v| {

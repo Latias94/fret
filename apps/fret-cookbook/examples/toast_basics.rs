@@ -21,7 +21,7 @@ impl View for ToastBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         // Toast actions stay on the advanced helper because Sonner dispatch is a host-owned
         // imperative integration: the handler needs `UiActionHost` + window, and the default
         // model/transient teaching paths do not expose that host surface directly.

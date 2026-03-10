@@ -197,7 +197,7 @@ impl View for AsyncInboxBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let status = self
             .st
             .status

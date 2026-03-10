@@ -40,7 +40,7 @@ impl View for QueryBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let fail_mode = cx.state().local::<bool>();
         let invalidate_requested = cx.state().local::<bool>();
         let invalidate_namespace_requested = cx.state().local::<bool>();

@@ -48,7 +48,7 @@ impl View for MarkdownAndCodeBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let source_state = cx.state().local_init(|| SAMPLE_MARKDOWN.to_string());
         let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
         let cap_height_state = cx.state().local_init(|| true);

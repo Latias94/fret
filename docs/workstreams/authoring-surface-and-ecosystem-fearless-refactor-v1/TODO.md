@@ -51,6 +51,28 @@ Companion docs:
   - [x] `Length`
   - [x] `SemanticsProps`
   - [x] `HoverRegionProps`
+  - [x] `ContainerQueryHysteresis`
+  - [x] `ViewportQueryHysteresis`
+  - [x] `ImageMetadata`
+  - [x] `ImageMetadataStore`
+  - [x] `ImageSamplingExt`
+  - [x] `MarginEdge`
+  - [x] `OverrideSlot`
+  - [x] `WidgetState`
+  - [x] `WidgetStateProperty`
+  - [x] `WidgetStates`
+  - [x] `merge_override_slot`
+  - [x] `merge_slot`
+  - [x] `resolve_override_slot`
+  - [x] `resolve_override_slot_opt`
+  - [x] `resolve_override_slot_opt_with`
+  - [x] `resolve_override_slot_with`
+  - [x] `resolve_slot`
+  - [x] `ColorFallback`
+  - [x] `SignedMetricRef`
+  - [x] `Corners4`
+  - [x] `Edges4`
+  - [x] `ViewportOrientation`
   - [x] `ElementContext`
   - [x] `UiTree`
   - [x] `UiServices`

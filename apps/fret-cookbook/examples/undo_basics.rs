@@ -167,7 +167,7 @@ impl View for UndoBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let undo_cmd: CommandId = act::Undo.into();
         let redo_cmd: CommandId = act::Redo.into();

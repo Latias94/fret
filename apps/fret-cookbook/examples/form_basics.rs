@@ -49,7 +49,7 @@ impl View for FormBasicsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let name_state = cx.state().local::<String>();
         let email_state = cx.state().local::<String>();
         let error_state = cx.state().local::<Option<String>>();

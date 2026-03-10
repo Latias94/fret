@@ -164,7 +164,7 @@ impl View for TodoView {
         Self
     }
 
-    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let draft = cx.state().local::<String>();
         let enabled = !cx.state().watch(&draft).layout().value_or_default().trim().is_empty();
 
