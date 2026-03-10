@@ -737,6 +737,10 @@ real editors.
   the private `ui/canvas/widget/node_resize/math/rects.rs` and
   `ui/canvas/widget/node_resize/math/resize.rs` seams, so `node_resize/math.rs` now mainly keeps
   the root re-exports and focused resize conformance tests explicit.
+- press-session preparation now also routes session clearing helpers and hit-specific preparation
+  profiles through the private `ui/canvas/widget/press_session/clear.rs` and
+  `ui/canvas/widget/press_session/prepare.rs` seams, so `press_session.rs` now mainly keeps the
+  root re-exports and focused interaction-state fixture tests explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

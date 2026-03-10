@@ -1189,6 +1189,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     flow through the private `ui/canvas/widget/node_resize/math/rects.rs` and
     `ui/canvas/widget/node_resize/math/resize.rs` seams, so `node_resize/math.rs` now mainly
     keeps the root re-exports and focused resize conformance tests explicit.
+  - Progress: press-session preparation now also routes session clearing helpers and hit-specific
+    preparation profiles through the private `ui/canvas/widget/press_session/clear.rs` and
+    `ui/canvas/widget/press_session/prepare.rs` seams, so `press_session.rs` now mainly keeps the
+    root re-exports and focused interaction-state fixture tests explicit.
 
 ## M5 - Compatibility retained convergence
 
