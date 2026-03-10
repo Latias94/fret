@@ -304,7 +304,7 @@ fn sampling_hint(value: &str) -> ImageSamplingHint {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) -> ViewElements {
     let (effect, filterable_input_image, non_filterable_input_image) = {
         let pack = cx.app.global::<DemoEffectPack>();
         (

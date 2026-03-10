@@ -306,7 +306,7 @@ fn watch_first_f32(
         .unwrap_or(default)
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> ViewElements {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };

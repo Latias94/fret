@@ -284,6 +284,17 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("ViewCx<'_, '_, App>"));
     }
 
+    fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
+        let expected = format!(
+            "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> ViewElements"
+        );
+        assert!(src.contains(&expected));
+        let legacy = format!(
+            "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> Elements"
+        );
+        assert!(!src.contains(&legacy));
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -357,6 +368,19 @@ mod authoring_surface_policy_tests {
             TODO_DEMO,
         ] {
             assert_view_runtime_example_uses_app_ui_aliases(src);
+        }
+    }
+
+    #[test]
+    fn advanced_entry_examples_prefer_view_elements_aliases() {
+        for (src, state) in [
+            (CUSTOM_EFFECT_V1_DEMO, "CustomEffectV1State"),
+            (CUSTOM_EFFECT_V2_DEMO, "CustomEffectV2State"),
+            (CUSTOM_EFFECT_V3_DEMO, "State"),
+            (GENUI_DEMO, "GenUiState"),
+            (LIQUID_GLASS_DEMO, "LiquidGlassState"),
+        ] {
+            assert_advanced_entry_prefers_view_elements_alias(src, state);
         }
     }
 

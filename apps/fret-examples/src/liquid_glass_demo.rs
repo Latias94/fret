@@ -591,7 +591,7 @@ impl View for LiquidGlassView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
     let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);

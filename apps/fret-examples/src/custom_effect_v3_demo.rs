@@ -329,7 +329,7 @@ impl CustomEffectV3View {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements {
     // Animations make refraction far easier to see than static gradients.
     // Hold a continuous-frames lease so the backdrop moves without user input.
     let _frames = cx.begin_continuous_frames();

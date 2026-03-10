@@ -863,7 +863,7 @@ impl View for GenUiView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> Elements {
+fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let clear_cmd: fret_runtime::CommandId = act::ClearActions.into();
