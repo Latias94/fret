@@ -9,33 +9,38 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let label_in_field = snippets::label_in_field::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
+    let api_reference = doc_layout::notes(
         cx,
         [
-            "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
-            "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
-            "Use `Label::for_control(ControlId)` + `Input::control_id(ControlId)` to model `htmlFor`/`id` association (click-to-focus + labelled-by semantics).",
-            "The main parity gap here is usage clarity rather than missing mechanism or composition APIs.",
+            "`Label::new(text)` is the Fret equivalent of the upstream `<Label />`; `for_control(...)` covers the documented association path.",
+            "`Label` remains a lightweight text primitive; form structure, helper text, and error presentation belong to `Field`, `FieldLabel`, and related field parts.",
+            "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
+            "No extra generic children / `asChild` / `compose()` surface is needed here: upstream composition already happens around the label rather than through the label primitive itself.",
+            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Label docs order: Demo -> Usage -> Label in Field -> RTL."),
+        Some(
+            "Preview mirrors the shadcn Label docs path first: Demo, Usage, Label in Field, RTL, and API Reference.",
+        ),
         vec![
             DocSection::new("Demo", demo)
                 .description("Basic label above an input.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Label` + control association.")
+                .description("Copyable minimal usage for `Label` plus control association.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Label in Field", label_in_field)
-                .description("Prefer Field + FieldLabel for form layouts.")
+                .description("Prefer `Field` plus `FieldLabel` for form layouts with helper text.")
                 .code_rust_from_file_region(snippets::label_in_field::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Label and input alignment under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .description("Public surface summary and ownership notes."),
         ],
     );
 
