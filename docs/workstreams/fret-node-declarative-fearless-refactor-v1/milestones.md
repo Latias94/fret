@@ -759,6 +759,11 @@ real editors.
   `ui/canvas/widget/pointer_up_left_route/dispatch.rs` seams, so
   `pointer_up_left_route.rs` now mainly keeps stop-auto-pan plus top-level orchestration explicit
   while the plain-double-click gate keeps focused unit coverage.
+- committed pointer-up release handling now also routes resize and group-drag commit branches
+  through the private `ui/canvas/widget/pointer_up_commit/resize.rs` and
+  `ui/canvas/widget/pointer_up_commit/group_drag.rs` seams, so `pointer_up_commit.rs` now mainly
+  keeps root re-exports plus node-drag delegation explicit while the commit wrappers stop
+  accumulating inline orchestration.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
