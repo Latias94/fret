@@ -668,6 +668,30 @@ fn scroll_into_view_continues_past_nested_scroll_when_inner_target_is_already_vi
     let target_id = target_id.get().expect("target element id");
     let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
 
+    let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
+        &mut app,
+        window,
+        inner_handle.binding_key(),
+    );
+    let inner_scroll_element = bound
+        .first()
+        .copied()
+        .expect("expected inner scroll to be registered for its handle");
+    let inner_scroll_node = crate::declarative::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        inner_scroll_element,
+    )
+    .expect("expected inner scroll node");
+    let inner_scroll_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("inner scroll bounds");
+    assert!(
+        inner_scroll_bounds.size.height.0 > 0.5,
+        "expected inner scroll node to have a non-zero viewport bounds; bounds={inner_scroll_bounds:?} viewport={:?}",
+        inner_handle.viewport_size(),
+    );
+
     assert!(
         inner_handle.max_offset().y.0 > 0.5,
         "expected nested inner scroll to have a real scroll range before scroll_into_view: viewport={:?} content={:?} max={:?}",
