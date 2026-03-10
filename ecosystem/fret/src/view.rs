@@ -204,6 +204,41 @@ impl<T> LocalState<T> {
     }
 }
 
+/// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
+/// free of direct `ModelStore` plumbing.
+///
+/// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
+/// across shared `Model<T>` graphs, use `ViewCx::on_action_notify_models` directly.
+pub struct LocalTxn<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> LocalTxn<'a> {
+    pub fn value_or<T: Any + Clone>(&self, local: &LocalState<T>, default: T) -> T {
+        local.value_in_or(self.models, default)
+    }
+
+    pub fn value_or_else<T: Any + Clone>(&self, local: &LocalState<T>, f: impl FnOnce() -> T) -> T {
+        local.value_in_or_else(self.models, f)
+    }
+
+    pub fn set<T: Any>(&mut self, local: &LocalState<T>, value: T) -> bool {
+        local.set_in(self.models, value)
+    }
+
+    pub fn update<T: Any>(&mut self, local: &LocalState<T>, f: impl FnOnce(&mut T)) -> bool {
+        local.update_in(self.models, f)
+    }
+
+    pub fn update_if<T: Any>(
+        &mut self,
+        local: &LocalState<T>,
+        f: impl FnOnce(&mut T) -> bool,
+    ) -> bool {
+        local.update_in_if(self.models, f)
+    }
+}
+
 #[must_use]
 pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
     cx: &'cx mut ElementContext<'a, H>,
@@ -789,6 +824,21 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static,
     ) {
         self.on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()))
+    }
+
+    /// Register a typed unit action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the transaction only touches view-owned `LocalState<T>` slots.
+    pub fn on_action_notify_locals<A: crate::TypedAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static,
+    ) {
+        self.on_action_notify_models::<A>(move |models| {
+            let mut tx = LocalTxn { models };
+            f(&mut tx)
+        })
     }
 
     /// Register a typed action handler that records a transient event for this dispatch cycle.

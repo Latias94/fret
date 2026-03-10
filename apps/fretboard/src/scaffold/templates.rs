@@ -358,21 +358,21 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action_notify_models::<act::Add>({
+        cx.on_action_notify_locals::<act::Add>({
             let draft_state = draft_state.clone();
             let next_id_state = next_id_state.clone();
             let todos_state = todos_state.clone();
-            move |models| {
-                let text = draft_state
-                    .value_in_or_else(models, String::new)
+            move |tx| {
+                let text = tx
+                    .value_or_else(&draft_state, String::new)
                     .trim()
                     .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let id = next_id_state.value_in_or(models, 1);
-                let _ = next_id_state.update_in(models, |v| *v = v.saturating_add(1));
+                let id = tx.value_or(&next_id_state, 1);
+                let _ = tx.update(&next_id_state, |v| *v = v.saturating_add(1));
 
                 let item = TodoRow {
                     id,
@@ -380,18 +380,18 @@ impl View for TodoView {
                     text: Arc::from(text),
                 };
 
-                if !todos_state.update_in(models, |todos| todos.insert(0, item)) {
+                if !tx.update(&todos_state, |todos| todos.insert(0, item)) {
                     return false;
                 }
 
-                draft_state.set_in(models, String::new())
+                tx.set(&draft_state, String::new())
             }
         });
 
-        cx.on_action_notify_models::<act::ClearDone>({
+        cx.on_action_notify_locals::<act::ClearDone>({
             let todos_state = todos_state.clone();
-            move |models| {
-                todos_state.update_in_if(models, |rows| {
+            move |tx| {
+                tx.update_if(&todos_state, |rows| {
                     let before = rows.len();
                     rows.retain(|row| !row.done);
                     rows.len() != before
@@ -860,20 +860,20 @@ impl View for TodoView {
         let total_count = todos.len();
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action_notify_models::<act::Add>({
+        cx.on_action_notify_locals::<act::Add>({
             let draft_state = draft_state.clone();
             let next_id_state = next_id_state.clone();
             let todos_state = todos_state.clone();
-            move |models| {
-                let text = draft_state.value_in_or_else(models, String::new).trim().to_string();
+            move |tx| {
+                let text = tx.value_or_else(&draft_state, String::new).trim().to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let id = next_id_state.value_in_or(models, 1);
-                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
+                let id = tx.value_or(&next_id_state, 1);
+                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
 
-                if !todos_state.update_in(models, |rows| {
+                if !tx.update(&todos_state, |rows| {
                     rows.push(TodoRow {
                         id,
                         done: false,
@@ -883,14 +883,14 @@ impl View for TodoView {
                     return false;
                 }
 
-                draft_state.set_in(models, String::new())
+                tx.set(&draft_state, String::new())
             }
         });
 
-        cx.on_action_notify_models::<act::ClearDone>({
+        cx.on_action_notify_locals::<act::ClearDone>({
             let todos_state = todos_state.clone();
-            move |models| {
-                todos_state.update_in_if(models, |rows| {
+            move |tx| {
+                tx.update_if(&todos_state, |rows| {
                     let before = rows.len();
                     rows.retain(|row| !row.done);
                     rows.len() != before
@@ -1110,7 +1110,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
-- Default entrypoints: start with `on_action_notify_models` for coordinated writes, use `on_action_notify_local_set/update` for single-slot handlers, and payload actions for per-row list interactions.
+- Default entrypoints: start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, use `on_action_notify_models` when coordinating shared `Model<T>` graphs, and use payload actions for per-row list interactions.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `on_action_notify_transient` in the handler and consume the transient in `render()`.
@@ -1189,7 +1189,7 @@ cargo run --release
 {ui_assets_line}
 - Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
-- Default entrypoints: start with `on_action_notify_models` for coordinated writes, use payload actions for per-row list interactions, and keep `on_activate*` for local widget glue only.
+- Default entrypoints: start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, use payload actions for per-row list interactions, and keep `on_activate*` for local widget glue only.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - For keyed dynamic lists, prefer `LocalState<Vec<_>>` + payload actions when the rows are view-owned; keep explicit `Model<Vec<_>>` only when shared ownership or runtime coordination is the point.
 - Read tracked state near the top of `render()` and keep row rendering driven by local snapshots.
@@ -1279,11 +1279,15 @@ mod tests {
         assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
-        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
+        assert!(src.contains("cx.on_action_notify_locals::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_locals::<act::ClearDone>"));
         assert!(src.contains("cx.on_action_notify_local_update::<act::RefreshTip, u64>("));
         assert!(src.contains("cx.on_action_notify_local_set::<act::FilterAll, TodoFilter>("));
-        assert!(src.contains("cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(
+            src.contains(
+                "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("
+            )
+        );
         assert!(src.contains("cx.use_selector("));
         assert!(src.contains("cx.use_query("));
         assert!(src.contains("let draft_state = cx.use_local::<String>();"));
@@ -1335,9 +1339,13 @@ mod tests {
         assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
-        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
-        assert!(src.contains("cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(src.contains("cx.on_action_notify_locals::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_locals::<act::ClearDone>"));
+        assert!(
+            src.contains(
+                "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("
+            )
+        );
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.use_local::<String>();"));
         assert!(src.contains("let next_id_state = cx.use_local_with(|| 3u64);"));
@@ -1379,14 +1387,14 @@ mod tests {
         ));
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));
-        assert!(simple.contains("start with `on_action_notify_models`"));
+        assert!(simple.contains("start with `on_action_notify_locals`"));
         assert!(simple.contains("cookbook/reference-only host-side glue"));
         assert!(simple.contains("second rung of the default onboarding path"));
 
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
         assert!(todo.contains("cookbook/reference-only host-side glue"));
-        assert!(todo.contains("Default entrypoints: start with `on_action_notify_models`"));
+        assert!(todo.contains("Default entrypoints: start with `on_action_notify_locals`"));
         assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
     }

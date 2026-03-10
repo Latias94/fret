@@ -952,9 +952,7 @@ mod authoring_surface_policy_tests {
         assert!(README.contains(
             "App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`"
         ));
-        assert!(!README.contains(
-            "fret::App::new(...).window(...).ui(...)?"
-        ));
+        assert!(!README.contains("fret::App::new(...).window(...).ui(...)?"));
     }
 
     #[test]
