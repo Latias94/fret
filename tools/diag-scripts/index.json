@@ -7183,6 +7183,28 @@
       ]
     },
     {
+      "id": "ui-gallery-workspace-shell-tab-commands-smoke",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.command_dispatch_trace"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "keyboard",
+        "smoke",
+        "tabs",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Sets the theme preset to zinc/dark explicitly and enables the workspace tab strip.",
+        "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
+        "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
       "required_capabilities": [],

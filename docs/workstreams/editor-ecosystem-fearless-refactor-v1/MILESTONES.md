@@ -174,8 +174,14 @@ Progress:
   - `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
   - `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-parity-shared-models.json`
   - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`
+  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
+  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
 - `ui_gallery` now also carries the minimum single-pane workspace-shell command/focus wiring:
   a mirrored `WorkspaceWindowLayout`, `WorkspaceCommandScope`, and
   `WorkspacePaneContentFocusTarget` for the main content surface.
 - The workspace-shell focus gate is now explicit:
   - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
+- The single-pane workspace layout mirror now also has a dedicated tab-command gate:
+  - `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
+    This gate now locks the promoted default MRU semantics for
+    `workspace.tab.next/prev` plus close-mirror fallback in the `ui_gallery` workspace shell.

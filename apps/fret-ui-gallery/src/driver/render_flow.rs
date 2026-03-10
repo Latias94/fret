@@ -61,7 +61,9 @@ pub(super) fn begin_frame(
 
     #[cfg(target_arch = "wasm32")]
     UiGalleryDriver::sync_page_router_from_external_history(app, window, state);
-    UiGalleryDriver::sync_workspace_window_layout_from_models(app, state);
+    if !UiGalleryDriver::sync_workspace_models_from_window_layout(app, state, window) {
+        UiGalleryDriver::sync_workspace_window_layout_from_models(app, state);
+    }
 
     let availability = app
         .global::<WindowCommandAvailabilityService>()

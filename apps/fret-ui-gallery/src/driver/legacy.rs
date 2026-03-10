@@ -3846,6 +3846,9 @@ impl WinitAppDriver for UiGalleryDriver {
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);
+                if Self::sync_workspace_models_from_window_layout(app, state, window) {
+                    app.request_redraw(window);
+                }
             }
         }
 
@@ -4032,6 +4035,9 @@ impl WinitAppDriver for UiGalleryDriver {
         for event in drive.events {
             injected_any = true;
             state.ui.dispatch_event(app, services, &event);
+        }
+        if injected_any && Self::sync_workspace_models_from_window_layout(app, state, window) {
+            app.request_redraw(window);
         }
 
         if injected_any {

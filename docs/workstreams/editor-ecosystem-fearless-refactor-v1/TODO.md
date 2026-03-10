@@ -120,7 +120,11 @@ Milestones: `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.m
       and workspace-shell focus/command-scope now has a dedicated smoke gate in
       `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json`
       backed by the `ui_gallery` single-pane `WorkspaceCommandScope` + `WorkspacePaneContentFocusTarget`
-      wiring; edit-session commit/cancel coverage still remains open.
+      wiring, while workspace-shell tab command mirroring now has a dedicated smoke gate in
+      `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`
+      that locks `workspace.tab.next`, `workspace.tab.prev`, and `workspace.tab.close` against the
+      mirrored single-pane `WorkspaceWindowLayout` with the default MRU cycling semantics from
+      `fret-workspace`; edit-session commit/cancel coverage still remains open.
 - [~] `EER-PROOF-052` Add evidence anchors that point from each proof/gate back to the owning crate.
       Current status: the `imui` proof surface and the `ui_gallery` workspace-shell proof surface
       now both have anchored code + gate evidence, but the `apps/fret-editor` side still needs the
