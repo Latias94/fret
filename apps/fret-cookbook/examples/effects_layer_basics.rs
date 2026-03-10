@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
 mod act {
@@ -27,13 +27,13 @@ struct EffectsLayerBasicsView {
 }
 
 impl View for EffectsLayerBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             effect: app.models_mut().insert(EffectKind::None),
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let effect_kind = cx
@@ -54,7 +54,7 @@ impl View for EffectsLayerBasicsView {
             EffectKind::Blur,
         );
 
-        let button = |_cx: &mut ElementContext<'_, App>,
+        let button = |_cx: &mut ElementContext<'_, KernelApp>,
                       label: &'static str,
                       effect: EffectKind,
                       action: fret_runtime::ActionId,
@@ -85,7 +85,7 @@ impl View for EffectsLayerBasicsView {
                 cx;
                 shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
-                    let tile = |_cx: &mut ElementContext<'_, App>, color: ColorRef| {
+                    let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))

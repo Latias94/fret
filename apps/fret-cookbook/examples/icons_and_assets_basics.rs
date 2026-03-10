@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::ImageColorSpace;
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, SvgIconProps};
@@ -59,7 +59,7 @@ struct IconsAndAssetsBasicsView {
 }
 
 impl View for IconsAndAssetsBasicsView {
-    fn init(app: &mut App, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
         // Ensure the UI assets caches exist and set budgets explicitly (optional).
         fret_ui_assets::UiAssets::configure(
             app,
@@ -94,7 +94,7 @@ impl View for IconsAndAssetsBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let assets_reload_bumps_state = cx.use_local::<u64>();
 
@@ -185,11 +185,11 @@ impl View for IconsAndAssetsBasicsView {
                 shadcn::CardContent::build(|cx, out| {
                     out.push_ui(
                         cx,
-                        ui::v_flex(|cx: &mut ElementContext<'_, App>| {
+                        ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {
                             let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                             let preload = cx
                                 .app
-                                .global::<fret::prelude::icon::IconSvgPreloadDiagnostics>()
+                                .global::<icon::IconSvgPreloadDiagnostics>()
                                 .copied();
                             let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
                             let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
@@ -257,7 +257,7 @@ impl View for IconsAndAssetsBasicsView {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
         };
 
-        let render_image = |cx: &mut ElementContext<'_, App>,
+        let render_image = |cx: &mut ElementContext<'_, KernelApp>,
                             title: &str,
                             st: &fret_ui_assets::ImageSourceState|
          -> AnyElement {

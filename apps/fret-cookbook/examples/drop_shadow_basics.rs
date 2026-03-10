@@ -12,7 +12,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::Point;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectStep};
 
@@ -40,11 +40,11 @@ fn shadow_chain() -> EffectChain {
 struct DropShadowBasicsView;
 
 impl View for DropShadowBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let enabled_state = cx.use_local_with(|| true);
@@ -93,7 +93,7 @@ impl View for DropShadowBasicsView {
 
         let chain = shadow_chain();
 
-        let card = |cx: &mut ElementContext<'_, App>, title: String| -> AnyElement {
+        let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement {
             let surface = ui::v_flex(|cx| {
                 ui::children![
                     cx;

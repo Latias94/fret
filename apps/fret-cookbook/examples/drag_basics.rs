@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::{CursorIcon, MouseButton, Point, PointerId, Px};
 use fret_runtime::DefaultAction;
 use fret_ui::Invalidation;
@@ -26,7 +26,7 @@ struct DragBasicsView {
 }
 
 impl View for DragBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self {
             origin: app.models_mut().insert(Point::new(Px(0.0), Px(0.0))),
             drag: app.models_mut().insert(None::<DragState>),
@@ -34,7 +34,7 @@ impl View for DragBasicsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let origin = cx

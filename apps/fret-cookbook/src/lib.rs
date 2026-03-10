@@ -23,8 +23,12 @@ mod authoring_surface_policy_tests {
     const COMMANDS_KEYMAP_EXAMPLE: &str = include_str!("../examples/commands_keymap_basics.rs");
     const DATA_TABLE_EXAMPLE: &str = include_str!("../examples/data_table_basics.rs");
     const DATE_PICKER_EXAMPLE: &str = include_str!("../examples/date_picker_basics.rs");
+    const DRAG_EXAMPLE: &str = include_str!("../examples/drag_basics.rs");
+    const DROP_SHADOW_EXAMPLE: &str = include_str!("../examples/drop_shadow_basics.rs");
+    const EFFECTS_LAYER_EXAMPLE: &str = include_str!("../examples/effects_layer_basics.rs");
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
     const IMUI_ACTION_EXAMPLE: &str = include_str!("../examples/imui_action_basics.rs");
+    const ICONS_AND_ASSETS_EXAMPLE: &str = include_str!("../examples/icons_and_assets_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
     const HELLO_COUNTER_EXAMPLE: &str = include_str!("../examples/hello_counter.rs");
@@ -56,6 +60,17 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.use_local"));
         assert!(!src.contains("cx.on_action_notify_"));
         assert!(!src.contains("cx.on_payload_action_notify_"));
+    }
+
+    fn assert_uses_advanced_surface(src: &str) {
+        assert!(src.contains("advanced::prelude::*"));
+        assert!(src.contains("KernelApp"));
+        assert!(src.contains("ViewCx<'_, '_, KernelApp>"));
+        assert!(src.contains("-> Elements"));
+        assert!(!src.contains("use fret::prelude::*;"));
+        assert!(!src.contains("use fret::app::prelude::*;"));
+        assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(!src.contains("-> Ui"));
     }
 
     #[test]
@@ -167,6 +182,26 @@ mod authoring_surface_policy_tests {
     fn shared_scaffold_uses_component_surface_instead_of_legacy_prelude() {
         assert!(SCAFFOLD.contains("use fret::component::prelude::*;"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
+    }
+
+    #[test]
+    fn advanced_examples_use_the_explicit_advanced_surface() {
+        assert_uses_advanced_surface(DRAG_EXAMPLE);
+        assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
+        assert_uses_advanced_surface(DROP_SHADOW_EXAMPLE);
+        assert_uses_advanced_surface(ICONS_AND_ASSETS_EXAMPLE);
+
+        assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
+        assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
+
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("on_action_notify_model_set::<act::Pixelate"));
+
+        assert!(DROP_SHADOW_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
+
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("Effect::RequestAnimationFrame"));
     }
 
     #[test]
