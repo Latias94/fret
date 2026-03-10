@@ -38,9 +38,9 @@ impl View for SimpleTodoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
-        let draft_state = cx.use_local::<String>();
-        let next_id_state = cx.use_local_with(|| 3u64);
-        let todos_state = cx.use_local_with(|| {
+        let draft_state = cx.state().local::<String>();
+        let next_id_state = cx.state().local_init(|| 3u64);
+        let todos_state = cx.state().local_init(|| {
             vec![
                 TodoRow {
                     id: 1,
@@ -55,8 +55,8 @@ impl View for SimpleTodoView {
             ]
         });
 
-        let todos = todos_state.layout(cx).value_or_default();
-        let draft_value = draft_state.layout(cx).value_or_default();
+        let todos = cx.state().watch(&todos_state).layout().value_or_default();
+        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -137,7 +137,7 @@ impl View for SimpleTodoView {
         .w_full()
         .max_w(Px(560.0));
 
-        cx.on_action_notify_locals::<act::Add>({
+        cx.actions().locals::<act::Add>({
             let draft_state = draft_state.clone();
             let next_id_state = next_id_state.clone();
             let todos_state = todos_state.clone();
@@ -166,7 +166,7 @@ impl View for SimpleTodoView {
             }
         });
 
-        cx.on_action_notify_locals::<act::ClearDone>({
+        cx.actions().locals::<act::ClearDone>({
             let todos_state = todos_state.clone();
             move |tx| {
                 tx.update_if(&todos_state, |rows| {
@@ -177,17 +177,15 @@ impl View for SimpleTodoView {
             }
         });
 
-        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
-            &todos_state,
-            |rows, id| {
+        cx.actions()
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
                 } else {
                     false
                 }
-            },
-        );
+            });
 
         fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }

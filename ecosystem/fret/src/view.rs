@@ -455,6 +455,217 @@ pub struct ViewCx<'cx, 'a, H: UiHost> {
     action_handlers_used: bool,
 }
 
+/// Grouped LocalState-first helpers for the default app authoring surface.
+pub struct AppUiState<'view, 'cx, 'a, H: UiHost> {
+    cx: &'view mut ViewCx<'cx, 'a, H>,
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
+    #[track_caller]
+    pub fn local<T>(self) -> LocalState<T>
+    where
+        T: Any + Default,
+    {
+        self.cx.use_local::<T>()
+    }
+
+    #[track_caller]
+    pub fn local_keyed<K: Hash, T>(self, key: K) -> LocalState<T>
+    where
+        T: Any + Default,
+    {
+        self.cx.use_local_keyed::<K, T>(key)
+    }
+
+    #[track_caller]
+    pub fn local_init<T>(self, init: impl FnOnce() -> T) -> LocalState<T>
+    where
+        T: Any,
+    {
+        self.cx.use_local_with(init)
+    }
+
+    pub fn watch<T: Any>(
+        self,
+        local: &'view LocalState<T>,
+    ) -> WatchedLocal<'view, 'view, 'a, H, T> {
+        self.cx.watch_local(local)
+    }
+}
+
+/// Grouped action/effect registration helpers for the default app authoring surface.
+pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
+    cx: &'view mut ViewCx<'cx, 'a, H>,
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
+    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+        T: Any,
+    {
+        self.cx.on_action_notify_local_update::<A, T>(local, update);
+    }
+
+    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone,
+    {
+        self.cx.on_action_notify_local_set::<A, T>(local, value);
+    }
+
+    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
+    where
+        A: crate::TypedAction,
+    {
+        self.cx.on_action_notify_toggle_local_bool::<A>(local);
+    }
+
+    pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        self.cx.on_action_notify_models::<A>(f);
+    }
+
+    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        self.cx.on_action_notify_locals::<A>(f);
+    }
+
+    pub fn transient<A>(self, transient_key: u64)
+    where
+        A: crate::TypedAction,
+    {
+        self.cx.on_action_notify_transient::<A>(transient_key);
+    }
+
+    pub fn payload_local_update_if<A, T>(
+        self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+        T: Any,
+    {
+        self.cx
+            .on_payload_action_notify_local_update_if::<A, T>(local, update);
+    }
+
+    pub fn payload_locals<A>(
+        self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+    {
+        self.cx.on_payload_action_notify_locals::<A>(f);
+    }
+
+    pub fn availability<A>(
+        self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    ) where
+        A: crate::TypedAction,
+    {
+        self.cx.on_action_availability::<A>(f);
+    }
+}
+
+/// Grouped selector/query helpers for the default app authoring surface.
+pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
+    #[allow(dead_code)]
+    cx: &'view mut ViewCx<'cx, 'a, H>,
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector<Deps, TValue>(
+        self,
+        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
+        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
+    ) -> TValue
+    where
+        Deps: Any + PartialEq,
+        TValue: Any + Clone,
+    {
+        self.cx.use_selector(deps, compute)
+    }
+
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_keyed<K: Hash, Deps, TValue>(
+        self,
+        key: K,
+        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
+        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
+    ) -> TValue
+    where
+        Deps: Any + PartialEq,
+        TValue: Any + Clone,
+    {
+        self.cx.use_selector_keyed(key, deps, compute)
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query<T: Any + Send + Sync + 'static>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
+        + Send
+        + 'static,
+    ) -> fret_query::QueryHandle<T> {
+        self.cx.use_query(key, policy, fetch)
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query_async<T, Fut>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + Send + 'static,
+    ) -> fret_query::QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, fret_query::QueryError>> + Send + 'static,
+    {
+        self.cx.use_query_async(key, policy, fetch)
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query_async_local<T, Fut>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + 'static,
+    ) -> fret_query::QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
+    {
+        self.cx.use_query_async_local(key, policy, fetch)
+    }
+}
+
+/// Grouped render-time effect helpers for the default app authoring surface.
+pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
+    cx: &'view mut ViewCx<'cx, 'a, H>,
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
+    pub fn take_transient(self, key: u64) -> bool {
+        self.cx.take_transient_on_action_root(key)
+    }
+}
+
 impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self {
         Self {
@@ -481,6 +692,26 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     /// Access the underlying element context.
     pub fn elements(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
+    }
+
+    /// Grouped state/local helpers for the default app authoring surface.
+    pub fn state(&mut self) -> AppUiState<'_, 'cx, 'a, H> {
+        AppUiState { cx: self }
+    }
+
+    /// Grouped typed action registration helpers for the default app authoring surface.
+    pub fn actions(&mut self) -> AppUiActions<'_, 'cx, 'a, H> {
+        AppUiActions { cx: self }
+    }
+
+    /// Grouped selector/query helpers for the default app authoring surface.
+    pub fn data(&mut self) -> AppUiData<'_, 'cx, 'a, H> {
+        AppUiData { cx: self }
+    }
+
+    /// Grouped render-time effect helpers for the default app authoring surface.
+    pub fn effects(&mut self) -> AppUiEffects<'_, 'cx, 'a, H> {
+        AppUiEffects { cx: self }
     }
 
     /// Create a keyed scope for hooks and element state.
@@ -675,8 +906,8 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         key: fret_query::QueryKey<T>,
         policy: fret_query::QueryPolicy,
         fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
-            + Send
-            + 'static,
+        + Send
+        + 'static,
     ) -> fret_query::QueryHandle<T> {
         fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
     }
@@ -715,7 +946,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-            + 'static,
+        + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
@@ -729,7 +960,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-            + 'static,
+        + 'static,
     ) {
         self.on_action::<A>(move |host, action_cx| {
             let handled = f(host, action_cx);
@@ -861,11 +1092,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-                &mut dyn fret_ui::action::UiFocusActionHost,
-                fret_ui::action::ActionCx,
-                A::Payload,
-            ) -> bool
-            + 'static,
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
@@ -876,11 +1107,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-                &mut dyn fret_ui::action::UiFocusActionHost,
-                fret_ui::action::ActionCx,
-                A::Payload,
-            ) -> bool
-            + 'static,
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
     ) {
         self.on_payload_action::<A>(move |host, action_cx, payload| {
             let handled = f(host, action_cx, payload);
@@ -933,10 +1164,10 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(
-                &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-                fret_ui::action::CommandAvailabilityActionCx,
-            ) -> fret_ui::CommandAvailability
-            + 'static,
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);

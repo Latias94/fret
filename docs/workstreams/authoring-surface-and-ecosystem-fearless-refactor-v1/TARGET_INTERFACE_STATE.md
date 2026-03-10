@@ -171,11 +171,11 @@ These names/surfaces should disappear entirely if the replacement exists:
 | component prelude is explicit | in progress |
 | advanced surface is explicit | in progress |
 | canonical naming reset landed | in progress |
-| grouped `AppUi` namespaces landed | not started |
+| grouped `AppUi` namespaces landed | in progress |
 | first-party ecosystems migrated | in progress |
 | templates/docs aligned | in progress |
 | old surface deleted | not started |
-| guards/gates added | not started |
+| guards/gates added | in progress |
 
 ## Definition of Complete
 

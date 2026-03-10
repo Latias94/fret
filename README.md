@@ -60,8 +60,9 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 For new app authors, keep the default authoring model small and explicit:
 
 - `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
-- `on_action_notify_models` for most typed UI actions,
-- `on_action_notify_transient` when an action must trigger an `App`-only effect in `render()`,
+- `cx.actions().locals(...)` for most LocalState-first typed UI actions,
+- `cx.actions().transient(...)` when an action must trigger an `App`-only effect in `render()`,
+- `cx.actions().models(...)` only when you intentionally coordinate shared `Model<T>` graphs,
 - `on_activate*` only for local pressable/widget glue.
 - Everything else (`on_action_notify`, single-model aliases, redraw-oriented `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
 - The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
@@ -164,10 +165,10 @@ impl View for TodoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
-        let draft = cx.use_local::<String>();
-        let enabled = !draft.layout(cx).value_or_default().trim().is_empty();
+        let draft = cx.state().local::<String>();
+        let enabled = !cx.state().watch(&draft).layout().value_or_default().trim().is_empty();
 
-        cx.on_action_notify_local_set::<act::Add, String>(&draft, String::new());
+        cx.actions().local_set::<act::Add, String>(&draft, String::new());
 
         let input = shadcn::Input::new(&draft)
             .a11y_label("New task")

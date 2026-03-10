@@ -34,6 +34,9 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("ViewCx<'_, '_, App>"));
         assert!(!src.contains("fn init(_app: &mut App"));
         assert!(!src.contains("-> Elements"));
+        assert!(!src.contains("cx.use_local"));
+        assert!(!src.contains("cx.on_action_notify_"));
+        assert!(!src.contains("cx.on_payload_action_notify_"));
     }
 
     #[test]
@@ -41,15 +44,25 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(HELLO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_V2_TARGET_EXAMPLE);
+        assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
+        assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(
+            SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
+        );
         assert!(SIMPLE_TODO_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("UiChildIntoElement<KernelApp>"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
     }
 
     #[test]
     fn onboarding_docs_use_the_new_app_surface() {
         assert_uses_app_surface(ROOT_README);
         assert_uses_app_surface(GOLDEN_PATH_DOC);
-        assert!(ROOT_README.contains("on_action_notify_local_set::<act::Add, String>"));
-        assert!(GOLDEN_PATH_DOC.contains("on_action_notify_local_set::<act::Add, String>"));
+        assert!(ROOT_README.contains("cx.state().local::<String>()"));
+        assert!(ROOT_README.contains("cx.actions().local_set::<act::Add, String>"));
+        assert!(GOLDEN_PATH_DOC.contains("cx.state().local::<String>()"));
+        assert!(GOLDEN_PATH_DOC.contains("cx.actions().local_set::<act::Add, String>"));
     }
 }

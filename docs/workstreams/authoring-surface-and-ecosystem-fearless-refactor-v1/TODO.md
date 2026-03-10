@@ -52,17 +52,17 @@ Companion docs:
 ## M2 — Reset the app authoring API
 
 - [ ] Introduce grouped app-facing context namespaces:
-  - [ ] `state()`
-  - [ ] `actions()`
-  - [ ] `data()`
-  - [ ] `effects()`
+  - [x] `state()`
+  - [x] `actions()`
+  - [x] `data()`
+  - [x] `effects()`
 - [ ] Add the new default operations:
-  - [ ] local state creation/init
-  - [ ] local state watch/read
-  - [ ] default local transactions
-  - [ ] payload-local handlers
-  - [ ] transient action helpers
-  - [ ] selector/query integration points
+  - [x] local state creation/init
+  - [x] local state watch/read
+  - [x] default local transactions
+  - [x] payload-local handlers
+  - [x] transient action helpers
+  - [x] selector/query integration points
 - [ ] Rename or replace flat helpers that are no longer part of the blessed path.
 - [ ] Remove redundant first-contact aliases from the app surface.
 

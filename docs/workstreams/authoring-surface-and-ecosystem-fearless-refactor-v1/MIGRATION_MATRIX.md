@@ -53,10 +53,10 @@ An old surface is eligible for deletion only when all of the following are true:
 | Kernel runtime naming | bare `App` in app-facing imports | `KernelApp` | type alias only for migration, then stop exporting bare `App` on app path | app prelude no longer exposes kernel runtime as bare `App` | In progress | `TARGET_INTERFACE_STATE.md` |
 | App UI context | `ViewCx` | `AppUi` | type alias first, grouped API second, delete old teaching last | templates/examples use `AppUi` and grouped namespaces | In progress | `ecosystem/fret/src/view.rs`, `TARGET_INTERFACE_STATE.md` |
 | UI return alias | `Elements` as default taught return type | `Ui` | alias `Ui = Elements` | official examples/docs use `Ui` | In progress | `TARGET_INTERFACE_STATE.md` |
-| Flat state helpers | `use_local*`, `use_state*` mixed default posture | `ui.state()` | wrapper namespace over current methods | default docs/templates stop teaching flat calls | Not started | `ecosystem/fret/src/view.rs` |
-| Flat action helpers | `on_action*`, `on_action_notify*`, payload variants | `ui.actions()` | wrapper namespace over current handlers | default docs/templates stop teaching flat handler list | Not started | `ecosystem/fret/src/view.rs` |
-| Selector/query hooks | `use_selector`, `use_query*` on flat context | `ui.data()` | namespace wrapper + extension traits | first-party state libs use grouped data surface | Not started | `ecosystem/fret/src/view.rs` |
-| Effect helpers | app-bound side effects via ad-hoc patterns | `ui.effects()` | introduce grouped entry while forwarding to current mechanisms | default path has one documented effect story | Not started | `DESIGN.md` |
+| Flat state helpers | `use_local*`, `use_state*` mixed default posture | `ui.state()` | wrapper namespace over current methods | default docs/templates stop teaching flat calls | In progress | `ecosystem/fret/src/view.rs` |
+| Flat action helpers | `on_action*`, `on_action_notify*`, payload variants | `ui.actions()` | wrapper namespace over current handlers | default docs/templates stop teaching flat handler list | In progress | `ecosystem/fret/src/view.rs` |
+| Selector/query hooks | `use_selector`, `use_query*` on flat context | `ui.data()` | namespace wrapper + extension traits | first-party state libs use grouped data surface | In progress | `ecosystem/fret/src/view.rs` |
+| Effect helpers | app-bound side effects via ad-hoc patterns | `ui.effects()` | introduce grouped entry while forwarding to current mechanisms | default path has one documented effect story | In progress | `DESIGN.md` |
 
 ## Ecosystem Crates
 
@@ -79,7 +79,7 @@ An old surface is eligible for deletion only when all of the following are true:
 | `docs/README.md` | canonical index, but still references old names/mental models in places | points to new product surface and migration tracker | docs consistency gate covers docs index | Not started | `docs/README.md` |
 | `docs/first-hour.md` | strong default guidance, still tied to current naming | teach `FretApp`, `AppUi`, grouped namespaces | templates and cookbook match exactly | Not started | `docs/first-hour.md` |
 | scaffold templates | current `hello/simple-todo/todo` teach old surface names | teach only new app surface | template gate added and green | Migrated | `apps/fretboard/src/scaffold/templates.rs` |
-| cookbook official examples | current view runtime posture | new app surface posture | no official example teaches the old surface | In progress | `apps/fret-cookbook/examples/` |
+| cookbook official examples | current view runtime posture | new app surface posture | no official example teaches the old surface | Migrated | `apps/fret-cookbook/examples/` |
 | comparison/advanced examples | mixed by design | explicit advanced/component imports where appropriate | examples taxonomy is clear and documented | Not started | `docs/examples/README.md` |
 
 ## Hard Delete Matrix
@@ -92,8 +92,8 @@ These are the concrete "remove this" lanes.
 | bare `App` in app-facing prelude for kernel runtime | `KernelApp` | app prelude no longer exports it bare and call sites are migrated | In progress |
 | `ViewCx` as the taught app-facing context name | `AppUi` | grouped context APIs are live and official surfaces migrated | In progress |
 | `Elements` as the taught app-facing return alias | `Ui` | official examples/docs migrated | In progress |
-| flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | Not started |
-| flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated | Not started |
+| flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated | In progress |
+| flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated | In progress |
 | broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | In progress |
 | stale docs that teach superseded names | rewritten docs | new docs merged and linked | In progress |
 

@@ -33,15 +33,17 @@ impl View for HelloView {
             "RenderedAgain"
         };
 
-        let count_state = cx.use_local::<u32>();
-        let count_value = count_state.layout(cx).value_or(0);
+        let count_state = cx.state().local::<u32>();
+        let count_value = cx.state().watch(&count_state).layout().value_or(0);
 
-        cx.on_action_notify_local_update::<act::Click, u32>(&count_state, |v| {
-            *v = v.saturating_add(1);
-            println!("hello: clicked");
-        });
+        cx.actions()
+            .local_update::<act::Click, u32>(&count_state, |v| {
+                *v = v.saturating_add(1);
+                println!("hello: clicked");
+            });
 
-        cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
         let root = ui::v_flex(|cx| {
             ui::children![

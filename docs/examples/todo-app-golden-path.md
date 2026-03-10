@@ -152,7 +152,7 @@ fn install_app(app: &mut KernelApp) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, `on_action_notify_transient` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -215,7 +215,7 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `on_action_notify_locals` / `on_payload_action_notify_locals` over `on_action_notify_models`.
+  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload_locals(...)` over `cx.actions().models(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -235,8 +235,8 @@ mod act {
 
 impl View for TodoView {
     fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
-        let draft = cx.use_local::<String>();
-        cx.on_action_notify_local_set::<act::Add, String>(&draft, String::new());
+        let draft = cx.state().local::<String>();
+        cx.actions().local_set::<act::Add, String>(&draft, String::new());
 
         shadcn::Button::new("Add")
             .action(act::Add)
@@ -248,10 +248,10 @@ impl View for TodoView {
 
 ## View (render a retained UI tree)
 
-The view runtime renders the same declarative IR (`Elements`) but provides a cohesive authoring loop:
+The view runtime renders the same declarative IR (`Ui`, backed by `Elements`) but provides a cohesive authoring loop:
 
-- view-local hooks (`use_local*`, `use_selector`, `use_query`),
-- typed action handler registration,
+- grouped app helpers (`state()`, `actions()`, `data()`, `effects()`),
+- LocalState/query/selector helpers behind those grouped entrypoints,
 - `notify → dirty → reuse` semantics via view cache roots.
 
 For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
@@ -269,7 +269,7 @@ High-level sketch:
 ```rust,ignore
 use fret_selector::ui::DepsBuilder;
 
-let derived = cx.use_selector(
+let derived = cx.data().selector(
     |cx| {
         let mut deps = DepsBuilder::new(cx);
         deps.model_rev(&self.todos);
@@ -291,12 +291,10 @@ For async data (network, disk, indexing), we recommend storing cached resource s
 High-level sketch:
 
 ```rust,ignore
-use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState};
-use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
-let handle = cx.use_query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.layout_query(cx).value_or_default();
+let handle = cx.data().query(key, policy, move |token| fetch(token));
+let state: QueryState<T> = handle.watch(cx).layout().value_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -304,14 +302,14 @@ To invalidate/refetch from app logic:
 ```rust,ignore
 // v1 (view runtime): if refetch is just a pure state projection, keep it as a normal model
 // transaction (for example, bump a `Model<u64>` nonce like `tip_nonce`).
-cx.on_action_notify_models::<act::RefreshTip>({
+cx.actions().models::<act::RefreshTip>({
     let tip_nonce = self.tip_nonce.clone();
     move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
 });
 
 // then include the nonce in the query key:
 let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
-let handle = cx.use_query(tip_key(nonce), policy, move |token| fetch(token));
+let handle = cx.data().query(tip_key(nonce), policy, move |token| fetch(token));
 ```
 
 ## Event pipeline (platform → UI)
@@ -323,10 +321,10 @@ In a typical window driver:
 
 ## Action handlers (logic)
 
-In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `on_action_notify_models`, use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
+In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, drop to `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
 
 ```rust,ignore
-cx.on_action_notify_models::<act::Add>({
+cx.actions().models::<act::Add>({
     let draft = self.draft.clone();
     let todos = self.todos.clone();
     move |models| {
