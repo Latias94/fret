@@ -14,7 +14,8 @@ struct ImUiShadcnAdapterView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-shadcn-adapter-demo")
         .window("imui_shadcn_adapter_demo", (840.0, 560.0))
-        .run_view::<ImUiShadcnAdapterView>()?;
+        .view::<ImUiShadcnAdapterView>()?
+        .run()?;
     Ok(())
 }
 

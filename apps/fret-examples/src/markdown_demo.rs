@@ -804,6 +804,7 @@ pub fn run() -> anyhow::Result<()> {
         .window("markdown-demo", (920.0, 720.0))
         .setup(apply_markdown_demo_theme_tokens)
         .config_files(false)
-        .run_view::<MarkdownDemoView>()
+        .view::<MarkdownDemoView>()?
+        .run()
         .with_context(|| "failed to run markdown demo")
 }

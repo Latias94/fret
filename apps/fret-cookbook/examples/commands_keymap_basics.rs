@@ -268,6 +268,7 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .setup(install_commands)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<CommandsKeymapBasicsView>()
+        .view::<CommandsKeymapBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

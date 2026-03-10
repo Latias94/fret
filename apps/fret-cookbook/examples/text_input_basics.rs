@@ -201,6 +201,7 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .setup(install_commands)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<TextInputBasicsView>()
+        .view::<TextInputBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

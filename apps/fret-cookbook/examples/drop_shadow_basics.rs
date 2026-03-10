@@ -189,6 +189,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-drop-shadow-basics", (1280.0, 860.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DropShadowBasicsView>()
+        .view::<DropShadowBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

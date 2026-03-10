@@ -299,6 +299,7 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
         })
-        .run_view::<DropShadowDemoView>()
+        .view::<DropShadowDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

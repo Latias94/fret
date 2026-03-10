@@ -682,7 +682,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 "#;
@@ -760,7 +761,8 @@ fn main() -> anyhow::Result<()> {{
     FretApp::new("{package_name}")
         .window("{package_name}", (560.0, 360.0))
         .setup(install_app)
-        .run_view::<HelloView>()
+        .view::<HelloView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }}
 "#
@@ -1045,7 +1047,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 "#;
@@ -1278,7 +1281,9 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(!src.contains("ui::raw_text( "));
         assert!(src.contains("impl View for TodoView"));
-        assert!(src.contains(".run_view::<TodoView>()"));
+        assert!(src.contains(".view::<TodoView>()?"));
+        assert!(src.contains(".run()"));
+        assert!(!src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("shadcn::Card::build(|cx, out| {"));
@@ -1322,7 +1327,9 @@ mod tests {
         assert!(src.contains("ui::v_flex("));
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
-        assert!(src.contains(".run_view::<HelloView>()"));
+        assert!(src.contains(".view::<HelloView>()?"));
+        assert!(src.contains(".run()"));
+        assert!(!src.contains(".run_view::<HelloView>()"));
         assert!(src.contains("let click_count_state = cx.state().local::<u32>();"));
         assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
@@ -1345,7 +1352,9 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(!src.contains("ui::raw_text( "));
         assert!(src.contains("impl View for TodoView"));
-        assert!(src.contains(".run_view::<TodoView>()"));
+        assert!(src.contains(".view::<TodoView>()?"));
+        assert!(src.contains(".run()"));
+        assert!(!src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));

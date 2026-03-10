@@ -88,6 +88,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-date-picker-basics", (720.0, 420.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DatePickerBasicsView>()
+        .view::<DatePickerBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

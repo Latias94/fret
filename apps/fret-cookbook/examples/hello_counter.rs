@@ -29,7 +29,8 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("hello-counter-demo")
         .window("hello_counter_demo", (520.0, 420.0))
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<HelloCounterView>()
+        .view::<HelloCounterView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 

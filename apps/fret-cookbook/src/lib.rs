@@ -112,6 +112,13 @@ mod authoring_surface_policy_tests {
         );
     }
 
+    fn assert_prefers_view_builder_then_run(src: &str) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains(".view::<"));
+        assert!(normalized.contains(".run()"));
+        assert!(!normalized.contains(".run_view::<"));
+    }
+
     #[test]
     fn onboarding_examples_use_the_new_app_surface() {
         assert_uses_app_surface(HELLO_EXAMPLE);
@@ -316,6 +323,44 @@ mod authoring_surface_policy_tests {
             CUSTOM_V1_EXAMPLE,
         ] {
             assert_advanced_view_runtime_example_uses_app_ui_aliases(src);
+        }
+    }
+
+    #[test]
+    fn docs_and_examples_prefer_builder_then_run() {
+        for src in [
+            ROOT_README,
+            GOLDEN_PATH_DOC,
+            HELLO_EXAMPLE,
+            SIMPLE_TODO_EXAMPLE,
+            SIMPLE_TODO_V2_TARGET_EXAMPLE,
+            HELLO_COUNTER_EXAMPLE,
+            TEXT_INPUT_EXAMPLE,
+            TOGGLE_EXAMPLE,
+            PAYLOAD_ACTIONS_EXAMPLE,
+            FORM_EXAMPLE,
+            DATE_PICKER_EXAMPLE,
+            COMMANDS_KEYMAP_EXAMPLE,
+            OVERLAY_EXAMPLE,
+            THEME_SWITCHING_EXAMPLE,
+            TOAST_EXAMPLE,
+            VIRTUAL_LIST_EXAMPLE,
+            ASYNC_INBOX_EXAMPLE,
+            QUERY_EXAMPLE,
+            ROUTER_EXAMPLE,
+            DATA_TABLE_EXAMPLE,
+            UNDO_EXAMPLE,
+            MARKDOWN_AND_CODE_EXAMPLE,
+            IMUI_ACTION_EXAMPLE,
+            DRAG_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
+            DROP_SHADOW_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+            CANVAS_PAN_ZOOM_EXAMPLE,
+            CUSTOM_V1_EXAMPLE,
+        ] {
+            assert_prefers_view_builder_then_run(src);
         }
     }
 

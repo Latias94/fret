@@ -5,7 +5,8 @@ struct ImUiHelloView;
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-hello-demo")
         .window("imui_hello_demo", (520.0, 240.0))
-        .run_view::<ImUiHelloView>()?;
+        .view::<ImUiHelloView>()?
+        .run()?;
     Ok(())
 }
 

@@ -261,6 +261,7 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
         })
-        .run_view::<QueryAsyncTokioDemoView>()
+        .view::<QueryAsyncTokioDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

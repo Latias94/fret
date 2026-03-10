@@ -233,6 +233,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("query-demo")
         .window("query-demo", (560.0, 360.0))
         .config_files(false)
-        .run_view::<QueryDemoView>()
+        .view::<QueryDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

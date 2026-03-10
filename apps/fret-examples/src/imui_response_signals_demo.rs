@@ -8,7 +8,8 @@ struct ImUiResponseSignalsView;
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-response-signals-demo")
         .window("imui_response_signals_demo", (720.0, 520.0))
-        .run_view::<ImUiResponseSignalsView>()?;
+        .view::<ImUiResponseSignalsView>()?
+        .run()?;
     Ok(())
 }
 

@@ -449,6 +449,7 @@ fn main() -> anyhow::Result<()> {
         // includes them.
         .register_icon_pack(fret_icons_lucide::register_vendor_icons)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<IconsAndAssetsBasicsView>()
+        .view::<IconsAndAssetsBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

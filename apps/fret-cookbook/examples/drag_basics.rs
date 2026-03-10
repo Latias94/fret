@@ -212,6 +212,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-drag-basics", (760.0, 520.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DragBasicsView>()
+        .view::<DragBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

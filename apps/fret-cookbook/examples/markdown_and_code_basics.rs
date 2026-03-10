@@ -195,6 +195,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-markdown-and-code-basics", (1080.0, 820.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<MarkdownAndCodeBasicsView>()
+        .view::<MarkdownAndCodeBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

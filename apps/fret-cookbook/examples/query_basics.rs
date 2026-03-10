@@ -208,6 +208,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-query-basics", (640.0, 420.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<QueryBasicsView>()
+        .view::<QueryBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

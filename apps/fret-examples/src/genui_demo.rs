@@ -39,7 +39,8 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,
             );
         })
-        .run_view::<GenUiView>()
+        .view::<GenUiView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 

@@ -145,6 +145,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-data-table-basics", (1180.0, 820.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<DataTableBasicsView>()
+        .view::<DataTableBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

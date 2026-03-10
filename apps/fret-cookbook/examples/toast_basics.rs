@@ -129,6 +129,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-toast-basics", (720.0, 360.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<ToastBasicsView>()
+        .view::<ToastBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

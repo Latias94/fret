@@ -475,6 +475,7 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .setup(install_router_commands)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<RouterBasicsView>()
+        .view::<RouterBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

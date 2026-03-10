@@ -328,6 +328,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-assets-reload-epoch-basics", (960.0, 780.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<AssetsReloadEpochBasicsView>()
+        .view::<AssetsReloadEpochBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

@@ -219,6 +219,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-simple-todo", (640.0, 560.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<SimpleTodoView>()
+        .view::<SimpleTodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

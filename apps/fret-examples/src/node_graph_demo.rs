@@ -27,7 +27,8 @@ struct NodeGraphDemoView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("node-graph-demo")
         .window("node_graph_demo", (980.0, 720.0))
-        .run_view::<NodeGraphDemoView>()?;
+        .view::<NodeGraphDemoView>()?
+        .run()?;
     Ok(())
 }
 

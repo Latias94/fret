@@ -441,6 +441,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-canvas-pan-zoom-basics", (1120.0, 780.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<CanvasPanZoomBasicsView>()
+        .view::<CanvasPanZoomBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

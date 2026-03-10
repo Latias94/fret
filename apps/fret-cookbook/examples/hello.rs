@@ -70,6 +70,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-hello")
         .window("cookbook-hello", (560.0, 360.0))
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<HelloView>()
+        .view::<HelloView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

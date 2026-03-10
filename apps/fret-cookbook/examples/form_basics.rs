@@ -210,6 +210,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-form-basics", (720.0, 520.0))
         .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<FormBasicsView>()
+        .view::<FormBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

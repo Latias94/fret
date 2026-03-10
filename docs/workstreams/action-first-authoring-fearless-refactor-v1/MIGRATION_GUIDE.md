@@ -112,7 +112,8 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("my-demo")
         .window("my-demo", (560.0, 360.0))
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<MyView>()
+        .view::<MyView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 ```

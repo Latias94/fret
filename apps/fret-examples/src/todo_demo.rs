@@ -295,6 +295,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("todo-demo")
         .window("todo-demo", (860.0, 640.0))
         .config_files(false)
-        .run_view::<TodoDemoView>()
+        .view::<TodoDemoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

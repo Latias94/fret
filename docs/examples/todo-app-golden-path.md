@@ -117,7 +117,8 @@ use fret::app::prelude::*;
 fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 ```
@@ -144,7 +145,8 @@ fn install_app(app: &mut App) {
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:
         .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .run_view::<TodoView>()
+        .view::<TodoView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 ```

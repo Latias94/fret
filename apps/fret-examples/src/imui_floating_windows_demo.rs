@@ -14,7 +14,8 @@ struct ImUiFloatingWindowsView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-floating-windows-demo")
         .window("imui_floating_windows_demo", (720.0, 480.0))
-        .run_view::<ImUiFloatingWindowsView>()?;
+        .view::<ImUiFloatingWindowsView>()?
+        .run()?;
     Ok(())
 }
 

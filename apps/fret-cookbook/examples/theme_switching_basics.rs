@@ -166,6 +166,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-theme-switching-basics")
         .window("cookbook-theme-switching-basics", (720.0, 520.0))
         .setup(fret_cookbook::install_cookbook_defaults)
-        .run_view::<ThemeSwitchingBasicsView>()
+        .view::<ThemeSwitchingBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

@@ -170,6 +170,7 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-imui-action-basics", (720.0, 420.0))
         .setup(fret_cookbook::install_cookbook_defaults)
         .command_palette(true)
-        .run_view::<ImUiActionBasicsView>()
+        .view::<ImUiActionBasicsView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }

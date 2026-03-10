@@ -210,7 +210,8 @@ pub fn run() -> anyhow::Result<()> {
             install_tokio_spawner(app);
             apply_theme(app, false);
         })
-        .run_view::<AsyncPlaygroundView>()
+        .view::<AsyncPlaygroundView>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 

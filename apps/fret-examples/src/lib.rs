@@ -284,6 +284,13 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("ViewCx<'_, '_, App>"));
     }
 
+    fn assert_prefers_view_builder_then_run(src: &str) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains(".view::<"));
+        assert!(normalized.contains(".run()"));
+        assert!(!normalized.contains(".run_view::<"));
+    }
+
     fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
         let expected = format!(
             "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> ViewElements"
@@ -388,6 +395,29 @@ mod authoring_surface_policy_tests {
             TODO_DEMO,
         ] {
             assert_view_runtime_example_uses_app_ui_aliases(src);
+        }
+    }
+
+    #[test]
+    fn view_entry_examples_prefer_builder_then_run() {
+        for src in [
+            ASYNC_PLAYGROUND_DEMO,
+            CHART_DECLARATIVE_DEMO,
+            DROP_SHADOW_DEMO,
+            GENUI_DEMO,
+            HELLO_COUNTER_DEMO,
+            IMUI_FLOATING_WINDOWS_DEMO,
+            IMUI_HELLO_DEMO,
+            IMUI_NODE_GRAPH_DEMO,
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            IMUI_SHADCN_ADAPTER_DEMO,
+            MARKDOWN_DEMO,
+            NODE_GRAPH_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            QUERY_DEMO,
+            TODO_DEMO,
+        ] {
+            assert_prefers_view_builder_then_run(src);
         }
     }
 

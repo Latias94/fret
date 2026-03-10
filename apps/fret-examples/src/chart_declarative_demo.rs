@@ -17,7 +17,8 @@ struct ChartDeclarativeView {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("chart-declarative-demo")
         .window("chart_declarative_demo", (960.0, 720.0))
-        .run_view::<ChartDeclarativeView>()?;
+        .view::<ChartDeclarativeView>()?
+        .run()?;
     Ok(())
 }
 

@@ -1169,8 +1169,11 @@ mod tests {
 #[cfg(test)]
 mod authoring_surface_policy_tests {
     const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
+    const ROOT_README: &str = include_str!("../../../README.md");
     const README: &str = include_str!("../README.md");
     const DOCS_README: &str = include_str!("../../../docs/README.md");
+    const TODO_APP_GOLDEN_PATH: &str =
+        include_str!("../../../docs/examples/todo-app-golden-path.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
     const FEARLESS_REFACTORING: &str = include_str!("../../../docs/fearless-refactoring.md");
     const LIB_RS: &str = include_str!("lib.rs");
@@ -1253,9 +1256,21 @@ mod authoring_surface_policy_tests {
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
         assert!(README.contains("`state`: enable selector/query helpers on `AppUi`"));
+        assert!(!README.contains(".run_view::<"));
         assert!(!README.contains(".install_app("));
         assert!(!README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
         assert!(!README.contains("currently backed by `ViewCx`"));
+    }
+
+    #[test]
+    fn root_readme_and_golden_path_prefer_builder_then_run() {
+        assert!(ROOT_README.contains(".view::<TodoView>()?"));
+        assert!(ROOT_README.contains(".run()"));
+        assert!(!ROOT_README.contains(".run_view::<"));
+
+        assert!(TODO_APP_GOLDEN_PATH.contains(".view::<TodoView>()?"));
+        assert!(TODO_APP_GOLDEN_PATH.contains(".run()"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".run_view::<"));
     }
 
     #[test]

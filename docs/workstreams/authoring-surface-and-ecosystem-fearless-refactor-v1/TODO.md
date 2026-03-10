@@ -117,7 +117,7 @@ Companion docs:
 - [ ] Update `docs/first-hour.md`.
 - [x] Update the golden-path todo docs.
 - [x] Update scaffold templates in `apps/fretboard`.
-- [ ] Update official cookbook examples to use the new app surface.
+- [x] Update official cookbook examples to use the new app surface.
 - [x] Move advanced examples to explicit advanced imports when needed.
 - [ ] Remove or rewrite examples that still teach superseded patterns.
 
@@ -133,7 +133,8 @@ Companion docs:
 
 - [x] Add a gate that checks the app prelude stays app-only.
 - [x] Add a gate that checks low-level mechanism types do not leak into the app prelude.
-- [ ] Add a gate that templates only use blessed app-surface APIs.
+- [x] Add a gate that templates only use blessed app-surface APIs.
+- [x] Add source gates that keep default docs/examples/templates on `view::<V>()?.run()`.
 - [ ] Add a gate that README/docs/first-hour agree on the default action model.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
 - [ ] Keep layering checks green.
