@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::app::prelude::*;
 
 mod act {
     fret::payload_actions!([Remove(u64) = "cookbook.payload_actions.remove.v2"]);
@@ -23,31 +23,31 @@ struct Row {
     label: Arc<str>,
 }
 
-struct PayloadActionsView {
-    rows: Model<Vec<Row>>,
-}
+struct PayloadActionsView;
 
 impl View for PayloadActionsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        let rows = app.models_mut().insert(vec![
-            Row {
-                id: 1,
-                label: Arc::from("Parameterize actions without routers"),
-            },
-            Row {
-                id: 2,
-                label: Arc::from("Keep IR data-first (payload is transient)"),
-            },
-            Row {
-                id: 3,
-                label: Arc::from("Prepare for future DSL/frontends"),
-            },
-        ]);
-        Self { rows }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let rows_snapshot = cx.watch_model(&self.rows).layout().value_or_default();
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let rows_state = cx.state().local_init(|| {
+            vec![
+                Row {
+                    id: 1,
+                    label: Arc::from("Parameterize actions without routers"),
+                },
+                Row {
+                    id: 2,
+                    label: Arc::from("Keep IR data-first (payload is transient)"),
+                },
+                Row {
+                    id: 3,
+                    label: Arc::from("Prepare for future DSL/frontends"),
+                },
+            ]
+        });
+        let rows_snapshot = cx.state().watch(&rows_state).layout().value_or_default();
 
         let rows_el = ui::v_flex_build(|cx, out| {
             for row in &rows_snapshot {
@@ -79,17 +79,13 @@ impl View for PayloadActionsView {
         .w_full()
         .test_id(TEST_ID_ROWS);
 
-        cx.on_payload_action::<act::Remove>({
-            let rows = self.rows.clone();
-            move |host, acx, id| {
-                let _ = host.models_mut().update(&rows, |rows| {
-                    rows.retain(|r| r.id != id);
-                });
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.actions()
+            .payload::<act::Remove>()
+            .local_update_if::<Vec<Row>>(&rows_state, |rows, id| {
+                let before = rows.len();
+                rows.retain(|row| row.id != id);
+                rows.len() != before
+            });
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(

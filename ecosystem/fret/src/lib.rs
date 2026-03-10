@@ -210,14 +210,12 @@ pub mod app {
         pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};
         pub use crate::{actions, workspace_menu};
         pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, TextOverflow, TextWrap};
-        #[cfg(feature = "icons")]
         pub use fret_icons::IconId;
         pub use fret_runtime::{ActionId, CommandId, TypedAction};
         pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps};
         pub use fret_ui::{Theme, ThemeSnapshot};
         pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
-        #[cfg(feature = "icons")]
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::declarative::prelude::*;
         pub use fret_ui_kit::ui;
@@ -1075,7 +1073,9 @@ mod authoring_surface_policy_tests {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
         assert!(app_prelude.contains("pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};"));
+        assert!(app_prelude.contains("pub use fret_icons::IconId;"));
         assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+        assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
     }
 }

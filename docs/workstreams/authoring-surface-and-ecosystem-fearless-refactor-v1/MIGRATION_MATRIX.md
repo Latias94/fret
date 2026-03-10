@@ -79,7 +79,7 @@ An old surface is eligible for deletion only when all of the following are true:
 | `docs/README.md` | canonical index, but still references old names/mental models in places | points to new product surface and migration tracker | docs consistency gate covers docs index | In progress | `docs/README.md` |
 | `docs/first-hour.md` | strong default guidance, still tied to current naming | teach `FretApp`, `AppUi`, grouped namespaces | templates and cookbook match exactly | In progress | `docs/first-hour.md` |
 | scaffold templates | current `hello/simple-todo/todo` teach old surface names | teach only new app surface | template gate added and green | Migrated | `apps/fretboard/src/scaffold/templates.rs` |
-| cookbook official examples | current view runtime posture | new app surface posture | no official example teaches the old surface | Migrated | `apps/fret-cookbook/examples/` |
+| cookbook official examples | current view runtime posture | new app surface posture | no official example teaches the old surface | In progress | `apps/fret-cookbook/examples/` |
 | comparison/advanced examples | mixed by design | explicit advanced/component imports where appropriate | examples taxonomy is clear and documented | Not started | `docs/examples/README.md` |
 
 ## Hard Delete Matrix

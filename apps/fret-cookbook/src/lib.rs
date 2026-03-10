@@ -20,10 +20,15 @@ pub fn install_cookbook_defaults(app: &mut KernelApp) {
 mod authoring_surface_policy_tests {
     const ROOT_README: &str = include_str!("../../../README.md");
     const GOLDEN_PATH_DOC: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
+    const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
+    const HELLO_COUNTER_EXAMPLE: &str = include_str!("../examples/hello_counter.rs");
+    const PAYLOAD_ACTIONS_EXAMPLE: &str = include_str!("../examples/payload_actions_basics.rs");
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
+    const TEXT_INPUT_EXAMPLE: &str = include_str!("../examples/text_input_basics.rs");
+    const TOGGLE_EXAMPLE: &str = include_str!("../examples/toggle_basics.rs");
 
     fn assert_uses_app_surface(src: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
@@ -56,6 +61,33 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+    }
+
+    #[test]
+    fn migrated_basics_examples_use_the_new_app_surface() {
+        assert_uses_app_surface(HELLO_COUNTER_EXAMPLE);
+        assert_uses_app_surface(TEXT_INPUT_EXAMPLE);
+        assert_uses_app_surface(TOGGLE_EXAMPLE);
+        assert_uses_app_surface(PAYLOAD_ACTIONS_EXAMPLE);
+
+        assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().local_set::<act::Reset, i64>"));
+
+        assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().locals::<act::Submit>"));
+        assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().availability::<act::Submit>"));
+
+        assert!(TOGGLE_EXAMPLE.contains("toggle_local_bool::<act::ToggleBookmark>"));
+
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
+    }
+
+    #[test]
+    fn shared_scaffold_uses_component_surface_instead_of_legacy_prelude() {
+        assert!(SCAFFOLD.contains("use fret::component::prelude::*;"));
+        assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
     }
 
     #[test]

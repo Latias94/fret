@@ -4,7 +4,7 @@
 //! to keep the "page shell" consistent (background, padding, card centering) without turning the
 //! cookbook crate into a reusable product API.
 
-use fret::prelude::*;
+use fret::component::prelude::*;
 
 /// Builds a centered cookbook page with a single primary surface (typically a Card).
 ///

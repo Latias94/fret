@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_app::{CommandMeta, CommandScope};
 use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 
@@ -14,7 +14,7 @@ const TEST_ID_INPUT: &str = "cookbook.text_input_basics.input";
 const TEST_ID_LEN: &str = "cookbook.text_input_basics.len";
 const TEST_ID_SUBMITTED_COUNT: &str = "cookbook.text_input_basics.submitted_count";
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let submit: CommandId = act::Submit.into();
     let submit_meta = CommandMeta::new("Submit input")
         .with_description("Submits the current input value (clears on submit).")
@@ -46,16 +46,24 @@ impl TextInputBasicsView {
 }
 
 impl View for TextInputBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let text_state = cx.use_local::<String>();
-        let submitted_count_state = cx.use_local::<u32>();
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let text_state = cx.state().local::<String>();
+        let submitted_count_state = cx.state().local::<u32>();
 
-        let text = text_state.watch(cx).layout().value_or_else(String::new);
-        let submitted_count = submitted_count_state.watch(cx).layout().value_or(0);
+        let text = cx
+            .state()
+            .watch(&text_state)
+            .layout()
+            .value_or_else(String::new);
+        let submitted_count = cx
+            .state()
+            .watch(&submitted_count_state)
+            .layout()
+            .value_or(0);
 
         let text_len_chars = text.chars().count() as u32;
         let text_len = text_len_chars as f64;
@@ -89,7 +97,7 @@ impl View for TextInputBasicsView {
             .cancel_command(act::Clear.into())
             .test_id(TEST_ID_INPUT);
 
-        cx.on_action_notify_locals::<act::Submit>({
+        cx.actions().locals::<act::Submit>({
             let text_state = text_state.clone();
             let submitted_count_state = submitted_count_state.clone();
             move |tx| {
@@ -105,7 +113,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_notify_locals::<act::Clear>({
+        cx.actions().locals::<act::Clear>({
             let text_state = text_state.clone();
             move |tx| {
                 let text = tx.value_or_else(&text_state, String::new);
@@ -117,7 +125,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Submit>({
+        cx.actions().availability::<act::Submit>({
             let text_state = text_state.clone();
             move |host, _acx| {
                 if TextInputBasicsView::has_text(host, &text_state) {
@@ -128,7 +136,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Clear>({
+        cx.actions().availability::<act::Clear>({
             let text_state = text_state.clone();
             move |host, _acx| {
                 if TextInputBasicsView::has_text(host, &text_state) {
