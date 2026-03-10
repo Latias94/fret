@@ -4,6 +4,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::theme_tokens::{
+    workspace_frame_background, workspace_status_bar_background, workspace_status_bar_border,
+    workspace_top_bar_background, workspace_top_bar_border,
+};
+
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -92,7 +97,9 @@ impl WorkspaceFrame {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
-        let background = self.background.or_else(|| theme.color_by_key("background"));
+        let background = self
+            .background
+            .or_else(|| workspace_frame_background(theme));
 
         let top = self.top;
         let left = self.left;
@@ -207,10 +214,8 @@ impl WorkspaceTopBar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
-        let bg = theme
-            .color_by_key("muted")
-            .or_else(|| theme.color_by_key("background"));
-        let border = theme.color_by_key("border");
+        let bg = workspace_top_bar_background(theme);
+        let border = workspace_top_bar_border(theme);
 
         cx.container(
             ContainerProps {
@@ -320,10 +325,8 @@ impl WorkspaceStatusBar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
-        let bg = theme
-            .color_by_key("muted")
-            .or_else(|| theme.color_by_key("background"));
-        let border = theme.color_by_key("border");
+        let bg = workspace_status_bar_background(theme);
+        let border = workspace_status_bar_border(theme);
 
         cx.container(
             ContainerProps {

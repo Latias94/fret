@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-image-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-compositions-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-meeting-notes-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-preview-only-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-preview-only-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-page-shell-only-memory-steady.json",
+    "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-scaffold-only-memory-steady.json"
+  ]
+}

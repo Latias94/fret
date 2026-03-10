@@ -41,14 +41,14 @@ impl View for QueryBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let fail_mode = cx.use_state::<bool>();
-        let invalidate_requested = cx.use_state::<bool>();
-        let invalidate_namespace_requested = cx.use_state::<bool>();
+        let fail_mode = cx.use_local::<bool>();
+        let invalidate_requested = cx.use_local::<bool>();
+        let invalidate_namespace_requested = cx.use_local::<bool>();
 
-        cx.on_action_notify_toggle_bool::<act::ToggleErrorMode>(fail_mode.clone());
-        cx.on_action_notify_model_set::<act::Invalidate, bool>(invalidate_requested.clone(), true);
-        cx.on_action_notify_model_set::<act::InvalidateNamespace, bool>(
-            invalidate_namespace_requested.clone(),
+        cx.on_action_notify_toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
+        cx.on_action_notify_local_set::<act::Invalidate, bool>(&invalidate_requested, true);
+        cx.on_action_notify_local_set::<act::InvalidateNamespace, bool>(
+            &invalidate_namespace_requested,
             true,
         );
         cx.on_action_availability::<act::ToggleErrorMode>(|_host, _acx| {
@@ -59,15 +59,9 @@ impl View for QueryBasicsView {
             CommandAvailability::Available
         });
 
-        let fail_mode_enabled = cx.watch_model(&fail_mode).layout().copied_or(false);
-        let do_invalidate = cx
-            .watch_model(&invalidate_requested)
-            .layout()
-            .copied_or(false);
-        let do_invalidate_namespace = cx
-            .watch_model(&invalidate_namespace_requested)
-            .layout()
-            .copied_or(false);
+        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
+        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
+        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
         let window = cx.window;
 
         if do_invalidate {
@@ -75,20 +69,14 @@ impl View for QueryBasicsView {
             let _ = with_query_client(cx.app, |client, app| {
                 client.invalidate(app, key);
             });
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&invalidate_requested, |v| *v = false);
+            let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
             cx.app.request_redraw(window);
         }
         if do_invalidate_namespace {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(QUERY_NS);
             });
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&invalidate_namespace_requested, |v| *v = false);
+            let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
             cx.app.request_redraw(window);
         }
 
@@ -109,10 +97,9 @@ impl View for QueryBasicsView {
             })
         });
 
-        let state = cx
-            .watch_model(handle.model())
-            .layout()
-            .cloned_or_else(QueryState::<DemoData>::default);
+        let state = handle
+            .layout(cx)
+            .value_or_else(QueryState::<DemoData>::default);
 
         let status_label = match state.status {
             QueryStatus::Idle => "Idle",
@@ -127,7 +114,6 @@ impl View for QueryBasicsView {
             "Mode: Ok"
         })
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
         .test_id(TEST_ID_MODE_BADGE);
 
         let status_badge = shadcn::Badge::new(status_label)
@@ -136,7 +122,6 @@ impl View for QueryBasicsView {
                 QueryStatus::Error => shadcn::BadgeVariant::Destructive,
                 QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
             })
-            .into_element(cx)
             .test_id(TEST_ID_STATUS_BADGE);
 
         let data_line: Arc<str> = state
@@ -148,23 +133,20 @@ impl View for QueryBasicsView {
         let invalidate_btn = shadcn::Button::new("Invalidate")
             .variant(shadcn::ButtonVariant::Default)
             .action(act::Invalidate)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_INVALIDATE);
         let invalidate_ns_btn = shadcn::Button::new("Invalidate namespace")
             .variant(shadcn::ButtonVariant::Ghost)
             .action(act::InvalidateNamespace)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_INVALIDATE_NS);
         let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::ToggleErrorMode)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_TOGGLE_MODE);
 
-        let buttons = ui::h_flex(|_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+        let buttons =
+            ui::h_flex(|cx| ui::children![cx; invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
+                .gap(Space::N2)
+                .items_center();
 
         let lines = ui::v_flex(|cx| {
             let data = cx.text(data_line).test_id(TEST_ID_DATA_LINE);
@@ -174,35 +156,44 @@ impl View for QueryBasicsView {
             }
             out
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Query basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A tiny async resource example using fret-query (invalidate + error mode).",
-            )
-            .into_element(cx),
-            ui::h_flex(|_cx| [status_badge, mode_badge])
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-        ])
-        .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Query basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A tiny async resource example using fret-query (invalidate + error mode).",
+                        ),
+                    );
+                    out.push_ui(
+                        cx,
+                        ui::h_flex(|cx| ui::children![cx; status_badge, mode_badge])
+                            .gap(Space::N2)
+                            .items_center(),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; buttons, lines])
+                            .gap(Space::N4)
+                            .w_full(),
+                    );
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(560.0));
 
-        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [buttons, lines])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx)])
-        .into_element(cx);
-
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(560.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

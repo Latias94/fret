@@ -9,6 +9,12 @@ New to the repo? Start with:
 - Setup (native: toolchain + OS deps + fast builds): [docs/setup.md](./setup.md)
 - Examples index (templates + cookbook + gallery + labs): [docs/examples/README.md](./examples/README.md)
 
+Default onboarding ladder:
+
+- **Default**: `hello` → `simple-todo` → `todo`
+- **Comparison**: `simple_todo_v2_target` when you want to compare authoring density or local-state/list tradeoffs
+- **Advanced**: gallery, interop, docking, renderer, and maintainer harnesses
+
 ## Command conventions (docs)
 
 Unless a document says otherwise:
@@ -26,10 +32,11 @@ Unless a document says otherwise:
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Action-first authoring + view runtime refactor: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - Current endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
-- Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
+- Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md`
 - App entry builder v1 (`fret::App` onboarding + builder/hook story): `docs/workstreams/app-entry-builder-v1/DESIGN.md`, `docs/workstreams/app-entry-builder-v1/TODO.md`, and `docs/workstreams/app-entry-builder-v1/MILESTONES.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
 - Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
@@ -41,6 +48,7 @@ Unless a document says otherwise:
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
+- Text style cascade fearless refactor (GPUI-style subtree text refinement for passive text): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`
 - Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
 - Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`
@@ -56,7 +64,9 @@ Unless a document says otherwise:
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
 - UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
+- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port.md`, `docs/workstreams/ai-elements-port-todo.md`, and `docs/workstreams/ai-elements-upstream-alignment.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
+- Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
@@ -101,25 +111,34 @@ Portable profiles we treat as regression gates:
 
 ## State management (authoring ergonomics)
 
-Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalidation, driver-boundary inbox draining),
-so the default authoring story lives in ecosystem crates.
+Fret’s kernel/runtime primitives are intentionally small (`Model<T>`, tracked invalidation,
+driver-boundary inbox draining), so the default app-authoring story lives in ecosystem crates and is
+now taught as `LocalState` + view runtime + typed actions.
 
 - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - Endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new todo`, `cargo run -p fretboard -- new simple-todo`
+  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
-  - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
+- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
-  - `cx.on_action_notify_models::<A>(|models| ...)` - default for most typed UI actions.
+  - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
+  - `cx.on_action_notify_locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
+  - `cx.on_action_notify_models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
   - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
   - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, router availability sync, background scheduling, RAF effects).
+- Surface taxonomy:
+  - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
+  - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples
+  - **Advanced**: gallery, viewport/interop, docking, renderer, maintainer harnesses
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
+- Authoring golden path (v2): `docs/authoring-golden-path-v2.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`
   - Persistence (sqlite/sqlx): `docs/integrating-sqlite-and-sqlx.md`
@@ -141,9 +160,10 @@ so the default authoring story lives in ecosystem crates.
 10. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
 11. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
 12. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-13. `docs/known-issues.md` — common diagnostics and current platform limitations.
-14. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-15. ADR deep dives (pick by subsystem):
+13. `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md` — one-page status view for what is done, what is maintenance mode, what is still architectural, and what remains on the hard-delete track.
+14. `docs/known-issues.md` — common diagnostics and current platform limitations.
+15. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+16. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`

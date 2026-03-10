@@ -10,8 +10,16 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let cell = |cx: &mut ElementContext<'_, App>, card: shadcn::Card| {
-        card.refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
+    let cell = |cx: &mut ElementContext<'_, App>, test_id: &'static str, card: shadcn::Card| {
+        let card = card
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0)))
+            .into_element(cx)
+            .test_id(test_id);
+
+        ui::v_flex(move |_cx| vec![card])
+            .w_full()
+            .min_w_0()
+            .items_start()
             .into_element(cx)
     };
 
@@ -34,7 +42,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-content-only", card)
             };
 
             let header_only = {
@@ -48,15 +56,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-only", card)
             };
 
             let header_and_content = {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Content").into_element(cx),
-                        shadcn::CardDescription::new("This card has header + content.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
@@ -64,7 +70,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-content", card)
             };
 
             let footer_only = {
@@ -74,15 +80,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-footer-only", card)
             };
 
             let header_and_footer = {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Footer").into_element(cx),
-                        shadcn::CardDescription::new("No CardContent in this one.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardFooter::new(vec![
@@ -90,7 +94,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-header-footer", card)
             };
 
             let content_and_footer = {
@@ -104,15 +108,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-content-footer", card)
             };
 
             let header_content_footer = {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header + Content + Footer").into_element(cx),
-                        shadcn::CardDescription::new("The common default composition.")
-                            .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
@@ -124,34 +126,22 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(
+                    cx,
+                    "ui-gallery-card-compositions-header-content-footer",
+                    card,
+                )
             };
 
-            let header_with_border = {
+            let bordered_sections = {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Header with Border").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "CardHeader can render a bottom border (optional).",
-                        )
-                        .into_element(cx),
+                        shadcn::CardTitle::new("Bordered Sections").into_element(cx),
                     ])
                     .border_bottom(true)
                     .into_element(cx),
                     shadcn::CardContent::new(vec![
-                        ui::text("Content under a bordered header.")
-                            .text_sm()
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]);
-                cell(cx, card)
-            };
-
-            let footer_with_border = {
-                let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![
-                        ui::text("Content above a bordered footer.")
+                        ui::text("Header/footer borders can be enabled independently.")
                             .text_sm()
                             .into_element(cx),
                     ])
@@ -162,7 +152,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .border_top(true)
                     .into_element(cx),
                 ]);
-                cell(cx, card)
+                cell(cx, "ui-gallery-card-compositions-bordered-sections", card)
             };
 
             vec![
@@ -173,8 +163,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 header_and_footer,
                 content_and_footer,
                 header_content_footer,
-                header_with_border,
-                footer_with_border,
+                bordered_sections,
             ]
         },
     )

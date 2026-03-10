@@ -155,16 +155,18 @@ an interactive chat demo:
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
-  - `AI code block (demo)` (`ai_code_block_demo`): `CodeBlock` + `Snippet` demo + gate:
+  - `AI code block (demo)` (`ai_code_block_demo`): docs-aligned `CodeBlock` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
   - `AI commit (demo)` (`ai_commit_demo`): `Commit` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
   - `AI commit large (demo)` (`ai_commit_large_demo`): long file list + scroll + file-path click seam gate:
     - `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
-  - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
-    - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `AI stack trace (demo)` (`ai_stack_trace_demo`): docs-aligned `StackTrace` page with default-open, collapsed, and hide-internal examples; gated by:
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-demo-copy.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-collapsed.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-no-internal.json`
   - `AI stack trace large (demo)` (`ai_stack_trace_large_demo`): long frame list + scroll + file-path click seam gate:
-    - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+    - `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-stack-trace-large-scroll.json`
   - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
   - `AI test results large (demo)` (`ai_test_results_large_demo`): long test list + scroll + activate seam gate:
@@ -190,7 +192,9 @@ effects/policy app-owned and to fit Fret’s action-hook model. If upstream beha
 this section as part of the “Version stamp” bump.
 
 - `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
+- `CommitSeparator`, `CommitTimestamp`, and `CommitFileStatus` (`commit.tsx`): Fret now exposes `children(...)` hooks for the three upstream custom-content slots, so the UI Gallery page can mirror the official docs composition model.
 - `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
+- `StackTrace` compound parts are composed via closure-based `into_element_with_children(...)` instead of eager child collection so inherited provider state is established before parts resolve context.
 - `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.
 - `Test` rows (`test-results.tsx`): upstream renders tests as a non-interactive row by default; Fret keeps the default non-interactive but adds an optional activation seam (`Test::on_activate(OnTestActivate)`) for editor-style “open test output” flows.
 

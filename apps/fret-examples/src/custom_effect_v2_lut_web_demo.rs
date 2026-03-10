@@ -408,7 +408,7 @@ impl CustomEffectV2LutWebDriver {
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
+        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
@@ -427,7 +427,7 @@ impl CustomEffectV2LutWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let radius = Px(lens_corner_radius_px);
 
@@ -667,7 +667,7 @@ impl CustomEffectV2LutWebDriver {
                 ])
                 .into_element(cx);
 
-                let mode_row = ui::v_flex(move |cx| {
+                let mode_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
                     vec![
                         label_row(cx, "Effect mode", mode_value.clone()),
                         shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
@@ -829,72 +829,77 @@ impl CustomEffectV2LutWebDriver {
                 .gap(Space::N2)
                 .into_element(cx);
 
-                let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
-                    let supported = cx
-                        .app
-                        .global::<RendererCapabilities>()
-                        .map(|c| c.custom_effect_v2_user_image)
-                        .unwrap_or(false);
-                    vec![
-                        ui::h_row(|cx| {
-                            [
-                                shadcn::Switch::new(controls.enabled.clone())
-                                    .a11y_label("Enable the effect layer")
-                                    .test_id("custom-effect-v2-lut-web.enabled")
-                                    .into_element(cx),
-                                shadcn::Label::new("Enable").into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        mode_row,
-                        quality_row,
-                        sampling_row,
-                        uv_span_row,
-                        strength_row,
-                        max_sample_offset_row,
-                        tint_row,
-                        blur_radius_row,
-                        blur_downsample_row,
-                        shadcn::Separator::new().into_element(cx),
-                        lens_corner_row,
-                        tile_corner_row,
-                        ui::h_row(|cx| {
-                            [
-                                shadcn::Switch::new(controls.debug_input.clone())
-                                    .a11y_label("Show the input image")
-                                    .test_id("custom-effect-v2-lut-web.debug-input")
-                                    .into_element(cx),
-                                shadcn::Label::new("Show input").into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        shadcn::Button::new("Reset")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .on_activate(reset.clone())
-                            .test_id("custom-effect-v2-lut-web.reset")
+                let content = shadcn::CardContent::new([ui::v_flex(
+                    move |cx: &mut ElementContext<'_, App>| {
+                        let supported = cx
+                            .app
+                            .global::<RendererCapabilities>()
+                            .map(|c| c.custom_effect_v2_user_image)
+                            .unwrap_or(false);
+                        vec![
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(controls.enabled.clone())
+                                        .a11y_label("Enable the effect layer")
+                                        .test_id("custom-effect-v2-lut-web.enabled")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
                             .into_element(cx),
-                        ui::h_row(move |cx| {
-                            [
-                                shadcn::Label::new("Supported").into_element(cx),
-                                cx.spacer(SpacerProps::default()),
-                                shadcn::Badge::new(format!("{supported}"))
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                        shadcn::CardDescription::new("Keys: V toggle surface, R reset controls.")
+                            mode_row,
+                            quality_row,
+                            sampling_row,
+                            uv_span_row,
+                            strength_row,
+                            max_sample_offset_row,
+                            tint_row,
+                            blur_radius_row,
+                            blur_downsample_row,
+                            shadcn::Separator::new().into_element(cx),
+                            lens_corner_row,
+                            tile_corner_row,
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(controls.debug_input.clone())
+                                        .a11y_label("Show the input image")
+                                        .test_id("custom-effect-v2-lut-web.debug-input")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Show input").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
                             .into_element(cx),
-                    ]
-                })
+                            shadcn::Button::new("Reset")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .on_activate(reset.clone())
+                                .test_id("custom-effect-v2-lut-web.reset")
+                                .into_element(cx),
+                            ui::h_row(move |cx| {
+                                [
+                                    shadcn::Label::new("Supported").into_element(cx),
+                                    cx.spacer(SpacerProps::default()),
+                                    shadcn::Badge::new(format!("{supported}"))
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
+                            shadcn::CardDescription::new(
+                                "Keys: V toggle surface, R reset controls.",
+                            )
+                            .into_element(cx),
+                        ]
+                    },
+                )
                 .gap(Space::N3)
-                .items_stretch()])
+                .items_stretch()
+                .into_element(cx)])
                 .into_element(cx);
 
                 vec![
@@ -1278,7 +1283,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo custom_effect_v2_lut_web_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     }
 }

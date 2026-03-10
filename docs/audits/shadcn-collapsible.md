@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit — Collapsible
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -9,50 +8,46 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Collapsible` surface against the upstream shadcn/ui v4
-docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Collapsible` against the upstream shadcn/ui v4 base docs,
+base examples, and the current gallery/docs surface.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/collapsible.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/collapsible.tsx`
-- Registry demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx`
-- Underlying primitive: Radix `@radix-ui/react-collapsible`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/collapsible.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/collapsible-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-basic.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-settings.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-file-tree.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-rtl.tsx`
+- Underlying primitive: Base UI `@base-ui/react/collapsible`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
-- Radix-aligned primitive helpers: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
+- Primitive/motion helpers: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/collapsible.rs`
 
 ## Audit checklist
 
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
-- Pass: A composable Radix/shadcn-shaped children surface is also available via
-  `fret_ui_shadcn::collapsible_primitives`.
-- Note: Fret intentionally does not add a generic `compose()` builder on the top-level shadcn
-  wrapper because the composable children API already exists in `collapsible_primitives`, while the
-  wrapper keeps a compact closure-based ergonomic API.
+- Pass: A source-aligned children surface is available via `fret_ui_shadcn::collapsible::primitives`.
+- Pass: The legacy flat module path `fret_ui_shadcn::collapsible_primitives` remains available for compatibility.
+- Pass: No extra generic `compose()` API is needed here because the primitives surface already covers the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
 - Pass: Supports a controlled open state (`Model<bool>`).
-- Pass: Supports uncontrolled `defaultOpen` (internal open model).
+- Pass: Supports uncontrolled `default_open` via `Collapsible::uncontrolled(...)`.
 
-### A11y behavior
+### A11y and motion behavior
 
-- Pass: Trigger exposes an expanded outcome (`expanded=true/false`).
-- Pass: Trigger can model Radix `aria-controls` via the `controls_element` relationship when the
-  content wrapper is mounted.
+- Pass: Trigger exposes the expected expanded/collapsed outcome.
+- Pass: Trigger/content wiring can model the equivalent of `aria-controls` through the registered controls relationship.
+- Pass: Measured open/close motion remains implementation-owned in the primitive/recipe layer; no mechanism-layer drift was identified in this pass.
 
-### Content mount/unmount
+### Gallery / docs parity
 
-- Pass: Upstream uses `Presence` + measured content dimensions for height animations; Fret models
-  the same outcome by caching the measured content height in per-element state and driving a clipped
-  wrapper height using an eased 0..1 progress value.
-  - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
-  - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
-  - Note: Fret does not expose Radix's `--radix-collapsible-content-height/width` CSS variables; the
-    cached size is stored in element state.
+- Pass: The gallery now mirrors the upstream base Collapsible docs path first: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.
+- Pass: The `Basic` section maps to the upstream outcome even though the example is authored through Fret's compact top-level wrapper rather than only the primitives path.
+- Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib collapsible`
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib collapsible`

@@ -103,6 +103,7 @@ pub mod switch;
 pub mod table;
 pub mod tabs;
 mod text_edit_context_menu;
+pub mod text_value_model;
 pub mod textarea;
 pub mod toast;
 pub mod toggle;
@@ -130,8 +131,8 @@ pub use accordion::{
 pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
-    AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHandle, AlertDialogHeader,
+    AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
 };
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{
@@ -157,7 +158,8 @@ pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection, CardHeader,
-    CardSize, CardTitle,
+    CardSize, CardTitle, card, card_action, card_content, card_description,
+    card_description_children, card_footer, card_header, card_sized, card_title,
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayApi,
@@ -228,8 +230,9 @@ pub use dialog::{
 };
 pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_direction_provider};
 pub use drawer::{
-    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
-    DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
+    DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
+    DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -339,6 +342,7 @@ pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
     TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
 };
+pub use text_value_model::IntoTextValueModel;
 pub use textarea::{Textarea, textarea};
 pub use toggle::{
     Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,

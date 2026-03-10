@@ -1,6 +1,6 @@
 ---
 title: Onboarding Ergonomics + Ecosystem Interop (v1)
-status: draft
+status: historical reference (superseded by action-first v2 authoring docs)
 date: 2026-02-15
 scope: first-time app authoring + interop “Tier A” embedding (native-first; wasm follow-up)
 ---
@@ -31,6 +31,8 @@ Tracking:
 
 - TODO list: `docs/workstreams/onboarding-ergonomics-v1-todo.md`
 - Milestones: `docs/workstreams/onboarding-ergonomics-v1-milestones.md`
+
+Status note (2026-03-08): this document is now historical planning context. The current onboarding/default-path guidance lives in `docs/first-hour.md`, `docs/examples/todo-app-golden-path.md`, and `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`. References below to MVU/`Model<T>` as the starter path should be read as superseded, not current guidance.
 
 ---
 
@@ -74,7 +76,7 @@ These are the decisions agreed in discussion so far:
 The current golden path is strong, but a new user can still experience:
 
 1. **Concept density too early**
-   - A template/demo can introduce: `Model`, explicit invalidation, MVU router, selector-derived
+   - A template/demo can introduce: `LocalState`, explicit invalidation guidance, typed action handlers, selector-derived
      state, query/async state, tokens/theme, and shadcn recipes in one go.
    - This is great as a “best practice baseline”, but it is not the best *first hour*.
 
@@ -118,7 +120,7 @@ Targets (v1 direction):
 We should explicitly support an onboarding ladder:
 
 - **Step 0**: “Hello UI” (no selector/query; minimal state).
-- **Step 1**: “Local state” with `Model<T>` + typed commands (MVU).
+- **Step 1**: “Local state” with `LocalState<T>` + typed actions on the view-runtime path.
 - **Step 2**: “Derived state” (selectors) once the app needs projections/counters.
 - **Step 3**: “Async state” (queries) once the app needs caching + lifecycle.
 - **Step 4**: “Editor-grade” modules (docking, multi-window, viewports).
@@ -164,7 +166,7 @@ Introduce template variants that map to the onboarding ladder:
 
 - `fretboard new hello` (already minimal) → ensure it uses the most ergonomic primitives.
 - `fretboard new simple-todo`:
-  - `Model<T>` + typed MVU messages + shadcn components,
+  - `LocalState<T>` + typed actions + shadcn components,
   - no selectors, no queries,
   - focuses on identity (`cx.keyed`) and basic layout.
 - `fretboard new todo` (current golden baseline):
@@ -175,7 +177,7 @@ Introduce template variants that map to the onboarding ladder:
 Add a short, friendly “first hour” doc that teaches:
 
 - which crate to depend on (`fret`),
-- the minimal mental model for `Model<T>` and typed commands,
+- the minimal mental model for `LocalState<T>` / typed actions / keyed lists,
 - how to choose invalidation levels (rule-of-thumb table),
 - how to build lists with keys (and why),
 - how to use `ui::*` constructors to avoid props noise.
@@ -409,12 +411,12 @@ Notes:
 - This is ecosystem-only, so it does not violate the “mechanism-only kernel” rule.
 - This is also the most important prerequisite for `simple-todo` to feel truly “newbie-friendly”.
 
-### F) MVU ergonomics: document the “tick refresh” posture and a future escape hatch
+### F) Historical MVU note: keep the old “tick refresh” discussion as archive context only
 
-`fret::mvu` currently optimizes for “it works” by forcing a full layout refresh after each update.
-That is a valid onboarding tradeoff, but we should:
+The old `fret::mvu` path used to optimize for “it works” by forcing a full layout refresh after each update.
+That discussion is now historical only; the in-tree default path is action-first view runtime, so we should:
 
-- document it clearly as a v1 default,
+- keep it documented only as external/historical migration context,
 - define a path to opt into more precise invalidation later (if needed),
 - add perf/diagnostic guidance for when MVU apps grow.
 

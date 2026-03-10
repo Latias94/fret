@@ -313,11 +313,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Eleme
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
     let use_non_filterable_input = cx
         .watch_model(&st.use_non_filterable_input)
         .layout()
-        .copied_or(false);
+        .value_or(false);
     let input_image = if use_non_filterable_input {
         non_filterable_input_image
     } else {
@@ -334,7 +334,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Eleme
     let input_strength = watch_first_f32(cx, &st.input_strength, 0.35);
     let rim_strength = watch_first_f32(cx, &st.rim_strength, 0.65);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 10.0);
-    let debug_input = cx.watch_model(&st.debug_input).layout().copied_or(false);
+    let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);
 
     let inspector = inspector(
         cx,

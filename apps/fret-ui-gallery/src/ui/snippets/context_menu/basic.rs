@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
@@ -23,12 +24,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 vec![
                     shadcn::ContextMenuEntry::Item(
                         shadcn::ContextMenuItem::new("Profile")
+                            .action(CommandId::new("ui_gallery.context_menu.basic.profile"))
                             .test_id("ui-gallery-context-menu-basic-profile"),
                     ),
-                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Billing")),
-                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Team")),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Billing")
+                            .action(CommandId::new("ui_gallery.context_menu.basic.billing")),
+                    ),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Team")
+                            .action(CommandId::new("ui_gallery.context_menu.basic.team")),
+                    ),
                     shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Subscription")),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Subscription")
+                            .action(CommandId::new("ui_gallery.context_menu.basic.subscription")),
+                    ),
                 ]
             },
         )

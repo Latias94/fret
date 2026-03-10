@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: AI conversation demo prompt send click works when fully visible",
+    "tags": ["ui-gallery", "ai-elements", "conversation", "prompt-input"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the AI Elements Conversation demo page.",
+      "Scrolls the send button itself fully into view before clicking it.",
+      "Verifies clicking send appends one message to the conversation."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 1000.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai_conversation_demo" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-conversation-demo" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-conversation-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-ai-conversation-demo" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 0.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" },
+      "delta_y": 220.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "Click send should append exactly one message.",
+      "clear_before_type": true
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" },
+      "delta_y": 120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-conversation-demo-prompt-send-click" }
+  ]
+}

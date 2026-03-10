@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -30,7 +31,8 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, ui,
 };
 
 use crate::overlay_motion;
@@ -133,14 +135,83 @@ pub struct DropdownMenuTrigger {
     child: AnyElement,
 }
 
+pub struct DropdownMenuTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl DropdownMenuTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> DropdownMenuTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        DropdownMenuTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> DropdownMenuTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> DropdownMenuTrigger {
+        DropdownMenuTrigger::new(
+            self.child
+                .expect("expected dropdown-menu trigger child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_trigger(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost> UiHostBoundIntoElement<H> for DropdownMenuTrigger {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DropdownMenuTrigger::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost> UiChildIntoElement<H> for DropdownMenuTrigger {
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DropdownMenuTrigger::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for DropdownMenuTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DropdownMenuTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for DropdownMenuTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DropdownMenuTriggerBuild::into_element(self, cx)
     }
 }
 
@@ -543,8 +614,26 @@ impl DropdownMenuItem {
         self
     }
 
+    /// Bind a stable action ID to this dropdown-menu item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn trailing_on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.trailing_command = Some(command.into());
+        self
+    }
+
+    /// Bind a stable action ID to the trailing affordance on this dropdown-menu item.
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn trailing_action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.trailing_command = Some(action.into());
         self
     }
 
@@ -646,6 +735,15 @@ impl DropdownMenuCheckboxItem {
         self
     }
 
+    /// Bind a stable action ID to this dropdown-menu checkbox item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -743,6 +841,15 @@ impl DropdownMenuRadioItemSpec {
         self
     }
 
+    /// Bind a stable action ID to this dropdown-menu radio item spec (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -826,6 +933,15 @@ impl DropdownMenuRadioItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Bind a stable action ID to this dropdown-menu radio item (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
         self
     }
 
@@ -1729,11 +1845,40 @@ impl DropdownMenu {
         self
     }
 
+    /// Host-bound builder-first helper that late-lands the trigger at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
+        self.into_element(cx, move |cx| trigger.into_child_element(cx), entries)
+    }
+
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
     ///
     /// This is a thin adapter over `DropdownMenu::into_element(...)` that allows call sites to use
     /// `DropdownMenuTrigger` and `DropdownMenuContent` parts (and to attach content placement
     /// options in a shadcn-like location).
+    #[track_caller]
+    pub fn build_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl Into<DropdownMenuContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
+        let menu = content.into().apply_to(self);
+        menu.build(cx, trigger, entries)
+    }
+
     #[track_caller]
     pub fn into_element_parts<H: UiHost, I>(
         self,
@@ -1745,8 +1890,8 @@ impl DropdownMenu {
     where
         I: IntoIterator<Item = DropdownMenuEntry>,
     {
-        let menu = content.into().apply_to(self);
-        menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
+        let trigger = trigger(cx);
+        self.build_parts(cx, trigger, content, entries)
     }
 
     #[track_caller]
@@ -4318,7 +4463,7 @@ mod tests {
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::LayoutDirection;
+    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, LayoutDirection};
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
@@ -4330,6 +4475,7 @@ mod tests {
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::element::{AnyElement, ElementKind, PressableA11y};
+    use fret_ui_kit::ui::UiElementSinkExt as _;
 
     fn contains_foreground_scope(el: &AnyElement) -> bool {
         matches!(el.kind, ElementKind::ForegroundScope(_))
@@ -4343,6 +4489,131 @@ mod tests {
         el.children
             .iter()
             .find_map(find_first_inherited_foreground_node)
+    }
+
+    #[test]
+    fn dropdown_menu_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(
+                cx,
+                DropdownMenuTrigger::build(crate::Card::build(|_cx, _out| {})),
+            );
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_build_parts_opens_on_trigger_activate_with_late_landed_trigger() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(240.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dropdown-menu-build-parts",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let trigger =
+                    DropdownMenuTrigger::build(cx.pressable_with_id_props(move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        let props = PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        };
+                        let children =
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())];
+                        (props, children)
+                    }));
+                let menu = DropdownMenu::new(open.clone()).build_parts(
+                    cx,
+                    trigger,
+                    DropdownMenuContent::new(),
+                    |_cx| vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+                );
+                vec![menu]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_pos = center(trigger_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]
@@ -6088,6 +6359,110 @@ mod tests {
             "expected trigger to control menu content; controls={:?} content={:?}",
             trigger_sem.controls,
             menu_content.id
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_part_trigger_keeps_authored_button_semantics_when_avatar_is_nested_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dropdown-menu-avatar-trigger-semantics",
+            move |cx| {
+                vec![
+                    DropdownMenu::new(open.clone())
+                        .modal(false)
+                        .into_element_parts(
+                            cx,
+                            |cx| {
+                                let avatar =
+                                    Avatar::new([AvatarFallback::new("LR").into_element(cx)])
+                                        .into_element(cx)
+                                        .test_id("dropdown-menu-avatar-trigger-leaf");
+
+                                let trigger = Button::new("")
+                                    .variant(ButtonVariant::Ghost)
+                                    .size(ButtonSize::Icon)
+                                    .a11y_label("Account")
+                                    .children([avatar])
+                                    .test_id("dropdown-menu-avatar-trigger")
+                                    .into_element(cx);
+
+                                DropdownMenuTrigger::new(trigger)
+                            },
+                            DropdownMenuContent::new(),
+                            |_cx| [DropdownMenuItem::new("Profile").into()],
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("dropdown-menu-avatar-trigger"))
+            .expect("expected authored button trigger semantics node");
+        assert_eq!(
+            trigger.role,
+            SemanticsRole::Button,
+            "expected authored trigger button to own button semantics"
+        );
+        assert!(
+            trigger.actions.focus,
+            "expected authored trigger button to remain focusable"
+        );
+        assert!(
+            trigger.actions.invoke,
+            "expected authored trigger button to remain invokable"
+        );
+
+        let leaf = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("dropdown-menu-avatar-trigger-leaf"))
+            .expect("expected nested avatar leaf semantics node");
+        assert_eq!(
+            leaf.role,
+            SemanticsRole::Generic,
+            "expected nested avatar leaf to stay presentational"
+        );
+        assert!(
+            !leaf.actions.focus,
+            "expected nested avatar leaf to avoid owning focus semantics"
+        );
+        assert!(
+            !leaf.actions.invoke,
+            "expected nested avatar leaf to avoid owning invoke semantics"
         );
     }
 

@@ -371,7 +371,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is the preferred way for declarative UI to drive animations: while the returned
     /// lease is held, the mount pass will continue requesting animation frames.
     pub fn begin_continuous_frames(&mut self) -> ContinuousFrames {
-        let lease = self.window_state.begin_continuous_frames();
+        let lease = self
+            .window_state
+            .begin_continuous_frames(Some(self.root_id()));
         self.request_animation_frame();
         lease
     }
@@ -415,6 +417,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     #[track_caller]
     pub fn keyed<K: Hash, R>(&mut self, key: K, f: impl FnOnce(&mut Self) -> R) -> R {
         let loc = Location::caller();
+        self.keyed_at(loc, key, f)
+    }
+
+    #[doc(hidden)]
+    pub fn keyed_at<K: Hash, R>(
+        &mut self,
+        loc: &'static Location<'static>,
+        key: K,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
         let caller = callsite_hash(loc);
         let key_hash = stable_hash(&key);
         self.enter_with_callsite(loc, caller, Some(key_hash), None, f)

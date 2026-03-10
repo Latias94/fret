@@ -374,6 +374,7 @@ where
                         element: root_id,
                         instance: ElementInstance::Stack(root_stack),
                         inherited_foreground: None,
+                        inherited_text_style: None,
                         semantics_decoration: None,
                         key_context: None,
                     },
@@ -391,6 +392,7 @@ where
                     window_state,
                     window_frame,
                     child,
+                    None,
                     &mut scroll_bindings,
                     &mut pending_invalidations,
                 ));
@@ -909,6 +911,7 @@ where
                             DismissibleLayerProps::default(),
                         ),
                         inherited_foreground: None,
+                        inherited_text_style: None,
                         semantics_decoration: None,
                         key_context: None,
                     },
@@ -929,6 +932,7 @@ where
                     window_state,
                     window_frame,
                     child,
+                    None,
                     &mut scroll_bindings,
                     &mut pending_invalidations,
                 ));
@@ -1275,12 +1279,24 @@ fn mount_element<H: UiHost + 'static>(
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &mut WindowFrame,
     element: AnyElement,
+    parent_inherited_text_style: Option<fret_core::TextStyleRefinement>,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
     let mut element = element;
     let id = element.id;
     let inherited_foreground = element.inherited_foreground;
+    let local_inherited_text_style = element.inherited_text_style.clone();
+    let inherited_text_style = match (
+        parent_inherited_text_style.as_ref(),
+        local_inherited_text_style.as_ref(),
+    ) {
+        (Some(parent), Some(local)) => Some(parent.merged(local)),
+        (Some(parent), None) => Some(parent.clone()),
+        (None, Some(local)) => Some(local.clone()),
+        (None, None) => None,
+    }
+    .filter(|style| !style.is_empty());
     let semantics_decoration = element.semantics_decoration.clone();
     let key_context = element.key_context.clone();
     let mut children = std::mem::take(&mut element.children);
@@ -1496,9 +1512,15 @@ fn mount_element<H: UiHost + 'static>(
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
     );
 
-    let previous_instance = window_frame.instances.get(node).map(|r| &r.instance);
+    let previous_record = window_frame.instances.get(node);
+    let previous_instance = previous_record.map(|r| &r.instance);
+    let previous_inherited_text_style =
+        previous_record.and_then(|r| r.inherited_text_style.as_ref());
     if !reuse_view_cache {
         let mut mask = declarative_instance_change_mask(previous_instance, &instance);
+        if previous_inherited_text_style != inherited_text_style.as_ref() {
+            mask |= INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+        }
         if ui.interactive_resize_active() && ui.hover_edge_changed_this_frame() {
             mask &= !INVALIDATION_LAYOUT;
         }
@@ -1533,6 +1555,7 @@ fn mount_element<H: UiHost + 'static>(
                 element: id,
                 instance,
                 inherited_foreground,
+                inherited_text_style: inherited_text_style.clone(),
                 semantics_decoration,
                 key_context,
             },
@@ -1690,6 +1713,7 @@ fn mount_element<H: UiHost + 'static>(
                 window_state,
                 window_frame,
                 child,
+                inherited_text_style.clone(),
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -1720,6 +1744,7 @@ fn mount_element<H: UiHost + 'static>(
                 window_state,
                 window_frame,
                 child,
+                inherited_text_style.clone(),
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -1961,6 +1986,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 window_state,
                 window_frame,
                 child_element,
+                None,
                 scroll_bindings,
                 pending_invalidations,
             );

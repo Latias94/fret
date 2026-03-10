@@ -5,23 +5,21 @@ use fret_core::{Corners, Px};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+    let avatar =
+        shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)]).into_element(cx);
+    let trigger = shadcn::DropdownMenuTrigger::build(
+        shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Icon)
+            .a11y_label("Account")
+            .corner_radii_override(Corners::all(Px(999.0)))
+            .children([avatar])
+            .test_id("ui-gallery-dropdown-menu-avatar-trigger"),
+    );
+
+    shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
         cx,
-        |cx| {
-            let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
-                .into_element(cx);
-
-            let trigger = shadcn::Button::new("")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::Icon)
-                .a11y_label("Account")
-                .corner_radii_override(Corners::all(Px(999.0)))
-                .children([avatar])
-                .test_id("ui-gallery-dropdown-menu-avatar-trigger")
-                .into_element(cx);
-
-            shadcn::DropdownMenuTrigger::new(trigger)
-        },
+        trigger,
         shadcn::DropdownMenuContent::new()
             .align(shadcn::DropdownMenuAlign::End)
             .side_offset(Px(4.0))

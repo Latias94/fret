@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
@@ -20,11 +21,14 @@ use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost, focus_visible};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+use fret_ui_kit::{
+    LayoutRefinement, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget,
+    UiSupportsLayout,
+};
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -60,6 +64,7 @@ pub struct ScrollAreaViewport {
     axis: ScrollAxis,
     probe_unbounded: bool,
     viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
     focus_ring: bool,
     focus_ring_radius: Option<Px>,
     intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
@@ -73,6 +78,7 @@ impl ScrollAreaViewport {
             axis: ScrollAxis::Y,
             probe_unbounded: true,
             viewport_test_id: None,
+            viewport_focus_test_id: None,
             focus_ring: true,
             focus_ring_radius: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
@@ -91,6 +97,12 @@ impl ScrollAreaViewport {
 
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    /// Optional automation anchor for the focusable wrapper used to paint the viewport focus ring.
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
         self
     }
 
@@ -285,6 +297,7 @@ impl ScrollAreaRoot {
                 axis: viewport_axis,
                 probe_unbounded: viewport_probe_unbounded,
                 viewport_test_id,
+                viewport_focus_test_id,
                 focus_ring: viewport_focus_ring,
                 focus_ring_radius: viewport_focus_ring_radius,
                 intrinsic_measure_mode,
@@ -358,6 +371,10 @@ impl ScrollAreaRoot {
                     },
                     move |_cx| viewport_children,
                 );
+                let scroll = match viewport_test_id.clone() {
+                    Some(test_id) => scroll.test_id(test_id),
+                    None => scroll,
+                };
 
                 let scroll_id = scroll.id;
                 let viewport = if viewport_focus_ring {
@@ -390,7 +407,7 @@ impl ScrollAreaRoot {
                                 vec![viewport_scroll]
                             },
                         );
-                        if let Some(test_id) = viewport_test_id.clone() {
+                        if let Some(test_id) = viewport_focus_test_id.clone() {
                             semantics = semantics.test_id(test_id);
                         }
                         (id_out.get().expect("viewport semantics id"), semantics)
@@ -439,10 +456,7 @@ impl ScrollAreaRoot {
                         move |_cx| vec![viewport_semantics],
                     )
                 } else {
-                    match viewport_test_id {
-                        Some(test_id) => scroll.test_id(test_id),
-                        None => scroll,
-                    }
+                    scroll
                 };
 
                 let mut children = vec![viewport];
@@ -677,6 +691,7 @@ pub struct ScrollArea {
     layout: LayoutRefinement,
     scroll_handle: Option<ScrollHandle>,
     viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
 }
 
@@ -694,7 +709,27 @@ impl ScrollArea {
             layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
             viewport_test_id: None,
+            viewport_focus_test_id: None,
             viewport_intrinsic_measure_mode: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> ScrollAreaBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        ScrollAreaBuild {
+            build: Some(build),
+            axis: ScrollAxis::Y,
+            show_scrollbar: true,
+            scrollbar_type: ScrollAreaType::default(),
+            scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
+            scroll_handle: None,
+            viewport_test_id: None,
+            viewport_focus_test_id: None,
+            viewport_intrinsic_measure_mode: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -737,6 +772,11 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
+        self
+    }
+
     pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
         self.viewport_intrinsic_measure_mode = Some(mode);
         self
@@ -747,6 +787,9 @@ impl ScrollArea {
         let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
         if let Some(test_id) = self.viewport_test_id {
             viewport = viewport.viewport_test_id(test_id);
+        }
+        if let Some(test_id) = self.viewport_focus_test_id {
+            viewport = viewport.viewport_focus_test_id(test_id);
         }
         if let Some(mode) = self.viewport_intrinsic_measure_mode {
             viewport = viewport.intrinsic_measure_mode(mode);
@@ -789,6 +832,142 @@ where
     ScrollArea::new(f(cx)).into_element(cx)
 }
 
+pub struct ScrollAreaBuild<H, B> {
+    build: Option<B>,
+    axis: ScrollAxis,
+    show_scrollbar: bool,
+    scrollbar_type: ScrollAreaType,
+    scroll_hide_delay_ticks: u64,
+    layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
+    viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
+    viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar(mut self, show: bool) -> Self {
+        self.show_scrollbar = show;
+        self
+    }
+
+    pub fn type_(mut self, scrollbar_type: ScrollAreaType) -> Self {
+        self.scrollbar_type = scrollbar_type;
+        self
+    }
+
+    pub fn scroll_hide_delay_ticks(mut self, ticks: u64) -> Self {
+        self.scroll_hide_delay_ticks = ticks;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn scroll_handle(mut self, handle: ScrollHandle) -> Self {
+        self.scroll_handle = Some(handle);
+        self
+    }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn viewport_focus_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_focus_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.viewport_intrinsic_measure_mode = Some(mode);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_scroll_area_children(
+            cx,
+            self.build.expect("expected scroll-area build closure"),
+        );
+        let mut area = ScrollArea::new(children)
+            .axis(self.axis)
+            .show_scrollbar(self.show_scrollbar)
+            .type_(self.scrollbar_type)
+            .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
+            .refine_layout(self.layout);
+
+        if let Some(handle) = self.scroll_handle {
+            area = area.scroll_handle(handle);
+        }
+        if let Some(test_id) = self.viewport_test_id {
+            area = area.viewport_test_id(test_id);
+        }
+        if let Some(test_id) = self.viewport_focus_test_id {
+            area = area.viewport_focus_test_id(test_id);
+        }
+        if let Some(mode) = self.viewport_intrinsic_measure_mode {
+            area = area.viewport_intrinsic_measure_mode(mode);
+        }
+
+        area.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for ScrollAreaBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for ScrollAreaBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ScrollAreaBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_scroll_area_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -802,7 +981,27 @@ mod tests {
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, ElementKind, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::ui;
     use std::time::Duration;
+
+    fn any_element_has_test_id(el: &AnyElement, test_id: &str) -> bool {
+        el.semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+            || el
+                .children
+                .iter()
+                .any(|child| any_element_has_test_id(child, test_id))
+    }
+
+    fn any_element_has_text(el: &AnyElement, needle: &str) -> bool {
+        matches!(&el.kind, ElementKind::Text(props) if props.text.as_ref() == needle)
+            || el
+                .children
+                .iter()
+                .any(|child| any_element_has_text(child, needle))
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -878,6 +1077,36 @@ mod tests {
         assert_eq!(bar.orientation, ScrollAreaScrollbarOrientation::Horizontal);
         assert_eq!(bar.track_padding, Px(2.0));
         assert!((bar.thumb_idle_alpha - 0.6).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn scroll_area_build_collects_children_and_viewport_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, ui::text("Row"));
+            })
+            .viewport_test_id("sa.viewport")
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(80.0)))
+            .into_element(cx)
+        });
+
+        assert!(
+            any_element_has_test_id(&element, "sa.viewport"),
+            "expected ScrollArea::build to preserve viewport test_id"
+        );
+        assert!(
+            any_element_has_text(&element, "Row"),
+            "expected ScrollArea::build to keep child content"
+        );
     }
 
     #[test]
@@ -1008,6 +1237,7 @@ mod tests {
                     let el = ScrollArea::new([cx.text("Row")])
                         .refine_layout(LayoutRefinement::default().size_full())
                         .viewport_test_id("sa.viewport")
+                        .viewport_focus_test_id("sa.viewport.focus")
                         .into_element(cx);
                     let (alpha, always_paint) =
                         find_scroll_area_viewport_ring_alpha_and_always_paint(&el)
@@ -1057,7 +1287,7 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let viewport = node_id_by_test_id(&snap, "sa.viewport");
+        let viewport = node_id_by_test_id(&snap, "sa.viewport.focus");
         ui.set_focus(Some(viewport));
 
         // Frame 2: focused => alpha tweens in (intermediate) and always-paint should be active while animating.
@@ -1738,6 +1968,185 @@ mod tests {
             ui.children(stack).len(),
             2,
             "expected auto scrollbar to mount for overflow when using an explicit handle"
+        );
+    }
+
+    #[test]
+    fn scroll_area_docs_card_content_size_matches_visible_page_root_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let mut services = FakeServices::default();
+        let handle = ScrollHandle::default();
+
+        fn fill_width_layout() -> LayoutStyle {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+            layout
+        }
+
+        fn paragraph(cx: &mut ElementContext<'_, App>, text: impl Into<String>) -> AnyElement {
+            let mut props = ContainerProps::default();
+            props.layout = fill_width_layout();
+            let text = text.into();
+            cx.container(props, move |cx| vec![cx.text(text.clone())])
+        }
+
+        fn section(cx: &mut ElementContext<'_, App>, idx: usize) -> AnyElement {
+            let preview = cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(0.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        cx.text(format!("Alert preview {idx}")),
+                        cx.text("A preview panel with title and description."),
+                        cx.text("Visible content should define the scroll extent."),
+                    ]
+                },
+            );
+
+            let code = cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(0.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    (0..16)
+                        .map(|line| {
+                            cx.text(format!(
+                                "let alert_section_{idx}_{line} = very_long_code_line_for_copy_paste_surface;"
+                            ))
+                        })
+                        .collect::<Vec<_>>()
+                },
+            );
+
+            let tabs = crate::Tabs::uncontrolled(Some("preview"))
+                .content_fill_remaining(false)
+                .test_id(format!("docs-tabs-{idx}"))
+                .items([
+                    crate::TabsItem::new("preview", "Preview", [preview]),
+                    crate::TabsItem::new("code", "Code", [code]),
+                ])
+                .into_element(cx);
+
+            cx.column(
+                ColumnProps {
+                    layout: fill_width_layout(),
+                    gap: Px(6.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        cx.text(format!("Section {idx}")),
+                        paragraph(
+                            cx,
+                            format!(
+                                "Docs-like section {idx} with a preview/code tabs pair and wrapped copy."
+                            ),
+                        ),
+                        tabs,
+                    ]
+                },
+            )
+        }
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa-docs-card-height-regression",
+            |cx| {
+                let body = cx
+                    .column(
+                        ColumnProps {
+                            layout: fill_width_layout(),
+                            gap: Px(12.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut out = Vec::with_capacity(8);
+                            out.push(paragraph(
+                                cx,
+                                "Preview follows the docs-card structure used by the UI gallery.",
+                            ));
+                            out.extend((0..6).map(|idx| section(cx, idx)));
+                            out.push(paragraph(
+                                cx,
+                                "Notes: content size should track the visible page root rather than an oversized intrinsic probe.",
+                            ));
+                            out
+                        },
+                    )
+                    .test_id("docs-root");
+
+                let page_root = crate::Card::new([
+                    crate::CardHeader::new([
+                        crate::CardTitle::new("Preview").into_element(cx),
+                        crate::CardDescription::new(
+                            "Interactive preview for validating behaviors.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    crate::CardContent::new([body]).into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("page-root");
+
+                vec![
+                    ScrollArea::new(vec![page_root])
+                        .type_(ScrollAreaType::Auto)
+                        .scroll_handle(handle.clone())
+                        .viewport_test_id("sa.viewport")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let page_root = node_id_by_test_id(&snap, "page-root");
+        let docs_root = node_id_by_test_id(&snap, "docs-root");
+        let page_bounds = ui.debug_node_bounds(page_root).expect("page root bounds");
+        let docs_bounds = ui.debug_node_bounds(docs_root).expect("docs root bounds");
+
+        assert!(
+            handle.max_offset().y.0 > 0.01,
+            "expected docs card preview to overflow vertically; viewport={:?} content={:?} page={:?} docs={:?}",
+            handle.viewport_size(),
+            handle.content_size(),
+            page_bounds,
+            docs_bounds
+        );
+        let docs_bottom = docs_bounds.origin.y.0 + docs_bounds.size.height.0;
+        let page_bottom = page_bounds.origin.y.0 + page_bounds.size.height.0;
+        assert!(
+            handle.content_size().height.0 + 1.0 >= docs_bottom
+                && handle.content_size().height.0 <= page_bottom + 1.0,
+            "expected scroll content height to stay within the visible docs/page bounds: content={:?} page={:?} docs={:?} docs_bottom={} page_bottom={}",
+            handle.content_size(),
+            page_bounds,
+            docs_bounds,
+            docs_bottom,
+            page_bottom,
         );
     }
 }

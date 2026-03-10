@@ -18,7 +18,7 @@ const ENV_WIRE_PAINT_COOKBOOK: &str = "FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK"
 const TEST_ID_CANVAS: &str = "node_graph.canvas";
 
 #[derive(Clone)]
-struct NodeGraphDemoState {
+struct NodeGraphDemoView {
     surface: NodeGraphSurfaceBinding,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
 }
@@ -26,31 +26,32 @@ struct NodeGraphDemoState {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("node-graph-demo")
         .window("node_graph_demo", (980.0, 720.0))
-        .ui(init_window, view)?
-        .run()?;
+        .run_view::<NodeGraphDemoView>()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
-    let surface = NodeGraphSurfaceBinding::new(
-        app.models_mut(),
-        demo_graph(),
-        NodeGraphViewState::default(),
-    );
-    let paint_overrides = demo_paint_overrides();
-    NodeGraphDemoState {
-        surface,
-        paint_overrides,
+impl View for NodeGraphDemoView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        let surface = NodeGraphSurfaceBinding::new(
+            app.models_mut(),
+            demo_graph(),
+            NodeGraphViewState::default(),
+        );
+        let paint_overrides = demo_paint_overrides();
+        Self {
+            surface,
+            paint_overrides,
+        }
     }
-}
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::ViewElements {
-    st.surface.observe(cx);
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        self.surface.observe(cx.elements());
 
-    let mut props = st.surface.surface_props();
-    props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
-    props.paint_overrides = st.paint_overrides.clone();
-    node_graph_surface(cx, props).into()
+        let mut props = self.surface.surface_props();
+        props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
+        props.paint_overrides = self.paint_overrides.clone();
+        node_graph_surface(cx.elements(), props).into()
+    }
 }
 
 fn env_enabled(name: &str) -> bool {

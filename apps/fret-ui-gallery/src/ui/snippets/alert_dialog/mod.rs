@@ -9,8 +9,10 @@
 pub mod basic;
 pub mod demo;
 pub mod destructive;
+pub mod detached_trigger;
 pub mod media;
 pub mod parts;
+pub mod rich_content;
 pub mod rtl;
 pub mod small;
 pub mod small_with_media;

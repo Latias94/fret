@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle, TextWrap};
+use fret_core::{Px, SemanticsRole, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
@@ -63,43 +63,6 @@ fn plan_base_chrome(theme: &Theme) -> ChromeRefinement {
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
         .py(Space::N6)
-}
-
-fn card_title_text_style(theme: &Theme) -> TextStyle {
-    let px = theme
-        .metric_by_key("component.card.title_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.card.title_line_height")
-        .unwrap_or(px);
-
-    TextStyle {
-        font: FontId::ui(),
-        size: px,
-        weight: FontWeight::SEMIBOLD,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
-}
-
-fn card_description_text_style(theme: &Theme) -> TextStyle {
-    let px = theme
-        .metric_by_key("component.card.description_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.card.description_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-    TextStyle {
-        font: FontId::ui(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
 }
 
 /// Collapsible plan container aligned with AI Elements `Plan`.
@@ -309,13 +272,17 @@ impl PlanTitle {
             .unwrap_or(false);
 
         let el = if is_streaming {
-            let style = card_title_text_style(Theme::global(&*cx.app));
-            super::Shimmer::new(self.text.clone())
-                .text_style(style)
-                .role(SemanticsRole::Text)
-                .wrap(TextWrap::Word)
-                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)
+            let theme = Theme::global(&*cx.app).snapshot();
+            fret_ui_kit::typography::scope_text_style_with_color(
+                super::Shimmer::new(self.text.clone())
+                    .use_resolved_passive_text()
+                    .role(SemanticsRole::Text)
+                    .wrap(TextWrap::Word)
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                fret_ui_kit::typography::title_text_refinement(&theme, "component.card.title"),
+                theme.color_token("card-foreground"),
+            )
         } else {
             CardTitle::new(self.text.clone()).into_element(cx)
         };
@@ -357,13 +324,17 @@ impl PlanDescription {
             .unwrap_or(false);
 
         let el = if is_streaming {
-            let style = card_description_text_style(Theme::global(&*cx.app));
-            super::Shimmer::new(self.text.clone())
-                .text_style(style)
-                .role(SemanticsRole::Text)
-                .wrap(TextWrap::Word)
-                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)
+            let theme = Theme::global(&*cx.app).snapshot();
+            fret_ui_kit::typography::scope_description_text(
+                super::Shimmer::new(self.text.clone())
+                    .use_resolved_passive_text()
+                    .role(SemanticsRole::Text)
+                    .wrap(TextWrap::Word)
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.card.description",
+            )
         } else {
             CardDescription::new(self.text.clone()).into_element(cx)
         };
@@ -600,5 +571,115 @@ impl PlanFooter {
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    #[test]
+    fn plan_title_streaming_scopes_inherited_title_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            cx.with_state(PlanProviderState::default, |st| {
+                st.controller = Some(PlanController {
+                    open: open.clone(),
+                    is_streaming: true,
+                    disabled: false,
+                });
+            });
+            PlanTitle::new("Title").into_element(cx)
+        });
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::title_text_refinement(
+                &theme,
+                "component.card.title",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(theme.color_token("card-foreground"))
+        );
+
+        let text = find_text_by_content(&element, "Title")
+            .expect("expected shimmer base text child under the scoped root");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected shimmer title branch to render a text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+    }
+
+    #[test]
+    fn plan_description_streaming_scopes_inherited_description_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            cx.with_state(PlanProviderState::default, |st| {
+                st.controller = Some(PlanController {
+                    open: open.clone(),
+                    is_streaming: true,
+                    disabled: false,
+                });
+            });
+            PlanDescription::new("Description").into_element(cx)
+        });
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.card.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+
+        let text = find_text_by_content(&element, "Description")
+            .expect("expected shimmer base text child under the scoped root");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected shimmer description branch to render a text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
     }
 }

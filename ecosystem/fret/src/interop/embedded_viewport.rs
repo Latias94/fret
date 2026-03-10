@@ -302,6 +302,75 @@ pub trait EmbeddedViewportRecord: 'static {
 
 /// A smaller contract for recording into an embedded surface, while delegating the rendering
 /// implementation to a registered [`EmbeddedViewportForeignUi`] instance.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub trait EmbeddedViewportView: crate::view::View {
+    fn embedded_viewport_surface(&mut self) -> &mut EmbeddedViewportSurface;
+
+    fn embedded_viewport_label(&self) -> Option<&'static str> {
+        None
+    }
+
+    fn record_embedded_viewport(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+        view: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+    );
+
+    fn request_redraw_after_record(&self) -> bool {
+        true
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+impl<V> EmbeddedViewportRecord for crate::view::ViewWindowState<V>
+where
+    V: EmbeddedViewportView,
+{
+    fn embedded_viewport_surface(&mut self) -> &mut EmbeddedViewportSurface {
+        self.view.embedded_viewport_surface()
+    }
+
+    fn embedded_viewport_label(&self) -> Option<&'static str> {
+        self.view.embedded_viewport_label()
+    }
+
+    fn record_embedded_viewport(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+        view: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        self.view.record_embedded_viewport(
+            app,
+            window,
+            context,
+            renderer,
+            scale_factor,
+            tick_id,
+            frame_id,
+            view,
+            encoder,
+        );
+    }
+
+    fn request_redraw_after_record(&self) -> bool {
+        self.view.request_redraw_after_record()
+    }
+}
+
 pub trait EmbeddedViewportSurfaceOwner: 'static {
     /// Return the embedded surface stored in your window state.
     fn embedded_viewport_surface(&mut self) -> &mut EmbeddedViewportSurface;

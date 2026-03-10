@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Open Questions
 
-Last updated: 2026-03-04
+Last updated: 2026-03-08
 
 This file tracks decisions intentionally deferred **past the v1 landing**.
 
@@ -53,21 +53,30 @@ Options:
 
 ---
 
-## Q4 — How should MVU coexist with the view runtime?
+## Q4 — Historical note: how was MVU coexistence resolved?
 
-Options:
+Status note (2026-03-08): resolved in-tree. MVU no longer coexists as a supported in-tree authoring path; it remains only as historical/external migration context.
+
+Historical options that were considered:
 
 - keep MVU indefinitely as an alternative paradigm (documented “use when”),
 - treat MVU as legacy and plan a staged deprecation.
 
-Recommendation:
+Historical recommendation:
 
 - keep MVU initially; decide deprecation only after adoption evidence and a full cleanup milestone.
 
-Decision (v1):
+Resolution (current repo state):
 
-- Land the view runtime in `ecosystem/fret` (golden path). Defer a split crate until after M2/M3 adoption.
-- MVU is quarantined as a compat surface under `fret::legacy::prelude::*` and is gated out of the cookbook/templates.
+- the view runtime landed as the in-tree golden path in `ecosystem/fret`,
+- in-tree MVU was removed rather than kept as a compat surface,
+- cookbook/templates/examples are now expected to teach the action-first/view-runtime path only.
+
+Reference anchors:
+
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+- `tools/gate_no_mvu_in_tree.py`
 
 ---
 
@@ -86,5 +95,5 @@ This must stay aligned with:
 
 Status (as of 2026-03-04):
 
-- The v1 view-cache + action-first gates are green (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
+- The v1 view-cache + action-first gates are green (`python tools/diag_gate_action_first_authoring_v1.py`).
 - Inspection/picking may still affect reuse decisions; gaps should be documented as explicit reuse reasons in cache-root diagnostics.

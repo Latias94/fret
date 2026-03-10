@@ -242,11 +242,13 @@ fn status_badge<H: UiHost>(
             ink_overflow: Default::default(),
         });
 
-        vec![ui::h_row(move |_cx| vec![icon, text])
-            .items(Items::Center)
-            .justify(Justify::Center)
-            .gap(Space::N1)
-            .into_element(cx)]
+        vec![
+            ui::h_row(move |_cx| vec![icon, text])
+                .items(Items::Center)
+                .justify(Justify::Center)
+                .gap(Space::N1)
+                .into_element(cx),
+        ]
     })
 }
 
@@ -349,11 +351,13 @@ impl TestResults {
                     return Vec::new();
                 };
 
-                vec![TestResultsHeader::new([
-                    TestResultsSummary::new(summary.clone()).into_element(cx),
-                    TestResultsDuration::new(summary).into_element(cx),
-                ])
-                .into_element(cx)]
+                vec![
+                    TestResultsHeader::new([
+                        TestResultsSummary::new(summary.clone()).into_element(cx),
+                        TestResultsDuration::new(summary).into_element(cx),
+                    ])
+                    .into_element(cx),
+                ]
             },
         );
 
@@ -703,11 +707,13 @@ impl TestResultsProgress {
                     cx.container(props, |_cx| Vec::new())
                 };
 
-                vec![ui::h_row(move |_cx| vec![passed_seg, failed_seg])
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .gap(Space::N0)
-                    .items(Items::Stretch)
-                    .into_element(cx)]
+                vec![
+                    ui::h_row(move |_cx| vec![passed_seg, failed_seg])
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N0)
+                        .items(Items::Stretch)
+                        .into_element(cx),
+                ]
             })
         };
 
@@ -1846,11 +1852,13 @@ impl TestResultsContent {
         let content = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
             move |cx| {
-                vec![ui::v_stack(move |_cx| children)
-                    .layout(layout)
-                    .gap(Space::N2)
-                    .items(Items::Stretch)
-                    .into_element(cx)]
+                vec![
+                    ui::v_stack(move |_cx| children)
+                        .layout(layout)
+                        .gap(Space::N2)
+                        .items(Items::Stretch)
+                        .into_element(cx),
+                ]
             },
         );
 

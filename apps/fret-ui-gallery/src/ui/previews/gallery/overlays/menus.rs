@@ -19,10 +19,10 @@ pub(in crate::ui) fn preview_menus(
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Apple")
                         .test_id("ui-gallery-menus-dropdown-item-apple")
-                        .on_select(CMD_MENU_DROPDOWN_APPLE),
+                        .action(CMD_MENU_DROPDOWN_APPLE),
                 ),
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Orange").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                    shadcn::DropdownMenuItem::new("Orange").action(CMD_MENU_DROPDOWN_ORANGE),
                 ),
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
@@ -45,7 +45,7 @@ pub(in crate::ui) fn preview_menus(
                 shadcn::ContextMenuEntry::Item(
                     shadcn::ContextMenuItem::new("Action")
                         .test_id("ui-gallery-menus-context-item-action")
-                        .on_select(CMD_MENU_CONTEXT_ACTION),
+                        .action(CMD_MENU_CONTEXT_ACTION),
                 ),
                 shadcn::ContextMenuEntry::Separator,
                 shadcn::ContextMenuEntry::Item(

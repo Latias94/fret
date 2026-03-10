@@ -14,7 +14,7 @@ documentation and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/popover.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`
 - Registry demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-popover` (portal + anchored content + dismiss)

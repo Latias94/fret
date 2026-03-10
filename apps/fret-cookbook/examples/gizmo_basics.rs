@@ -335,28 +335,28 @@ fn paint_gizmo(
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> ViewElements {
-    let model = cx.watch_model(&st.model).paint().cloned_or_default();
+    let model = cx.watch_model(&st.model).paint().value_or_default();
 
     let pos = model.transform.translation;
     let pos_len = pos.length() as f64;
 
     let snap_label = if model.snap { "Snap: on" } else { "Snap: off" };
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Gizmo basics").into_element(cx),
-        shadcn::CardDescription::new(
-            "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let header = shadcn::CardHeader::build(|cx, out| {
+        out.push_ui(cx, shadcn::CardTitle::new("Gizmo basics"));
+        out.push_ui(
+            cx,
+            shadcn::CardDescription::new(
+                "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
+            ),
+        );
+    });
 
-    let pos_badges = ui::h_flex(|cx| {
-        let mut badge = |label: String, test_id: &'static str, value: f64| {
+    let pos_badges = ui::h_flex(|_cx| {
+        let badge = |label: String, test_id: &'static str, value: f64| {
             shadcn::Badge::new(label)
                 .variant(shadcn::BadgeVariant::Secondary)
-                .into_element(cx)
-                .attach_semantics(
+                .a11y(
                     SemanticsDecoration::default()
                         .role(SemanticsRole::Meter)
                         .test_id(test_id)
@@ -376,37 +376,33 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let toolbar = ui::h_flex(|cx| {
-        [
+        ui::children![
+            cx;
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(CMD_RESET)
-                .test_id(TEST_ID_RESET)
-                .into_element(cx),
+                .test_id(TEST_ID_RESET),
             shadcn::Button::new(snap_label)
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_TOGGLE_SNAP)
-                .test_id(TEST_ID_TOGGLE_SNAP)
-                .into_element(cx),
+                .test_id(TEST_ID_TOGGLE_SNAP),
             pos_badges,
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
-    let hint = shadcn::Alert::new([
-        shadcn::AlertTitle::new("Try it").into_element(cx),
+    let hint = shadcn::Alert::new(ui::children![
+        cx;
+        shadcn::AlertTitle::new("Try it"),
         shadcn::AlertDescription::new(
             "Left-drag inside the viewport. Dragging from the center should pick the view-plane translation handle, which is easy to script for regression gates.",
-        )
-        .into_element(cx),
+        ),
     ])
-    .ui()
-    .into_element(cx);
+    .ui();
 
     let viewport = {
         let model_handle = st.model.clone();
@@ -658,27 +654,30 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     let viewport = ui::container(|_cx| vec![viewport])
         .w_full()
         .h_full()
-        .min_h(Px(480.0))
-        .into_element(cx);
+        .min_h(Px(480.0));
 
-    let content = ui::v_flex(|_cx| vec![toolbar, hint, viewport])
-        .gap(Space::N3)
-        .w_full()
-        .h_full()
-        .min_w_0()
-        .into_element(cx);
-
-    let card = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(cx, header);
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    ui::v_flex(|cx| ui::children![cx; toolbar, hint, viewport])
+                        .gap(Space::N3)
+                        .w_full()
+                        .h_full()
+                        .min_w_0(),
+                );
+            }),
+        );
+    })
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {
@@ -733,8 +732,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(shadcn::install_app)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }

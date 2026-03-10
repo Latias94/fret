@@ -184,12 +184,13 @@ pub(crate) fn check_bundle_for_windowed_rows_offset_changes_min_json(
     }
 
     let out_path = out_dir.join("check.windowed_rows_offset_changes_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "windowed_rows_offset_changes_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "eps_px": eps_px,
@@ -403,12 +404,13 @@ pub(crate) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_jso
     }
 
     let out_path = out_dir.join("check.windowed_rows_visible_start_changes_repainted.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "windowed_rows_visible_start_changes_repainted",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "any_scroll": any_scroll,

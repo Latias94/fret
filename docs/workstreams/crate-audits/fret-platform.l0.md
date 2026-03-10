@@ -45,7 +45,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-platform/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-platform`
+- `python tools/audit_crate.py --crate fret-platform`
 
 ## 4) Module ownership map (internal seams)
 
@@ -72,7 +72,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-platform/src/lib.rs`
-- `pwsh -NoProfile -File tools/check_layering.ps1`
+- `python tools/check_layering.py`
 
 ## 6) Code quality findings (Rust best practices)
 
@@ -91,4 +91,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - Should any of these contracts be `async` in the portable layer, or should the portable layer remain synchronous and rely on runner-owned async/effects for long work (recommended by current architecture)?
-

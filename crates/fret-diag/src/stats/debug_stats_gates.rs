@@ -62,12 +62,13 @@ pub(crate) fn check_bundle_for_layout_fast_path_min_json(
     }
 
     let out_path = out_dir.join("check.layout_fast_path_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "layout_fast_path_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_frames": min_frames,
@@ -166,12 +167,13 @@ pub(crate) fn check_bundle_for_prepaint_actions_min_json(
     }
 
     let out_path = out_dir.join("check.prepaint_actions_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "prepaint_actions_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_snapshots": min_snapshots,
@@ -281,12 +283,13 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     }
 
     let out_path = out_dir.join("check.chart_sampling_window_shifts_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "chart_sampling_window_shifts_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_actions": min_actions,
@@ -398,12 +401,13 @@ pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
     }
 
     let out_path = out_dir.join("check.node_graph_cull_window_shifts_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "node_graph_cull_window_shifts_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_actions": min_actions,
@@ -515,12 +519,13 @@ pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
     }
 
     let out_path = out_dir.join("check.node_graph_cull_window_shifts_max.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "node_graph_cull_window_shifts_max",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "max_actions": max_actions,

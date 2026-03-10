@@ -13,7 +13,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx`
 
 ## Fret implementation

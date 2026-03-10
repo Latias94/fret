@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("groups.rs");
 
 // region: example
+use fret_runtime::CommandId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
@@ -25,15 +26,25 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new(
                             "My Account",
                         )),
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Profile")),
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Billing")),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Profile")
+                                .action(CommandId::new("ui_gallery.context_menu.groups.profile")),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Billing")
+                                .action(CommandId::new("ui_gallery.context_menu.groups.billing")),
+                        ),
                         shadcn::ContextMenuEntry::Separator,
                     ])),
                     shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Team")),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Team")
+                                .action(CommandId::new("ui_gallery.context_menu.groups.team")),
+                        ),
                         shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new(
                             "Subscription",
-                        )),
+                        )
+                        .action(CommandId::new("ui_gallery.context_menu.groups.subscription"))),
                     ])),
                 ]
             },

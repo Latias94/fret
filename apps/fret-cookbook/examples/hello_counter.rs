@@ -32,10 +32,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-struct HelloCounterView {
-    count: Model<i64>,
-    step: Model<String>,
-}
+struct HelloCounterView;
 
 fn parse_step(step_text: &str) -> (i64, bool) {
     let raw = step_text.trim();
@@ -49,21 +46,18 @@ fn parse_step(step_text: &str) -> (i64, bool) {
 }
 
 impl View for HelloCounterView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            count: app.models_mut().insert(0i64),
-            step: app.models_mut().insert("1".to_string()),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let count = cx.watch_model(&self.count).layout().copied_or(0);
-        let step_text = cx
-            .watch_model(&self.step)
-            .layout()
-            .cloned_or_else(String::new);
+        let count_state = cx.use_local_with(|| 0i64);
+        let step_state = cx.use_local_with(|| "1".to_string());
+
+        let count = count_state.layout(cx).value_or(0);
+        let step_text = step_state.layout(cx).value_or_else(String::new);
         let (effective_step, step_valid) = parse_step(&step_text);
 
         let count_color = if count > 0 {
@@ -74,47 +68,30 @@ impl View for HelloCounterView {
             theme.color_token("foreground")
         };
 
-        cx.on_action_notify_models::<act::Inc>({
-            let count = self.count.clone();
-            let step = self.step.clone();
-            move |models| {
-                let step_text = models
-                    .read(&step, Clone::clone)
-                    .ok()
-                    .unwrap_or_else(|| "1".to_string());
-                let (step_value, _) = parse_step(&step_text);
-                let _ = models.update(&count, |v| *v = v.saturating_add(step_value));
-                true
+        cx.on_action_notify_locals::<act::Inc>({
+            let count_state = count_state.clone();
+            let step_state = step_state.clone();
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_add(step))
             }
         });
 
-        cx.on_action_notify_models::<act::Dec>({
-            let count = self.count.clone();
-            let step = self.step.clone();
-            move |models| {
-                let step_text = models
-                    .read(&step, Clone::clone)
-                    .ok()
-                    .unwrap_or_else(|| "1".to_string());
-                let (step_value, _) = parse_step(&step_text);
-                let _ = models.update(&count, |v| *v = v.saturating_sub(step_value));
-                true
+        cx.on_action_notify_locals::<act::Dec>({
+            let count_state = count_state.clone();
+            let step_state = step_state.clone();
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_sub(step))
             }
         });
 
-        cx.on_action_notify_model_set::<act::Reset, i64>(self.count.clone(), 0);
-        cx.on_action_notify_model_set::<act::StepPreset1, String>(
-            self.step.clone(),
-            "1".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::StepPreset5, String>(
-            self.step.clone(),
-            "5".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::StepPreset10, String>(
-            self.step.clone(),
-            "10".to_string(),
-        );
+        cx.on_action_notify_local_set::<act::Reset, i64>(&count_state, 0);
+        cx.on_action_notify_local_set::<act::StepPreset1, String>(&step_state, "1".to_string());
+        cx.on_action_notify_local_set::<act::StepPreset5, String>(&step_state, "5".to_string());
+        cx.on_action_notify_local_set::<act::StepPreset10, String>(&step_state, "10".to_string());
 
         let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(
@@ -129,24 +106,25 @@ impl View for HelloCounterView {
         .w_px(Px(48.0))
         .h_px(Px(48.0))
         .items_center()
-        .justify_center()
-        .into_element(cx);
+        .justify_center();
 
-        let header_inner = ui::v_flex(|cx| {
-        ui::children![
-            cx;
-            hero_icon,
-            shadcn::CardTitle::new("Hello Counter"),
-            shadcn::CardDescription::new(
-                "A minimal counter demo using `fret` + shadcn/ui (view runtime + typed actions).",
-            ),
-        ]
-    })
-    .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
-
-        let header = shadcn::CardHeader::new([header_inner]);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(
+                cx,
+                ui::v_flex(|cx| {
+                    ui::children![
+                        cx;
+                        hero_icon,
+                        shadcn::CardTitle::new("Hello Counter"),
+                        shadcn::CardDescription::new(
+                            "A minimal counter demo using `fret` + shadcn/ui (view runtime + typed actions).",
+                        ),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center(),
+            );
+        });
 
         let count_text = cx
             .text_props(TextProps {
@@ -205,47 +183,43 @@ impl View for HelloCounterView {
             ink_overflow: Default::default(),
         });
 
-        let step_input = shadcn::Input::new(self.step.clone())
+        let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")
             .submit_command(act::Inc.into())
             .a11y_role(SemanticsRole::TextField)
-            .test_id(TEST_ID_STEP_INPUT)
-            .into_element(cx);
+            .test_id(TEST_ID_STEP_INPUT);
 
         let presets = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("1")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset1)
-                    .test_id(TEST_ID_STEP_1)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_1),
                 shadcn::Button::new("5")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset5)
-                    .test_id(TEST_ID_STEP_5)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_5),
                 shadcn::Button::new("10")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset10)
-                    .test_id(TEST_ID_STEP_10)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STEP_10),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let step_row = ui::v_flex(|_cx| [step_input, presets])
+        let step_row = ui::v_flex(|cx| ui::children![cx; step_input, presets])
             .gap(Space::N2)
             .w_full()
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let actions = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconLg)
@@ -254,15 +228,13 @@ impl View for HelloCounterView {
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Decrement")
-                    .test_id(TEST_ID_DEC)
-                    .into_element(cx),
+                    .test_id(TEST_ID_DEC),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
                     .a11y_role(SemanticsRole::Button)
-                    .test_id(TEST_ID_RESET)
-                    .into_element(cx),
+                    .test_id(TEST_ID_RESET),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Default)
                     .size(shadcn::ButtonSize::IconLg)
@@ -271,42 +243,48 @@ impl View for HelloCounterView {
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Increment")
-                    .test_id(TEST_ID_INC)
-                    .into_element(cx),
+                    .test_id(TEST_ID_INC),
             ]
         })
         .gap(Space::N4)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let content_body = ui::v_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 ui::v_flex(|cx| ui::children![cx; count_text, status_line, step_badge])
                     .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                ui::v_flex(|_cx| [step_row, step_help])
+                    .items_center(),
+                ui::v_flex(|cx| ui::children![cx; step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
-                    .items_center()
-                    .into_element(cx),
+                    .items_center(),
             ]
         })
         .gap(Space::N6)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let content = shadcn::CardContent::new([content_body]);
-        let footer = shadcn::CardFooter::new([actions]);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content_body);
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardFooter::build(|cx, out| {
+                    out.push_ui(cx, actions);
+                }),
+            );
+        })
+        .refine_style(ChromeRefinement::default().shadow_lg())
+        .ui()
+        .w_full()
+        .max_w(Px(480.0));
 
-        let card = shadcn::Card::new(ui::children![cx; header, content, footer])
-            .refine_style(ChromeRefinement::default().shadow_lg())
-            .ui()
-            .w_full()
-            .max_w(Px(480.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

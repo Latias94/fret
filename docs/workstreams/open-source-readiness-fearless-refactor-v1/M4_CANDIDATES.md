@@ -24,7 +24,7 @@ A good migration candidate is:
   - Prefer `fret` (with `["desktop", "shadcn"]`) + `fret-ui-shadcn` surfaces.
   - If it needs heavier deps, it must be **feature-gated** in the cookbook.
 - Prefer **action-first / view runtime** authoring.
-  - If the upstream demo is MVU/legacy, migration implies rewriting (or keeping it as feature-gated “Legacy MVU” until action-first lands).
+  - If the upstream demo is MVU/legacy, migration implies rewriting it onto the action-first/view-runtime path (or treating it as explicit historical/reference material rather than an onboarding/default surface).
 
 ## Initial migration batch (implemented in cookbook)
 

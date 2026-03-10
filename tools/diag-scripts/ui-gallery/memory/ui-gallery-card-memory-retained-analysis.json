@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery: card retained memory analysis (nav none)",
+    "tags": [
+      "ui-gallery",
+      "card",
+      "memory",
+      "analysis",
+      "retained",
+      "nav-none"
+    ],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "env_defaults": {
+      "FRET_DIAG_DEBUG_SNAPSHOT": 1,
+      "FRET_DIAG_SEMANTICS_TEST_IDS_ONLY": 0,
+      "FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY": 1,
+      "FRET_DIAG_MAX_SEMANTICS_NODES": 8000,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_UI_GALLERY_START_PAGE": "card",
+      "FRET_UI_GALLERY_NAV_QUERY": "__none__"
+    },
+    "target_hints": [
+      "Starts UI Gallery on the card page with the nav list hidden, enables retained/debug snapshots, and captures a steady-state bundle for runtime-state attribution."
+    ]
+  },
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 10
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-card-memory-retained-analysis",
+      "max_snapshots": 1
+    }
+  ]
+}

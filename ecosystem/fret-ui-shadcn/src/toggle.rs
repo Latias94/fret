@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{ActionId, CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -249,6 +249,7 @@ impl ToggleStyle {
 
 pub struct Toggle {
     model: Option<Model<bool>>,
+    pressed_snapshot: Option<bool>,
     default_pressed: bool,
     label: Option<Arc<str>>,
     children: Vec<AnyElement>,
@@ -258,6 +259,7 @@ pub struct Toggle {
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     on_click: Option<CommandId>,
+    action_payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
     variant: ToggleVariant,
     size: ToggleSize,
     chrome: ChromeRefinement,
@@ -269,6 +271,7 @@ impl std::fmt::Debug for Toggle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Toggle")
             .field("model", &"<model>")
+            .field("pressed_snapshot", &self.pressed_snapshot)
             .field("label", &self.label.as_ref().map(|s| s.as_ref()))
             .field("children_len", &self.children.len())
             .field("disabled", &self.disabled)
@@ -287,6 +290,7 @@ impl Toggle {
     pub fn new(model: Model<bool>) -> Self {
         Self {
             model: Some(model),
+            pressed_snapshot: None,
             default_pressed: false,
             label: None,
             children: Vec::new(),
@@ -296,6 +300,34 @@ impl Toggle {
             control_id: None,
             a11y_label: None,
             on_click: None,
+            action_payload: None,
+            variant: ToggleVariant::default(),
+            size: ToggleSize::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            style: ToggleStyle::default(),
+        }
+    }
+
+    /// Creates a toggle from a plain pressed snapshot, mirroring the upstream controlled
+    /// `pressed` prop without forcing a `Model<bool>` at the call site.
+    ///
+    /// This is intended for views that already own the state elsewhere and only need the toggle to
+    /// render the current value while dispatching an external action on activation.
+    pub fn from_pressed(pressed: bool) -> Self {
+        Self {
+            model: None,
+            pressed_snapshot: Some(pressed),
+            default_pressed: false,
+            label: None,
+            children: Vec::new(),
+            leading_icon: None,
+            trailing_icon: None,
+            disabled: false,
+            control_id: None,
+            a11y_label: None,
+            on_click: None,
+            action_payload: None,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             chrome: ChromeRefinement::default(),
@@ -308,6 +340,7 @@ impl Toggle {
     pub fn uncontrolled(default_pressed: bool) -> Self {
         Self {
             model: None,
+            pressed_snapshot: None,
             default_pressed,
             label: None,
             children: Vec::new(),
@@ -317,6 +350,7 @@ impl Toggle {
             control_id: None,
             a11y_label: None,
             on_click: None,
+            action_payload: None,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             chrome: ChromeRefinement::default(),
@@ -359,8 +393,8 @@ impl Toggle {
 
     /// Binds this Toggle to a logical form control id (similar to HTML `id`).
     ///
-    /// When set, `Label::for_control(ControlId)` forwards focus to the toggle pressable, and the
-    /// label click toggles the pressed state via the control registry.
+    /// When set, `Label::for_control(ControlId)` forwards focus to the toggle pressable and
+    /// mirrors the same press activation path (typed action dispatch and/or pressed-state toggle).
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
         self
@@ -368,6 +402,34 @@ impl Toggle {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Bind a stable action ID to this toggle (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this still dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`Toggle::action_payload`], but computes the payload lazily on activation.
+    pub fn action_payload_factory(
+        mut self,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -416,11 +478,17 @@ impl Toggle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let model =
-            fret_ui_kit::primitives::toggle::toggle_use_model(cx, self.model.clone(), || {
-                self.default_pressed
-            })
-            .model();
+        let pressed_snapshot = self.pressed_snapshot;
+        let model = match (self.model.clone(), pressed_snapshot) {
+            (Some(model), _) => Some(model),
+            (None, Some(_)) => None,
+            (None, None) => Some(
+                fret_ui_kit::primitives::toggle::toggle_use_model(cx, None, || {
+                    self.default_pressed
+                })
+                .model(),
+            ),
+        };
         let label = self.label;
         let children = self.children;
         let leading_icon = self.leading_icon;
@@ -429,6 +497,7 @@ impl Toggle {
         let a11y_label = self.a11y_label.clone();
         let control_id = self.control_id;
         let on_click = self.on_click;
+        let action_payload = self.action_payload;
         let disabled = disabled_explicit
             || on_click
                 .as_ref()
@@ -567,6 +636,7 @@ impl Toggle {
 
         let control_id_for_register = control_id.clone();
         let control_registry_for_register = control_registry.clone();
+        let pressed_model_for_toggle = model.clone();
         let labelled_by_element_for_toggle = labelled_by_element;
         let described_by_element_for_toggle = described_by_element;
         let has_a11y_label_for_toggle = a11y_label.is_some();
@@ -576,20 +646,52 @@ impl Toggle {
                 control_id_for_register.clone(),
                 control_registry_for_register.clone(),
             ) {
-                let entry = ControlEntry {
-                    element: _id,
-                    enabled: !disabled,
-                    action: ControlAction::ToggleBool(model.clone()),
+                let toggle_action = pressed_model_for_toggle
+                    .clone()
+                    .map(ControlAction::ToggleBool);
+                let action = match (on_click.clone(), action_payload.clone(), toggle_action) {
+                    (Some(command), payload, Some(toggle_action)) => Some(ControlAction::Sequence(
+                        vec![
+                            ControlAction::DispatchCommand { command, payload },
+                            toggle_action,
+                        ]
+                        .into(),
+                    )),
+                    (Some(command), payload, None) => {
+                        Some(ControlAction::DispatchCommand { command, payload })
+                    }
+                    (None, _, Some(toggle_action)) => Some(toggle_action),
+                    (None, _, None) => None,
                 };
-                let _ = cx.app.models_mut().update(&control_registry, |reg| {
-                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
-                });
+                if let Some(action) = action {
+                    let entry = ControlEntry {
+                        element: _id,
+                        enabled: !disabled,
+                        action,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
             }
 
-            cx.pressable_dispatch_command_if_enabled_opt(on_click);
-            cx.pressable_toggle_bool(&model);
+            if let Some(payload) = action_payload.clone() {
+                cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                    on_click.clone(),
+                    payload,
+                );
+            } else {
+                cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
+            }
+            if let Some(model) = pressed_model_for_toggle.as_ref() {
+                cx.pressable_toggle_bool(model);
+            }
 
-            let on = cx.watch_model(&model).copied().unwrap_or(false);
+            let on = if let Some(model) = pressed_model_for_toggle.as_ref() {
+                cx.watch_model(model).copied().unwrap_or(false)
+            } else {
+                pressed_snapshot.unwrap_or(false)
+            };
             let mut states = WidgetStates::from_pressable(cx, state, !disabled);
             states.set(WidgetState::Selected, on);
 
@@ -807,8 +909,9 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{
-        CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
-        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+        CommandId, CommandMeta, CommandScope, Effect, FrameId, TickId,
+        WindowCommandActionAvailabilityService, WindowCommandEnabledService,
+        WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::UiTree;
     use std::collections::HashMap;
@@ -826,8 +929,8 @@ mod tests {
             (
                 TextBlobId::default(),
                 TextMetrics {
-                    size: Size::new(Px(0.0), Px(0.0)),
-                    baseline: Px(0.0),
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
                 },
             )
         }
@@ -895,6 +998,170 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn toggle_pressed_value_exposes_semantics_without_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle-pressed-value-semantics",
+            |cx| {
+                vec![
+                    Toggle::from_pressed(true)
+                        .a11y_label("Toggle bookmark")
+                        .label("Bookmark")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("Toggle bookmark"))
+            .expect("toggle semantics node");
+        assert_eq!(node.role, fret_core::SemanticsRole::Button);
+        assert_eq!(
+            node.flags.pressed_state,
+            Some(fret_core::SemanticsPressedState::True)
+        );
+    }
+
+    #[test]
+    fn field_label_click_dispatches_action_for_snapshot_toggle_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let cmd = CommandId::from("test.toggle.label-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Toggle Label Action").with_scope(CommandScope::App),
+        );
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle-label-dispatches-action-for-snapshot-control",
+            |cx| {
+                let mut row_layout = fret_ui::element::LayoutStyle::default();
+                row_layout.size.width = fret_ui::element::Length::Fill;
+
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: row_layout,
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: false,
+                    },
+                    |cx| {
+                        vec![
+                            Toggle::from_pressed(true)
+                                .control_id("test.toggle")
+                                .a11y_label("Test toggle")
+                                .label("Bookmark")
+                                .action(cmd.clone())
+                                .into_element(cx),
+                            crate::FieldLabel::new("Toggle via label")
+                                .for_control("test.toggle")
+                                .into_element(cx)
+                                .test_id("test.toggle.label"),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.flush_effects();
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.toggle.label"))
+            .expect("label semantics node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())),
+            "expected label click to dispatch {cmd:?}, got {effects:?}"
+        );
     }
 
     #[test]

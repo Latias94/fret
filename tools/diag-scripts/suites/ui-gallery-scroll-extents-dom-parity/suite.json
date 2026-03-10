@@ -2,6 +2,7 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
+    "tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-demo-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",

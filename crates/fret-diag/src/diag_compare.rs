@@ -49,10 +49,10 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
         return cmd_compare_resource_footprint(&a_src, &b_src, stats_json);
     }
 
-    let a_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&a_src);
-    let b_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&b_src);
-    let a_bundle_path = resolve_bundle_artifact_path(&a_src);
-    let b_bundle_path = resolve_bundle_artifact_path(&b_src);
+    let a_resolved = resolve::resolve_bundle_ref(&a_src)?;
+    let b_resolved = resolve::resolve_bundle_ref(&b_src)?;
+    let a_bundle_path = a_resolved.bundle_artifact;
+    let b_bundle_path = b_resolved.bundle_artifact;
 
     let report = compare_bundles(
         &a_bundle_path,
@@ -226,7 +226,7 @@ fn resolve_session_root_for_resource_footprint(src: &Path) -> PathBuf {
     if src.is_dir() {
         // Common case: user provided a base out dir or session out dir; resolve to the latest bundle
         // dir and then climb back to the session root (which holds `resource.footprint.json`).
-        let bundle_dir = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(src);
+        let bundle_dir = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_self(src);
         if let Some(session_root) = bundle_dir.parent() {
             if session_root.join("resource.footprint.json").is_file() {
                 return session_root.to_path_buf();

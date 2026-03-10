@@ -15,7 +15,7 @@ use fret_code_editor_view::{
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
-    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, PointerType, Px, Rect, SceneOp, Size,
     TextFontFeatureSetting, TextOverflow, TextPaintStyle, TextShapingStyle, TextSpan, TextStyle,
     TextWrap, UnderlineStyle,
 };
@@ -25,8 +25,8 @@ use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActio
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{
-    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps, SemanticsProps,
-    TextInputRegionProps,
+    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps,
+    SemanticsDecoration, TextInputRegionProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::windowed_rows_surface::{
@@ -2557,24 +2557,18 @@ impl CodeEditor {
                             return false;
                         }
 
-                        host.set_cursor_icon(CursorIcon::Text);
+                        if down.pointer_type != PointerType::Touch {
+                            host.set_cursor_icon(CursorIcon::Text);
+                        }
                         if st.interaction.focusable {
                             host.request_focus(region_id);
                         }
-                        host.capture_pointer();
 
                         let bounds = host.bounds();
                         let cell_w = on_pointer_down_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
 
                         st.last_bounds = Some(bounds);
-                        st.dragging = true;
-                        st.drag_pointer = Some(down.pointer_id);
-                        st.drag_autoscroll_viewport_pos = Some(viewport_pos_for_pointer(
-                            bounds,
-                            &on_pointer_down_scroll,
-                            down.position,
-                        ));
                         st.undo_group = None;
 
                         let caret = caret_for_pointer(&mut st, row, bounds, down.position, cell_w);
@@ -2585,6 +2579,21 @@ impl CodeEditor {
                             down.click_count,
                             down.modifiers.shift,
                         );
+
+                        if down.pointer_type == PointerType::Touch {
+                            st.dragging = false;
+                            st.drag_pointer = None;
+                            st.drag_autoscroll_viewport_pos = None;
+                        } else {
+                            host.capture_pointer();
+                            st.dragging = true;
+                            st.drag_pointer = Some(down.pointer_id);
+                            st.drag_autoscroll_viewport_pos = Some(viewport_pos_for_pointer(
+                                bounds,
+                                &on_pointer_down_scroll,
+                                down.position,
+                            ));
+                        }
 
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -2598,7 +2607,12 @@ impl CodeEditor {
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, _row, mv| {
                         // Show an I-beam cursor while hovering the editor surface, even when not dragging.
-                        host.set_cursor_icon(CursorIcon::Text);
+                        if mv.pointer_type != PointerType::Touch {
+                            host.set_cursor_icon(CursorIcon::Text);
+                        }
+                        if mv.pointer_type == PointerType::Touch {
+                            return false;
+                        }
                         if !mv.buttons.left {
                             return false;
                         }
@@ -2991,17 +3005,12 @@ impl CodeEditor {
                     },
                 ));
 
-                vec![windowed_rows_surface_with_pointer_region(
+                let surface = windowed_rows_surface_with_pointer_region(
                     cx,
                     surface_props,
                     pointer_props,
                     handlers,
-                    Some(SemanticsProps {
-                        role: fret_core::SemanticsRole::Viewport,
-                        label: Some(Arc::<str>::from("Editor viewport")),
-                        test_id: viewport_test_id.clone(),
-                        ..Default::default()
-                    }),
+                    None,
                     move |painter, row, rect| {
                         if cell_w.get().0 <= 0.0 {
                             let scope = painter.key_scope(&"fret-code-editor-cell-width");
@@ -3039,7 +3048,18 @@ impl CodeEditor {
                             caret_color,
                         );
                     },
-                )]
+                );
+
+                if let Some(test_id) = viewport_test_id.clone() {
+                    let surface = surface.attach_semantics(
+                        SemanticsDecoration::default()
+                            .label("Editor viewport")
+                            .test_id(test_id),
+                    );
+                    vec![surface]
+                } else {
+                    vec![surface]
+                }
             })
         })
     }

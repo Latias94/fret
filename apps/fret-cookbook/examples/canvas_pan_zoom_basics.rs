@@ -66,15 +66,12 @@ impl View for CanvasPanZoomBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let view_value = cx.watch_model(&self.view).paint().copied_or_default();
-        let node_origin = cx
-            .watch_model(&self.node_origin)
-            .paint()
-            .copied_or_default();
+        let view_value = cx.watch_model(&self.view).paint().value_or_default();
+        let node_origin = cx.watch_model(&self.node_origin).paint().value_or_default();
         let node_drag_count = cx
             .watch_model(&self.node_drag_count)
             .paint()
-            .copied_or_default();
+            .value_or_default();
 
         cx.on_action_notify_model_update::<act::ResetView, PanZoom2D>(self.view.clone(), |v| {
             *v = PanZoom2D::default();
@@ -92,8 +89,7 @@ impl View for CanvasPanZoomBasicsView {
 
         let zoom_badge = shadcn::Badge::new(format!("Zoom: {:.2}", view_value.zoom))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Meter)
                     .test_id(TEST_ID_ZOOM)
@@ -103,8 +99,7 @@ impl View for CanvasPanZoomBasicsView {
 
         let pan_x = shadcn::Badge::new(format!("Pan X: {:.0}", view_value.pan.x.0))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Meter)
                     .test_id(TEST_ID_PAN_X)
@@ -112,8 +107,7 @@ impl View for CanvasPanZoomBasicsView {
             );
         let pan_y = shadcn::Badge::new(format!("Pan Y: {:.0}", view_value.pan.y.0))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Meter)
                     .test_id(TEST_ID_PAN_Y)
@@ -122,8 +116,7 @@ impl View for CanvasPanZoomBasicsView {
 
         let drag_badge = shadcn::Badge::new(format!("Node drags: {node_drag_count}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Meter)
                     .test_id(TEST_ID_NODE_DRAGS)
@@ -131,16 +124,15 @@ impl View for CanvasPanZoomBasicsView {
             );
 
         let toolbar = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 shadcn::Button::new("Reset view")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::ResetView)
-                    .into_element(cx)
                     .test_id(TEST_ID_RESET_VIEW),
                 shadcn::Button::new("Reset node")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::ResetNode)
-                    .into_element(cx)
                     .test_id(TEST_ID_RESET_NODE),
                 zoom_badge,
                 pan_x,
@@ -149,20 +141,18 @@ impl View for CanvasPanZoomBasicsView {
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let hint = shadcn::Alert::new([
-            shadcn::AlertTitle::new("Interactions").into_element(cx),
+        let hint = shadcn::Alert::new(ui::children![
+            cx;
+            shadcn::AlertTitle::new("Interactions"),
             shadcn::AlertDescription::new(
                 "Middle-drag pans. Wheel zooms. Left-drag the rectangle to move it in canvas space.",
-            )
-            .into_element(cx),
+            ),
         ])
-        .ui()
-        .into_element(cx);
+        .ui();
 
-        let canvas = {
+        let canvas: AnyElement = {
             let view_model = self.view.clone();
             let node_origin_model = self.node_origin.clone();
             let drag_model = self.node_drag.clone();
@@ -413,27 +403,36 @@ impl View for CanvasPanZoomBasicsView {
                 .into()
         };
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Canvas pan/zoom basics").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Uses fret-canvas pan/zoom wiring + a tiny app-owned drag tool for one item.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, hint, canvas])
-                .gap(Space::N3)
-                .w_full()
-                .into_element(cx)])
-            .into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Canvas pan/zoom basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Uses fret-canvas pan/zoom wiring + a tiny app-owned drag tool for one item.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; toolbar, hint, canvas])
+                            .gap(Space::N3)
+                            .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .max_w(Px(980.0))
-        .into_element(cx);
+        .max_w(Px(980.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

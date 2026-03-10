@@ -34,9 +34,16 @@ pub trait View: 'static {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements;
 }
 
-#[derive(Clone)]
 pub struct LocalState<T> {
     model: Model<T>,
+}
+
+impl<T> Clone for LocalState<T> {
+    fn clone(&self) -> Self {
+        Self {
+            model: self.model.clone(),
+        }
+    }
 }
 
 impl<T> LocalState<T> {
@@ -48,6 +55,62 @@ impl<T> LocalState<T> {
         self.model.clone()
     }
 
+    pub fn read_in<R>(
+        &self,
+        models: &ModelStore,
+        f: impl FnOnce(&T) -> R,
+    ) -> Result<R, ModelUpdateError>
+    where
+        T: Any,
+    {
+        models.read(&self.model, f)
+    }
+
+    pub fn revision_in(&self, models: &ModelStore) -> Option<u64>
+    where
+        T: Any,
+    {
+        models.revision(&self.model)
+    }
+
+    /// Clone the current local value through an explicit `ModelStore` read.
+    ///
+    /// This mirrors the render-time `watch(...).value_*` helpers for multi-state transactions that
+    /// still need to read from `ModelStore` inside `on_action_notify_models::<A>(...)`.
+    pub fn value_in(&self, models: &ModelStore) -> Option<T>
+    where
+        T: Any + Clone,
+    {
+        self.read_in(models, Clone::clone).ok()
+    }
+
+    pub fn value_in_or(&self, models: &ModelStore, default: T) -> T
+    where
+        T: Any + Clone,
+    {
+        self.value_in(models).unwrap_or(default)
+    }
+
+    pub fn value_in_or_else(&self, models: &ModelStore, f: impl FnOnce() -> T) -> T
+    where
+        T: Any + Clone,
+    {
+        self.value_in(models).unwrap_or_else(f)
+    }
+
+    pub fn value_in_or_default(&self, models: &ModelStore) -> T
+    where
+        T: Any + Clone + Default,
+    {
+        self.value_in(models).unwrap_or_default()
+    }
+
+    /// Update this local slot through an explicit `ModelStore` transaction.
+    ///
+    /// This is a store-only write helper: it does **not** request redraw or mark the current
+    /// view-cache root dirty by itself. Use it inside `on_action_notify_models::<A>(...)` when the
+    /// write participates in a broader model-store transaction, or use `update_action(...)` /
+    /// `ViewCx::on_action_notify_local_*` when the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -55,6 +118,22 @@ impl<T> LocalState<T> {
         models.update(&self.model, f).is_ok()
     }
 
+    /// Update this local slot through an explicit `ModelStore` transaction and let the closure
+    /// decide whether the write should count as `handled`.
+    ///
+    /// This is useful for tracked collections where the mutation may or may not actually change the
+    /// slot (for example: toggle/remove by id). Missing model handles still return `false`.
+    pub fn update_in_if(&self, models: &mut ModelStore, f: impl FnOnce(&mut T) -> bool) -> bool
+    where
+        T: Any,
+    {
+        models.update(&self.model, f).ok().unwrap_or(false)
+    }
+
+    /// Set this local slot through an explicit `ModelStore` transaction.
+    ///
+    /// Like `update_in(...)`, this only mutates the tracked slot; redraw + `notify()` remain the
+    /// responsibility of the surrounding authoring surface unless you use the action-aware helpers.
     pub fn set_in(&self, models: &mut ModelStore, value: T) -> bool
     where
         T: Any,
@@ -62,6 +141,8 @@ impl<T> LocalState<T> {
         self.update_in(models, move |slot| *slot = value)
     }
 
+    /// Update this local slot from an action dispatch and participate in the tracked-write
+    /// rerender rule (`request_redraw(window)` + `notify(action_cx)`) when the write succeeds.
     pub fn update_action(
         &self,
         host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -79,6 +160,27 @@ impl<T> LocalState<T> {
         handled
     }
 
+    /// Like `update_action(...)`, but the closure decides whether the mutation should count as
+    /// `handled` before triggering redraw + `notify()`.
+    pub fn update_action_if(
+        &self,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        action_cx: fret_ui::action::ActionCx,
+        f: impl FnOnce(&mut T) -> bool,
+    ) -> bool
+    where
+        T: Any,
+    {
+        let handled = self.update_in_if(host.models_mut(), f);
+        if handled {
+            host.request_redraw(action_cx.window);
+            host.notify(action_cx);
+        }
+        handled
+    }
+
+    /// Set this local slot from an action dispatch and participate in the tracked-write rerender
+    /// rule (`request_redraw(window)` + `notify(action_cx)`) when the write succeeds.
     pub fn set_action(
         &self,
         host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -90,16 +192,72 @@ impl<T> LocalState<T> {
     {
         self.update_action(host, action_cx, move |slot| *slot = value)
     }
+
+    pub fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedLocal<'watch, 'watch, 'a, H, T>
+    where
+        T: Any,
+    {
+        cx.watch_local(self)
+    }
+}
+
+/// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
+/// free of direct `ModelStore` plumbing.
+///
+/// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
+/// across shared `Model<T>` graphs, use `ViewCx::on_action_notify_models` directly.
+pub struct LocalTxn<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> LocalTxn<'a> {
+    pub fn value_or<T: Any + Clone>(&self, local: &LocalState<T>, default: T) -> T {
+        local.value_in_or(self.models, default)
+    }
+
+    pub fn value_or_else<T: Any + Clone>(&self, local: &LocalState<T>, f: impl FnOnce() -> T) -> T {
+        local.value_in_or_else(self.models, f)
+    }
+
+    pub fn set<T: Any>(&mut self, local: &LocalState<T>, value: T) -> bool {
+        local.set_in(self.models, value)
+    }
+
+    pub fn update<T: Any>(&mut self, local: &LocalState<T>, f: impl FnOnce(&mut T)) -> bool {
+        local.update_in(self.models, f)
+    }
+
+    pub fn update_if<T: Any>(
+        &mut self,
+        local: &LocalState<T>,
+        f: impl FnOnce(&mut T) -> bool,
+    ) -> bool {
+        local.update_in_if(self.models, f)
+    }
 }
 
 #[must_use]
-pub struct WatchedLocal<'cx, 'm, 'a, H: UiHost, T: Any> {
+pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
     cx: &'cx mut ElementContext<'a, H>,
-    local: &'m LocalState<T>,
+    model: &'m Model<T>,
     invalidation: Invalidation,
 }
 
-impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
+pub type WatchedLocal<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
+pub type WatchedModel<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
+
+impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
+    fn new(cx: &'cx mut ElementContext<'a, H>, model: &'m Model<T>) -> Self {
+        Self {
+            cx,
+            model,
+            invalidation: Invalidation::Paint,
+        }
+    }
+
     pub fn invalidation(mut self, invalidation: Invalidation) -> Self {
         self.invalidation = invalidation;
         self
@@ -118,19 +276,19 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
     }
 
     pub fn observe(self) {
-        self.cx.observe_model(self.local.model(), self.invalidation);
+        self.cx.observe_model(self.model, self.invalidation);
     }
 
     pub fn revision(self) -> Option<u64> {
-        self.cx.observe_model(self.local.model(), self.invalidation);
-        self.cx.app.models().revision(self.local.model())
+        self.cx.observe_model(self.model, self.invalidation);
+        self.cx.app.models().revision(self.model)
     }
 
     pub fn copied(self) -> Option<T>
     where
         T: Copy,
     {
-        self.cx.get_model_copied(self.local.model(), self.invalidation)
+        self.cx.get_model_copied(self.model, self.invalidation)
     }
 
     pub fn copied_or(self, default: T) -> T
@@ -151,7 +309,7 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
     where
         T: Clone,
     {
-        self.cx.get_model_cloned(self.local.model(), self.invalidation)
+        self.cx.get_model_cloned(self.model, self.invalidation)
     }
 
     pub fn cloned_or(self, default: T) -> T
@@ -175,12 +333,113 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
         self.cloned().unwrap_or_default()
     }
 
+    /// Default post-v1 read path: clone/copy the tracked value without choosing between
+    /// `copied_*` and `cloned_*` at every call site.
+    pub fn value(self) -> Option<T>
+    where
+        T: Clone,
+    {
+        self.cloned()
+    }
+
+    pub fn value_or(self, default: T) -> T
+    where
+        T: Clone,
+    {
+        self.value().unwrap_or(default)
+    }
+
+    pub fn value_or_else(self, f: impl FnOnce() -> T) -> T
+    where
+        T: Clone,
+    {
+        self.value().unwrap_or_else(f)
+    }
+
+    pub fn value_or_default(self) -> T
+    where
+        T: Clone + Default,
+    {
+        self.value().unwrap_or_default()
+    }
+
     pub fn read_ref<R>(self, f: impl FnOnce(&T) -> R) -> Result<R, ModelUpdateError> {
-        self.cx.read_model_ref(self.local.model(), self.invalidation, f)
+        self.cx.read_model_ref(self.model, self.invalidation, f)
     }
 
     pub fn read<R>(self, f: impl FnOnce(&mut H, &T) -> R) -> Result<R, ModelUpdateError> {
-        self.cx.read_model(self.local.model(), self.invalidation, f)
+        self.cx.read_model(self.model, self.invalidation, f)
+    }
+}
+
+/// Shared read-side ergonomics for both `LocalState<T>` and explicit `Model<T>` handles.
+pub trait TrackedStateExt<T: Any> {
+    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>;
+
+    fn paint<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        self.watch(cx).paint()
+    }
+
+    fn layout<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        self.watch(cx).layout()
+    }
+
+    fn hit_test<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        self.watch(cx).hit_test()
+    }
+}
+
+impl<T: Any> TrackedStateExt<T> for LocalState<T> {
+    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        cx.watch_local(self)
+    }
+}
+
+impl<T: Any> TrackedStateExt<T> for Model<T> {
+    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        WatchedState::new(cx.cx, self)
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::IntoTextValueModel for LocalState<String> {
+    fn into_text_value_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::IntoTextValueModel for &LocalState<String> {
+    fn into_text_value_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "state-query")]
+impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::QueryHandle<T> {
+    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, fret_query::QueryState<T>> {
+        WatchedState::new(cx.cx, self.model())
     }
 }
 
@@ -369,12 +628,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 
     /// Observe and read a model-backed local state handle.
-    pub fn watch_local<'m, T: Any>(&'m mut self, local: &'m LocalState<T>) -> WatchedLocal<'m, 'm, 'a, H, T> {
-        WatchedLocal {
-            cx: self.cx,
-            local,
-            invalidation: Invalidation::Paint,
-        }
+    pub fn watch_local<'m, T: Any>(
+        &'m mut self,
+        local: &'m LocalState<T>,
+    ) -> WatchedLocal<'m, 'm, 'a, H, T> {
+        WatchedState::new(self.cx, local.model())
     }
 
     /// Derived state hook backed by `ecosystem/fret-selector` (UI feature).
@@ -417,8 +675,8 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         key: fret_query::QueryKey<T>,
         policy: fret_query::QueryPolicy,
         fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
-        + Send
-        + 'static,
+            + Send
+            + 'static,
     ) -> fret_query::QueryHandle<T> {
         fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
     }
@@ -457,7 +715,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
@@ -471,7 +729,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
+            + 'static,
     ) {
         self.on_action::<A>(move |host, action_cx| {
             let handled = f(host, action_cx);
@@ -516,6 +774,46 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
     }
 
+    /// Register a typed unit action handler that updates a `LocalState<T>` and participates in the
+    /// view-cache closure (`request_redraw` + `notify`) when the update succeeds.
+    pub fn on_action_notify_local_update<A, T>(
+        &mut self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T) + 'static,
+    ) where
+        A: crate::TypedAction,
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        self.on_action::<A>(move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
+    }
+
+    /// Register a typed unit action handler that sets a `LocalState<T>` to a fixed value and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when the write succeeds.
+    pub fn on_action_notify_local_set<A, T>(&mut self, local: &LocalState<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone,
+    {
+        let local = LocalState::clone(local);
+        self.on_action::<A>(move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
+    }
+
+    /// Convenience helper: register a typed unit action handler that toggles a `LocalState<bool>`.
+    pub fn on_action_notify_toggle_local_bool<A: crate::TypedAction>(
+        &mut self,
+        local: &LocalState<bool>,
+    ) {
+        let local = LocalState::clone(local);
+        self.on_action::<A>(move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
+        });
+    }
+
     /// Register a typed unit action handler that runs a model-store transaction and participates
     /// in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
     ///
@@ -526,6 +824,21 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static,
     ) {
         self.on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()))
+    }
+
+    /// Register a typed unit action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the transaction only touches view-owned `LocalState<T>` slots.
+    pub fn on_action_notify_locals<A: crate::TypedAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static,
+    ) {
+        self.on_action_notify_models::<A>(move |models| {
+            let mut tx = LocalTxn { models };
+            f(&mut tx)
+        })
     }
 
     /// Register a typed action handler that records a transient event for this dispatch cycle.
@@ -548,11 +861,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
@@ -563,11 +876,11 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
+                &mut dyn fret_ui::action::UiFocusActionHost,
+                fret_ui::action::ActionCx,
+                A::Payload,
+            ) -> bool
+            + 'static,
     ) {
         self.on_payload_action::<A>(move |host, action_cx, payload| {
             let handled = f(host, action_cx, payload);
@@ -579,14 +892,51 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         });
     }
 
+    /// Register a typed payload action handler that mutates `LocalState<T>` and participates in
+    /// the tracked-write rerender rule when the closure returns `handled=true`.
+    ///
+    /// This is intentionally narrow: it exists for keyed-list / payload-row style mutations where
+    /// the remaining visible boilerplate is mostly `host.models_mut()` + `LocalState` cloning at
+    /// the root action table.
+    pub fn on_payload_action_notify_local_update_if<A, T>(
+        &mut self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        self.on_payload_action::<A>(move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+
+    /// Register a typed payload action handler that runs a LocalState-focused transaction and
+    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This keeps the default authoring surface free of direct `ModelStore` references for the
+    /// common case where the handler only coordinates view-owned `LocalState<T>` slots.
+    pub fn on_payload_action_notify_locals<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
+    ) {
+        self.on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, payload)
+        })
+    }
+
     /// Register a typed unit action availability handler.
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
+                &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+                fret_ui::action::CommandAvailabilityActionCx,
+            ) -> fret_ui::CommandAvailability
+            + 'static,
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
@@ -686,4 +1036,181 @@ pub fn view_record_engine_frame<V: View>(
         ui.set_view_cache_enabled(true);
     }
     fret_launch::EngineFrameUpdate::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LocalState;
+    use fret_core::AppWindowId;
+    use fret_runtime::{Effect, ModelStore, TimerToken};
+    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+
+    #[derive(Default)]
+    struct FakeHost {
+        models: ModelStore,
+        redraws: Vec<AppWindowId>,
+        notifies: Vec<ActionCx>,
+        next_timer: u64,
+    }
+
+    impl UiActionHost for FakeHost {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, _effect: Effect) {}
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraws.push(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            let current = self.next_timer;
+            self.next_timer = self.next_timer.saturating_add(1);
+            TimerToken(current)
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            fret_runtime::ClipboardToken::default()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            fret_runtime::ShareSheetToken::default()
+        }
+
+        fn notify(&mut self, cx: ActionCx) {
+            self.notifies.push(cx);
+        }
+    }
+
+    impl UiFocusActionHost for FakeHost {
+        fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
+    }
+
+    #[test]
+    fn local_state_value_in_helpers_clone_store_values() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(String::from("hello")),
+        };
+
+        assert_eq!(local.value_in(&host.models), Some(String::from("hello")));
+        assert_eq!(
+            local.value_in_or(&host.models, String::from("fallback")),
+            String::from("hello")
+        );
+        assert_eq!(
+            LocalState {
+                model: host.models.insert(String::new()),
+            }
+            .value_in_or_default(&host.models),
+            String::new()
+        );
+    }
+
+    #[test]
+    fn local_state_update_in_if_returns_closure_handled_state() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+
+        assert!(local.update_in_if(&mut host.models, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 2);
+            values.len() != before
+        }));
+        assert_eq!(
+            host.models
+                .read(local.model(), |values| values.clone())
+                .unwrap(),
+            vec![1, 3]
+        );
+        assert!(!local.update_in_if(&mut host.models, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 99);
+            values.len() != before
+        }));
+    }
+
+    #[test]
+    fn local_state_update_action_requests_redraw_and_notify() {
+        let mut host = FakeHost::default();
+        let model = host.models.insert(1i32);
+        let local = LocalState {
+            model: model.clone(),
+        };
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(42),
+        };
+
+        assert!(local.update_action(&mut host, action_cx, |value| *value += 1));
+        assert_eq!(host.models.read(&model, |value| *value).unwrap(), 2);
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
+    }
+
+    #[test]
+    fn local_state_update_action_if_only_notifies_when_handled() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(7),
+        };
+
+        assert!(local.update_action_if(&mut host, action_cx, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 2);
+            values.len() != before
+        }));
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
+
+        host.redraws.clear();
+        host.notifies.clear();
+        assert!(!local.update_action_if(&mut host, action_cx, |values| {
+            let before = values.len();
+            values.retain(|value| *value != 99);
+            values.len() != before
+        }));
+        assert!(host.redraws.is_empty());
+        assert!(host.notifies.is_empty());
+    }
+
+    #[test]
+    fn local_state_update_action_if_can_use_payload_from_closure() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(9),
+        };
+
+        assert!(local.update_action_if(&mut host, action_cx, |values| {
+            let remove_id = 2u64;
+            let before = values.len();
+            values.retain(|value| *value != remove_id);
+            values.len() != before
+        }));
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn local_state_supports_text_value_widgets() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(String::from("hello")),
+        };
+
+        let _input = fret_ui_shadcn::Input::new(&local);
+        let _textarea = fret_ui_shadcn::Textarea::new(&local);
+    }
 }

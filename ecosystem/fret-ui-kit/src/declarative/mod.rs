@@ -68,6 +68,8 @@ pub use forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use global_watch::GlobalWatchExt;
 pub use keyboard_avoidance::window_insets_padding_refinement_or_zero;
 pub use model_watch::ModelWatchExt;
+#[cfg(feature = "state-query")]
+pub use model_watch::QueryHandleWatchExt;
 pub use occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,

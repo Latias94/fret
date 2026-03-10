@@ -11,4 +11,6 @@ pub mod basic;
 pub mod custom_colors;
 pub mod demo;
 pub mod destructive;
+pub mod interactive_links;
+pub mod rich_title;
 pub mod rtl;

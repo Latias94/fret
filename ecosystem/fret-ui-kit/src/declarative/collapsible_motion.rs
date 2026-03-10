@@ -57,6 +57,7 @@ impl Default for MeasuredSizeState {
 
 #[derive(Debug, Default, Clone, Copy)]
 struct MeasuredHeightEndpointHoldState {
+    initialized: bool,
     last_open_requested: bool,
     opening_hold_pending: bool,
     closing_hold_pending: bool,
@@ -230,11 +231,15 @@ pub fn measured_height_motion_for_root<H: UiHost>(
         MeasuredHeightEndpointHoldState::default,
         |st: &mut MeasuredHeightEndpointHoldState| {
             let prev_open = st.last_open_requested;
-            if open && !prev_open {
-                st.opening_hold_pending = true;
-            }
-            if !open && prev_open {
-                st.closing_hold_pending = true;
+            if st.initialized {
+                if open && !prev_open {
+                    st.opening_hold_pending = true;
+                }
+                if !open && prev_open {
+                    st.closing_hold_pending = true;
+                }
+            } else {
+                st.initialized = true;
             }
             st.last_open_requested = open;
             (st.opening_hold_pending, st.closing_hold_pending)
@@ -258,8 +263,12 @@ pub fn measured_height_motion_for_root<H: UiHost>(
             wants_measurement,
             transition,
             should_render: true,
-            wrapper_refinement: collapsible_measurement_wrapper_refinement(),
-            wrapper_opacity: 0.0,
+            wrapper_refinement: LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .min_h(Px(0.0))
+                .overflow_hidden(),
+            wrapper_opacity: 1.0,
         };
     }
 
@@ -344,11 +353,15 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
         MeasuredHeightEndpointHoldState::default,
         |st: &mut MeasuredHeightEndpointHoldState| {
             let prev_open = st.last_open_requested;
-            if open && !prev_open {
-                st.opening_hold_pending = true;
-            }
-            if !open && prev_open {
-                st.closing_hold_pending = true;
+            if st.initialized {
+                if open && !prev_open {
+                    st.opening_hold_pending = true;
+                }
+                if !open && prev_open {
+                    st.closing_hold_pending = true;
+                }
+            } else {
+                st.initialized = true;
             }
             st.last_open_requested = open;
             (st.opening_hold_pending, st.closing_hold_pending)
@@ -373,8 +386,12 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
             wants_measurement,
             transition,
             should_render: true,
-            wrapper_refinement: collapsible_measurement_wrapper_refinement(),
-            wrapper_opacity: 0.0,
+            wrapper_refinement: LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .min_h(Px(0.0))
+                .overflow_hidden(),
+            wrapper_opacity: 1.0,
         };
     }
 

@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
 Status: Landed (v1 implementation is in-tree; hardening follow-ups in progress; ADRs remain the source of truth)
-Last updated: 2026-03-05
+Last updated: 2026-03-10
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
 Zed/GPUI while preserving Fret’s non-negotiable layering rules:
@@ -13,6 +13,8 @@ The key stance:
 
 - Treat “DSL” as an optional **future frontend**, not as the core refactor goal.
 - Design the refactor so that a future DSL/frontend can compile into the same IR and reuse the same runtime loop.
+- Treat **GPUI authoring/runtime** as the north-star for v2; component-library productization work is
+  secondary packaging, not the primary target.
 
 ---
 
@@ -139,8 +141,10 @@ These v1 decisions are locked to keep the implementation plan executable:
 
 ### Upstream references (non-normative)
 
-- Zed/GPUI (typed actions + key dispatch): `repo-ref/zed/crates/gpui`
-- gpui-component (ergonomic builder patterns): `repo-ref/gpui-component/crates/ui`
+- Primary north-star — Zed/GPUI (typed actions + key dispatch + view/runtime mental model):
+  `repo-ref/zed/crates/gpui`
+- Secondary packaging reference — gpui-component (selected builder/productization patterns only):
+  `repo-ref/gpui-component/crates/ui`
 
 ---
 
@@ -385,7 +389,7 @@ struct MyView {
 
 impl View for MyView {
     fn render(&mut self, cx: &mut ViewCx<'_, App>) -> Elements {
-        let st = cx.watch_model(&self.st).layout().cloned_or_default();
+        let st = cx.watch_model(&self.st).layout().value_or_default();
 
         let derived = cx.use_selector(
             |cx| DepsBuilder::new(cx).model_rev(&self.st).finish(),
@@ -496,7 +500,7 @@ What remains intentionally deferred to a later phase:
 - `ViewCx::use_state` still returns `Model<T>` rather than offering a plain-Rust local-state story,
 - medium demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes,
 - `ui::children!` remains the dominant composition style instead of builder-only composition,
-- widget-local action sugar such as `listener` / `dispatch` / `shortcut` is not yet the default mental model,
+- keyed-list / payload-row handler ergonomics are not yet productized as a narrow default follow-up,
 - some App/transient-effect cases still require explicit scheduling ceremony.
 
 Recommendation:

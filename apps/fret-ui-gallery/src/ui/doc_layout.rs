@@ -3,6 +3,7 @@ use super::*;
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
     pub title_test_id: Option<&'static str>,
+    pub root_test_id: Option<Arc<str>>,
     pub description: Vec<&'static str>,
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
@@ -34,6 +35,7 @@ impl DocSection {
         Self {
             title,
             title_test_id: None,
+            root_test_id: None,
             description: Vec::new(),
             preview,
             code: None,
@@ -46,6 +48,11 @@ impl DocSection {
 
     pub(in crate::ui) fn title_test_id(mut self, title_test_id: &'static str) -> Self {
         self.title_test_id = Some(title_test_id);
+        self
+    }
+
+    pub(in crate::ui) fn test_id_root(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.root_test_id = Some(test_id.into());
         self
     }
 
@@ -149,18 +156,18 @@ pub(in crate::ui) fn render_doc_page(
     })
     .gap(Space::N6)
     .items_start()
-    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(page_max_w),
+    )
     .into_element(cx);
 
-    ui::h_flex(move |cx| {
-        [ui::container(move |_cx| vec![body])
-            .w_full()
-            .max_w(page_max_w)
-            .into_element(cx)]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .justify_center()
-    .into_element(cx)
+    ui::h_flex(move |_cx| [body])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_center()
+        .into_element(cx)
 }
 
 pub(in crate::ui) fn wrap_preview_page(
@@ -427,6 +434,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     let DocSection {
         title,
         title_test_id,
+        root_test_id,
         description,
         preview,
         code,
@@ -444,12 +452,11 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     };
 
     let shell = shell && title != "Notes";
-    let preview_shell = if shell {
+    let preview = if shell {
         demo_shell(cx, max_w, preview)
     } else {
-        layout_only_shell(cx, max_w, preview)
+        preview
     };
-    let preview = preview_shell;
 
     let content = match code {
         Some(code) => preview_code_tabs(
@@ -474,20 +481,24 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
             (None, None) => title_el,
         });
         if !description.is_empty() {
-            let description_stack = ui::v_flex(move |cx| {
-                description
-                    .into_iter()
-                    .map(|line| muted_full_width(cx, line))
-                    .collect::<Vec<_>>()
-            })
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx);
-            out.push(if let Some(prefix) = test_id_prefix.as_deref() {
-                description_stack.test_id(format!("{prefix}-description"))
+            let description_el = if description.len() == 1 {
+                muted_full_width(cx, description[0])
             } else {
-                description_stack
+                ui::v_flex(move |cx| {
+                    description
+                        .into_iter()
+                        .map(|line| muted_full_width(cx, line))
+                        .collect::<Vec<_>>()
+                })
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+            };
+            out.push(if let Some(prefix) = test_id_prefix.as_deref() {
+                description_el.test_id(format!("{prefix}-description"))
+            } else {
+                description_el
             });
         }
         out.push(if let Some(prefix) = test_id_prefix.as_deref() {
@@ -507,7 +518,21 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     )
     .into_element(cx);
 
-    section_body
+    if let Some(root_test_id) = root_test_id {
+        let mut section_layout = fret_ui::element::LayoutStyle::default();
+        section_layout.size.width = fret_ui::element::Length::Fill;
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: section_layout,
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(root_test_id),
+                ..Default::default()
+            },
+            |_cx| [section_body],
+        )
+    } else {
+        section_body
+    }
 }
 
 fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
@@ -523,17 +548,6 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
                 .min_w_0()
                 .max_w(max_w)
                 .overflow_visible(),
-        )
-    });
-    cx.container(props, move |_cx| [body])
-}
-
-fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
-    let props = cx.with_theme(|theme| {
-        decl_style::container_props(
-            theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
     cx.container(props, move |_cx| [body])

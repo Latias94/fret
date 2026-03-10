@@ -21,6 +21,7 @@ use fret_diag_protocol::{
 };
 
 pub mod api;
+mod artifact_alias;
 mod artifact_lint;
 mod artifact_store;
 pub mod artifacts;
@@ -30,7 +31,9 @@ mod commands;
 mod compare;
 mod compat;
 pub mod devtools;
+mod diag_campaign;
 mod diag_compare;
+mod diag_dashboard;
 mod diag_list;
 mod diag_matrix;
 mod diag_perf;
@@ -44,6 +47,7 @@ mod diag_simple_dispatch;
 mod diag_stats;
 mod diag_suite;
 mod diag_suite_scripts;
+mod diag_summarize;
 mod evidence_index;
 mod frames_index;
 mod gates;
@@ -66,6 +70,7 @@ mod perf_seed_policy;
 mod post_run_checks;
 mod promoted_registry_builder;
 mod registry;
+pub mod regression_summary;
 mod run_artifacts;
 mod script_execution;
 mod script_registry;
@@ -107,20 +112,23 @@ use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
     compare_bundles, ensure_env_var, find_latest_export_dir, maybe_launch_demo,
-    normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file, resolve_threshold,
-    run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
-    wait_for_files_with_extensions,
+    maybe_launch_demo_without_diagnostics, normalize_repo_relative_path, read_latest_pointer,
+    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
 use devtools::DevtoolsOps;
 use gates::{
-    CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
-    RenderTextAtlasBytesGateResult, RenderTextFontDbGateResult, RenderTextFontDbThresholds,
-    RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult, ResourceFootprintGateResult,
-    ResourceFootprintThresholds, WgpuHubCountsGateResult, WgpuHubCountsThresholds,
-    WgpuMetalAllocatedSizeGateResult, check_code_editor_memory_thresholds,
+    CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, LinearBytesVsImagesGateResult,
+    LinearBytesVsImagesThreshold, RedrawHitchesGateResult, RenderTextAtlasBytesGateResult,
+    RenderTextFontDbGateResult, RenderTextFontDbThresholds, RendererGpuBudgetThresholds,
+    RendererGpuBudgetsGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
+    WgpuHubCountsGateResult, WgpuHubCountsThresholds, WgpuMetalAllocatedSizeGateResult,
+    check_code_editor_memory_thresholds,
+    check_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images,
     check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_render_text_font_db_thresholds, check_renderer_gpu_budget_thresholds,
     check_resource_footprint_thresholds, check_wgpu_hub_counts_thresholds,
+    check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images,
     check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
@@ -138,6 +146,12 @@ use tooling_failures::{
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value};
 
+pub use diag_dashboard::{
+    DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
+    DashboardSummaryProjection, dashboard_counter_entries, dashboard_failing_summary_entries,
+    dashboard_human_lines_from_projection, dashboard_reason_code_entries,
+    project_dashboard_summary,
+};
 pub(crate) use math::{percentile_nearest_rank_sorted, summarize_times_us};
 
 #[derive(Debug, Clone)]
@@ -391,6 +405,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut lint_eps_px: f32 = 0.5;
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
+    let mut check_memory_p90_max: Vec<(String, u64)> = Vec::new();
+    let mut repeat_compare_enabled: bool = true;
     let mut reuse_launch: bool = false;
     let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
@@ -424,6 +440,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
     let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
+    let mut max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images: Option<
+        LinearBytesVsImagesThreshold,
+    > = None;
     let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
     let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
     let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
@@ -439,11 +458,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_wgpu_hub_render_pipelines: Option<u64> = None;
     let mut max_wgpu_hub_shader_modules: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
+    let mut max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images: Option<
+        LinearBytesVsImagesThreshold,
+    > = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_render_text_registered_font_blobs_total_bytes: Option<u64> = None;
     let mut max_render_text_registered_font_blobs_count: Option<u64> = None;
     let mut max_render_text_shape_cache_entries: Option<u64> = None;
     let mut max_render_text_blob_cache_entries: Option<u64> = None;
+    let mut max_render_text_shape_cache_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_paint_palette_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_decorations_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
     let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
@@ -535,6 +560,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_hello_world_compare_idle_present_max_delta: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
@@ -1032,6 +1058,39 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .max(1);
                 i += 1;
             }
+            "--no-compare" => {
+                repeat_compare_enabled = false;
+                i += 1;
+            }
+            "--check-memory-p90-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-memory-p90-max".to_string());
+                };
+                let v = v.trim();
+                let (key, bytes_str) = if let Some((a, b)) = v.split_once(':') {
+                    (a.trim(), b.trim())
+                } else if let Some((a, b)) = v.split_once('=') {
+                    (a.trim(), b.trim())
+                } else {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                };
+                if key.is_empty() || bytes_str.is_empty() {
+                    return Err(
+                        "invalid value for --check-memory-p90-max: expected \"<key>:<bytes>\""
+                            .to_string(),
+                    );
+                }
+                let bytes = bytes_str.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-memory-p90-max: invalid bytes (expected u64)"
+                        .to_string()
+                })?;
+                check_memory_p90_max.push((key.to_string(), bytes));
+                i += 1;
+            }
             "--max-top-total-us" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1231,6 +1290,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images"
+                            .to_string(),
+                    );
+                };
+                max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images = Some(
+                    parse_linear_bytes_vs_images_threshold(
+                        &v,
+                        "--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images",
+                    )?,
+                );
+                i += 1;
+            }
             "--max-macos-io-surface-dirty-bytes" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1417,6 +1492,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images"
+                            .to_string(),
+                    );
+                };
+                max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images = Some(
+                    parse_linear_bytes_vs_images_threshold(
+                        &v,
+                        "--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images",
+                    )?,
+                );
+                i += 1;
+            }
             "--max-render-text-atlas-bytes-live-estimate-total" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1484,6 +1575,51 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_render_text_blob_cache_entries = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --max-render-text-blob-cache-entries".to_string()
                 })?);
+                i += 1;
+            }
+            "--max-render-text-shape-cache-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_shape_cache_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-paint-palette-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_paint_palette_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-decorations-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_decorations_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string()
+                    })?);
                 i += 1;
             }
             "--max-code-editor-buffer-len-bytes" => {
@@ -2106,6 +2242,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
                 i += 1;
             }
+            "--check-hello-world-compare-idle-present-max-delta" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string(),
+                    );
+                };
+                check_hello_world_compare_idle_present_max_delta =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-hello-world-compare-idle-present-max-delta"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
             "--check-gc-sweep-liveness" => {
                 check_gc_sweep_liveness = true;
                 i += 1;
@@ -2517,6 +2668,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_render_text_registered_font_blobs_count,
         max_render_text_shape_cache_entries,
         max_render_text_blob_cache_entries,
+        max_render_text_shape_cache_bytes_estimate_total,
+        max_render_text_blob_paint_palette_bytes_estimate_total,
+        max_render_text_blob_decorations_bytes_estimate_total,
     };
 
     let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
@@ -2546,16 +2700,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         );
     }
     if sub != "repro"
-        && (resource_footprint_thresholds.any() || renderer_gpu_budget_thresholds.any())
+        && (resource_footprint_thresholds.any()
+            || renderer_gpu_budget_thresholds.any()
+            || max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images.is_some())
     {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
-    if sub != "repro" && max_wgpu_metal_current_allocated_size_bytes.is_some() {
+    if sub != "repro"
+        && (max_wgpu_metal_current_allocated_size_bytes.is_some()
+            || max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images.is_some())
+    {
         return Err(
-            "--max-wgpu-metal-current-allocated-size-bytes is only supported with `diag repro` for now"
+            "--max-wgpu-metal-current-allocated-size-bytes/--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images is only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2573,7 +2732,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "repro" && render_text_font_db_thresholds.any() {
         return Err(
-            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries are only supported with `diag repro` for now"
+            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries/--max-render-text-shape-cache-bytes-estimate-total/--max-render-text-blob-paint-palette-bytes-estimate-total/--max-render-text-blob-decorations-bytes-estimate-total are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2939,6 +3098,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
     };
 
+    let resolved_paths = ResolvedScriptPaths {
+        out_dir: resolved_out_dir.clone(),
+        trigger_path: resolved_trigger_path.clone(),
+        ready_path: resolved_ready_path.clone(),
+        exit_path: resolved_exit_path.clone(),
+        script_path: resolved_script_path.clone(),
+        script_trigger_path: resolved_script_trigger_path.clone(),
+        script_result_path: resolved_script_result_path.clone(),
+        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+    };
+    let resolved_run_context = ResolvedRunContext {
+        paths: resolved_paths.clone(),
+        fs_transport_cfg: fs_transport_cfg.clone(),
+    };
+
     if let Some(res) = diag_simple_dispatch::dispatch_simple(
         sub.as_str(),
         &rest,
@@ -3001,6 +3175,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
         check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
         check_hover_layout_max: check_hover_layout_max.clone(),
+        check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3105,6 +3280,48 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             stats_top_override,
         ),
+        "dashboard" => diag_dashboard::cmd_dashboard(diag_dashboard::DashboardCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
+        "campaign" => diag_campaign::cmd_campaign(diag_campaign::CampaignCmdContext {
+            pack_after_run,
+            rest: rest.clone(),
+            suite_script_inputs: suite_script_inputs.clone(),
+            suite_prewarm_scripts: suite_prewarm_scripts.clone(),
+            suite_prelude_scripts: suite_prelude_scripts.clone(),
+            suite_prelude_each_run,
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            devtools_ws_url: devtools_ws_url.clone(),
+            devtools_token: devtools_token.clone(),
+            devtools_session_id: devtools_session_id.clone(),
+            timeout_ms,
+            poll_ms,
+            stats_top,
+            stats_json,
+            warmup_frames,
+            max_test_ids,
+            lint_all_test_ids_bounds,
+            lint_eps_px,
+            suite_lint,
+            pack_include_screenshots,
+            reuse_launch,
+            launch: launch.clone(),
+            launch_env: launch_env.clone(),
+            launch_high_priority,
+            launch_write_bundle_json,
+            keep_open,
+            checks: run_checks.clone(),
+        }),
+        "summarize" => diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            stats_json,
+        }),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,
@@ -3121,13 +3338,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 ensure_ai_packet,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_trigger_path: resolved_trigger_path.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 pack_include_root_artifacts,
                 pack_include_triage,
@@ -3157,13 +3368,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_after_run,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_trigger_path: resolved_script_trigger_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 pack_include_screenshots,
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
                 check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
@@ -3173,6 +3378,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_high_priority,
                 launch_write_bundle_json,
                 perf_repeat,
+                check_memory_p90_max: check_memory_p90_max.clone(),
+                compare_enabled: repeat_compare_enabled,
                 compare_eps_px,
                 compare_ignore_bounds,
                 compare_ignore_scene_fingerprint,
@@ -3188,14 +3395,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             diag_repro::cmd_repro(diag_repro::ReproCmdContext {
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_exit_path: resolved_exit_path.clone(),
-                resolved_script_path: resolved_script_path.clone(),
-                resolved_script_trigger_path: resolved_script_trigger_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
-                resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
-                fs_transport_cfg: fs_transport_cfg.clone(),
+                resolved_run_context: resolved_run_context.clone(),
                 pack_out: pack_out.clone(),
                 ensure_ai_packet,
                 pack_ai_only,
@@ -3219,11 +3419,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_markers: renderdoc_markers.clone(),
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
+                max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images,
                 renderer_gpu_budget_thresholds,
                 code_editor_memory_thresholds,
                 render_text_font_db_thresholds,
                 wgpu_hub_counts_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
+                max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,
                 checks: run_checks.clone(),
@@ -3238,9 +3440,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 suite_prelude_scripts: suite_prelude_scripts.clone(),
                 suite_prelude_each_run,
                 workspace_root: workspace_root.clone(),
-                resolved_out_dir: resolved_out_dir.clone(),
-                resolved_ready_path: resolved_ready_path.clone(),
-                resolved_script_result_path: resolved_script_result_path.clone(),
+                resolved_paths: resolved_paths.clone(),
                 devtools_ws_url: devtools_ws_url.clone(),
                 devtools_token: devtools_token.clone(),
                 devtools_session_id: devtools_session_id.clone(),
@@ -3266,6 +3466,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
                 check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
                 check_hover_layout_max: check_hover_layout_max.clone(),
+                check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
@@ -3595,6 +3796,43 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
     }
 }
 
+fn parse_linear_bytes_vs_images_threshold(
+    s: &str,
+    flag: &str,
+) -> Result<LinearBytesVsImagesThreshold, String> {
+    // Format: "<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]"
+    let parts: Vec<&str> = s
+        .split(',')
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+        .collect();
+    if parts.len() < 2 || parts.len() > 3 {
+        return Err(format!(
+            "invalid value for {flag}: expected \"<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]\""
+        ));
+    }
+
+    let intercept_bytes: u64 = parts[0]
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag}: invalid intercept_bytes (expected u64)"))?;
+    let slope_ppm: u64 = parts[1]
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag}: invalid slope_ppm (expected u64)"))?;
+    let headroom_bytes: u64 = if parts.len() >= 3 {
+        parts[2].parse::<u64>().map_err(|_| {
+            format!("invalid value for {flag}: invalid headroom_bytes (expected u64)")
+        })?
+    } else {
+        0
+    };
+
+    Ok(LinearBytesVsImagesThreshold {
+        intercept_bytes,
+        slope_ppm,
+        headroom_bytes,
+    })
+}
+
 pub(crate) fn script_requests_screenshots(script: &Path) -> bool {
     let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return false;
@@ -3758,23 +3996,168 @@ fn script_env_defaults_value(value: &serde_json::Value) -> Vec<(String, String)>
     out.into_iter().collect()
 }
 
-fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
-    let path = out_dir.join("capabilities.json");
-    let Ok(bytes) = std::fs::read(&path) else {
-        return Vec::new();
+pub(crate) fn resolve_filesystem_capabilities_path(base_dir: &Path) -> Option<PathBuf> {
+    let direct = base_dir.join("capabilities.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = base_dir.join("_root").join("capabilities.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    if let Some(parent) = base_dir.parent() {
+        let from_parent = parent.join("capabilities.json");
+        if from_parent.is_file() {
+            return Some(from_parent);
+        }
+    }
+    None
+}
+
+pub(crate) fn read_filesystem_capabilities_payload(
+    path: &Path,
+) -> Option<fret_diag_protocol::FilesystemCapabilitiesV1> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return None;
     };
-    let Ok(parsed) = serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes)
-    else {
-        return Vec::new();
-    };
+    serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes).ok()
+}
+
+pub(crate) fn normalize_filesystem_capabilities(
+    parsed: &fret_diag_protocol::FilesystemCapabilitiesV1,
+) -> Vec<String> {
     let mut caps: Vec<String> = parsed
         .capabilities
-        .into_iter()
-        .filter_map(|c| compat::normalize_capability(&c))
+        .iter()
+        .filter_map(|c| compat::normalize_capability(c))
         .collect();
     caps.sort();
     caps.dedup();
     caps
+}
+
+fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
+    let Some(path) = resolve_filesystem_capabilities_path(out_dir) else {
+        return Vec::new();
+    };
+    let Some(parsed) = read_filesystem_capabilities_payload(&path) else {
+        return Vec::new();
+    };
+    normalize_filesystem_capabilities(&parsed)
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum CapabilitySourceKind {
+    Filesystem,
+    TransportSession,
+    Inline,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct CapabilitySource {
+    kind: CapabilitySourceKind,
+    path: Option<PathBuf>,
+    label: Option<String>,
+    transport: Option<String>,
+    session_id: Option<String>,
+}
+
+impl CapabilitySource {
+    fn kind_str(&self) -> &'static str {
+        match self.kind {
+            CapabilitySourceKind::Filesystem => "filesystem",
+            CapabilitySourceKind::TransportSession => "transport_session",
+            CapabilitySourceKind::Inline => "inline",
+            CapabilitySourceKind::Unknown => "unknown",
+        }
+    }
+
+    pub(crate) fn filesystem(path: Option<&Path>) -> Self {
+        Self {
+            kind: CapabilitySourceKind::Filesystem,
+            path: path.map(Path::to_path_buf),
+            label: None,
+            transport: Some("filesystem".to_string()),
+            session_id: None,
+        }
+    }
+
+    pub(crate) fn transport_session(transport: &str, session_id: &str) -> Self {
+        Self {
+            kind: CapabilitySourceKind::TransportSession,
+            path: None,
+            label: Some(format!("{transport}:{session_id}")),
+            transport: Some(transport.to_string()),
+            session_id: Some(session_id.to_string()),
+        }
+    }
+
+    pub(crate) fn transport_name(&self) -> &str {
+        self.transport.as_deref().unwrap_or(match self.kind {
+            CapabilitySourceKind::Filesystem => "filesystem",
+            CapabilitySourceKind::TransportSession => "transport_session",
+            CapabilitySourceKind::Inline => "inline",
+            CapabilitySourceKind::Unknown => "unknown",
+        })
+    }
+
+    pub(crate) fn source_path(&self) -> Option<&Path> {
+        self.path.as_deref()
+    }
+
+    pub(crate) fn legacy_check_source(&self) -> String {
+        self.transport_name().to_string()
+    }
+
+    pub(crate) fn legacy_label(&self) -> String {
+        if let Some(path) = self.path.as_deref() {
+            return format!("{}:{}", self.transport_name(), path.display());
+        }
+        if let Some(label) = self.label.as_deref() {
+            return label.to_string();
+        }
+        match self.kind {
+            CapabilitySourceKind::Filesystem => {
+                "filesystem:<missing capabilities.json>".to_string()
+            }
+            CapabilitySourceKind::TransportSession => self
+                .session_id
+                .as_deref()
+                .map(|session_id| format!("{}:{session_id}", self.transport_name()))
+                .unwrap_or_else(|| format!("{}:<missing session>", self.transport_name())),
+            CapabilitySourceKind::Inline => "inline".to_string(),
+            CapabilitySourceKind::Unknown => "unknown".to_string(),
+        }
+    }
+
+    pub(crate) fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "kind": self.kind_str(),
+            "path": self.path.as_ref().map(|path| path.display().to_string()),
+            "label": self.label.clone().or_else(|| Some(self.legacy_label())),
+            "transport": self.transport.clone(),
+            "session_id": self.session_id.clone(),
+        })
+    }
+}
+
+pub(crate) fn resolve_filesystem_capabilities_source(base_dir: &Path) -> CapabilitySource {
+    let source_path = resolve_filesystem_capabilities_path(base_dir);
+    CapabilitySource::filesystem(source_path.as_deref())
+}
+
+pub(crate) fn read_filesystem_capabilities_with_provenance(
+    base_dir: &Path,
+) -> (CapabilitySource, Vec<String>) {
+    let source = resolve_filesystem_capabilities_source(base_dir);
+    let available = source
+        .source_path()
+        .and_then(read_filesystem_capabilities_payload)
+        .map(|parsed| normalize_filesystem_capabilities(&parsed))
+        .unwrap_or_default();
+    (source, available)
 }
 
 fn capabilities_check_v1(
@@ -3966,6 +4349,143 @@ mod capability_tests {
     }
 
     #[test]
+    fn read_filesystem_capabilities_with_provenance_falls_back_to_parent_path() {
+        let parent_dir = make_temp_dir("fret-diag-capabilities-parent");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["multi_window".to_string(), "diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
+        };
+        std::fs::write(
+            parent_dir.join("session").join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+        let expected_source_path = parent_dir.join("session").join("capabilities.json");
+
+        let (source, available) = read_filesystem_capabilities_with_provenance(&run_dir);
+
+        assert_eq!(source.source_path(), Some(expected_source_path.as_path()));
+        assert_eq!(
+            available,
+            vec![
+                "diag.multi_window".to_string(),
+                "diag.script_v2".to_string()
+            ]
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn resolve_filesystem_capabilities_source_formats_legacy_label() {
+        let parent_dir = make_temp_dir("fret-diag-capabilities-source-label");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
+        };
+        let capabilities_path = parent_dir.join("session").join("capabilities.json");
+        std::fs::write(
+            &capabilities_path,
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let source = resolve_filesystem_capabilities_source(&run_dir);
+
+        assert_eq!(source.source_path(), Some(capabilities_path.as_path()));
+        assert_eq!(
+            source.legacy_label(),
+            format!("filesystem:{}", capabilities_path.display())
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn transport_session_capability_source_keeps_transport_identity() {
+        let source = CapabilitySource::transport_session("devtools_ws", "session-123");
+
+        assert_eq!(source.transport_name(), "devtools_ws");
+        assert_eq!(source.source_path(), None);
+        assert_eq!(source.legacy_check_source(), "devtools_ws");
+        assert_eq!(source.legacy_label(), "devtools_ws:session-123");
+    }
+
+    #[test]
+    fn doctor_report_includes_normalized_capabilities_from_shared_loader() {
+        let bundle_dir = make_temp_dir("fret-diag-doctor-capabilities");
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["multi_window".to_string(), "diag.script_v2".to_string()],
+            runner_kind: Some("filesystem".to_string()),
+            runner_version: Some("1".to_string()),
+            hints: None,
+        };
+        std::fs::write(
+            bundle_dir.join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+        let expected_capabilities_path = bundle_dir.join("capabilities.json");
+        let expected_capabilities_path_str = expected_capabilities_path.display().to_string();
+
+        let report = crate::commands::doctor::doctor_report_json(&bundle_dir, 4);
+
+        assert_eq!(
+            report
+                .get("capabilities_path")
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_path_str.as_str())
+        );
+        assert_eq!(
+            report
+                .get("capability_source")
+                .and_then(|value| value.get("kind"))
+                .and_then(|value| value.as_str()),
+            Some("filesystem")
+        );
+        assert_eq!(
+            report
+                .get("capability_source")
+                .and_then(|value| value.get("path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_capabilities_path_str.as_str())
+        );
+        assert_eq!(
+            report
+                .get("capabilities")
+                .and_then(|value| value.get("normalized_capabilities_total"))
+                .and_then(|value| value.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            report
+                .get("capabilities")
+                .and_then(|value| value.get("normalized_capabilities"))
+                .and_then(|value| value.as_array())
+                .map(|items| items
+                    .iter()
+                    .filter_map(|item| item.as_str())
+                    .collect::<Vec<_>>()),
+            Some(vec!["diag.multi_window", "diag.script_v2"])
+        );
+
+        let _ = std::fs::remove_dir_all(&bundle_dir);
+    }
+
+    #[test]
     fn script_required_capabilities_include_step_inferred_caps() {
         let out_dir = make_temp_dir("fret-diag-capabilities-infer");
         let script_path = out_dir.join("script.json");
@@ -4114,20 +4634,54 @@ mod capability_tests {
 }
 
 #[derive(Debug, Clone)]
-struct ResolvedScriptPaths {
-    out_dir: PathBuf,
-    ready_path: PathBuf,
-    exit_path: PathBuf,
-    script_path: PathBuf,
-    script_trigger_path: PathBuf,
-    script_result_path: PathBuf,
-    script_result_trigger_path: PathBuf,
+pub(crate) struct ResolvedScriptPaths {
+    pub(crate) out_dir: PathBuf,
+    pub(crate) trigger_path: PathBuf,
+    pub(crate) ready_path: PathBuf,
+    pub(crate) exit_path: PathBuf,
+    pub(crate) script_path: PathBuf,
+    pub(crate) script_trigger_path: PathBuf,
+    pub(crate) script_result_path: PathBuf,
+    pub(crate) script_result_trigger_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedRunContext {
+    pub(crate) paths: ResolvedScriptPaths,
+    pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+}
+
+pub(crate) fn script_run_fs_transport_cfg(
+    out_dir: &Path,
+    script_path: &Path,
+    script_trigger_path: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_path = script_path.to_path_buf();
+    cfg.script_trigger_path = script_trigger_path.to_path_buf();
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
+}
+
+pub(crate) fn script_result_fs_transport_cfg(
+    out_dir: &Path,
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) -> crate::transport::FsDiagTransportConfig {
+    let mut cfg = crate::transport::FsDiagTransportConfig::from_out_dir(out_dir.to_path_buf());
+    cfg.script_result_path = script_result_path.to_path_buf();
+    cfg.script_result_trigger_path = script_result_trigger_path.to_path_buf();
+    cfg
 }
 
 impl ResolvedScriptPaths {
-    fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
+    pub(crate) fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
         let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
         Self {
+            trigger_path: resolve_path(workspace_root, out_dir.join("trigger.touch")),
             ready_path: resolve_path(workspace_root, out_dir.join("ready.touch")),
             exit_path: resolve_path(workspace_root, out_dir.join("exit.touch")),
             script_path: resolve_path(workspace_root, out_dir.join("script.json")),
@@ -4139,6 +4693,16 @@ impl ResolvedScriptPaths {
             ),
             out_dir,
         }
+    }
+
+    pub(crate) fn launch_fs_transport_cfg(&self) -> crate::transport::FsDiagTransportConfig {
+        script_run_fs_transport_cfg(
+            &self.out_dir,
+            &self.script_path,
+            &self.script_trigger_path,
+            &self.script_result_path,
+            &self.script_result_trigger_path,
+        )
     }
 }
 
@@ -4367,7 +4931,7 @@ struct ConnectedToolingTransport {
     devtools: DevtoolsOps,
     selected_session_id: String,
     available_caps: Vec<String>,
-    source: &'static str,
+    capability_source: CapabilitySource,
 }
 
 fn connect_devtools_ws_tooling(
@@ -4427,9 +4991,9 @@ fn connect_devtools_ws_tooling(
 
     Ok(ConnectedToolingTransport {
         devtools,
+        capability_source: CapabilitySource::transport_session("devtools_ws", &selected_session_id),
         selected_session_id,
         available_caps,
-        source: "devtools_ws",
     })
 }
 
@@ -4479,9 +5043,9 @@ fn connect_filesystem_tooling(
 
     Ok(ConnectedToolingTransport {
         devtools,
+        capability_source: CapabilitySource::transport_session("filesystem", &selected_session_id),
         selected_session_id,
         available_caps,
-        source: "filesystem",
     })
 }
 
@@ -4507,12 +5071,13 @@ fn run_script_over_transport(
 
     let required_caps = script_required_capabilities_value(&script_json);
     if !required_caps.is_empty() {
+        let source = connected.capability_source.legacy_check_source();
         gate_required_capabilities_with_script_result(
             capabilities_check_path,
             script_result_path,
             &required_caps,
             &connected.available_caps,
-            connected.source,
+            &source,
         )?;
     }
 
@@ -4575,7 +5140,7 @@ fn run_script_over_transport(
             // and cause missed edge-detection updates (e.g. clobbering the final `passed` result
             // with a stale `running` snapshot). Tooling should only write to a distinct output
             // path in filesystem mode (for example `<out_dir>/tool.script.result.json`).
-            let runtime_owned_path = connected.source == "filesystem"
+            let runtime_owned_path = connected.capability_source.transport_name() == "filesystem"
                 && *script_result_path == out_dir.join("script.result.json");
             if !runtime_owned_path {
                 let _ = write_json_value(
@@ -4597,7 +5162,7 @@ fn run_script_over_transport(
             let ws_hint = seam.timeout_hint_for_waiting_script_result();
             let note = format!(
                 "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?} {}",
-                connected.source,
+                connected.capability_source.transport_name(),
                 prev_run_id,
                 target_run_id,
                 last_seen_stage.unwrap_or("none"),
@@ -4767,12 +5332,7 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(paths.out_dir.clone());
-    launch_fs_transport_cfg.script_path = paths.script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = paths.script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = paths.script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path = paths.script_result_trigger_path.clone();
+    let launch_fs_transport_cfg = paths.launch_fs_transport_cfg();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,

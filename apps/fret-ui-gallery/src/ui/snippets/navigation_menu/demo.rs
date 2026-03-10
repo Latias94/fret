@@ -104,7 +104,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         shadcn::NavigationMenuLink::new(model, [body])
             .label(title)
             .test_id(test_id)
-            .on_click(command)
+            .action(command)
             .into_element(cx)
     };
 
@@ -123,7 +123,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         shadcn::NavigationMenuLink::new(model, [row])
             .label(label)
             .test_id(test_id)
-            .on_click(command)
+            .action(command)
             .into_element(cx)
     };
 
@@ -378,7 +378,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
             let docs = shadcn::NavigationMenuItem::new("docs", "Documentation", std::iter::empty())
                 .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-docs")
-                .on_click(CMD_APP_OPEN);
+                .action(CMD_APP_OPEN);
 
             let md_query = if use_container_query {
                 NavigationMenuMdBreakpointQuery::Container

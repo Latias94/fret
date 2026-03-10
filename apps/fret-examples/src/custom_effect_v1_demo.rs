@@ -307,7 +307,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Eleme
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 14.0);
     let blur_downsample = watch_first_f32(cx, &st.blur_downsample, 2.0);
     let refraction_height_px = watch_first_f32(cx, &st.refraction_height_px, 20.0);

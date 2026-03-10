@@ -4,19 +4,21 @@ use fret_core::SemanticsRole;
 use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
+use fret_ui_kit::prelude::*;
 use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
-    Alert, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AvatarImage,
-    Badge, Breadcrumb, Button, Card, CardContent, CardDescription, CardFooter, CardHeader,
-    CardTitle, Collapsible, Combobox, Command, CommandDialog, CommandEmpty, CommandInput,
-    CommandItem, CommandList, CommandPalette, CommandShortcut, ContextMenu, ContextMenuEntry,
-    DataGridCanvas, DataGridCanvasAxis, DataTable, DataTableGlobalFilterInput,
-    DataTableViewOptionItem, DataTableViewOptions, Dialog, DialogContent, DialogDescription,
-    DialogFooter, DialogHeader, DialogTitle, Drawer, DrawerContent, DrawerFooter, DrawerHeader,
-    DropdownMenu, DropdownMenuEntry, Empty, HoverCardContent, Kbd, Menubar, Popover,
-    PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, Progress, Select, Sheet,
+    Alert, AlertAction, AlertDescription, AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+    AlertDialogTitle, AlertTitle, AvatarImage, Badge, Breadcrumb, Button, Card, CardContent,
+    CardDescription, CardFooter, CardHeader, CardTitle, Collapsible, Combobox, Command,
+    CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList, CommandPalette,
+    CommandShortcut, ContextMenu, ContextMenuEntry, DataGridCanvas, DataGridCanvasAxis, DataTable,
+    DataTableGlobalFilterInput, DataTableViewOptionItem, DataTableViewOptions, Dialog,
+    DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
+    DrawerContent, DrawerFooter, DrawerHeader, DropdownMenu, DropdownMenuEntry, Empty, Field,
+    FieldGroup, FieldLabel, FieldSet, HoverCardContent, Kbd, Menubar, Popover, PopoverContent,
+    PopoverDescription, PopoverHeader, PopoverTitle, Progress, ScrollArea, Select, Sheet,
     SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
     TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
     TooltipContent,
@@ -137,6 +139,20 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         .p_4()
         .border_1()
         .into_element(cx);
+    let _ = Alert::build(|cx, out| {
+        out.push_ui(cx, AlertTitle::new("x"));
+        out.push_ui(cx, AlertDescription::new("y"));
+        out.push_ui(
+            cx,
+            AlertAction::build(|cx, out| {
+                out.push(cx.text("Undo"));
+            }),
+        );
+    })
+    .ui()
+    .p_4()
+    .border_1()
+    .into_element(cx);
     let _ = Badge::new("x").ui().px_2().into_element(cx);
     let _ = Kbd::new("x").ui().px_2().into_element(cx);
 }
@@ -260,6 +276,37 @@ fn ui_builder_smoke_applies_supported_patches() {
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();
+    let _ = Alert::build::<fret_ui_app::App, _>(|cx, out| {
+        out.push_ui(cx, AlertTitle::new("x"));
+        out.push_ui(cx, AlertDescription::new("y"));
+    })
+    .ui()
+    .p_4()
+    .border_1()
+    .build();
+    let _ = ScrollArea::build::<fret_ui_app::App, _>(|cx, out: &mut Vec<AnyElement>| {
+        out.push_ui(cx, ui::text("row"));
+    })
+    .ui()
+    .w_full()
+    .build();
+    let _ = FieldSet::build::<fret_ui_app::App, _>(|cx, out: &mut Vec<AnyElement>| {
+        out.push_ui(
+            cx,
+            FieldGroup::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    Field::build(|cx, out| {
+                        out.push_ui(cx, FieldLabel::new("Email"));
+                        out.push_ui(cx, ui::text("value"));
+                    }),
+                );
+            }),
+        );
+    })
+    .ui()
+    .w_full()
+    .build();
     let _ = Badge::new("x").ui().px_2().build();
     let _ = Kbd::new("x").ui().px_2().build();
     let _ = AvatarImage::maybe(None).ui().px_2().build();
@@ -274,6 +321,9 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = CardHeader::new(Vec::new()).ui().build();
     let _ = CardContent::new(Vec::new()).ui().build();
     let _ = CardFooter::new(Vec::new()).ui().build();
+    let _ = CardFooter::build::<fret_ui_app::App, _>(|_cx, _out| {})
+        .ui()
+        .build();
     let _ = CardTitle::new("x").ui().build();
     let _ = CardDescription::new("x").ui().build();
 

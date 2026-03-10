@@ -425,7 +425,7 @@ fn command_palette_toggle(app: &mut App, window: AppWindowId) -> bool {
             |svc, _app| svc.push_snapshot(window, snapshot.with_input_ctx(input_ctx)),
         );
 
-        app.with_global_mut(CommandPaletteService::default, |svc, _app| {
+        app.with_global_mut_untracked(CommandPaletteService::default, |svc, _app| {
             svc.set_gating_handle(window, Some(handle));
         });
     }
@@ -440,7 +440,7 @@ fn command_palette_cleanup_gating_if_closed(app: &mut App, window: AppWindowId, 
         return;
     }
 
-    let handle = app.with_global_mut(CommandPaletteService::default, |svc, _app| {
+    let handle = app.with_global_mut_untracked(CommandPaletteService::default, |svc, _app| {
         svc.take_gating_handle(window)
     });
     if let Some(handle) = handle {
@@ -526,6 +526,32 @@ mod command_palette_gating_tests {
                 .is_none(),
             "expected window snapshot to be cleared after removing last override"
         );
+    }
+
+    #[test]
+    fn command_palette_cleanup_does_not_mark_service_changed_each_frame() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let _ = app.take_changed_globals();
+        assert_eq!(command_palette_toggle(&mut app, window), true);
+        let _ = app.take_changed_globals();
+
+        let models = app
+            .global::<CommandPaletteService>()
+            .and_then(|svc| svc.models(window))
+            .expect("command palette models");
+        let _ = app.models_mut().update(&models.open, |v| *v = false);
+        command_palette_cleanup_gating_if_closed(&mut app, window, false);
+
+        let changed = app.take_changed_globals();
+        assert!(
+            !changed.contains(&std::any::TypeId::of::<CommandPaletteService>()),
+            "command palette cleanup bookkeeping should stay untracked"
+        );
+
+        command_palette_cleanup_gating_if_closed(&mut app, window, false);
+        assert!(app.take_changed_globals().is_empty());
     }
 }
 
@@ -1664,6 +1690,20 @@ fn ui_app_handle_global_changes<S>(
 
     state.pending_invalidation.push_globals(changed);
     if !changed.is_empty() {
+        let changed_names = changed
+            .iter()
+            .map(|&t| {
+                app.global_type_name(t)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| format!("{t:?}"))
+            })
+            .collect::<Vec<_>>();
+        app.with_global_mut_untracked(
+            fret_runtime::WindowGlobalChangeDiagnosticsStore::default,
+            |store, app| {
+                store.record_batch(window, app.frame_id(), changed_names.iter());
+            },
+        );
         app.request_redraw(window);
     }
 

@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::image_asset_state;
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::{ColorRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 
@@ -188,7 +189,7 @@ impl MarkdownDemoView {
         let pending = cx
             .watch_model(&self.st.pending_anchor)
             .layout()
-            .cloned_or_default();
+            .value_or_default();
         let Some(fragment) = pending.as_deref() else {
             return;
         };
@@ -382,11 +383,11 @@ $$
         let wrap_enabled = cx
             .watch_model(&self.st.wrap_code)
             .layout()
-            .copied_or_default();
+            .value_or_default();
         let cap_enabled = cx
             .watch_model(&self.st.cap_code_height)
             .layout()
-            .copied_or_default();
+            .value_or_default();
 
         let mut components = markdown::MarkdownComponents::<App>::default();
         components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));
@@ -493,10 +494,9 @@ $$
                     download_remote_image(src_for_fetch.as_ref())
                 });
 
-                let state = cx
-                    .watch_model(handle.model())
-                    .layout()
-                    .cloned_or_else(QueryState::<RemoteImageData>::default);
+                let state = handle
+                    .layout_query(cx)
+                    .value_or_else(QueryState::<RemoteImageData>::default);
 
                 match state.status {
                     QueryStatus::Idle | QueryStatus::Loading => return spinner_box(cx),

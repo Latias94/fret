@@ -71,13 +71,23 @@
       "padding_px": 4.0
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "docsec-scrollbar-drag-baseline-tabs-trigger-code"
-      }
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "field": "y_max",
+      "stable_frames": 3,
+      "max_delta": 1.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -90,13 +100,23 @@
       "timeout_frames": 600
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "docsec-scrollbar-drag-baseline-tabs-trigger-preview"
-      }
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "field": "y_max",
+      "stable_frames": 3,
+      "max_delta": 1.0,
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "scroll-area-toggle-code-tabs" }
   ]
 }

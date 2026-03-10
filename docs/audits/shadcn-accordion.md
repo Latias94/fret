@@ -14,7 +14,7 @@ examples in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/accordion.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx`
 - Component wrapper (Radix Accordion skin): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/accordion.tsx`
 - Demo usage: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/accordion-demo.tsx`
 
@@ -32,8 +32,7 @@ examples in `repo-ref/ui`.
 - Pass: A Radix-shaped, shadcn-skinned component family exists in
   `fret_ui_shadcn::accordion::composable` (`AccordionRoot` / `AccordionItem` / `AccordionTrigger` /
   `AccordionContent`).
-- Pass: The legacy builder-style API (`Accordion::single(...)` / `Accordion::multiple(...)`) remains
-  available for compact internal recipes.
+- Pass: Gallery `Usage` can now use the composable Radix-shaped shadcn surface for closer docs parity, while the legacy builder-style API remains available for compact internal recipes.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).

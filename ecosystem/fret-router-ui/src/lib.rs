@@ -25,6 +25,20 @@ use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableKeyActivation, PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
+#[doc(hidden)]
+pub trait RouterOutletIntoElement: Sized {
+    fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement;
+}
+
+impl<T> RouterOutletIntoElement for T
+where
+    T: fret_ui_kit::UiChildIntoElement<App>,
+{
+    fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement {
+        fret_ui_kit::UiChildIntoElement::into_child_element(self, cx)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RouterUiSnapshot<R> {
     pub location: RouteLocation,
@@ -495,10 +509,22 @@ pub fn router_outlet<R>(
 where
     R: Clone + 'static,
 {
+    router_outlet_ui(cx, snapshot, render)
+}
+
+pub fn router_outlet_ui<R, T>(
+    cx: &mut ElementContext<'_, App>,
+    snapshot: &Model<RouterUiSnapshot<R>>,
+    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> T,
+) -> AnyElement
+where
+    R: Clone + 'static,
+    T: RouterOutletIntoElement,
+{
     let snap = cx
         .get_model_cloned(snapshot, Invalidation::Layout)
         .expect("router snapshot model should be readable");
-    render(cx, &snap)
+    render(cx, &snap).into_router_outlet_element(cx)
 }
 
 pub fn router_outlet_with_test_id<R>(
@@ -510,7 +536,20 @@ pub fn router_outlet_with_test_id<R>(
 where
     R: Clone + 'static,
 {
-    router_outlet(cx, snapshot, render).test_id(test_id)
+    router_outlet_ui(cx, snapshot, render).test_id(test_id)
+}
+
+pub fn router_outlet_with_test_id_ui<R, T>(
+    cx: &mut ElementContext<'_, App>,
+    snapshot: &Model<RouterUiSnapshot<R>>,
+    test_id: impl Into<Arc<str>>,
+    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> T,
+) -> AnyElement
+where
+    R: Clone + 'static,
+    T: RouterOutletIntoElement,
+{
+    router_outlet_ui(cx, snapshot, render).test_id(test_id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -551,7 +590,19 @@ where
         cx: &mut ElementContext<'_, App>,
         render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
     ) -> AnyElement {
-        let elem = router_outlet(cx, &self.snapshot, render);
+        self.into_element_ui(cx, render)
+    }
+
+    #[track_caller]
+    pub fn into_element_ui<T>(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> T,
+    ) -> AnyElement
+    where
+        T: RouterOutletIntoElement,
+    {
+        let elem = router_outlet_ui(cx, &self.snapshot, render);
         match self.test_id {
             Some(test_id) => elem.test_id(test_id),
             None => elem,
@@ -565,17 +616,39 @@ where
         render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
         not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
     ) -> AnyElement {
+        self.into_element_by_leaf_ui(cx, render, not_found)
+    }
+
+    #[track_caller]
+    pub fn into_element_by_leaf_ui<T, N>(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> T,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> N,
+    ) -> AnyElement
+    where
+        T: RouterOutletIntoElement,
+        N: RouterOutletIntoElement,
+    {
+        let Self { snapshot, test_id } = self;
         let mut render = Some(render);
         let mut not_found = Some(not_found);
-        self.into_element(cx, move |cx, snap| {
+        let elem = router_outlet(cx, &snapshot, move |cx, snap| {
             if snap.is_not_found {
-                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+                return (not_found.take().expect("not_found should be callable"))(cx, snap)
+                    .into_router_outlet_element(cx);
             }
             match snap.leaf_route() {
-                Some(route) => (render.take().expect("render should be callable"))(cx, route, snap),
-                None => (not_found.take().expect("not_found should be callable"))(cx, snap),
+                Some(route) => (render.take().expect("render should be callable"))(cx, route, snap)
+                    .into_router_outlet_element(cx),
+                None => (not_found.take().expect("not_found should be callable"))(cx, snap)
+                    .into_router_outlet_element(cx),
             }
-        })
+        });
+        match test_id {
+            Some(test_id) => elem.test_id(test_id),
+            None => elem,
+        }
     }
 
     #[track_caller]
@@ -593,32 +666,61 @@ where
         ) -> AnyElement,
         not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
     ) -> AnyElement {
+        self.into_element_by_leaf_with_status_ui(cx, status, ready, pending, error, not_found)
+    }
+
+    #[track_caller]
+    pub fn into_element_by_leaf_with_status_ui<Ready, Pending, Error, NotFound>(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        status: impl FnOnce(&App, &RouterUiSnapshot<R>, &R) -> RouterLeafStatus,
+        ready: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> Ready,
+        pending: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> Pending,
+        error: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>, Arc<str>) -> Error,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> NotFound,
+    ) -> AnyElement
+    where
+        Ready: RouterOutletIntoElement,
+        Pending: RouterOutletIntoElement,
+        Error: RouterOutletIntoElement,
+        NotFound: RouterOutletIntoElement,
+    {
+        let Self { snapshot, test_id } = self;
         let mut status = Some(status);
         let mut ready = Some(ready);
         let mut pending = Some(pending);
         let mut error = Some(error);
         let mut not_found = Some(not_found);
-        self.into_element(cx, move |cx, snap| {
+        let elem = router_outlet(cx, &snapshot, move |cx, snap| {
             if snap.is_not_found {
-                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+                return (not_found.take().expect("not_found should be callable"))(cx, snap)
+                    .into_router_outlet_element(cx);
             }
 
             let Some(route) = snap.leaf_route() else {
-                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+                return (not_found.take().expect("not_found should be callable"))(cx, snap)
+                    .into_router_outlet_element(cx);
             };
 
             match (status.take().expect("status should be callable"))(&*cx.app, snap, route) {
                 RouterLeafStatus::Ready => {
                     (ready.take().expect("ready should be callable"))(cx, route, snap)
+                        .into_router_outlet_element(cx)
                 }
                 RouterLeafStatus::Pending => {
                     (pending.take().expect("pending should be callable"))(cx, route, snap)
+                        .into_router_outlet_element(cx)
                 }
                 RouterLeafStatus::Error { message } => {
                     (error.take().expect("error should be callable"))(cx, route, snap, message)
+                        .into_router_outlet_element(cx)
                 }
             }
-        })
+        });
+        match test_id {
+            Some(test_id) => elem.test_id(test_id),
+            None => elem,
+        }
     }
 }
 
@@ -757,13 +859,39 @@ impl RouterLink {
 
 #[cfg(test)]
 mod tests {
-    use super::RouterUiStore;
+    use super::{RouterOutlet, RouterUiSnapshot, RouterUiStore};
     use fret_app::App;
     use fret_router::{
         MemoryHistory, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable,
         RouteTree, Router,
     };
+    use fret_runtime::Model;
+    use fret_ui::ElementContext;
+    use fret_ui::element::AnyElement;
+    use fret_ui_kit::ui;
     use std::sync::Arc;
+
+    #[allow(dead_code)]
+    fn router_outlet_by_leaf_ui_accepts_builder_children(
+        cx: &mut ElementContext<'_, App>,
+        snapshot: Model<RouterUiSnapshot<CompileRoute>>,
+    ) -> AnyElement {
+        RouterOutlet::new(snapshot).into_element_by_leaf_ui(
+            cx,
+            |_cx, _route, snap| {
+                let depth = snap.match_depth();
+                ui::container(move |cx| ui::children![cx; ui::text(format!("depth={depth}"))])
+                    .w_full()
+            },
+            |_cx, _snap| ui::text("not found"),
+        )
+    }
+
+    #[allow(dead_code)]
+    #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+    enum CompileRoute {
+        Home,
+    }
 
     #[test]
     fn router_ui_store_updates_snapshot_on_navigation() {

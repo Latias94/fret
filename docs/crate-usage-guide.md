@@ -34,6 +34,7 @@ If you are a component author, start with:
 Desktop-first quick start:
 
 - If you want a single dependency for a native desktop app, use `fret` (ecosystem-level batteries-included wrapper).
+- If you are onboarding a new app author, pair it with the default ladder: `hello` → `simple-todo` → `todo`.
 
 Web/wasm quick start (tooling):
 
@@ -80,7 +81,13 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*`. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + typed actions and keep the first-contact handler surface to `on_action_notify_locals`, `on_action_notify_transient`, and local `on_activate*`. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs. Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+
+**Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
+
+- **Default**: `hello`, `simple-todo`, `todo`
+- **Comparison**: evidence-oriented side-by-side samples such as `simple_todo_v2_target`
+- **Advanced**: manual assembly, interop, renderer/docking, maintainer harnesses
 
 **Feature profiles (recommended):**
 

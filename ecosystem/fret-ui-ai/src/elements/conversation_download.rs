@@ -11,7 +11,8 @@ use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
-#[derive(Clone)]
+use super::conversation::{CONVERSATION_DOWNLOAD_SLOT_KEY, use_conversation_context};
+
 /// A small “download/export transcript” button.
 ///
 /// This component emits an intent via `on_activate`; performing the actual effect (clipboard/file IO)
@@ -20,6 +21,7 @@ pub struct ConversationDownload {
     label: Arc<str>,
     disabled: bool,
     on_activate: Option<OnActivate>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     icon: IconId,
@@ -32,6 +34,7 @@ impl std::fmt::Debug for ConversationDownload {
             .field("label", &self.label.as_ref())
             .field("disabled", &self.disabled)
             .field("has_on_activate", &self.on_activate.is_some())
+            .field("has_children", &self.children.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -44,6 +47,7 @@ impl ConversationDownload {
             label: label.into(),
             disabled: false,
             on_activate: None,
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default(),
             icon: IconId::new_static("lucide.download"),
@@ -72,6 +76,11 @@ impl ConversationDownload {
         self
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -83,10 +92,17 @@ impl ConversationDownload {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let has_custom_children = self.children.is_some();
         let theme = Theme::global(&*cx.app).clone();
         let layout = self.layout;
+        let in_conversation = use_conversation_context(cx).is_some();
 
-        let mut btn = if self.show_label {
+        let mut btn = if let Some(children) = self.children {
+            Button::new("")
+                .children(children)
+                .size(ButtonSize::Icon)
+                .refine_layout(layout.clone())
+        } else if self.show_label {
             Button::new(self.label.clone())
                 .size(ButtonSize::Sm)
                 .refine_layout(layout.clone())
@@ -109,7 +125,11 @@ impl ConversationDownload {
 
         let btn = btn.into_element(cx);
 
-        if self.show_label {
+        if in_conversation {
+            return btn.key_context(CONVERSATION_DOWNLOAD_SLOT_KEY);
+        }
+
+        if self.show_label || has_custom_children {
             return btn;
         }
 

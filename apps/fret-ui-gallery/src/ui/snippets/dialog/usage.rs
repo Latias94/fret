@@ -29,29 +29,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     );
 
-    let content = shadcn::DialogContent::new([
-        shadcn::DialogHeader::new([
-            shadcn::DialogTitle::new("Edit profile").into_element(cx),
-            shadcn::DialogDescription::new(
-                "Make changes to your profile here. Click save when you're done.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::DialogFooter::new([
-            shadcn::Button::new("Save changes").into_element(cx),
-            shadcn::DialogClose::from_scope().into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
     shadcn::Dialog::new(open)
         .compose()
         .trigger(trigger)
         .portal(shadcn::DialogPortal::new())
         .overlay(shadcn::DialogOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            shadcn::DialogContent::new([
+                shadcn::DialogHeader::new([
+                    shadcn::DialogTitle::new("Are you absolutely sure?").into_element(cx),
+                    shadcn::DialogDescription::new(
+                        "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        })
         .into_element(cx)
 }
 // endregion: example

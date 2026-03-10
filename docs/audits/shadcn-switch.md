@@ -1,5 +1,4 @@
-# shadcn/ui v4 Audit — Switch
-
+# shadcn/ui v4 Audit - Switch
 
 ## Upstream references (non-normative)
 
@@ -9,54 +8,45 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn/ui v4 docs and the
-`new-york-v4` implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Switch` against the upstream shadcn/ui v4 base docs,
+base examples, and the existing switch web gates.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/switch.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/switch.tsx`
-- Underlying primitive: Radix `@radix-ui/react-switch`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/switch.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/switch.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/switch-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-description.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-invalid.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-sizes.tsx`, `repo-ref/ui/apps/v4/examples/base/switch-rtl.tsx`
+- Existing chrome gates: `goldens/shadcn-web/v4/new-york-v4/switch-demo.json`, `goldens/shadcn-web/v4/new-york-v4/switch-demo.focus.json`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/switch.rs`
-- Shared primitives:
-  - Focus ring recipe: `ecosystem/fret-ui-kit/src/declarative/style.rs`
-  - Control chrome composition: `ecosystem/fret-ui-kit/src/declarative/chrome.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/switch.rs`
 
 ## Audit checklist
 
-### Interaction
+### Authoring surface
 
-- Pass: Click toggles the bound `Model<bool>`.
-- Note: `Switch` is a leaf control surface, so Fret intentionally does not add a generic
-  `compose()` builder here; the direct control API already matches the important shadcn/Radix
-  contract.
-- Pass: Supports optional state via `Switch::new_opt(Model<Option<bool>>)` where `None` renders as
-  unchecked and click toggles to `Some(true)`.
-- Pass: Disabled state blocks interaction and applies reduced opacity.
+- Pass: `Switch::new(model)` plus `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` covers the documented control-level surface.
+- Pass: `Switch::from_checked(...)` and `action(...)` / `action_payload(...)` remain available for action-first authoring without forcing a `Model<bool>` at every call site.
+- Pass: `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the upstream description and choice-card compositions without widening `Switch` into a generic children API.
+- Pass: `Switch` remains a leaf control; no extra generic `compose()` / `asChild` surface is needed here.
 
-### Semantics
+### Layout & default-style ownership
 
-- Pass: Exposes `SemanticsRole::Switch` and `checked` state.
+- Pass: track/thumb chrome, focus ring, and intrinsic switch sizes remain recipe-owned because the upstream switch source defines those defaults on the component itself.
+- Pass: surrounding width caps such as `max-w-sm`, field-group stacking, and page/grid negotiation remain caller-owned and stay on gallery/example compositions.
+- Pass: checked-track and focus outcomes remain covered by the existing switch web chrome gates, and this pass also closes a small public-surface gap by adding `aria_invalid(...)` directly on `Switch` rather than forcing callers through manual style overrides.
+- Note: `SwitchStyle` remains a focused Fret follow-up for token-safe color overrides rather than part of the upstream docs path.
 
-### Visual parity (new-york)
+### Gallery / docs parity
 
-- Pass: Track uses `primary` when checked and `input` when unchecked (theme-key aligned).
-- Pass: Thumb is rendered as a circular element with `background` color and is non-interactive.
-- Pass: Thumb is vertically centered based on track/thumbnail sizes (aligns with `items-center`).
-- Pass: Track uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
-- Pass: Focus ring thickness (`ring-[3px]`) matches shadcn-web focus variant (`switch-demo.focus`).
+- Pass: the gallery now mirrors the upstream base Switch docs path first: `Demo`, `Usage`, `Description`, `Choice Card`, `Disabled`, `Invalid`, `Size`, and `RTL`.
+- Pass: `Label Association` and `Style Override` remain explicit Fret follow-ups after the upstream path because they document Fret-specific control-registry and styling escape hatches.
+- Pass: this work is mostly docs/public-surface parity, with one small source-alignment fix: `Switch` now exposes `aria_invalid(...)` directly.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib switch`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
-  (`web_vs_fret_layout_switch_demo_track_size`).
-- Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
-  (`web_vs_fret_switch_demo_focus_ring_matches`).
-
-## Follow-ups (recommended)
-
-- None at the moment.
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`switch-demo`, `switch-demo.focus`)
+- Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`switch-demo`)

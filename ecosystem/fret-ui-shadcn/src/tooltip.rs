@@ -15,8 +15,10 @@ use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, ui,
 };
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -461,6 +463,28 @@ impl TooltipProvider {
     }
 }
 
+/// Tooltip content argument.
+///
+/// This keeps the older eager `AnyElement` path working while also accepting the recipe-level
+/// `TooltipContent` builder directly.
+#[derive(Debug)]
+pub enum TooltipContentArg {
+    Element(AnyElement),
+    Builder(TooltipContent),
+}
+
+impl From<AnyElement> for TooltipContentArg {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<TooltipContent> for TooltipContentArg {
+    fn from(value: TooltipContent) -> Self {
+        Self::Builder(value)
+    }
+}
+
 /// shadcn/ui `Tooltip` root (v4).
 ///
 /// This is implemented as a component-layer policy built on runtime substrate primitives:
@@ -472,7 +496,7 @@ impl TooltipProvider {
 /// `overflow: Clip`.
 pub struct Tooltip {
     trigger: AnyElement,
-    content: AnyElement,
+    content: TooltipContentArg,
     align: TooltipAlign,
     side: TooltipSide,
     side_offset: Px,
@@ -548,10 +572,10 @@ impl std::fmt::Debug for Tooltip {
 }
 
 impl Tooltip {
-    pub fn new(trigger: AnyElement, content: AnyElement) -> Self {
+    pub fn new(trigger: AnyElement, content: impl Into<TooltipContentArg>) -> Self {
         Self {
             trigger,
-            content,
+            content: content.into(),
             align: TooltipAlign::default(),
             side: TooltipSide::default(),
             side_offset: Px(0.0),
@@ -574,6 +598,15 @@ impl Tooltip {
             on_open_change_with_reason: None,
             on_open_change_complete: None,
         }
+    }
+
+    /// Host-bound builder-first constructor that late-lands the trigger/content at the call site.
+    pub fn build<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl Into<TooltipContentArg>,
+    ) -> Self {
+        Self::new(trigger.into_child_element(cx), content)
     }
 
     pub fn align(mut self, align: TooltipAlign) -> Self {
@@ -786,7 +819,10 @@ impl Tooltip {
         let on_open_change_complete = self.on_open_change_complete;
 
         let base_trigger = self.trigger;
-        let content = self.content;
+        let content = match self.content {
+            TooltipContentArg::Element(content) => content,
+            TooltipContentArg::Builder(content) => content.into_element(cx),
+        };
         let trigger_id = base_trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
@@ -1377,14 +1413,69 @@ pub struct TooltipTrigger {
     child: AnyElement,
 }
 
+pub struct TooltipTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl TooltipTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> TooltipTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        TooltipTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> TooltipTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_trigger(self, cx: &mut ElementContext<'_, H>) -> TooltipTrigger {
+        TooltipTrigger::new(
+            self.child
+                .expect("expected tooltip trigger child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_trigger(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TooltipTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for TooltipTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TooltipTriggerBuild::into_element(self, cx)
     }
 }
 
@@ -1396,9 +1487,28 @@ pub struct TooltipAnchor {
     child: AnyElement,
 }
 
+pub struct TooltipAnchorBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl TooltipAnchor {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    /// Builder-first variant that late-lands the anchor child at `into_element(cx)` time.
+    ///
+    /// If you need the anchor ID before final landing, call [`TooltipAnchorBuild::into_anchor`] or
+    /// keep using [`TooltipAnchor::new`] with an already-landed child.
+    pub fn build<H: UiHost, T>(child: T) -> TooltipAnchorBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        TooltipAnchorBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
     }
 
     pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
@@ -1408,6 +1518,45 @@ impl TooltipAnchor {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> TooltipAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_anchor(self, cx: &mut ElementContext<'_, H>) -> TooltipAnchor {
+        TooltipAnchor::new(
+            self.child
+                .expect("expected tooltip anchor child")
+                .into_child_element(cx),
+        )
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_anchor(cx).into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for TooltipAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TooltipAnchorBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for TooltipAnchorBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TooltipAnchorBuild::into_element(self, cx)
     }
 }
 
@@ -1527,12 +1676,92 @@ mod tests {
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
-        ContainerProps, FlexProps, LayoutStyle, Length, PressableA11y, PressableProps,
+        ContainerProps, ElementKind, FlexProps, LayoutStyle, Length, PressableA11y, PressableProps,
         SemanticsProps, TextProps,
     };
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn tooltip_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(
+                cx,
+                TooltipTrigger::build(crate::Card::build(|_cx, _out| {})),
+            );
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn tooltip_anchor_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, TooltipAnchor::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn tooltip_build_into_element_accepts_late_landed_trigger_and_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let root =
+                Tooltip::build(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+
+            assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
+        });
+    }
+
+    #[test]
+    fn tooltip_new_accepts_tooltip_content_builder() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let root = Tooltip::new(
+                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]),
+            )
+            .into_element(cx);
+
+            assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
+        });
+    }
 
     #[test]
     fn tooltip_content_default_max_width_matches_shadcn() {

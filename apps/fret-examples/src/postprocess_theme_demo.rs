@@ -212,12 +212,12 @@ impl View for ThemePostprocessView {
             return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
         };
 
-        let enabled = cx.watch_model(&self.st.enabled).layout().copied_or(true);
-        let compare = cx.watch_model(&self.st.compare).layout().copied_or(true);
+        let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);
+        let compare = cx.watch_model(&self.st.compare).layout().value_or(true);
         let theme = cx
             .watch_model(&self.st.theme)
             .layout()
-            .cloned_or(Option::<Arc<str>>::None);
+            .value_or(Option::<Arc<str>>::None);
 
         let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
         let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
@@ -230,7 +230,7 @@ impl View for ThemePostprocessView {
         let retro_dither = cx
             .watch_model(&self.st.retro_dither)
             .layout()
-            .copied_or(true);
+            .value_or(true);
 
         let inspector = inspector(
             cx,

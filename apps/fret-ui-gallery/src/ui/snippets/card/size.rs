@@ -11,29 +11,26 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    let default_card = shadcn::Card::new(vec![
+    let card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Default spacing").into_element(cx),
-            shadcn::CardDescription::new("CardSize::Default (py-6, px-6, gap-6).").into_element(cx),
+            shadcn::CardTitle::new("Small Card").into_element(cx),
+            shadcn::CardDescription::new("This card uses the small size variant.")
+                .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![
-            ui::text("CardContent text.").text_sm().into_element(cx),
-        ])
+        shadcn::CardContent::new(vec![ui::text(
+            "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
+        )
+        .text_sm()
+        .into_element(cx)])
         .into_element(cx),
-    ])
-    .refine_layout(max_w_sm.clone())
-    .into_element(cx)
-    .test_id("ui-gallery-card-size-default");
-
-    let sm_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Small spacing").into_element(cx),
-            shadcn::CardDescription::new("CardSize::Sm (py-4, px-4, gap-4).").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            ui::text("CardContent text.").text_sm().into_element(cx),
+        shadcn::CardFooter::new(vec![
+            shadcn::Button::new("Action")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .test_id("ui-gallery-card-size-sm-action"),
         ])
         .into_element(cx),
     ])
@@ -42,8 +39,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-card-size-sm");
 
-    ui::v_flex(|_cx| vec![default_card, sm_card])
-        .gap(Space::N4)
+    ui::v_flex(move |_cx| vec![card])
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)

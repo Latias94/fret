@@ -29,30 +29,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     );
 
-    let content = shadcn::SheetContent::new([
-        shadcn::SheetHeader::new([
-            shadcn::SheetTitle::new("Edit profile").into_element(cx),
-            shadcn::SheetDescription::new(
-                "Make changes to your profile here. Click save when you're done.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::SheetFooter::new([
-            shadcn::Button::new("Save changes").into_element(cx),
-            shadcn::SheetClose::from_scope().into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
     shadcn::Sheet::new(open)
-        .side(shadcn::SheetSide::Right)
         .compose()
         .trigger(trigger)
-        .portal(shadcn::SheetPortal::new())
-        .overlay(shadcn::SheetOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            shadcn::SheetContent::new([shadcn::SheetHeader::new([
+                shadcn::SheetTitle::new("Are you absolutely sure?").into_element(cx),
+                shadcn::SheetDescription::new("This action cannot be undone.").into_element(cx),
+            ])
+            .into_element(cx)])
+            .into_element(cx)
+        })
         .into_element(cx)
 }
 // endregion: example

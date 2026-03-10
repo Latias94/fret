@@ -37,75 +37,69 @@ fn shadow_chain() -> EffectChain {
     EffectChain::from_steps(&[EffectStep::DropShadowV1(shadow)]).sanitize()
 }
 
-struct DropShadowBasicsView {
-    enabled: Model<bool>,
-    stress: Model<bool>,
-}
+struct DropShadowBasicsView;
 
 impl View for DropShadowBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            enabled: app.models_mut().insert(true),
-            stress: app.models_mut().insert(false),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let enabled = cx.watch_model(&self.enabled).layout().copied_or(true);
-        let stress = cx.watch_model(&self.stress).layout().copied_or(false);
+        let enabled_state = cx.use_local_with(|| true);
+        let stress_state = cx.use_local_with(|| false);
+
+        let enabled = enabled_state.watch(cx).layout().value_or(true);
+        let stress = stress_state.watch(cx).layout().value_or(false);
 
         let toolbar = ui::v_flex(|cx| {
             let row_shadow = ui::h_flex(|cx| {
-                [
-                    shadcn::Label::new("Enable DropShadowV1:").into_element(cx),
-                    shadcn::Switch::new(self.enabled.clone())
-                        .test_id(TEST_ID_SWITCH_SHADOW)
-                        .into_element(cx),
+                ui::children![
+                    cx;
+                    shadcn::Label::new("Enable DropShadowV1:"),
+                    shadcn::Switch::new(enabled_state.clone_model())
+                        .test_id(TEST_ID_SWITCH_SHADOW),
                 ]
             })
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
             let row_stress = ui::h_flex(|cx| {
-                [
-                    shadcn::Label::new("Stress grid:").into_element(cx),
-                    shadcn::Switch::new(self.stress.clone())
-                        .test_id(TEST_ID_SWITCH_STRESS)
-                        .into_element(cx),
+                ui::children![
+                    cx;
+                    shadcn::Label::new("Stress grid:"),
+                    shadcn::Switch::new(stress_state.clone_model())
+                        .test_id(TEST_ID_SWITCH_STRESS),
                 ]
             })
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
-            [
-                shadcn::Alert::new([
-                    shadcn::AlertTitle::new("Renderer semantics").into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Alert::new(ui::children![
+                    cx;
+                    shadcn::AlertTitle::new("Renderer semantics"),
                     shadcn::AlertDescription::new(
                         "DropShadowV1 is computed within effect bounds (scissored). Keep padding inside the layer so the shadow can be visible.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
+                    ),
+                ]),
                 row_shadow,
                 row_stress,
             ]
         })
-        .gap(Space::N3)
-        .into_element(cx);
+        .gap(Space::N3);
 
         let chain = shadow_chain();
 
         let card = |cx: &mut ElementContext<'_, App>, title: String| -> AnyElement {
             let surface = ui::v_flex(|cx| {
-                [
-                    shadcn::Label::new(title).into_element(cx),
+                ui::children![
+                    cx;
+                    shadcn::Label::new(title),
                     shadcn::Badge::new("DropShadowV1")
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
+                        .variant(shadcn::BadgeVariant::Secondary),
                 ]
             })
             .gap(Space::N2)
@@ -114,27 +108,25 @@ impl View for DropShadowBasicsView {
             .border_1()
             .border_color(ColorRef::Color(theme.color_token("border")))
             .rounded_md()
-            .size_full()
-            .into_element(cx);
+            .size_full();
 
             // Keep a fixed-size effect layer and pad inside it so the shadow has space.
-            let padded = ui::container(|_cx| [surface])
-                .p(Space::N5)
-                .size_full()
-                .into_element(cx);
+            let padded = ui::container(|_cx| [surface]).p(Space::N5).size_full();
 
             let bounds = ui::container(|_cx| [padded])
                 .w_px(Px(260.0))
                 .h_px(Px(160.0))
                 .overflow_hidden()
                 .bg(ColorRef::Color(theme.color_token("muted")))
-                .rounded_md()
-                .into_element(cx);
+                .rounded_md();
 
             if enabled {
-                cx.effect_layer(EffectMode::FilterContent, chain, move |_cx| [bounds])
+                ui::effect_layer(EffectMode::FilterContent, chain.clone(), move |_cx| {
+                    [bounds]
+                })
+                .into_element(cx)
             } else {
-                bounds
+                bounds.into_element(cx)
             }
         };
 
@@ -143,49 +135,52 @@ impl View for DropShadowBasicsView {
         } else {
             (2usize, 3usize)
         };
-        let mut grid_rows: Vec<AnyElement> = Vec::with_capacity(rows);
-        for r in 0..rows {
-            grid_rows.push(
-                ui::h_flex(|cx| {
-                    let mut out: Vec<AnyElement> = Vec::with_capacity(cols);
-                    for c in 0..cols {
-                        let i = r * cols + c;
-                        out.push(card(cx, format!("Card {i}")));
-                    }
-                    out
-                })
-                .gap(Space::N4)
-                .into_element(cx),
+        let stage = ui::v_flex_build(|cx, out| {
+            for r in 0..rows {
+                out.push_ui(
+                    cx,
+                    ui::h_flex(|cx| {
+                        let mut row: Vec<AnyElement> = Vec::with_capacity(cols);
+                        for c in 0..cols {
+                            let i = r * cols + c;
+                            row.push(card(cx, format!("Card {i}")));
+                        }
+                        row
+                    })
+                    .gap(Space::N4),
+                );
+            }
+        })
+        .gap(Space::N4)
+        .items_center()
+        .test_id(TEST_ID_STAGE);
+
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Drop shadow basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A small, deterministic surface for DropShadowV1 renderer semantics (toggle + screenshot baseline).",
+                ),
             );
-        }
+        });
 
-        let stage = ui::v_flex(|_cx| grid_rows)
-            .gap(Space::N4)
-            .items_center()
-            .into_element(cx)
-            .test_id(TEST_ID_STAGE);
+        let content = ui::v_flex(|cx| ui::children![cx; toolbar, stage]).gap(Space::N5);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Drop shadow basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A small, deterministic surface for DropShadowV1 renderer semantics (toggle + screenshot baseline).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(1180.0));
 
-        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, stage])
-            .gap(Space::N5)
-            .into_element(cx)])
-        .into_element(cx);
-
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(1180.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

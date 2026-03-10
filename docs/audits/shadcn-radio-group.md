@@ -1,5 +1,4 @@
-# shadcn/ui v4 Audit — Radio Group
-
+# shadcn/ui v4 Audit - Radio Group
 
 ## Upstream references (non-normative)
 
@@ -9,57 +8,43 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `RadioGroup` against the upstream shadcn/ui v4 docs and
-examples in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `RadioGroup` against the upstream shadcn/ui v4 base docs,
+base examples, and the existing radio-group gates.
 
 ## Upstream references (source of truth)
 
-- Component wrapper (Radix RadioGroup skin): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/radio-group.tsx`
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/radio-group.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/radio-group.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/radio-group.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/radio-group-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-description.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-choice-card.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-fieldset.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-invalid.tsx`, `repo-ref/ui/apps/v4/examples/base/radio-group-rtl.tsx`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/radio_group.rs`
-- Key building blocks:
-  - Roving focus utilities: `ecosystem/fret-ui-kit/src/headless/roving_focus.rs`
-  - APG navigation hooks: `ecosystem/fret-ui-kit/src/declarative/collection_semantics.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/radio_group.rs`
 
 ## Audit checklist
 
-### Composition surface
+### Authoring surface
 
-- Pass: `RadioGroupItem` supports composable contents via `RadioGroupItem::children(...)` while keeping
-  the convenient `RadioGroup::item(RadioGroupItem::new(value, label))` builder shape.
-- Note: Because `RadioGroupItem::new(value, label)` already covers the common shadcn authoring path and
-  `children(...)` covers richer card content, Fret intentionally does not add a separate generic
-  `compose()` builder for this component.
-- Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
-- Pass: Supports uncontrolled `defaultValue` (internal selection model).
+- Pass: `RadioGroup::uncontrolled(default)` and `RadioGroup::new(model)` cover the documented uncontrolled and controlled authoring paths.
+- Pass: `RadioGroupItem::children(...)` and `variant(RadioGroupItemVariant::ChoiceCard)` cover the richer description and choice-card compositions.
+- Pass: no extra generic `compose()` API is needed here because the existing item children surface already matches the upstream composition model, including the invalid row composition.
+- Pass: `control_id(...)` remains the focused Fret bridge for label-forwarding and stays out of the upstream docs path.
 
-### Keyboard & selection behavior
+### Interaction & default-style ownership
 
-- Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
-- Pass: Selection commits via `cx.roving_select_option_arc_str(...)` (Radix RadioGroup behavior).
-- Pass: Enter key presses are consumed to match Radix/WAI-ARIA expectations; Space activates items.
-- Pass: Supports Radix `orientation` outcomes (`RadioGroupOrientation::Vertical` / `Horizontal`).
-- Pass: `loop_navigation(true)` defaults to looping behavior (Radix `loop` default).
+- Pass: selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned.
+- Pass: surrounding fieldset, card width, and row layout remain caller-owned composition.
+- Pass: existing radio-group layout and focus gates continue to cover representative interaction and geometry outcomes.
 
-### Visual defaults (shadcn parity)
+### Gallery / docs parity
 
-- Pass: Item sizing defaults to `size-4` (`16px`) via `component.radio_group.icon_size_px`.
-- Pass: Item border defaults to `border-input` and switches to `border-ring` on focus.
-- Pass: Selected indicator uses `primary` (dot fill), matching shadcn’s `CircleIcon fill-primary`.
-- Pass: The item icon uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
-- Pass: Focus ring thickness (`ring-[3px]`) matches shadcn-web focus variant (`radio-group-demo.focus`).
+- Pass: the gallery now mirrors the upstream base Radio Group docs path first: `Demo`, `Usage`, `Description`, `Choice Card`, `Fieldset`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.
+- Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the `control_id(...)` bridge.
+- Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib radio_group`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
-  (`web_vs_fret_layout_radio_group_demo_row_geometry`).
-- Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
-  (`web_vs_fret_radio_group_demo_focus_ring_matches`).
-
-## Follow-ups (recommended)
-
-- None at the moment.
+- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs` (`radio_group::web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
+- Existing focus gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_radio_group_demo_focus_ring_matches`)

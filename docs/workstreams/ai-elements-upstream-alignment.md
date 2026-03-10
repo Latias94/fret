@@ -58,7 +58,7 @@ Legend:
 
 | Upstream file | Fret owner | Rust module | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Parts-first transcript + default shell (`AiChat`). UI Gallery pages: `ai_chat_demo`, `ai_transcript_torture`, `ai_conversation_demo`. |
+| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Compound `Conversation` + `ConversationContent` + overlay parts now mirror the official docs composition more closely, while `AiChat` remains the convenience shell. UI Gallery pages: `ai_chat_demo`, `ai_transcript_torture`, `ai_conversation_demo`. Gates: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-scroll-button.json`, `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-prompt-send-click.json`. |
 | `message.tsx` | `fret-ui-ai` | `message*.rs`, `message_response.rs` | Ported (prototype) | Split into message wrapper, toolbar/actions, and response rendering. UI Gallery pages: `ai_message_demo`, `ai_message_branch_demo`, `ai_chat_demo`. |
 | `prompt-input.tsx` | `fret-ui-ai` | `prompt_input.rs` | Ported (prototype) | Effects remain app-owned; interaction gated via diag. |
 | `tool.tsx` | `fret-ui-ai` | `tool.rs`, `tool_call_block.rs` | Ported (prototype) | Collapsible tool call blocks + status outcomes. |
@@ -71,7 +71,7 @@ Legend:
 | `attachments.tsx` | `fret-ui-ai` | `attachments.rs` | Ported (prototype) | Chips grid; add/remove intents are app-owned. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `chain_of_thought.rs` | Ported (prototype) | Step-list disclosure surface. |
 | `checkpoint.tsx` | `fret-ui-ai` | `checkpoint.rs` | Ported (prototype) | Basic alignment. |
-| `confirmation.tsx` | `fret-ui-ai` | `confirmation.rs` | Ported (prototype) | Approve/deny policy surface. |
+| `confirmation.tsx` | `fret-ui-ai` | `confirmation.rs` | Ported (prototype) | Approve/deny policy surface. Direct compound-children composition and UI Gallery docs page now mirror the official examples. |
 | `context.tsx` | `fret-ui-ai` | `context.rs` | Ported (prototype) | Context usage hovercard (percent + progress + compact counts). |
 | `plan.tsx` | `fret-ui-ai` | `plan.rs` | Ported (prototype) | Plan item list outcomes. |
 | `shimmer.tsx` | `fret-ui-ai` | `shimmer.rs` | Ported (prototype) | Animated shimmer text surface. |
@@ -96,7 +96,7 @@ Legend:
 | `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
 | `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | Variant-aware placeholder shell (upstream uses Rive/webgl2) plus Fret-specific custom visual slot seam. Gate: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
 | `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
-| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
+| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). Thin selector-level `MicSelectorItem` / `MicSelectorEmpty` wrappers exist; remaining gap is render-props list composition. |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
 | `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). UI Gallery pages: `ai_workflow_canvas_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
@@ -107,12 +107,93 @@ Legend:
 | `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. UI Gallery pages: `ai_workflow_controls_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
 | `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. UI Gallery page: `ai_workflow_connection_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 
+## Selector surface alignment (2026-03-06)
+
+The upstream `mic-selector`, `voice-selector`, and `model-selector` surfaces look similar at a glance,
+but they should not collapse into one policy-heavy abstraction in Fret.
+
+The current alignment decision is:
+
+| Surface | Current Fret shape | Upstream shape | Recommendation |
+| --- | --- | --- | --- |
+| `MicSelector` | UI-only root with controlled/uncontrolled `value_model` + `open_model`, a Rust compound entrypoint (`into_element_with_children(...)`), explicit `MicSelectorItem` / `MicSelectorEmpty` wrappers, and a `MicSelectorList` that supports both auto rows and explicit entries. | Root + `Trigger` + `Value` + `Content` + `Input` + render-props `List(children(data))` + explicit `Empty` / `Item` / `Label`. | Keep the current UI-only seam (device enumeration and permission prompts remain app-owned). Treat the remaining gap as **ecosystem surface alignment**, not a runtime contract gap. The main remaining delta is upstream-style render-props list composition, which should be solved on top of shared `Command` composition rather than by adding new runtime mechanisms. |
+| `VoiceSelector` | Richest selector-owned compound surface today: root, content/input/list, shared `Command*` aliases, plus metadata/presentation parts such as `Name`, `Description`, `Gender`, `Accent`, `Age`, `Attributes`, `Bullet`, and `Preview`. | Root + dialog/content/input/list/items plus metadata/presentation parts and a context hook. | Use this as the **naming and taxonomy baseline** for selector compounds, but do not force every selector to grow the same presentation parts. The metadata/presentation parts are selector policy, not universal selector contracts. |
+| `ModelSelector` | Thin wrapper over dialog + shared `Command*` parts, plus selector-specific presentation helpers (`Logo`, `LogoGroup`, `Name`). | Thin wrapper over `Dialog` + `Command*` + provider logo/name helpers. | Keep this surface intentionally thin and alias-heavy. Do not turn `ModelSelector` into a policy-heavy root just to match `VoiceSelector`. Thin-wrapper parity is the correct outcome here. |
+
+### Smallest common selector surface
+
+The three selectors should align around a **smallest common surface**, not a fully identical API:
+
+- Root + trigger/content decomposition.
+- Shared command-family parts where they exist: `Input`, `List`, `Empty`, `Item`, `Group`,
+  `Separator`, `Shortcut`.
+- Controlled/uncontrolled open state on the root; controlled/uncontrolled selection state only for
+  selectors that semantically own a selected value.
+- Docs-style gallery pages that explain which parts are selector-owned vs shared `Command*`
+  composition.
+
+### Intentional divergences
+
+These are **intentional** and should stay out of `crates/fret-ui`:
+
+- `MicSelector`: device enumeration, permission prompts, and `devicechange` refresh remain app-owned.
+- `VoiceSelector`: voice inventory and preview playback transport remain app-owned.
+- `ModelSelector`: provider logo fetching remains local/recipe-owned for now (the current port uses a
+  local placeholder badge rather than remote `models.dev` fetches).
+
+### Mechanism vs recipe note
+
+The March 2026 `MicSelector` width regression was not a `crates/fret-ui` contract bug. The root cause
+was recipe-level width/stretch propagation in `fret-ui-shadcn::PopoverContent`, fixed in
+`ecosystem/fret-ui-shadcn/src/popover.rs` with a focused regression test.
+
+### Evidence anchors
+
+- `ecosystem/fret-ui-ai/src/elements/mic_selector.rs`
+- `ecosystem/fret-ui-ai/src/elements/voice_selector.rs`
+- `ecosystem/fret-ui-ai/src/elements/model_selector.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
+- `ecosystem/fret-ui-shadcn/src/popover.rs`
+
+## 2026-03-07 closure audit (docs parity + text infra)
+
+The upstream docs inventory is now fully represented in `fret-ui-ai` and in the AI UI Gallery when
+`fret-ui-gallery` is built with `--features gallery-dev`. The remaining closure work is now mostly
+**parity polish and text-infrastructure cleanup**, not missing-component work.
+
+| Family | Docs / Gallery status | Text infra status | Remaining closure work |
+| --- | --- | --- | --- |
+| `Conversation` / `AiChat` | Docs-aligned composition is present in `conversation_demo.rs` and `chat_demo.rs`. `AiChat` now reuses the `Conversation` compound instead of hand-rolling transcript overlays. | Stable enough for the current parity pass; not a text-cascade hotspot. | Write the long-transcript selection/search contract and finish the scroll-to-bottom token/styling polish. |
+| `Confirmation` | Docs-aligned compound examples exist in `confirmation_demo.rs`, `confirmation_request.rs`, `confirmation_accepted.rs`, and `confirmation_rejected.rs`; the UI Gallery snippets now mirror the official preview scripts more closely (title-wrapped slots, inline/block code styling, `max-w-2xl`-like framing). | Migrated to inherited description typography and covered by regression tests. | No immediate migration work beyond routine token cleanup. |
+| `SourcesBlock` / `InlineCitation` | Upstream docs page and Gallery demos exist (`sources_demo.rs`, `inline_citation_demo.rs`). | Leaf typography now uses the shared preset helper (`typography::preset_text_style_with_overrides`), but source-link / anchor behavior items are still open. | Finish source open-url / stable anchor contracts and keep the component-specific text helper cleanup moving into the remaining AI families. |
+| `Agent` / `Sandbox` | Docs pages and Gallery demos exist (`agent_demo.rs`, `sandbox_demo.rs`). | Core labels now use the shared preset helper; no remaining local text helper wrappers in these two surfaces. | Keep parity work focused on behavior/tokens and use them as the next reference examples in the passive-text cleanup sweep. |
+| Voice surfaces (`AudioPlayer`, `MicSelector`, `VoiceSelector`, `Transcription`) | Docs pages and Gallery demos exist. | Core labels / metadata now use the shared preset helper; no remaining local text helper wrappers in this tracked voice-family batch. | Keep closure work focused on token polish and preview/selection behavior seams, not on another family-wide text-helper rewrite. |
+| `Task` / `Persona` | Docs pages and Gallery demos exist (`task_demo.rs`, `persona_demo.rs` plus persona variants). | Core label/file typography now uses the shared preset helper; no remaining local text helper wrappers in these two surfaces. | Keep parity work focused on children/default-copy and token polish; treat them as the next docs-aligned slot/compound reference examples. |
+| `Artifact`, `Queue`, `Reasoning`, `Plan`, `EnvironmentVariables`, `PackageInfo`, `SchemaDisplay`, `Terminal`, `ConversationEmptyState`, `ChainOfThought` | Docs pages and Gallery demos exist. | Already migrated or guarded by inherited-typography regression tests / shared helper usage. | Keep parity polish focused on behavior/tokens, not on text-style infrastructure rewrites. |
+
+### Audit takeaway
+
+- The repo already has an alignment-document trail: `ai-elements-upstream-alignment`,
+  `ai-elements-port-todo`, `ai-elements-port-milestones`, and the text-style cascade workstream.
+- The tracked AI-family local text-helper cleanup is now complete. The remaining closure work shifts
+  back to behavior/token polish and other explicit seams, not another AI text-helper migration pass.
+- `Conversation` and `Confirmation` should now be treated as reference examples for the desired
+  direction: compound children APIs + inherited typography + focused regression gates.
+
 ## Known upstream files not yet ported
 
 As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.
  
 
 ## Evidence bundles (local)
+
+- 2026-03-06 mic selector open -> filter -> select -> close (PASS):
+  - Script: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-mic-selector-demo-select.json`
+  - Launch: `target/debug/fret-ui-gallery` via `cargo run -q -p fretboard -- diag run ... --launch -- target/debug/fret-ui-gallery`
+  - Session: `target/fret-diag-mic-selector-binary-debug/sessions/1772779723882-41378`
+  - Run id: `1772779726455-ui-gallery-ai-mic-selector-demo-select`
 
 - 2026-03-05 model selector open → filter → select → close (PASS):
   - Script: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-model-selector-demo-open-filter-select.json`

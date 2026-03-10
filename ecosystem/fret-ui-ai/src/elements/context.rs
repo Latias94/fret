@@ -306,6 +306,211 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
+const CONTEXT_TRIGGER_SLOT_KEY: &str = "__fret_ui_ai.context.trigger";
+const CONTEXT_CONTENT_SLOT_KEY: &str = "__fret_ui_ai.context.content";
+const CONTEXT_HEADER_SLOT_KEY: &str = "__fret_ui_ai.context.header";
+const CONTEXT_FOOTER_SLOT_KEY: &str = "__fret_ui_ai.context.footer";
+const CONTEXT_INPUT_SLOT_KEY: &str = "__fret_ui_ai.context.input";
+const CONTEXT_OUTPUT_SLOT_KEY: &str = "__fret_ui_ai.context.output";
+const CONTEXT_REASONING_SLOT_KEY: &str = "__fret_ui_ai.context.reasoning";
+const CONTEXT_CACHE_SLOT_KEY: &str = "__fret_ui_ai.context.cache";
+
+fn context_slot_placeholder<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    slot_key: &'static str,
+    semantics: Option<SemanticsDecoration>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut slot = cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: LayoutStyle::default(),
+            present: false,
+            interactive: false,
+        },
+        move |_cx| children,
+    );
+    slot.key_context = Some(Arc::<str>::from(slot_key));
+    if let Some(decoration) = semantics {
+        slot = slot.attach_semantics(decoration);
+    }
+    slot
+}
+
+fn context_slot_test_id(element: &AnyElement) -> Option<Arc<str>> {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.test_id.clone())
+}
+
+fn render_context_header_shell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let wrapper = ui::v_stack(move |_cx| children)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N2)
+        .into_element(cx);
+
+    let wrapper = cx.container(
+        decl_style::container_props(
+            &theme,
+            ChromeRefinement::default().p(Space::N3),
+            LayoutRefinement::default().w_full().min_w_0(),
+        ),
+        move |_cx| vec![wrapper],
+    );
+
+    if let Some(test_id) = test_id {
+        wrapper.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
+        )
+    } else {
+        wrapper
+    }
+}
+
+fn render_context_footer_shell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let wrapper = cx.container(
+        decl_style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .p(Space::N3)
+                .bg(ColorRef::Color(theme.color_token("secondary"))),
+            LayoutRefinement::default().w_full().min_w_0(),
+        ),
+        move |_cx| children,
+    );
+
+    if let Some(test_id) = test_id {
+        wrapper.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
+        )
+    } else {
+        wrapper
+    }
+}
+
+fn resolve_context_trigger_slot<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    mut slot: AnyElement,
+) -> AnyElement {
+    let test_id = context_slot_test_id(&slot);
+    if let Some(child) = slot.children.drain(..).next() {
+        return if let Some(test_id) = test_id {
+            child.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        } else {
+            child
+        };
+    }
+
+    let trigger = ContextTrigger::default();
+    if let Some(test_id) = test_id {
+        trigger.test_id(test_id).into_element(cx)
+    } else {
+        trigger.into_element(cx)
+    }
+}
+
+fn resolve_context_content_subtree<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    mut element: AnyElement,
+) -> Option<AnyElement> {
+    match element.key_context.as_deref() {
+        Some(CONTEXT_HEADER_SLOT_KEY) => {
+            let header = ContextContentHeader::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                header.test_id(test_id).into_element(cx)
+            } else {
+                header.into_element(cx)
+            });
+        }
+        Some(CONTEXT_FOOTER_SLOT_KEY) => {
+            let footer = ContextContentFooter::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                footer.test_id(test_id).into_element(cx)
+            } else {
+                footer.into_element(cx)
+            });
+        }
+        Some(CONTEXT_INPUT_SLOT_KEY) => {
+            let row = ContextInputUsage::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                row.test_id(test_id).into_element(cx)
+            } else {
+                row.into_element(cx)
+            });
+        }
+        Some(CONTEXT_OUTPUT_SLOT_KEY) => {
+            let row = ContextOutputUsage::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                row.test_id(test_id).into_element(cx)
+            } else {
+                row.into_element(cx)
+            });
+        }
+        Some(CONTEXT_REASONING_SLOT_KEY) => {
+            let row = ContextReasoningUsage::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                row.test_id(test_id).into_element(cx)
+            } else {
+                row.into_element(cx)
+            });
+        }
+        Some(CONTEXT_CACHE_SLOT_KEY) => {
+            let row = ContextCacheUsage::default();
+            return Some(if let Some(test_id) = context_slot_test_id(&element) {
+                row.test_id(test_id).into_element(cx)
+            } else {
+                row.into_element(cx)
+            });
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .filter_map(|child| resolve_context_content_subtree(cx, child))
+        .collect();
+    Some(element)
+}
+
+fn resolve_context_root_children<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+) -> (Option<AnyElement>, Option<AnyElement>) {
+    let mut trigger = None;
+    let mut content = None;
+
+    for child in children {
+        match child.key_context.as_deref() {
+            Some(CONTEXT_TRIGGER_SLOT_KEY) if trigger.is_none() => {
+                trigger = Some(resolve_context_trigger_slot(cx, child));
+            }
+            Some(CONTEXT_CONTENT_SLOT_KEY) if content.is_none() => {
+                content = resolve_context_content_subtree(cx, child);
+            }
+            _ => {}
+        }
+    }
+
+    (trigger, content)
+}
+
 /// AI Elements-aligned context usage hovercard (`context.tsx`).
 pub struct Context {
     used_tokens: u64,
@@ -314,6 +519,7 @@ pub struct Context {
     usage: Option<ContextUsage>,
     open_delay_frames: u32,
     close_delay_frames: u32,
+    children: Vec<AnyElement>,
     trigger: Option<AnyElement>,
     content: Option<AnyElement>,
     test_id_root: Option<Arc<str>>,
@@ -346,6 +552,7 @@ impl Context {
             usage: None,
             open_delay_frames: 0,
             close_delay_frames: 0,
+            children: Vec::new(),
             trigger: None,
             content: None,
             test_id_root: None,
@@ -370,6 +577,11 @@ impl Context {
 
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames = frames;
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -452,6 +664,75 @@ impl Context {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        if !self.children.is_empty() {
+            let theme = Theme::global(&*cx.app).clone();
+
+            let schema = ContextSchema {
+                used_tokens: self.used_tokens,
+                max_tokens: self.max_tokens,
+                usage: self.usage.clone(),
+                model_id: self.model_id.clone(),
+            };
+
+            let layout = self.layout;
+            let open_delay_frames = self.open_delay_frames;
+            let close_delay_frames = self.close_delay_frames;
+            let direct_children = self.children;
+            let trigger_override = self.trigger;
+            let content_override = self.content;
+            let test_id_root = self.test_id_root;
+
+            return cx.container(
+                decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default(),
+                ),
+                move |cx| {
+                    cx.with_state(ContextProviderState::default, |st| {
+                        st.schema = Some(schema.clone());
+                    });
+
+                    let (slot_trigger, slot_content) =
+                        resolve_context_root_children(cx, direct_children);
+                    let trigger = trigger_override
+                        .or(slot_trigger)
+                        .unwrap_or_else(|| ContextTrigger::default().into_element(cx));
+                    let content = content_override.or(slot_content).unwrap_or_else(|| {
+                        ContextContent::new([
+                            ContextContentHeader::default().into_element(cx),
+                            ContextContentBody::new([
+                                ContextInputUsage::default().into_element(cx),
+                                ContextOutputUsage::default().into_element(cx),
+                                ContextReasoningUsage::default().into_element(cx),
+                                ContextCacheUsage::default().into_element(cx),
+                            ])
+                            .into_element(cx),
+                            ContextContentFooter::default().into_element(cx),
+                        ])
+                        .into_element(cx)
+                    });
+
+                    let hover = HoverCard::new(trigger, content)
+                        .open_delay_frames(open_delay_frames)
+                        .close_delay_frames(close_delay_frames)
+                        .refine_layout(layout)
+                        .into_element(cx);
+
+                    let hover = match test_id_root {
+                        Some(id) => hover.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .test_id(id),
+                        ),
+                        None => hover,
+                    };
+
+                    vec![hover]
+                },
+            );
+        }
+
         self.into_element_with_children(cx, |cx| {
             let trigger = ContextTrigger::default().into_element(cx);
             let content = ContextContent::new([
@@ -490,8 +771,20 @@ impl ContextTrigger {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if let Some(children) = self.children {
-            return if let Some(test_id) = self.test_id {
+        let ContextTrigger { children, test_id } = self;
+
+        if use_context_schema(cx).is_none() {
+            let semantics = test_id.map(|id| SemanticsDecoration::default().test_id(id));
+            return context_slot_placeholder(
+                cx,
+                CONTEXT_TRIGGER_SLOT_KEY,
+                semantics,
+                children.into_iter().collect(),
+            );
+        }
+
+        if let Some(children) = children {
+            return if let Some(test_id) = test_id {
                 children.attach_semantics(SemanticsDecoration::default().test_id(test_id))
             } else {
                 children
@@ -532,7 +825,7 @@ impl ContextTrigger {
             .variant(ButtonVariant::Ghost)
             .into_element(cx);
 
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             btn.attach_semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Button)
@@ -607,9 +900,15 @@ impl ContextContent {
                     .merge(self.layout),
             );
 
-        match self.test_id {
+        let content = match self.test_id {
             Some(id) => content.test_id(id).into_element(cx),
             None => content.into_element(cx),
+        };
+
+        if use_context_schema(cx).is_some() {
+            content
+        } else {
+            content.key_context(CONTEXT_CONTENT_SLOT_KEY)
         }
     }
 }
@@ -633,13 +932,23 @@ impl ContextContentHeader {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let ContextContentHeader { children, test_id } = self;
+
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return match children {
+                Some(children) => render_context_header_shell(cx, children, test_id),
+                None => context_slot_placeholder(
+                    cx,
+                    CONTEXT_HEADER_SLOT_KEY,
+                    test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                    Vec::new(),
+                ),
+            };
         };
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let children = self.children.unwrap_or_else(|| {
+        let children = children.unwrap_or_else(|| {
             let pct = percent_used(schema.used_tokens, schema.max_tokens);
             let display_pct = cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
@@ -704,29 +1013,8 @@ impl ContextContentHeader {
             vec![header_row, progress]
         });
 
-        let wrapper = ui::v_stack(move |_cx| children)
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .into_element(cx);
-
-        let wrapper = cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default().p(Space::N3),
-                LayoutRefinement::default().w_full().min_w_0(),
-            ),
-            move |_cx| vec![wrapper],
-        );
-
-        if let Some(test_id) = self.test_id {
-            wrapper.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
-                    .test_id(test_id),
-            )
-        } else {
-            wrapper
-        }
+        let _ = theme;
+        render_context_header_shell(cx, children, test_id)
     }
 }
 
@@ -751,10 +1039,6 @@ impl ContextContentBody {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(_schema) = use_context_schema(cx) else {
-            return hidden(cx);
-        };
-
         let theme = Theme::global(&*cx.app).clone();
 
         let body = ui::v_stack(move |_cx| self.children)
@@ -803,14 +1087,24 @@ impl ContextContentFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let ContextContentFooter { children, test_id } = self;
+
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return match children {
+                Some(children) => render_context_footer_shell(cx, children, test_id),
+                None => context_slot_placeholder(
+                    cx,
+                    CONTEXT_FOOTER_SLOT_KEY,
+                    test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                    Vec::new(),
+                ),
+            };
         };
 
         let theme = Theme::global(&*cx.app).clone();
         let resolved_costs = resolved_usage_costs(&schema);
 
-        let children = self.children.unwrap_or_else(|| {
+        let children = children.unwrap_or_else(|| {
             let Some(total_cost) = resolved_costs.and_then(|costs| costs.total_cost_usd) else {
                 return Vec::new();
             };
@@ -859,26 +1153,8 @@ impl ContextContentFooter {
             return hidden(cx);
         }
 
-        let wrapper = cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .p(Space::N3)
-                    .bg(ColorRef::Color(theme.color_token("secondary"))),
-                LayoutRefinement::default().w_full().min_w_0(),
-            ),
-            move |_cx| children,
-        );
-
-        if let Some(test_id) = self.test_id {
-            wrapper.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
-                    .test_id(test_id),
-            )
-        } else {
-            wrapper
-        }
+        let _ = theme;
+        render_context_footer_shell(cx, children, test_id)
     }
 }
 
@@ -969,13 +1245,21 @@ impl ContextInputUsage {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if let Some(children) = self.children {
+        let ContextInputUsage { children, test_id } = self;
+
+        if let Some(children) = children {
             return children;
         }
 
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return context_slot_placeholder(
+                cx,
+                CONTEXT_INPUT_SLOT_KEY,
+                test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                Vec::new(),
+            );
         };
+
         let Some(ref usage) = schema.usage else {
             return hidden(cx);
         };
@@ -993,7 +1277,7 @@ impl ContextInputUsage {
             resolved_costs.and_then(|costs| costs.input_cost_usd),
             resolved_costs.is_some(),
         );
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
         } else {
             el
@@ -1020,12 +1304,19 @@ impl ContextOutputUsage {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if let Some(children) = self.children {
+        let ContextOutputUsage { children, test_id } = self;
+
+        if let Some(children) = children {
             return children;
         }
 
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return context_slot_placeholder(
+                cx,
+                CONTEXT_OUTPUT_SLOT_KEY,
+                test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                Vec::new(),
+            );
         };
         let Some(ref usage) = schema.usage else {
             return hidden(cx);
@@ -1044,7 +1335,7 @@ impl ContextOutputUsage {
             resolved_costs.and_then(|costs| costs.output_cost_usd),
             resolved_costs.is_some(),
         );
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
         } else {
             el
@@ -1071,12 +1362,19 @@ impl ContextReasoningUsage {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if let Some(children) = self.children {
+        let ContextReasoningUsage { children, test_id } = self;
+
+        if let Some(children) = children {
             return children;
         }
 
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return context_slot_placeholder(
+                cx,
+                CONTEXT_REASONING_SLOT_KEY,
+                test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                Vec::new(),
+            );
         };
         let Some(ref usage) = schema.usage else {
             return hidden(cx);
@@ -1095,7 +1393,7 @@ impl ContextReasoningUsage {
             resolved_costs.and_then(|costs| costs.reasoning_cost_usd),
             resolved_costs.is_some(),
         );
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
         } else {
             el
@@ -1122,12 +1420,19 @@ impl ContextCacheUsage {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if let Some(children) = self.children {
+        let ContextCacheUsage { children, test_id } = self;
+
+        if let Some(children) = children {
             return children;
         }
 
         let Some(schema) = use_context_schema(cx) else {
-            return hidden(cx);
+            return context_slot_placeholder(
+                cx,
+                CONTEXT_CACHE_SLOT_KEY,
+                test_id.map(|id| SemanticsDecoration::default().test_id(id)),
+                Vec::new(),
+            );
         };
         let Some(ref usage) = schema.usage else {
             return hidden(cx);
@@ -1146,7 +1451,7 @@ impl ContextCacheUsage {
             resolved_costs.and_then(|costs| costs.cached_cost_usd),
             resolved_costs.is_some(),
         );
-        if let Some(test_id) = self.test_id {
+        if let Some(test_id) = test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
         } else {
             el
@@ -1176,6 +1481,19 @@ mod tests {
             delta < 0.000_001,
             "expected {expected}, got {actual} (delta={delta})"
         );
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .map(|test_id| test_id == expected)
+            .unwrap_or(false)
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
     }
 
     #[test]
@@ -1279,5 +1597,89 @@ mod tests {
         assert_approx_eq(costs.input_cost_usd, 9.99);
         assert_approx_eq(costs.output_cost_usd, 0.08);
         assert_approx_eq(costs.total_cost_usd, 12.34);
+    }
+
+    #[test]
+    fn context_direct_children_resolve_deferred_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let direct_children = vec![
+                ContextTrigger::default()
+                    .test_id("context-trigger")
+                    .into_element(cx),
+                ContextContent::new([
+                    ContextContentHeader::default()
+                        .test_id("context-header")
+                        .into_element(cx),
+                    ContextContentBody::new([
+                        ContextInputUsage::default()
+                            .test_id("context-input")
+                            .into_element(cx),
+                        ContextOutputUsage::default()
+                            .test_id("context-output")
+                            .into_element(cx),
+                        ContextReasoningUsage::default()
+                            .test_id("context-reasoning")
+                            .into_element(cx),
+                        ContextCacheUsage::default()
+                            .test_id("context-cache")
+                            .into_element(cx),
+                    ])
+                    .test_id("context-body")
+                    .into_element(cx),
+                    ContextContentFooter::default()
+                        .test_id("context-footer")
+                        .into_element(cx),
+                ])
+                .test_id("context-content")
+                .into_element(cx),
+            ];
+
+            cx.with_state(ContextProviderState::default, |st| {
+                st.schema = Some(ContextSchema {
+                    used_tokens: 42_560,
+                    max_tokens: 128_000,
+                    model_id: Some(Arc::<str>::from("openai:gpt-5")),
+                    usage: Some(ContextUsage {
+                        input_tokens: Some(32_000),
+                        output_tokens: Some(8_000),
+                        reasoning_tokens: Some(512),
+                        cached_input_tokens: Some(2_048),
+                        ..Default::default()
+                    }),
+                });
+            });
+
+            let (trigger, content) = resolve_context_root_children(cx, direct_children);
+            let trigger = trigger.expect("resolved trigger");
+            let content = content.expect("resolved content");
+
+            assert!(has_test_id(&trigger, "context-trigger"));
+            assert!(has_test_id(&content, "context-content"));
+            assert!(has_test_id(&content, "context-header"));
+            assert!(has_test_id(&content, "context-body"));
+            assert!(has_test_id(&content, "context-footer"));
+            assert!(has_test_id(&content, "context-input"));
+            assert!(has_test_id(&content, "context-output"));
+            assert!(has_test_id(&content, "context-reasoning"));
+            assert!(has_test_id(&content, "context-cache"));
+        });
+    }
+
+    #[test]
+    fn context_body_renders_without_provider_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let body = ContextContentBody::new([cx.text("Body content")])
+                .test_id("context-body")
+                .into_element(cx);
+
+            assert!(has_test_id(&body, "context-body"));
+            assert!(!matches!(body.kind, ElementKind::InteractivityGate(_)));
+        });
     }
 }

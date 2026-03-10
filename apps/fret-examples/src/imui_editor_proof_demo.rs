@@ -24,21 +24,35 @@ use fret_ui_editor::controls::{
     NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
     TransformEditOptions, Vec3Edit,
 };
+use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
+use fret_ui_editor::theme::EditorThemePresetV1;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
+const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
 
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-struct ImUiEditorProofState {
+fn selected_editor_theme_preset() -> EditorThemePresetV1 {
+    let Some(raw) = std::env::var_os(ENV_EDITOR_PRESET) else {
+        return EditorThemePresetV1::Default;
+    };
+
+    match raw.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+        "imgui_like_dense" => EditorThemePresetV1::ImguiLikeDense,
+        _ => EditorThemePresetV1::Default,
+    }
+}
+
+struct ImUiEditorProofView {
     embedded: embedded::EmbeddedViewportSurface,
 }
 
-impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
+impl embedded::EmbeddedViewportView for ImUiEditorProofView {
     fn embedded_viewport_surface(&mut self) -> &mut embedded::EmbeddedViewportSurface {
         &mut self.embedded
     }
@@ -71,23 +85,25 @@ impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    let editor_preset = selected_editor_theme_preset();
+
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
-        .ui_with_hooks(init_window, view, |d| {
+        .view_with_hooks::<ImUiEditorProofView>(|d| {
             d.drive_embedded_viewport()
                 .dock_op(on_dock_op)
                 .window_create_spec(window_create_spec)
                 .window_created(window_created)
                 .before_close_window(before_close_window)
         })?
-        .init_app(|app| {
+        .init_app(move |app| {
             configure_single_window_caps_if_requested(app);
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
-            fret_ui_editor::theme::apply_editor_theme_patch_v1(app);
+            fret_ui_editor::theme::apply_editor_theme_preset_v1(app, editor_preset);
             fret_icons_lucide::install_app(app);
             install_dock_panel_registry(app);
         })
@@ -114,22 +130,28 @@ fn configure_single_window_caps_if_requested(app: &mut App) {
     });
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> ImUiEditorProofState {
-    embedded::ensure_models(app, window);
-    if !single_window_mode_enabled() {
-        ensure_aux_window_requested(app, window);
+impl View for ImUiEditorProofView {
+    fn init(app: &mut App, window: AppWindowId) -> Self {
+        embedded::ensure_models(app, window);
+        if !single_window_mode_enabled() {
+            ensure_aux_window_requested(app, window);
+        }
+
+        Self {
+            embedded: embedded::EmbeddedViewportSurface::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+                VIEWPORT_PX_SIZE,
+            ),
+        }
     }
 
-    ImUiEditorProofState {
-        embedded: embedded::EmbeddedViewportSurface::new(
-            wgpu::TextureFormat::Bgra8UnormSrgb,
-            RenderTargetColorSpace::Srgb,
-            VIEWPORT_PX_SIZE,
-        ),
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        render_view(cx.elements())
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> ViewElements {
+fn render_view(cx: &mut ElementContext<'_, App>) -> ViewElements {
     let window = cx.window;
     let last_input: Arc<str> = embedded::models(&*cx.app, window)
         .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())
@@ -145,6 +167,10 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
         .global::<fret_core::WindowMetricsService>()
         .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
+    let editor_preset = selected_editor_theme_preset();
+    let editor_preset_env = std::env::var_os(ENV_EDITOR_PRESET)
+        .filter(|v| !v.is_empty())
+        .map(|v| v.to_string_lossy().into_owned());
     let logical_window_id = cx
         .app
         .global::<WindowBootstrapService>()
@@ -176,6 +202,11 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
     let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
+    let parity_name_model = authoring_parity_name_model(cx);
+    let parity_drag_value_model = authoring_parity_drag_value_model(cx);
+    let parity_slider_model = authoring_parity_slider_model(cx);
+    let parity_enabled_model = authoring_parity_enabled_model(cx);
+    let parity_shading_model = authoring_parity_shading_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -207,6 +238,20 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     .text_xs();
                     ui.add_ui(hint);
                 }
+
+                let preset_line = match editor_preset_env.as_deref() {
+                    Some(raw) => fret_ui_kit::ui::text(format!(
+                        "editor preset: {} ({ENV_EDITOR_PRESET}={raw})",
+                        editor_preset.key()
+                    ))
+                    .text_xs(),
+                    None => fret_ui_kit::ui::text(format!(
+                        "editor preset: {} ({ENV_EDITOR_PRESET} unset)",
+                        editor_preset.key()
+                    ))
+                    .text_xs(),
+                };
+                ui.add_ui(preset_line);
 
                 let caps_line = fret_ui_kit::ui::text(format!(
                         "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
@@ -243,6 +288,57 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 let last_input_line =
                     fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
                 ui.add_ui(last_input_line);
+                ui.separator();
+
+                let parity_label = fret_ui_kit::ui::text(
+                    "authoring parity proof: shared models, left declarative, right imui adapters",
+                )
+                .text_xs();
+                ui.add_ui(parity_label);
+
+                let parity_hint = fret_ui_kit::ui::text(
+                    "edit either column and verify the paired control stays in sync under the same preset",
+                )
+                .text_xs();
+                ui.add_ui(parity_hint);
+
+                let parity_name_model_for_surface = parity_name_model.clone();
+                let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
+                let parity_slider_model_for_surface = parity_slider_model.clone();
+                let parity_enabled_model_for_surface = parity_enabled_model.clone();
+                let parity_shading_model_for_surface = parity_shading_model.clone();
+                ui.mount(move |cx| {
+                    vec![render_authoring_parity_surface(
+                        cx,
+                        parity_name_model_for_surface.clone(),
+                        parity_drag_value_model_for_surface.clone(),
+                        parity_slider_model_for_surface.clone(),
+                        parity_enabled_model_for_surface.clone(),
+                        parity_shading_model_for_surface.clone(),
+                    )]
+                });
+
+                let parity_state_hint = fret_ui_kit::ui::text(
+                    "shared state readout: use this to verify both columns mutate the same models",
+                )
+                .text_xs();
+                ui.add_ui(parity_state_hint);
+
+                let parity_name_model_for_state = parity_name_model.clone();
+                let parity_drag_value_model_for_state = parity_drag_value_model.clone();
+                let parity_slider_model_for_state = parity_slider_model.clone();
+                let parity_enabled_model_for_state = parity_enabled_model.clone();
+                let parity_shading_model_for_state = parity_shading_model.clone();
+                ui.mount(move |cx| {
+                    vec![render_authoring_parity_shared_state(
+                        cx,
+                        parity_name_model_for_state.clone(),
+                        parity_drag_value_model_for_state.clone(),
+                        parity_slider_model_for_state.clone(),
+                        parity_enabled_model_for_state.clone(),
+                        parity_shading_model_for_state.clone(),
+                    )]
+                });
                 ui.separator();
 
                 let editor_label =
@@ -1105,6 +1201,455 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     })
 }
 
+fn render_authoring_parity_surface(
+    cx: &mut ElementContext<'_, App>,
+    name_model: Model<String>,
+    drag_value_model: Model<f64>,
+    slider_model: Model<f64>,
+    enabled_model: Model<bool>,
+    shading_model: Model<Option<Arc<str>>>,
+) -> fret_ui::element::AnyElement {
+    let shading_items = authoring_parity_shading_items();
+
+    fret_ui_kit::ui::h_flex_build(move |cx, out| {
+        out.push(
+            fret_ui_kit::ui::container_build({
+                let shading_items = shading_items.clone();
+                let name_model = name_model.clone();
+                let drag_value_model = drag_value_model.clone();
+                let slider_model = slider_model.clone();
+                let enabled_model = enabled_model.clone();
+                let shading_model = shading_model.clone();
+                move |cx, out| {
+                    out.push(render_authoring_parity_declarative_group(
+                        cx,
+                        name_model,
+                        drag_value_model,
+                        slider_model,
+                        enabled_model,
+                        shading_model,
+                        shading_items,
+                    ));
+                }
+            })
+            .basis_0()
+            .flex_1()
+            .into_element(cx),
+        );
+
+        out.push(
+            fret_ui_kit::ui::container_build(move |cx, out| {
+                out.push(render_authoring_parity_imui_group(
+                    cx,
+                    name_model,
+                    drag_value_model,
+                    slider_model,
+                    enabled_model,
+                    shading_model,
+                    shading_items,
+                ));
+            })
+            .basis_0()
+            .flex_1()
+            .into_element(cx),
+        );
+    })
+    .gap(fret_ui_kit::Space::N3)
+    .into_element(cx)
+}
+
+fn render_authoring_parity_shared_state(
+    cx: &mut ElementContext<'_, App>,
+    name_model: Model<String>,
+    drag_value_model: Model<f64>,
+    slider_model: Model<f64>,
+    enabled_model: Model<bool>,
+    shading_model: Model<Option<Arc<str>>>,
+) -> fret_ui::element::AnyElement {
+    let name = cx
+        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let value = cx
+        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let blend = cx
+        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let enabled = cx
+        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
+        .unwrap_or(false);
+    let shading = cx
+        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
+        .unwrap_or(None);
+
+    let name_line = if name.trim().is_empty() {
+        "shared name: <empty>".to_string()
+    } else {
+        format!("shared name: {name}")
+    };
+    let value_line = format!("shared value: {value:.3}");
+    let blend_line = format!("shared blend: {:.0}%", blend * 100.0);
+    let enabled_line = format!("shared enabled: {enabled}");
+    let shading_line = match shading.as_deref() {
+        Some("lit") => "shared mode: lit (Lit)".to_string(),
+        Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+        Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+        Some(other) => format!("shared mode: {other}"),
+        None => "shared mode: <none>".to_string(),
+    };
+
+    fret_ui_kit::ui::v_flex_build(move |cx, out| {
+        out.push(
+            cx.text(name_line)
+                .test_id("imui-editor-proof.authoring.shared.name"),
+        );
+        out.push(
+            cx.text(value_line)
+                .test_id("imui-editor-proof.authoring.shared.value"),
+        );
+        out.push(
+            cx.text(blend_line)
+                .test_id("imui-editor-proof.authoring.shared.blend"),
+        );
+        out.push(
+            cx.text(enabled_line)
+                .test_id("imui-editor-proof.authoring.shared.enabled"),
+        );
+        out.push(
+            cx.text(shading_line)
+                .test_id("imui-editor-proof.authoring.shared.mode"),
+        );
+    })
+    .gap(fret_ui_kit::Space::N1)
+    .into_element(cx)
+}
+
+fn render_authoring_parity_declarative_group(
+    cx: &mut ElementContext<'_, App>,
+    name_model: Model<String>,
+    drag_value_model: Model<f64>,
+    slider_model: Model<f64>,
+    enabled_model: Model<bool>,
+    shading_model: Model<Option<Arc<str>>>,
+    shading_items: Arc<[EnumSelectItem]>,
+) -> fret_ui::element::AnyElement {
+    let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.3}")));
+    let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
+
+    PropertyGroup::new("Declarative authoring")
+        .options(fret_ui_editor::composites::PropertyGroupOptions {
+            test_id: Some(Arc::from("imui-editor-proof.authoring.declarative.group")),
+            header_test_id: Some(Arc::from(
+                "imui-editor-proof.authoring.declarative.group.header",
+            )),
+            content_test_id: Some(Arc::from(
+                "imui-editor-proof.authoring.declarative.group.content",
+            )),
+            ..Default::default()
+        })
+        .into_element(
+            cx,
+            |_cx| None,
+            move |cx| {
+                vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
+                    let mut rows = Vec::new();
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Name"),
+                        |cx| {
+                            TextField::new(name_model.clone())
+                                .options(TextFieldOptions {
+                                    clear_button: true,
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.name",
+                                    )),
+                                    clear_test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.name.clear",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Value"),
+                        |cx| {
+                            DragValue::new(drag_value_model.clone(), fmt.clone(), parse.clone())
+                                .options(fret_ui_editor::controls::DragValueOptions {
+                                    id_source: Some(Arc::from(
+                                        "authoring-parity.declarative.drag-value",
+                                    )),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.value",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Blend"),
+                        |cx| {
+                            Slider::new(slider_model.clone(), 0.0, 1.0)
+                                .format(percent_0_1_format(0))
+                                .parse(percent_0_1_parse())
+                                .options(SliderOptions {
+                                    id_source: Some(Arc::from(
+                                        "authoring-parity.declarative.slider",
+                                    )),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.blend",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Enabled"),
+                        |cx| {
+                            Checkbox::new(enabled_model.clone())
+                                .options(fret_ui_editor::controls::CheckboxOptions {
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.enabled",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Mode"),
+                        |cx| {
+                            EnumSelect::new(shading_model.clone(), shading_items.clone())
+                                .options(EnumSelectOptions {
+                                    id_source: Some(Arc::from("authoring-parity.declarative.mode")),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.mode",
+                                    )),
+                                    list_test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.mode.list",
+                                    )),
+                                    search_test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.mode.search",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows
+                })]
+            },
+        )
+}
+
+fn render_authoring_parity_imui_group(
+    cx: &mut ElementContext<'_, App>,
+    name_model: Model<String>,
+    drag_value_model: Model<f64>,
+    slider_model: Model<f64>,
+    enabled_model: Model<bool>,
+    shading_model: Model<Option<Arc<str>>>,
+    shading_items: Arc<[EnumSelectItem]>,
+) -> fret_ui::element::AnyElement {
+    let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.3}")));
+    let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
+
+    PropertyGroup::new("imui authoring")
+        .options(fret_ui_editor::composites::PropertyGroupOptions {
+            test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group")),
+            header_test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group.header")),
+            content_test_id: Some(Arc::from("imui-editor-proof.authoring.imui.group.content")),
+            ..Default::default()
+        })
+        .into_element(
+            cx,
+            |_cx| None,
+            move |cx| {
+                vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
+                    let mut rows = Vec::new();
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Name"),
+                        |cx| {
+                            render_authoring_parity_imui_host(cx, move |ui| {
+                                editor_imui::text_field(
+                                    ui,
+                                    TextField::new(name_model.clone()).options(TextFieldOptions {
+                                        clear_button: true,
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.imui.name",
+                                        )),
+                                        clear_test_id: Some(Arc::from(
+                                            "imui-editor-proof.authoring.imui.name.clear",
+                                        )),
+                                        ..Default::default()
+                                    }),
+                                );
+                            })
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Value"),
+                        |cx| {
+                            let fmt = fmt.clone();
+                            let parse = parse.clone();
+                            render_authoring_parity_imui_host(cx, move |ui| {
+                                editor_imui::drag_value(
+                                    ui,
+                                    DragValue::new(
+                                        drag_value_model.clone(),
+                                        fmt.clone(),
+                                        parse.clone(),
+                                    )
+                                    .options(
+                                        fret_ui_editor::controls::DragValueOptions {
+                                            id_source: Some(Arc::from(
+                                                "authoring-parity.imui.drag-value",
+                                            )),
+                                            test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.value",
+                                            )),
+                                            ..Default::default()
+                                        },
+                                    ),
+                                );
+                            })
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Blend"),
+                        |cx| {
+                            render_authoring_parity_imui_host(cx, move |ui| {
+                                editor_imui::slider(
+                                    ui,
+                                    Slider::new(slider_model.clone(), 0.0, 1.0)
+                                        .format(percent_0_1_format(0))
+                                        .parse(percent_0_1_parse())
+                                        .options(SliderOptions {
+                                            id_source: Some(Arc::from(
+                                                "authoring-parity.imui.slider",
+                                            )),
+                                            test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.blend",
+                                            )),
+                                            ..Default::default()
+                                        }),
+                                );
+                            })
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Enabled"),
+                        |cx| {
+                            render_authoring_parity_imui_host(cx, move |ui| {
+                                editor_imui::checkbox(
+                                    ui,
+                                    Checkbox::new(enabled_model.clone()).options(
+                                        fret_ui_editor::controls::CheckboxOptions {
+                                            test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.enabled",
+                                            )),
+                                            ..Default::default()
+                                        },
+                                    ),
+                                );
+                            })
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows.push(row_cx.row_with(
+                        cx,
+                        PropertyRow::new().options(row_cx.row_options.clone()),
+                        |cx| cx.text("Mode"),
+                        |cx| {
+                            render_authoring_parity_imui_host(cx, move |ui| {
+                                editor_imui::enum_select(
+                                    ui,
+                                    EnumSelect::new(shading_model.clone(), shading_items.clone())
+                                        .options(EnumSelectOptions {
+                                            id_source: Some(Arc::from(
+                                                "authoring-parity.imui.mode",
+                                            )),
+                                            test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.mode",
+                                            )),
+                                            list_test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.mode.list",
+                                            )),
+                                            search_test_id: Some(Arc::from(
+                                                "imui-editor-proof.authoring.imui.mode.search",
+                                            )),
+                                            ..Default::default()
+                                        }),
+                                );
+                            })
+                        },
+                        |_cx| None,
+                    ));
+
+                    rows
+                })]
+            },
+        )
+}
+
+fn render_authoring_parity_imui_host<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl for<'cx, 'a> FnOnce(&mut fret_imui::ImUi<'cx, 'a, H>) + 'static,
+) -> fret_ui::element::AnyElement {
+    fret_ui_kit::ui::container_build(move |cx, out| {
+        fret_imui::imui_build(cx, out, f);
+    })
+    .w_full()
+    .into_element(cx)
+}
+
+fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]> {
+    vec![
+        EnumSelectItem::new("lit", "Lit"),
+        EnumSelectItem::new("unlit", "Unlit"),
+        EnumSelectItem::new("matcap", "Matcap"),
+    ]
+    .into()
+}
+
 fn named_demo_state<H: UiHost, S: Clone + 'static>(
     cx: &mut ElementContext<'_, H>,
     name: &'static str,
@@ -1287,6 +1832,52 @@ fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<S
             .models_mut()
             .insert("Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string())
     })
+}
+
+fn authoring_parity_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.name",
+        |cx| cx.app.models_mut().insert("Shared Cube".to_string()),
+    )
+}
+
+fn authoring_parity_drag_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.drag_value",
+        |cx| cx.app.models_mut().insert(1.250_f64),
+    )
+}
+
+fn authoring_parity_slider_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.slider",
+        |cx| cx.app.models_mut().insert(0.35_f64),
+    )
+}
+
+fn authoring_parity_enabled_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.enabled",
+        |cx| cx.app.models_mut().insert(true),
+    )
+}
+
+fn authoring_parity_shading_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<Arc<str>>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.shading",
+        |cx| {
+            cx.app
+                .models_mut()
+                .insert(Some::<Arc<str>>(Arc::from("lit")))
+        },
+    )
 }
 
 fn install_dock_panel_registry(app: &mut App) {

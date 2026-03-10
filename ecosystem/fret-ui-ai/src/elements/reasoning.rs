@@ -1,7 +1,7 @@
 use fret_core::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Point, Px, SemanticsRole, TextStyle, Transform2D};
+use fret_core::{Point, Px, SemanticsRole, Transform2D};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
@@ -417,6 +417,17 @@ impl ReasoningTrigger {
     }
 }
 
+fn reasoning_message_scope(element: AnyElement, theme: &Theme, fg: fret_core::Color) -> AnyElement {
+    fret_ui_kit::typography::scope_text_style_with_color(
+        element,
+        typography::preset_text_refinement(
+            theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        ),
+        fg,
+    )
+}
+
 fn default_thinking_message<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -424,15 +435,16 @@ fn default_thinking_message<H: UiHost>(
     is_streaming: bool,
     duration_secs: Option<u32>,
 ) -> AnyElement {
-    let text_style: TextStyle =
-        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
-
     if is_streaming || duration_secs == Some(0) {
-        return Shimmer::new("Thinking...")
-            .duration_secs(1.0)
-            .text_style(text_style)
-            .role(SemanticsRole::Text)
-            .into_element(cx);
+        return reasoning_message_scope(
+            Shimmer::new("Thinking...")
+                .duration_secs(1.0)
+                .use_resolved_passive_text()
+                .role(SemanticsRole::Text)
+                .into_element(cx),
+            theme,
+            fg,
+        );
     }
 
     let text: Arc<str> = if let Some(duration) = duration_secs {
@@ -441,17 +453,20 @@ fn default_thinking_message<H: UiHost>(
         Arc::<str>::from("Thought for a few seconds")
     };
 
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text,
-        style: Some(text_style),
-        color: Some(fg),
-        wrap: fret_core::TextWrap::Word,
-        overflow: fret_core::TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    })
+    reasoning_message_scope(
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text,
+            style: None,
+            color: None,
+            wrap: fret_core::TextWrap::Word,
+            overflow: fret_core::TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        }),
+        theme,
+        fg,
+    )
 }
 
 #[derive(Clone)]
@@ -518,5 +533,129 @@ impl ReasoningContent {
             ),
             None => inner,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(element: &'a AnyElement, content: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == content
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_by_content(child, content))
+    }
+
+    fn has_scoped_text_style(
+        element: &AnyElement,
+        refinement: &fret_core::TextStyleRefinement,
+        foreground: fret_core::Color,
+    ) -> bool {
+        if element.inherited_text_style.as_ref() == Some(refinement)
+            && element.inherited_foreground == Some(foreground)
+        {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_scoped_text_style(child, refinement, foreground))
+    }
+
+    #[test]
+    fn reasoning_trigger_default_streaming_message_scopes_inherited_typography_for_shimmer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.with_state(ReasoningContextState::default, |st| {
+                    st.open = Some(open.clone());
+                    st.is_open = true;
+                    st.is_streaming = true;
+                    st.duration_secs = None;
+                });
+                ReasoningTrigger::new().into_element(cx)
+            });
+
+        let theme = fret_ui::Theme::global(&app).clone();
+        let expected_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
+        let expected_fg = theme.color_token("muted-foreground");
+
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_fg
+        ));
+
+        let text = find_text_by_content(&element, "Thinking...")
+            .expect("expected default streaming reasoning copy");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf under the scoped reasoning message");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+    }
+
+    #[test]
+    fn reasoning_trigger_default_settled_message_scopes_inherited_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                cx.with_state(ReasoningContextState::default, |st| {
+                    st.open = Some(open.clone());
+                    st.is_open = true;
+                    st.is_streaming = false;
+                    st.duration_secs = Some(3);
+                });
+                ReasoningTrigger::new().into_element(cx)
+            });
+
+        let theme = fret_ui::Theme::global(&app).clone();
+        let expected_refinement = typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        );
+        let expected_fg = theme.color_token("muted-foreground");
+
+        assert!(has_scoped_text_style(
+            &element,
+            &expected_refinement,
+            expected_fg
+        ));
+
+        let text = find_text_by_content(&element, "Thought for 3 seconds")
+            .expect("expected settled reasoning copy");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf under the scoped reasoning message");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
     }
 }

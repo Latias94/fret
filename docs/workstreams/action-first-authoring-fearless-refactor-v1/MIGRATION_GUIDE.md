@@ -1,9 +1,14 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-06
+Last updated: 2026-03-08
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
+
+Inventory:
+
+- Remaining teaching-surface `Model<T>` holders are classified in
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`.
 
 Note:
 
@@ -127,20 +132,41 @@ UI gallery reference:
 
 Migration steps:
 
-1) Move state into app-owned models.
+1) Choose state placement explicitly.
    - Shared state should stay in explicit models.
-   - For simple demo-local state, `cx.use_state::<T>()` is still model-backed in v1: it returns a
-     view-local `Model<T>` handle whose identity is retained in keyed view state.
-   - Direct plain-Rust local state is a post-v1 ergonomics exploration, not part of the landed v1
-     migration surface.
+   - For view-local state, prefer `cx.use_local*` + `state.layout(cx).value_*` / `state.paint(cx).value_*` on the default post-v1 path.
+   - For keyed dynamic collections that still allocate nested row models, keep the collection itself in an
+     explicit `Model<T>` for now and move adjacent draft/filter/counter state to `use_local*`.
+   - Use the teaching-surface inventory document to decide whether an example should migrate fully,
+     migrate partially, or remain an explicit-model reference case.
+   - Use `Input::new(&local_text)` / `Textarea::new(&local_text)` for text widgets on the post-v1
+     local-state path.
+   - Use `local.clone_model()` when an existing non-text widget constructor still expects `Model<T>`
+     (for example `Switch::new(...)` or `DatePicker::new_controllable(...)`).
+   - When a generic `ModelStore` closure still needs to read local state or compare revisions, prefer
+     `local.read_in(models, ...)` / `local.revision_in(models)` over leaking `local.model()` back into
+     the default path.
+   - For query resources, prefer reading the returned handle from the handle side as well:
+     `query_handle.layout(cx).value_or_else(QueryState::<T>::default)` instead of
+     `cx.watch_model(query_handle.model())...` at the teaching surface.
+   - `cx.use_state::<T>()` remains available when you intentionally want the raw `Model<T>` handle,
+     but it is no longer the first teaching-surface recommendation.
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
 3) Replace `update(...)` with `cx.on_action...` handlers.
    - Tip: for most state-mutating handlers, start with `cx.on_action_notify_models::<A>(|models| ...)`.
+   - If the action is a straightforward write to one local handle, `cx.on_action_notify_local_set`,
+     `cx.on_action_notify_local_update`, or `cx.on_action_notify_toggle_local_bool` are acceptable.
+   - Stay on `cx.on_action_notify_models::<A>(...)` when command/keymap gating, form-style
+     validation/reset flows, or broader coordination across multiple state slots is involved.
    - Use `cx.on_action_notify::<A>(...)` only for advanced host-only cases where the built-in
      model/transient shorthands do not fit.
 4) Replace manual “force refresh” hacks with:
-   - `cx.notify()` and/or
+   - first-class tracked writes (`cx.on_action_notify_models::<A>(...)`,
+     `cx.on_action_notify_local_*`, or `LocalState::update_action(...)`) when the change itself is
+     the rerender reason,
+   - `cx.notify()` only for imperative/cache-boundary invalidation that is not represented by a
+     tracked write, and/or
    - selector/query hooks that carry proper dependency observation.
 
 Helper layering for migration code:
@@ -172,9 +198,67 @@ surface from the post-v1 density goals:
 - Landed in v1: `View` + typed actions, `use_selector` / `use_query`, cx-less `ui::*` constructors,
   semantics/test IDs before `into_element(cx)`, and a narrowed default helper surface.
 - Not yet the default story: plain-Rust local state, builder-only composition that removes most
-  `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
+  `ui::children!`, and any narrower keyed-list / payload-row handler-placement aid beyond the
+  current root action table.
 - Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
   with side-by-side demo evidence rather than mixing them into the migration baseline.
+
+### Late-landing child composition (v1 best practice)
+
+Avoid forcing early `into_element(cx)` when the only reason is “I need a `Vec<AnyElement>` now”.
+Prefer collecting children at `into_element(cx)` time:
+
+- layout wrappers: prefer `ui::children![cx; ...]` inside `ui::{h_flex,v_flex}(|cx| ...)` closures.
+- shadcn composites: prefer `*_::build(...)` variants when available:
+  - `Card::build(...)`, `CardHeader::build(...)`, `CardContent::build(...)`
+  - `Table::build(...)`, `TableRow::build(...)`, `TableCell::build(child)`
+  - overlay triggers like `DialogTrigger::build(...)`, `SheetTrigger::build(...)`.
+
+Example (card, late-landing):
+
+```rust,ignore
+let card = shadcn::Card::build(|cx, out| {
+    out.push_ui(
+        cx,
+        shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Title"));
+            out.push_ui(cx, shadcn::CardDescription::new("Description"));
+        }),
+    );
+    out.push_ui(
+        cx,
+        shadcn::CardContent::build(|_cx, out| {
+            out.push(body);
+        }),
+    );
+})
+.ui()
+.w_full()
+.into_element(cx);
+```
+
+### Overlay composition note (Dialog/Sheet)
+
+When composing shadcn overlays via `.compose()`, prefer `.content_with(|cx| ...)` when the content
+needs to resolve scope-only affordances such as `DialogClose::from_scope()` / `SheetClose::from_scope()`.
+
+This keeps authoring on the late-landing pipeline while allowing the close affordance to resolve
+its `open` model from the active overlay scope.
+
+Example:
+
+```rust,ignore
+use fret_ui_shadcn as shadcn;
+
+shadcn::Dialog::new(open.clone())
+    .compose()
+    .trigger(shadcn::DialogTrigger::build(shadcn::Button::new("Open")))
+    .content_with(|cx| {
+        let close = shadcn::DialogClose::from_scope().into_element(cx);
+        shadcn::DialogContent::new(vec![close]).into_element(cx)
+    })
+    .into_element(cx);
+```
 
 ### Helper visibility policy (docs/templates)
 
@@ -253,15 +337,29 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+- `apps/fret-cookbook/examples/commands_keymap_basics.rs` (shows `use_local*` + `state.layout(cx)` / `state.paint(cx)` + `local.clone_model()` for command availability and switch widgets).
+- `apps/fret-cookbook/examples/drop_shadow_basics.rs` (shows the same bridge on a pure toggle-only renderer demo, keeping `Switch::new(Model<bool>)` unchanged while removing view-held `Model<bool>` fields).
+- `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (extends the bridge to a mixed editor/render-options page: `Textarea` now accepts `&LocalState<String>` directly, while `ToggleGroup::single` and `Switch` still keep their existing model-centered widget contracts and the view itself now prefers `use_local*` / `state.layout(cx)` / `state.paint(cx)`).
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (shows the same local-state path for a pure trigger counter while intentionally keeping the asset reload bump, redraw request, and RAF scheduling as render-time host/runtime effects).
+- `apps/fret-cookbook/examples/virtual_list_basics.rs` (shows the first virtualization hybrid on the post-v1 path: the items collection and scroll handle stay explicit, while mode/toggle/jump controls move to `use_local*` / `state.layout(cx)` / `state.paint(cx)` and scroll/reorder coordination continues on `on_action_notify_models`; the jump `Input` now accepts `&LocalState<String>` directly).
+- `apps/fret-cookbook/examples/theme_switching_basics.rs` (shows the same local-state path for a theme-selection surface: the selected scheme now lives in `use_local*`, while the actual theme application plus redraw/RAF sync intentionally stay render-time host effects).
+- `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (shows the same hybrid rule for asset demos: the reload bump counter now lives in local state, while the actual asset reload epoch bump plus redraw/RAF synchronization intentionally stay render-time host/runtime effects).
+- `apps/fret-cookbook/examples/customv1_basics.rs` (shows the matching renderer/effect hybrid: `enabled` and `strength` now live in `use_local*`, while effect registration, capability checks, and effect-layer plumbing intentionally stay render-time/runtime-owned).
+- `apps/fret-cookbook/examples/text_input_basics.rs` (shows the narrow text bridge: `Input::new(&LocalState<String>)` on the default path, while submit/clear gating stays on `on_action_notify_models`).
+- `apps/fret-cookbook/examples/date_picker_basics.rs` (shows the same bridge for `DatePicker::new_controllable(...)` while keeping the component boundary unchanged).
+- `apps/fret-cookbook/examples/form_basics.rs` (shows multi-field local-state reads plus generic `on_action_notify_models` coordination for validation/reset).
+- `apps/fret-cookbook/examples/simple_todo.rs` (now matches the default cookbook keyed-list path: `LocalState<Vec<_>>`, payload row toggle, and stable keyed row identity without explicit row `Model<bool>` handles).
+- `apps/fret-examples/src/todo_demo.rs` (shows the default app-grade keyed-list path: `LocalState<Vec<_>>`, payload row actions, and snapshot checkbox rendering).
+- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs` now matches that default keyed-list path for generated starter apps instead of mirroring the cookbook comparison split).
 - `apps/fret-examples/src/async_playground_demo.rs` (theme mirrors `Model<bool>`; `render()` applies the theme when the value changes).
 
 ### Current authoring review notes
 
 Based on the current template/demo pass (`hello_template_main_rs`, `hello_counter_demo`, `query_demo`):
 
-- Prefer reading models once near the top of `render()` into plain locals, then render from those locals below.
-  - Good: collect `draft_value`, `filter_value`, `count`, `step_text` up front.
-  - Avoid scattering `watch_model(...).layout()/paint()` calls deep inside card/layout subtrees unless the local scope truly needs them.
+- Prefer reading tracked state once near the top of `render()` into plain locals, then render from those locals below.
+  - Good: collect `draft_value`, `filter_value`, `count`, `step_text`, or `panel_open` up front.
+  - Prefer `state.layout(cx).value_*` / `state.paint(cx).value_*` for the default read path, and keep raw `watch(...)` only when you need custom invalidation, `observe()`, or `revision()` access.
 - Prefer one `AnyElement` landing per composed subtree boundary.
   - Good: build `header`, `content`, `footer`, then land each section once with `.into_element(cx)`.
   - Use `ui::children![cx; ...]` to keep heterogeneous child lists readable before the final landing.
@@ -398,18 +496,43 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
   - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
     - Internal policy/helper code that still wants a sink-based composition path can use `container_vstack_build(...)` / `container_hstack_build(...)` in `ecosystem/fret-ui-shadcn::layout` to stay on the same late-landing child pipeline without rebuilding a temporary `Vec<AnyElement>`.
-- When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
-  identity stable and reduce allocation noise.
+    - Example (closest behavior match):
+
+```rust,ignore
+// Before:
+// stack::container_vstack(cx, props, stack_props, children)
+
+// After (explicit composition):
+ui::container(|cx| {
+    vec![ui::v_stack(|_cx| children).layout(stack_layout)]
+})
+.layout(container_layout)
+.into_element(cx);
+```
+- When rendering dynamic lists, prefer `*_build(|cx, out| out.push_ui(cx, ui::keyed(id, |cx| ...)))`
+  so keyed identity stays stable without forcing an eager `AnyElement` landing inside the sink. Keep
+  raw `cx.keyed(id, |cx| ...)` for direct element construction paths that are not already on the
+  builder-first surface.
+- For router outlets, prefer `RouterOutlet::into_element_by_leaf_ui(...)` / `into_element_ui(...)` when route cards or not-found panels are still builder-first values; keep `into_element_by_leaf(...)` / `into_element(...)` for compatibility paths that already materialize `AnyElement`s.
+- For low-level raw container seams that still need explicit `ContainerProps`, prefer `ui::container_props(props, |cx| [...])` / `ui::container_props_build(props, |cx, out| ...)` so the child subtree can remain builder-first until the final host `cx.container(...)` boundary. Keep raw `cx.container(props, |_cx| [child])` for compatibility paths that already hold concrete `AnyElement`s or that intentionally bypass the authoring helpers.
 - For table-like composite trees, prefer `Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` when the children naturally come from loops or generated data; when the final cell child is itself a builder, prefer `TableCell::build(child)` over early `into_element(cx)` and keep `TableCell::new(child)` only for already-landed `AnyElement` values.
-- Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
-  `AnyElement` at the end of a subtree boundary.
+- For overlay trigger/anchor wrappers used in sink-based or direct late-landing paths, prefer `DialogTrigger::build(child)` / `SheetTrigger::build(child)` / `AlertDialogTrigger::build(child)` / `DrawerTrigger::build(child)` / `PopoverTrigger::build(child)` / `PopoverAnchor::build(child)` / `HoverCardTrigger::build(child)` / `HoverCardAnchor::build(child)` / `TooltipTrigger::build(child)` / `TooltipAnchor::build(child)` when the wrapped child is still a builder or `UiIntoElement`; keep `*_Trigger::new(child)` / `*_Anchor::new(child)` for already-landed `AnyElement` values. `Dialog::compose().trigger(...)` / `Sheet::compose().trigger(...)` / `AlertDialog::compose().trigger(...)` / `Drawer::compose().trigger(...)` now also accept those trigger build values directly, removing the old eager landing cliff from the composition surface. For anchor wrappers that need `element_id()` before final landing, use `*_AnchorBuild::into_anchor(cx)` or stay on the eager `*_Anchor::new(child)` path.
+- For dialog / sheet content trees that still need nested builders or `push_ui(...)`, prefer `DialogContent::build(...)` / `DialogHeader::build(...)` / `DialogFooter::build(...)` and `SheetContent::build(...)` / `SheetHeader::build(...)` / `SheetFooter::build(...)` so the overlay body stays builder-first until the final root `into_element(cx)` boundary. Keep raw `DialogContent::new(...)` / `SheetContent::new(...)` for already-landed `AnyElement` children or compatibility paths that still build the overlay body eagerly.
+- For alert-dialog / drawer content trees that still need nested builders or `push_ui(...)`, prefer `AlertDialogContent::build(...)` / `AlertDialogHeader::build(...)` / `AlertDialogFooter::build(...)` and `DrawerContent::build(...)` / `DrawerHeader::build(...)` / `DrawerFooter::build(...)` so those overlay sections stay builder-first until the existing alert-dialog / drawer root `into_element(cx)` boundary. Keep raw `AlertDialogContent::new(...)` / `DrawerContent::new(...)` for already-landed `AnyElement` children or compatibility paths that still build the overlay body eagerly.
+- For alert-dialog / drawer root authoring, prefer `AlertDialog::build(cx, trigger, content)` / `Drawer::build(cx, trigger, content)` when the trigger and content are still builder-first values. Those helpers keep the old runtime boundary but remove the eager trigger/content closure shell from straightforward gallery/cookbook-style call sites.
+- For popover / hover-card / tooltip root authoring, prefer the host-bound late-landing constructors `Popover::build(cx, trigger, content)` / `HoverCard::build(cx, trigger, content)` / `HoverCard::build_controllable(cx, open, default_open, trigger, content)` / `Tooltip::build(cx, trigger, content)` when the trigger or content is still a builder-first value. `PopoverContent::test_id(...)` and `Tooltip::new(trigger, content)` now both cross that root boundary without forcing an early `into_element(cx)` just to attach semantics or diagnostics hooks.
+- For dropdown-menu root / parts authoring, prefer `DropdownMenu::build(cx, trigger, entries)` for direct trigger wiring and `DropdownMenu::build_parts(cx, DropdownMenuTrigger::build(child), DropdownMenuContent::new()..., entries)` for the shadcn part surface. Keep `DropdownMenuTrigger::new(child)` / `into_element_parts(...)` only for already-landed `AnyElement` triggers or compatibility call sites that still need the old trigger closure shape.
+- Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)` whenever the
+  surrounding sink accepts `UiIntoElement`; if the sink/root still requires a concrete `AnyElement`
+  (for example `Vec<AnyElement>::push(...)` or a widget-host boundary), land exactly there instead of
+  introducing extra adapters.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in
   cookbook/examples (and the UI gallery shell):
-  - `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
-  - `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
-  - `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`) (shell-only; preview pages migrate in batches)
+  - `tools/gate_no_stack_in_cookbook.py`
+  - `tools/gate_no_stack_in_examples.py`
+  - `tools/gate_no_stack_in_ui_gallery_shell.py` (preview pages migrate in batches)
 - Legacy stack helpers are hard-deleted from `fret-ui-kit` and gated to prevent regressions.
-  - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
+  - Gate: `tools/gate_no_public_stack_in_ui_kit.py`
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 

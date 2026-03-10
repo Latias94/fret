@@ -53,8 +53,8 @@ fn parse_step(step_text: &str) -> (i64, bool) {
 }
 
 fn read_effective_step(models: &fret_runtime::ModelStore, step: &LocalState<String>) -> i64 {
-    let step_text = models
-        .read(step.model(), Clone::clone)
+    let step_text = step
+        .read_in(models, Clone::clone)
         .ok()
         .unwrap_or_else(|| "1".to_string());
     let (step, _) = parse_step(&step_text);
@@ -72,11 +72,8 @@ impl View for HelloCounterView {
         let count_state = cx.use_local_with(|| 0i64);
         let step_state = cx.use_local_with(|| "1".to_string());
 
-        let count = cx.watch_local(&count_state).layout().copied_or(0);
-        let step_text = cx
-            .watch_local(&step_state)
-            .layout()
-            .cloned_or_else(|| "1".to_string());
+        let count = count_state.layout(cx).value_or(0);
+        let step_text = step_state.layout(cx).value_or_else(|| "1".to_string());
         let (effective_step, step_valid) = parse_step(&step_text);
 
         cx.on_action_notify_models::<act::Inc>({
@@ -101,22 +98,10 @@ impl View for HelloCounterView {
             }
         });
 
-        cx.on_action_notify_models::<act::Reset>({
-            let count_state = count_state.clone();
-            move |models| count_state.set_in(models, 0)
-        });
-        cx.on_action_notify_models::<act::SetStep1>({
-            let step_state = step_state.clone();
-            move |models| step_state.set_in(models, "1".to_string())
-        });
-        cx.on_action_notify_models::<act::SetStep5>({
-            let step_state = step_state.clone();
-            move |models| step_state.set_in(models, "5".to_string())
-        });
-        cx.on_action_notify_models::<act::SetStep10>({
-            let step_state = step_state.clone();
-            move |models| step_state.set_in(models, "10".to_string())
-        });
+        cx.on_action_notify_local_set::<act::Reset, i64>(&count_state, 0);
+        cx.on_action_notify_local_set::<act::SetStep1, String>(&step_state, "1".to_string());
+        cx.on_action_notify_local_set::<act::SetStep5, String>(&step_state, "5".to_string());
+        cx.on_action_notify_local_set::<act::SetStep10, String>(&step_state, "10".to_string());
 
         let count_color = if count > 0 {
             theme.color_token("primary")
@@ -217,7 +202,7 @@ impl View for HelloCounterView {
             ink_overflow: Default::default(),
         });
 
-        let step_input = shadcn::Input::new(step_state.clone_model())
+        let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")
             .submit_command(inc_cmd)
             .into_element(cx)

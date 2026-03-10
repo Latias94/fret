@@ -1,6 +1,6 @@
 # Onboarding Ergonomics + Ecosystem Interop — Milestones (v1)
 
-Status: Draft
+Status: Historical reference (superseded by action-first v2 onboarding docs)
 
 This plan is intentionally staged: docs + templates first, then runnable interop evidence, then
 optional tooling/macros.
@@ -12,6 +12,8 @@ Design note:
 TODO tracker:
 
 - `docs/workstreams/onboarding-ergonomics-v1-todo.md`
+
+Status note (2026-03-08): milestone language below predates the in-tree action-first/view-runtime convergence. Read MVU/`Model<T>` references as historical planning context; the current onboarding ladder is documented in `docs/first-hour.md` and `docs/examples/todo-app-golden-path.md`.
 
 ---
 
@@ -25,7 +27,7 @@ Deliverables:
 
 - “First hour” doc exists and is linked from a discoverable place (decision: `README.md` or `docs/README.md`).
 - `docs/examples/todo-app-golden-path.md` clearly distinguishes:
-  - “simple-todo baseline” (Model + MVU),
+  - “simple-todo baseline” (view runtime + typed actions + keyed lists; today this means `LocalState<Vec<_>>` for view-owned starter lists),
   - “best practice baseline” (selector + query).
 
 Acceptance:
@@ -160,11 +162,11 @@ Acceptance:
 
 Outcome:
 
-- Users understand MVU’s “simple default” posture and how to evolve beyond it.
+- Users understand the historical MVU context, but learn the current action-first/view-runtime default path first.
 
 Deliverables:
 
-- MVU docs explain the “tick refresh” behavior and when to drop down to manual driver wiring.
+- Historical MVU docs explain the old “tick refresh” behavior only as migration/archive context.
 - A scoped proposal exists for an opt-in “more precise invalidation” mode (if we choose to pursue it).
 
 Acceptance:

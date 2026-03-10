@@ -210,7 +210,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<GroupedBarsDemoDriver, GroupedBarsDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         GroupedBarsDemoDriver::default(),
         create_window_state,

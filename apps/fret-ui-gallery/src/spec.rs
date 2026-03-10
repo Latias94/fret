@@ -5,6 +5,9 @@ use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
+pub(crate) const ENV_UI_GALLERY_NAV_QUERY: &str = "FRET_UI_GALLERY_NAV_QUERY";
+pub(crate) const ENV_UI_GALLERY_DIAG_PROFILE: &str = "FRET_UI_GALLERY_DIAG_PROFILE";
+pub(crate) const UI_GALLERY_DIAG_PROFILE_WORKSPACE_SHELL: &str = "workspace_shell";
 
 pub(crate) const BISECT_MINIMAL_ROOT: u32 = 1 << 0;
 pub(crate) const BISECT_DISABLE_OVERLAY_CONTROLLER: u32 = 1 << 1;
@@ -14,6 +17,17 @@ pub(crate) const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
 pub(crate) const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
 pub(crate) const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
 pub(crate) const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_DEMO: u32 = 1 << 8;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_USAGE: u32 = 1 << 9;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_SIZE: u32 = 1 << 10;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_CARD_CONTENT: u32 = 1 << 11;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_MEETING_NOTES: u32 = 1 << 12;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_IMAGE: u32 = 1 << 13;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_RTL: u32 = 1 << 14;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_COMPOSITIONS: u32 = 1 << 15;
+pub(crate) const BISECT_DISABLE_CARD_SECTION_NOTES: u32 = 1 << 16;
+pub(crate) const BISECT_DISABLE_CARD_CODE_TABS: u32 = 1 << 17;
+pub(crate) const BISECT_DISABLE_CARD_PAGE_INTRO: u32 = 1 << 18;
 
 pub(crate) fn ui_gallery_bisect_flags() -> u32 {
     static FLAGS: OnceLock<u32> = OnceLock::new();
@@ -36,6 +50,14 @@ pub(crate) fn ui_gallery_start_page() -> Option<Arc<str>> {
         let id = std::env::var(ENV_UI_GALLERY_START_PAGE).ok()?;
         ui_gallery_start_page_from_id(&id)
     }
+}
+
+pub(crate) fn ui_gallery_diag_profile() -> Option<Arc<str>> {
+    std::env::var(ENV_UI_GALLERY_DIAG_PROFILE)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(Arc::<str>::from)
 }
 
 fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
@@ -1297,7 +1319,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_ATTACHMENTS_DEMO,
                 "AI Attachments (Demo)",
-                "AI Elements Attachments / Grid + Inline + List Demo",
+                "AI Elements Attachments",
                 "fret-ui-ai (attachments surface)",
                 CMD_NAV_AI_ATTACHMENTS_DEMO,
                 &["ai", "attachments", "remove", "hover", "demo"],
@@ -1329,10 +1351,10 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_CODE_BLOCK_DEMO,
                 "AI Code Block (Demo)",
-                "AI Elements CodeBlock + Snippet Demo",
+                "AI Elements CodeBlock / Composable Header + Copy Demo",
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_CODE_BLOCK_DEMO,
-                &["ai", "code", "block", "snippet", "copy", "demo"],
+                &["ai", "code", "block", "copy", "docs", "demo"],
             ),
             PageSpec::new(
                 PAGE_AI_SNIPPET_DEMO,
@@ -1516,6 +1538,206 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
+            ),
+        ],
+    },
+    #[cfg(all(feature = "gallery-ai", not(feature = "gallery-dev")))]
+    PageGroupSpec {
+        title: "AI Elements",
+        items: &[
+            PageSpec::new(
+                PAGE_AI_CONVERSATION_DEMO,
+                "AI Conversation (Demo)",
+                "AI Elements Conversation / Transcript Surface Demo",
+                "fret-ui-ai (conversation transcript)",
+                CMD_NAV_AI_CONVERSATION_DEMO,
+                &[
+                    "ai",
+                    "conversation",
+                    "transcript",
+                    "scroll",
+                    "virtualized",
+                    "demo",
+                ],
+            ),
+            PageSpec::new(
+                PAGE_AI_MESSAGE_DEMO,
+                "AI Message (Demo)",
+                "AI Elements Message / Bubble + Actions Demo",
+                "fret-ui-ai (message building blocks)",
+                CMD_NAV_AI_MESSAGE_DEMO,
+                &["ai", "message", "bubble", "actions", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_CONTEXT_DEMO,
+                "AI Context (Demo)",
+                "AI Elements Context / Context Usage HoverCard Demo",
+                "fret-ui-ai (context hovercard)",
+                CMD_NAV_AI_CONTEXT_DEMO,
+                &["ai", "context", "tokens", "progress", "hovercard", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_TERMINAL_DEMO,
+                "AI Terminal (Demo)",
+                "AI Elements Terminal / Output Viewer Demo",
+                "fret-ui-ai (terminal viewer)",
+                CMD_NAV_AI_TERMINAL_DEMO,
+                &[
+                    "ai", "terminal", "output", "copy", "clear", "scroll", "demo",
+                ],
+            ),
+            PageSpec::new(
+                PAGE_AI_PACKAGE_INFO_DEMO,
+                "AI PackageInfo (Demo)",
+                "AI Elements PackageInfo / Package Versions Demo",
+                "fret-ui-ai (package info)",
+                CMD_NAV_AI_PACKAGE_INFO_DEMO,
+                &["ai", "package", "versions", "dependencies", "badge", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_OPEN_IN_CHAT_DEMO,
+                "AI OpenIn (Demo)",
+                "AI Elements OpenIn / Open in Chat Providers Demo",
+                "fret-ui-ai (open in chat menu)",
+                CMD_NAV_AI_OPEN_IN_CHAT_DEMO,
+                &["ai", "open", "chat", "menu", "providers", "url", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_TASK_DEMO,
+                "AI Task (Demo)",
+                "AI Elements Task / Collapsible Task Demo",
+                "fret-ui-ai (task collapsible)",
+                CMD_NAV_AI_TASK_DEMO,
+                &["ai", "task", "collapsible", "search", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_ARTIFACT_DEMO,
+                "AI Artifact (Demo)",
+                "AI Elements Artifact / Header + Content + Actions Demo",
+                "fret-ui-ai (artifact container)",
+                CMD_NAV_AI_ARTIFACT_DEMO,
+                &["ai", "artifact", "header", "actions", "tooltip", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_SHIMMER_DEMO,
+                "AI Shimmer (Demo)",
+                "AI Elements Shimmer / Animated Text Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_SHIMMER_DEMO,
+                &["ai", "shimmer", "loading", "text", "animation", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_REASONING_DEMO,
+                "AI Reasoning (Demo)",
+                "AI Elements Reasoning / Auto-open + Auto-close Disclosure Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_REASONING_DEMO,
+                &[
+                    "ai",
+                    "reasoning",
+                    "collapsible",
+                    "markdown",
+                    "timer",
+                    "demo",
+                ],
+            ),
+            PageSpec::new(
+                PAGE_AI_CODE_BLOCK_DEMO,
+                "AI Code Block (Demo)",
+                "AI Elements CodeBlock / Composable Header + Copy Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_CODE_BLOCK_DEMO,
+                &["ai", "code", "block", "copy", "docs", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_COMMIT_DEMO,
+                "AI Commit (Demo)",
+                "AI Elements Commit Disclosure Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_COMMIT_DEMO,
+                &["ai", "commit", "git", "copy", "diff", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_STACK_TRACE_DEMO,
+                "AI Stack Trace (Demo)",
+                "AI Elements StackTrace / Parsed Frames Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_STACK_TRACE_DEMO,
+                &["ai", "stack", "trace", "error", "copy", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_TEST_RESULTS_DEMO,
+                "AI Test Results (Demo)",
+                "AI Elements TestResults / Suite & Test Rows Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_TEST_RESULTS_DEMO,
+                &["ai", "test", "results", "suite", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_CONFIRMATION_DEMO,
+                "AI Confirmation (Demo)",
+                "AI Elements Confirmation / Approval Request Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_CONFIRMATION_DEMO,
+                &["ai", "confirmation", "approval", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_ENVIRONMENT_VARIABLES_DEMO,
+                "AI Environment Variables (Demo)",
+                "AI Elements EnvironmentVariables / Show-Hide + Copy Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO,
+                &[
+                    "ai",
+                    "environment",
+                    "variables",
+                    "env",
+                    "toggle",
+                    "copy",
+                    "demo",
+                ],
+            ),
+            PageSpec::new(
+                PAGE_AI_PLAN_DEMO,
+                "AI Plan (Demo)",
+                "AI Elements Plan / Collapsible Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_PLAN_DEMO,
+                &["ai", "plan", "collapsible", "streaming", "shimmer", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_DOCS_DEMO,
+                "AI Prompt Input (Docs-aligned)",
+                "Docs-aligned PromptInput composition (tools + model select + tooltips) Demo",
+                "fret-ui-ai (prompt input)",
+                CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO,
+                &[
+                    "ai", "prompt", "input", "docs", "tooltips", "select", "demo",
+                ],
+            ),
+            PageSpec::new(
+                PAGE_AI_CHAIN_OF_THOUGHT_DEMO,
+                "AI Chain of Thought (Demo)",
+                "AI Elements ChainOfThought / Collapsible Steps Demo",
+                "fret-ui-ai (chatbot)",
+                CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO,
+                &["ai", "chain", "thought", "steps", "collapsible", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_SCHEMA_DISPLAY_DEMO,
+                "AI Schema Display (Demo)",
+                "AI Elements SchemaDisplay / OpenAPI-ish Viewer Demo",
+                "fret-ui-ai (schema display)",
+                CMD_NAV_AI_SCHEMA_DISPLAY_DEMO,
+                &["ai", "schema", "openapi", "json", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_SNIPPET_DEMO,
+                "AI Snippet (Demo)",
+                "AI Elements Snippet / Inline Copy Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_SNIPPET_DEMO,
+                &["ai", "snippet", "copy", "code", "demo"],
             ),
         ],
     },

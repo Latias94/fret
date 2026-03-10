@@ -4,87 +4,39 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 
 fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        2,
-        [
-            shadcn::TableHead::new("Part").into_element(cx),
-            shadcn::TableHead::new("Notes").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |part: &'static str, notes: &'static str| {
+        shadcn::TableRow::build(2, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Context")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Root owns used/max tokens, optional usage costs, hover delays, and the provider scope.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("ContextTrigger")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Default trigger reads provider state; use `.children(...)` for a custom trigger surface.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("ContextContent")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Hover card content shell with divider, min width, and overflow defaults matching the docs card.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Header / Body / Footer")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Each part supports custom children; footer remains app-owned for cost values today.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Usage rows")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Input / Output / Reasoning / Cache rows auto-hide on zero tokens and accept custom children.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Compound composition")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Use `into_element_with_children(...)` when parts need the nearest provider, which is the Rust equivalent of the upstream compound-children API.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(2, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("Context", "Root owns used/max tokens, optional usage costs, hover delays, and the provider scope."));
+                out.push_ui(cx, row("ContextTrigger", "Default trigger reads provider state; use `.children(...)` for a custom trigger surface."));
+                out.push_ui(cx, row("ContextContent", "Hover card content shell with divider, min width, and overflow defaults matching the docs card."));
+                out.push_ui(cx, row("Header / Body / Footer", "Each part supports custom children; the default footer renders total cost and apps can still override it with custom children or explicit cost values."));
+                out.push_ui(cx, row("Usage rows", "Input / Output / Reasoning / Cache rows auto-hide on zero tokens and accept custom children."));
+                out.push_ui(cx, row("Compound composition", "`Context::children([...])` now mirrors the upstream compound ordering directly; `into_element_with_children(...)` remains the late-binding escape hatch."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 pub(super) fn preview_ai_context_demo(
@@ -96,11 +48,11 @@ pub(super) fn preview_ai_context_demo(
     let features = doc_layout::notes(
         cx,
         [
-            "Compound component structure matches the official AI Elements docs: trigger, content shell, header, body, footer, and per-usage rows.",
+            "Compound component structure now matches the official AI Elements docs more closely: `Context::children([...])` can directly nest trigger + content parts in the same order.",
             "Compact token formatting now follows the upstream style more closely (`100K` instead of `100.0K`).",
             "Gallery examples intentionally keep all four usage rows non-zero so every part stays visible and copyable in one page visit.",
             "Known `model_id` aliases now estimate costs automatically; explicit `ContextUsage::*_cost_usd` values still win when apps have exact billing data.",
-            "The current Fret surface already supports composable children; the main difference is Rust uses `into_element_with_children(...)` instead of React JSX nesting.",
+            "Part-level `.children(...)` customization still works, and the root keeps `into_element_with_children(...)` for cases where you need to construct parts from the nearest provider scope.",
         ],
     );
     let notes = doc_layout::notes(
@@ -116,11 +68,11 @@ pub(super) fn preview_ai_context_demo(
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview keeps the official AI Elements compound example first, then shows Fret's default convenience API for the same surface.",
+            "Preview starts with the docs-style compound example, then shows Fret's default convenience API for the same surface.",
         ),
         vec![
             DocSection::new("Compound API", compound)
-                .description("Docs-aligned provider-scoped composition using `ContextTrigger`, `ContextContent`, and the usage parts.")
+                .description("Docs-aligned direct composition using `Context::children([...])`, `ContextTrigger`, `ContextContent`, and the usage parts.")
                 .test_id_prefix("ui-gallery-ai-context-demo")
                 .code_rust_from_file_region(snippets::context_demo::SOURCE, "example"),
             DocSection::new("Default API", default_api)

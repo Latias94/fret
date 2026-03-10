@@ -13,6 +13,30 @@ Tracking files:
 
 - `docs/workstreams/diag-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/NON_FILESYSTEM_CAPABILITY_SOURCE_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAPABILITY_PROVENANCE_MINIMAL_IMPLEMENTATION_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DOCUMENT_MIGRATION_INTENT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/DEBT_RETIREMENT_TRACKER.md`
+- `docs/workstreams/diag-fearless-refactor-v2/SEAM_GATE_MATRIX.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RETIREMENT_CRITERIA.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RESIDUAL_NAMING_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/BUNDLE_ARTIFACT_ALIAS_AUDIT.md`
+- `docs/workstreams/diag-fearless-refactor-v2/LAYER_B_PAYLOAD_FAMILIES_AUDIT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/RUN_MANIFEST_BUNDLE_JSON_CHUNK_INDEX_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/OPTIONAL_COMPACT_PACK_FOR_SHARING_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REASON_CODE_CONSUMER_ALIGNMENT_AUDIT_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_DEFINITION_EXTERNALIZATION_DECISION_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/PRODUCER_LOCAL_REASON_CODE_NAMING_AUDIT_V1.md`
 
 Related workstreams and context:
 
@@ -34,7 +58,7 @@ Fret diagnostics has grown into a genuinely capable platform:
 
 That is good news for users, but it raises the cost of refactoring.
 
-The current challenge is no longer “can diag do enough?” but rather:
+The current challenge is no longer "can diag do enough?" but rather:
 
 1. can we evolve the stack without regressions,
 2. can contributors find the right extension point quickly,
@@ -45,7 +69,7 @@ This workstream is the umbrella plan for the next phase of diagnostics refactori
 
 ## 1) Positioning
 
-This workstream intentionally does **not** frame diagnostics as an “AI feature”.
+This workstream intentionally does **not** frame diagnostics as an "AI feature".
 
 Diagnostics should be treated as a general-purpose **automation + debugging + evidence platform** for Fret.
 AI agents are only one consumer. Other consumers matter equally:
@@ -68,9 +92,9 @@ stack still feels fragmented when viewed as one product surface.
 Symptoms:
 
 - runtime, tooling, artifacts, and GUI notes are split across multiple workstreams,
-- there is still some overlap between “diag architecture”, “diag simplification”, “DevTools GUI”, and
-  “bundle/script workflow” mental models,
-- contributors can still end up asking “where should this change live?” before they can start,
+- there is still some overlap between "diag architecture", "diag simplification", "DevTools GUI", and
+  "bundle/script workflow" mental models,
+- contributors can still end up asking "where should this change live?" before they can start,
 - GUI/DevTools can accidentally become a second source of truth instead of a thin consumer of the same contracts,
 - some refactor steps are obvious locally but lack a single program-level sequence and exit criteria.
 
@@ -110,7 +134,7 @@ That means:
 - the source of truth remains the runtime export contracts and tooling artifact contracts,
 - GUI should reuse existing commands, artifact stores, and resource/event surfaces whenever possible,
 - GUI-specific polish should not block core runtime/tooling cleanup,
-- “live inspect UX” and “artifact browser UX” are valid deliverables, but not reasons to widen core contracts casually.
+- "live inspect UX" and "artifact browser UX" are valid deliverables, but not reasons to widen core contracts casually.
 
 Practical rule:
 
@@ -181,9 +205,9 @@ GUI should reveal diagnostics state, not invent a parallel model of diagnostics 
 UI Gallery and demo-specific helpers are valuable proving grounds, but diagnostics contracts must stay usable by
 other ecosystem crates and external app surfaces.
 
-## 7) What “fearless” means here
+## 7) What "fearless" means here
 
-For this workstream, “fearless refactor” means contributors can change internals while preserving:
+For this workstream, "fearless refactor" means contributors can change internals while preserving:
 
 - stable artifact entry points,
 - stable command/task workflows,
@@ -191,7 +215,7 @@ For this workstream, “fearless refactor” means contributors can change inter
 - stable extension points,
 - stable mental model for where new features belong.
 
-It does **not** mean “large rewrites are cheap”. It means we deliberately build the seams and gates that make
+It does **not** mean "large rewrites are cheap". It means we deliberately build the seams and gates that make
 refactoring safe enough to perform continuously.
 
 ## 8) Target outcomes
@@ -204,14 +228,48 @@ By the end of this workstream, we should be able to say:
 - DevTools GUI can browse and trigger the same diagnostics model as CLI/MCP,
 - diagnostics can be described as one platform instead of a set of adjacent tools.
 
+## 8.5) Current implementation snapshot
+
+The workstream already has a first end-to-end aggregate path in-tree:
+
+- `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
+  `regression.summary.json`.
+- `fretboard diag summarize` aggregates one or more summaries into:
+  - `regression.summary.json` as the canonical merged summary,
+  - `regression.index.json` as a lighter consumer-oriented index.
+- `fretboard diag dashboard` is the first thin consumer over the aggregate index:
+  - default output is a human-readable first-open summary,
+  - `--json` keeps machine-readable access to the full index payload.
+- `apps/fret-devtools-mcp` now exposes the same aggregate artifacts as MCP resources when they
+  exist in the active artifacts root:
+  - `regression.summary.json`,
+  - `regression.index.json`.
+
+This means the current question is no longer whether aggregate summaries are useful, but how
+presentation surfaces should reuse them without creating a second diagnostics model.
+
 ## 9) Recommended execution order
 
 Recommended order for landable work:
 
 1. consolidate architecture narrative and boundaries,
+   - start with `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`,
 2. clean up runtime/tooling seams that affect every consumer,
 3. unify regression orchestration vocabulary,
+   - see `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`,
 4. align DevTools GUI to the same contracts,
 5. remove redundancy and close migration debt.
 
+Current emphasis after the latest `diag_suite` / `diag_run` landings:
+
+- `diag_campaign` is now the default next hotspot.
+- within `diag_campaign`, the next highest-ROI slice is still share/export artifact planning around
+  `write_campaign_share_manifest`, `write_campaign_combined_failure_zip_inner`, and
+  `build_campaign_share_manifest_item`.
+- `diag_run` is effectively parked unless a clearly reviewable sixth seam appears.
+- artifact/materialization and presentation-surface work should follow the next campaign slice,
+  not jump ahead of it.
+
 See `TODO.md` and `MILESTONES.md` for the staged plan.
+
+

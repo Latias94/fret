@@ -65,12 +65,6 @@ fn row_height_at(index: usize, tall_rows: bool) -> Px {
 
 struct VirtualListBasicsView {
     items: Model<Arc<Vec<RowItem>>>,
-    mode: Model<Option<Arc<str>>>,
-    tall_rows: Model<bool>,
-    reversed: Model<bool>,
-    index_keys: Model<bool>,
-    visible_only_keys: Model<bool>,
-    jump: Model<String>,
     scroll: VirtualListScrollHandle,
 }
 
@@ -78,12 +72,6 @@ impl View for VirtualListBasicsView {
     fn init(app: &mut App, _window: AppWindowId) -> Self {
         Self {
             items: app.models_mut().insert(make_items(LIST_LEN)),
-            mode: app.models_mut().insert(Some(Arc::from(MODE_MEASURED))),
-            tall_rows: app.models_mut().insert(false),
-            reversed: app.models_mut().insert(false),
-            index_keys: app.models_mut().insert(false),
-            visible_only_keys: app.models_mut().insert(false),
-            jump: app.models_mut().insert(String::new()),
             scroll: VirtualListScrollHandle::new(),
         }
     }
@@ -91,25 +79,28 @@ impl View for VirtualListBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
+        let mode_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(MODE_MEASURED)));
+        let tall_rows_state = cx.use_local_with(|| false);
+        let reversed_state = cx.use_local_with(|| false);
+        let index_keys_state = cx.use_local_with(|| false);
+        let visible_only_keys_state = cx.use_local_with(|| false);
+        let jump_state = cx.use_local::<String>();
+
         let items = cx
             .watch_model(&self.items)
             .layout()
-            .cloned_or_else(|| Arc::new(Vec::new()));
+            .value_or_else(|| Arc::new(Vec::new()));
         let len = items.len();
 
-        let mode = self
-            .mode
-            .read(&mut *cx.app, |_host, v| v.clone())
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| Arc::from(MODE_MEASURED));
-        let tall_rows = cx.watch_model(&self.tall_rows).layout().copied_or(false);
-        let reversed = cx.watch_model(&self.reversed).layout().copied_or(false);
-        let index_keys = cx.watch_model(&self.index_keys).layout().copied_or(false);
-        let visible_only_keys = cx
-            .watch_model(&self.visible_only_keys)
+        let mode: Arc<str> = mode_state
+            .watch(cx)
             .layout()
-            .copied_or(false);
+            .value_or_else(|| Some(Arc::from(MODE_MEASURED)))
+            .unwrap_or_else(|| Arc::from(MODE_MEASURED));
+        let tall_rows = tall_rows_state.watch(cx).layout().value_or(false);
+        let reversed = reversed_state.watch(cx).layout().value_or(false);
+        let index_keys = index_keys_state.watch(cx).layout().value_or(false);
+        let visible_only_keys = visible_only_keys_state.watch(cx).layout().value_or(false);
 
         // Virtual lists cache `index -> key` mappings and anchor bookkeeping. If the key mapping is
         // driven by more than just the items collection (e.g. `reversed`, `index_keys`), bump the
@@ -118,11 +109,11 @@ impl View for VirtualListBasicsView {
         let items_revision = store
             .revision(&self.items)
             .unwrap_or(0)
-            .wrapping_add(store.revision(&self.mode).unwrap_or(0))
-            .wrapping_add(store.revision(&self.tall_rows).unwrap_or(0))
-            .wrapping_add(store.revision(&self.reversed).unwrap_or(0))
-            .wrapping_add(store.revision(&self.index_keys).unwrap_or(0))
-            .wrapping_add(store.revision(&self.visible_only_keys).unwrap_or(0));
+            .wrapping_add(mode_state.revision_in(store).unwrap_or(0))
+            .wrapping_add(tall_rows_state.revision_in(store).unwrap_or(0))
+            .wrapping_add(reversed_state.revision_in(store).unwrap_or(0))
+            .wrapping_add(index_keys_state.revision_in(store).unwrap_or(0))
+            .wrapping_add(visible_only_keys_state.revision_in(store).unwrap_or(0));
 
         let mut options = match mode.as_ref() {
             MODE_FIXED => VirtualListOptions::fixed(Px(28.0), 10),
@@ -197,21 +188,7 @@ impl View for VirtualListBasicsView {
                     row_layout.size.width = Length::Fill;
                     row_layout.size.height = Length::Px(row_height_at(mapped, tall_rows));
 
-                    let content = ui::h_flex(|cx| {
-                        [
-                            cx.text(item.label.clone()),
-                            shadcn::Badge::new(format!("#{mapped}"))
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .w_full()
-                    .h_full()
-                    .into_element(cx);
-
-                    let mut row = cx.container(
+                    let mut row = ui::container_props(
                         ContainerProps {
                             layout: row_layout,
                             background: Some(background),
@@ -225,8 +202,21 @@ impl View for VirtualListBasicsView {
                             border_color: Some(theme_for_rows.color_token("border")),
                             ..Default::default()
                         },
-                        |_cx| [content],
-                    );
+                        |_cx| {
+                            [ui::h_flex(|cx| {
+                                ui::children![cx;
+                                    cx.text(item.label.clone()),
+                                    shadcn::Badge::new(format!("#{mapped}"))
+                                        .variant(shadcn::BadgeVariant::Secondary),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .w_full()
+                            .h_full()]
+                        },
+                    )
+                    .into_element(cx);
 
                     if item.id == TARGET_ID {
                         row = row.test_id(TEST_ID_ROW_TARGET);
@@ -255,7 +245,7 @@ impl View for VirtualListBasicsView {
 
         cx.on_action_notify_models::<act::ScrollToTarget>({
             let items = self.items.clone();
-            let reversed = self.reversed.clone();
+            let reversed = reversed_state.clone_model();
             let scroll = self.scroll.clone();
             move |models| {
                 let items = models
@@ -277,7 +267,7 @@ impl View for VirtualListBasicsView {
         });
 
         cx.on_action_notify_models::<act::ScrollJump>({
-            let jump = self.jump.clone();
+            let jump = jump_state.clone_model();
             let scroll = self.scroll.clone();
             move |models| {
                 let raw = models.read(&jump, Clone::clone).ok().unwrap_or_default();
@@ -287,7 +277,7 @@ impl View for VirtualListBasicsView {
             }
         });
 
-        let mode_toggle = shadcn::ToggleGroup::single(self.mode.clone())
+        let mode_toggle = shadcn::ToggleGroup::single(mode_state.clone_model())
             .items([
                 shadcn::ToggleGroupItem::new(MODE_MEASURED, [cx.text("Measured")])
                     .a11y_label("Measured virtualization")
@@ -300,126 +290,101 @@ impl View for VirtualListBasicsView {
                     .test_id(TEST_ID_MODE_KNOWN),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .into_element(cx)
             .test_id(TEST_ID_MODE);
 
         let controls = ui::v_flex(|cx| {
-            [
-                ui::h_flex(|cx| [shadcn::Label::new("Measure mode:").into_element(cx)])
-                    .items_center()
-                    .into_element(cx),
+            ui::children![cx;
+                ui::h_flex(|cx| ui::children![cx; shadcn::Label::new("Measure mode:")])
+                    .items_center(),
                 ui::h_row(|_cx| [mode_toggle])
                     .justify_center()
-                    .w_full()
-                    .into_element(cx),
-                shadcn::Separator::new().into_element(cx),
+                    .w_full(),
+                shadcn::Separator::new(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Tall rows:").into_element(cx),
-                        shadcn::Switch::new(self.tall_rows.clone())
-                            .test_id(TEST_ID_TALL_ROWS)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Tall rows:"),
+                        shadcn::Switch::new(tall_rows_state.clone_model()).test_id(TEST_ID_TALL_ROWS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Reversed:").into_element(cx),
-                        shadcn::Switch::new(self.reversed.clone())
-                            .test_id(TEST_ID_REVERSED)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Reversed:"),
+                        shadcn::Switch::new(reversed_state.clone_model()).test_id(TEST_ID_REVERSED),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Use index keys (bad):").into_element(cx),
-                        shadcn::Switch::new(self.index_keys.clone())
-                            .test_id(TEST_ID_INDEX_KEYS)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Use index keys (bad):"),
+                        shadcn::Switch::new(index_keys_state.clone_model()).test_id(TEST_ID_INDEX_KEYS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+                .items_center(),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Label::new("Key cache: visible only").into_element(cx),
-                        shadcn::Switch::new(self.visible_only_keys.clone())
-                            .test_id(TEST_ID_VISIBLE_ONLY_KEYS)
-                            .into_element(cx),
+                    ui::children![cx;
+                        shadcn::Label::new("Key cache: visible only"),
+                        shadcn::Switch::new(visible_only_keys_state.clone_model())
+                            .test_id(TEST_ID_VISIBLE_ONLY_KEYS),
                     ]
                 })
                 .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                shadcn::Separator::new().into_element(cx),
+                .items_center(),
+                shadcn::Separator::new(),
                 shadcn::Button::new("Rotate items (reorder)")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.refresh"))
                     .action(act::RotateItems)
-                    .into_element(cx)
                     .test_id(TEST_ID_ROTATE),
                 shadcn::Button::new(format!("Scroll to item #{TARGET_ID}"))
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.arrow_down"))
                     .action(act::ScrollToTarget)
-                    .into_element(cx)
                     .test_id(TEST_ID_SCROLL_TARGET),
                 ui::h_flex(|cx| {
-                    [
-                        shadcn::Input::new(self.jump.clone())
+                    ui::children![cx;
+                        shadcn::Input::new(&jump_state)
                             .a11y_label("Scroll to index")
                             .placeholder("Index…")
-                            .test_id(TEST_ID_SCROLL_JUMP_INPUT)
-                            .into_element(cx),
+                            .test_id(TEST_ID_SCROLL_JUMP_INPUT),
                         shadcn::Button::new("Go")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
                             .action(act::ScrollJump)
-                            .into_element(cx)
                             .test_id(TEST_ID_SCROLL_JUMP_GO),
                     ]
                 })
-                .gap(Space::N2)
-                .into_element(cx),
+                .gap(Space::N2),
             ]
         })
         .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
         let left = ui::v_flex_build(|cx, out| {
-            out.push(controls);
+            out.push_ui(cx, controls);
             if index_keys {
-                out.push(
-                    shadcn::Alert::new([
-                        shadcn::AlertTitle::new("Index keys are intentionally wrong")
-                            .into_element(cx),
-                        shadcn::AlertDescription::new(
-                            "Virtual lists must use stable keys from the model. Index identity breaks element-local state when the collection reorders.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .variant(shadcn::AlertVariant::Destructive)
-                    .into_element(cx),
-                );
+                let alert = shadcn::Alert::new(ui::children![cx;
+                    shadcn::AlertTitle::new("Index keys are intentionally wrong"),
+                    shadcn::AlertDescription::new(
+                        "Virtual lists must use stable keys from the model. Index identity breaks element-local state when the collection reorders.",
+                    ),
+                ])
+                .variant(shadcn::AlertVariant::Destructive);
+                out.push_ui(cx, alert);
             }
         })
         .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
         let mut list_slot_layout = LayoutStyle::default();
         list_slot_layout.size.width = Length::Fill;
         list_slot_layout.flex.grow = 1.0;
-        let list_slot = cx.container(
+        let list_slot = ui::container_props(
             ContainerProps {
                 layout: list_slot_layout,
                 background: Some(theme.color_token("background")),
@@ -429,29 +394,41 @@ impl View for VirtualListBasicsView {
                 ..Default::default()
             },
             |_cx| [list],
-        );
-
-        let body = ui::h_flex(|_cx| [left, list_slot])
-            .gap(Space::N6)
-            .w_full()
-            .into_element(cx);
-
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Virtual list basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Keyed virtualization + items_revision. Reorder the list and scroll to items without building 5,000 rows every frame.",
-            )
-            .into_element(cx),
-        ])
+        )
         .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(980.0))
-            .into_element(cx);
+        let body = ui::h_flex_build(|cx, out| {
+            out.push_ui(cx, left);
+            out.push(list_slot);
+        })
+        .gap(Space::N6)
+        .w_full();
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Virtual list basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Keyed virtualization + items_revision. Reorder the list and scroll to items without building 5,000 rows every frame.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(980.0));
+
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

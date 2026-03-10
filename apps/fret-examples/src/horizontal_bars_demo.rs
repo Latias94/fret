@@ -292,7 +292,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<HorizontalBarsDemoDriver, HorizontalBarsDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         HorizontalBarsDemoDriver::default(),
         create_window_state,

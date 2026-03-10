@@ -44,6 +44,20 @@ fn dock_drag_kind_is(have: fret_runtime::DragKindId, want: &str) -> bool {
     }
 }
 
+fn semantics_scroll_field_value(
+    node: &fret_core::SemanticsNode,
+    field: fret_diag_protocol::UiSemanticsScrollFieldV1,
+) -> Option<f64> {
+    match field {
+        fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+        fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+        fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+        fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+        fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+        fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+    }
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
@@ -702,14 +716,7 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            let got = match field {
-                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
-            };
+            let got = semantics_scroll_field_value(node, *field);
             got.is_some_and(|v| v.is_finite())
         }
         UiPredicateV1::SemanticsScrollApproxEq {
@@ -721,14 +728,7 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            let got = match field {
-                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
-            };
+            let got = semantics_scroll_field_value(node, *field);
             let Some(got) = got else {
                 return false;
             };
@@ -745,14 +745,7 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            let got = match field {
-                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
-                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
-            };
+            let got = semantics_scroll_field_value(node, *field);
             let Some(got) = got else {
                 return false;
             };

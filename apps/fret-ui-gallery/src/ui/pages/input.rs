@@ -20,13 +20,19 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let form = snippets::form::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
+    let usage = doc_layout::muted_full_width(
+        cx,
+        "Bind `Input` to a model, then compose it with `Field` parts when you need labels, descriptions, or validation copy.",
+    );
+
+    let api_reference = doc_layout::notes(
         cx,
         [
-            "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
-            "Native file inputs are authored as Input + Browse button composition (Fret does not mirror DOM `type=\"file\"`).",
-            "Diagnostics runs (`FRET_DIAG=1`) mock the file picker so scripted gates stay deterministic.",
-            "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
+            "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, and `aria_invalid(...)` cover the documented core surface.",
+            "`Input` root width/height defaults remain recipe-owned (`w-full min-w-0` plus the control height) because the upstream recipe defines those constraints on the component itself.",
+            "`control_id(...)` plus `FieldLabel::for_control(...)` is the Fret path for label association; it stays a focused follow-up example instead of widening the base Input API.",
+            "Native file inputs are authored as `Input` + `Browse` button composition; Fret does not mirror DOM `type=\"file\"` directly, and diagnostics runs mock the picker to keep scripted gates deterministic.",
+            "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
             "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
         ],
     );
@@ -34,9 +40,21 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input docs order: Basic, Field, Field Group, Disabled, Invalid, File, Inline, Grid, Required, Badge, Input Group, Button Group, Form, RTL.",
+            "Preview mirrors the shadcn Input docs path first, then keeps `Label Association` and `API Reference` as explicit Fret follow-ups.",
         ),
         vec![
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `Input` before the example matrix.")
+                .code_rust(
+                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+let value = cx.app.models_mut().insert(String::new());
+
+shadcn::Input::new(value)
+    .a11y_label("Search")
+    .placeholder("Type to search...")
+    .into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic)
                 .description("Single input field (used by IME routing regression scripts).")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
@@ -46,17 +64,11 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Field Group", field_group)
                 .description("FieldGroup stacks related fields and action rows.")
                 .code_rust_from_file_region(snippets::field_group::SOURCE, "example"),
-            DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control` + `Input::control_id` so label clicks focus the text input.")
-                .test_id_prefix("ui-gallery-input-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
-                .description(
-                    "Disabled inputs should block focus/interaction and use muted styling.",
-                )
+                .description("Disabled inputs should block focus/interaction and use muted styling.")
                 .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Invalid", invalid)
-                .description("Invalid state uses `aria_invalid` + field-level error copy.")
+                .description("Invalid state uses `aria_invalid` plus field-level error copy.")
                 .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
             DocSection::new("File", file)
                 .description("Native file picking uses a file dialog; diagnostics runs mock it.")
@@ -68,7 +80,7 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("Two-column input layout with shared row alignment.")
                 .code_rust_from_file_region(snippets::grid::SOURCE, "example"),
             DocSection::new("Required", required)
-                .description("Required affordance is represented by label copy in this gallery.")
+                .description("Required affordance is represented by label composition in this gallery.")
                 .code_rust_from_file_region(snippets::required::SOURCE, "example"),
             DocSection::new("Badge", badge)
                 .description("Use Badge inside a label row.")
@@ -80,12 +92,21 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("ButtonGroup composes an input and a button with shared chrome.")
                 .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
             DocSection::new("Form", form)
-                .description("Multi-field form layout using FieldGroup + responsive rows.")
+                .description("Multi-field form layout using FieldGroup plus responsive rows.")
                 .code_rust_from_file_region(snippets::form::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .description("Input + Field composition under an RTL direction provider.")
+                .description("Input plus Field composition under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("Label Association", label)
+                .description(
+                    "Use `FieldLabel::for_control` plus `Input::control_id` so label clicks focus the input and preserve labelled-by semantics.",
+                )
+                .test_id_prefix("ui-gallery-input-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .test_id_prefix("ui-gallery-input-api-reference")
+                .description("Public surface summary, ownership notes, and current caveats."),
         ],
     );
 

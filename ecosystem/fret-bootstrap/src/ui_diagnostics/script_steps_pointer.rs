@@ -1154,7 +1154,12 @@ pub(super) fn handle_click_stable_step(
     // can jump across frames (e.g. estimate -> measured), causing clicks to land at
     // stale coordinates when using a single-frame snapshot.
     if let Some(snapshot) = semantics_snapshot {
-        if let Some(node) = select_semantics_node_with_trace(
+        enum ResolvedClickStableTarget<'a> {
+            Semantics(&'a fret_core::SemanticsNode),
+            CachedTestId { id: String, bounds: Rect },
+        }
+
+        let resolved = select_semantics_node_with_trace(
             snapshot,
             window,
             element_runtime,
@@ -1163,7 +1168,22 @@ pub(super) fn handle_click_stable_step(
             step_index as u32,
             svc.cfg.redact_text,
             &mut active.selector_resolution_trace,
-        ) {
+        )
+        .map(ResolvedClickStableTarget::Semantics)
+        .or_else(|| {
+            let UiSelectorV1::TestId { id, .. } = &target else {
+                return None;
+            };
+            svc.per_window
+                .get(&window)
+                .and_then(|ring| ring.test_id_bounds.get(id).copied())
+                .map(|bounds| ResolvedClickStableTarget::CachedTestId {
+                    id: id.clone(),
+                    bounds,
+                })
+        });
+
+        if let Some(resolved) = resolved {
             let stable_required = stable_frames.max(1);
             let max_move_px = max_move_px.max(0.0);
 
@@ -1192,7 +1212,18 @@ pub(super) fn handle_click_stable_step(
                 },
             };
 
-            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+            let center = match &resolved {
+                ResolvedClickStableTarget::Semantics(node) => {
+                    if let Some(ui) = ui.as_deref() {
+                        pointer_position_prefer_intended_hit(snapshot, ui, node, window_bounds)
+                    } else {
+                        center_of_rect_clamped_to_rect(node.bounds, window_bounds)
+                    }
+                }
+                ResolvedClickStableTarget::CachedTestId { bounds, .. } => {
+                    center_of_rect_clamped_to_rect(*bounds, window_bounds)
+                }
+            };
             if state.remaining_frames == 0 {
                 if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
@@ -1204,7 +1235,10 @@ pub(super) fn handle_click_stable_step(
                         &target,
                         step_index as u32,
                         center,
-                        Some(node),
+                        match &resolved {
+                            ResolvedClickStableTarget::Semantics(node) => Some(*node),
+                            ResolvedClickStableTarget::CachedTestId { .. } => None,
+                        },
                         Some("click_stable.timeout"),
                         svc.cfg.max_debug_string_bytes,
                     );
@@ -1242,12 +1276,22 @@ pub(super) fn handle_click_stable_step(
                             &target,
                             step_index as u32,
                             center,
-                            Some(node),
+                            match &resolved {
+                                ResolvedClickStableTarget::Semantics(node) => Some(*node),
+                                ResolvedClickStableTarget::CachedTestId { .. } => None,
+                            },
                             Some("click_stable.probe"),
                             svc.cfg.max_debug_string_bytes,
                         );
-                        let ok = hit.includes_intended == Some(true)
-                            || hit.hit_path_contains_intended == Some(true);
+                        let ok = match &resolved {
+                            ResolvedClickStableTarget::Semantics(_) => {
+                                hit.includes_intended == Some(true)
+                                    || hit.hit_path_contains_intended == Some(true)
+                            }
+                            ResolvedClickStableTarget::CachedTestId { id, .. } => {
+                                hit.hit_semantics_test_id.as_deref() == Some(id.as_str())
+                            }
+                        };
                         if !ok {
                             hit.note = Some("click_stable.mismatch".to_string());
                             push_hit_test_trace(&mut active.hit_test_trace, hit.clone());
@@ -1296,7 +1340,14 @@ pub(super) fn handle_click_stable_step(
                             active.last_injected_pointer_source_step = Some(injected_step_index);
                             active.last_injected_pointer_source_test_id = match &target {
                                 UiSelectorV1::TestId { id, .. } => Some(id.clone()),
-                                _ => node.test_id.clone(),
+                                _ => match &resolved {
+                                    ResolvedClickStableTarget::Semantics(node) => {
+                                        node.test_id.clone()
+                                    }
+                                    ResolvedClickStableTarget::CachedTestId { id, .. } => {
+                                        Some(id.clone())
+                                    }
+                                },
                             };
                             active.wait_until = None;
                             active.screenshot_wait = None;
@@ -1321,7 +1372,12 @@ pub(super) fn handle_click_stable_step(
                         active.last_injected_pointer_source_step = Some(injected_step_index);
                         active.last_injected_pointer_source_test_id = match &target {
                             UiSelectorV1::TestId { id, .. } => Some(id.clone()),
-                            _ => node.test_id.clone(),
+                            _ => match &resolved {
+                                ResolvedClickStableTarget::Semantics(node) => node.test_id.clone(),
+                                ResolvedClickStableTarget::CachedTestId { id, .. } => {
+                                    Some(id.clone())
+                                }
+                            },
                         };
                         active.wait_until = None;
                         active.screenshot_wait = None;

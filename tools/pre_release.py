@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""
-Pre-release check runner (cross-platform).
-
-Ported from `tools/pre_release.ps1` to avoid requiring PowerShell.
-"""
+"""Pre-release check runner (cross-platform, canonical entrypoint)."""
 
 from __future__ import annotations
 
@@ -66,6 +62,81 @@ def main(argv: list[str]) -> int:
     _run_checked(
         "Stringly command parsing policy",
         [py, str(repo_root / "tools/check_stringly_command_parsing.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (prefer action helpers)",
+        [py, str(repo_root / "tools/gate_no_on_action_in_teaching_surfaces.py")],
+    )
+    _run_checked(
+        "Fret surface policy (builder-only crate root)",
+        [py, str(repo_root / "tools/gate_fret_builder_only_surface.py")],
+    )
+    _run_checked(
+        "Fret launch surface policy (curated root exports)",
+        [py, str(repo_root / "tools/gate_fret_launch_surface_contract.py")],
+    )
+    _run_checked(
+        "Fret launch root snapshot policy",
+        [py, str(repo_root / "tools/gate_fret_launch_root_surface_snapshot.py")],
+    )
+    _run_checked(
+        "Fret framework launch facade policy (curated manual-assembly exports)",
+        [py, str(repo_root / "tools/gate_fret_framework_launch_surface.py")],
+    )
+    _run_checked(
+        "FnDriver example helper policy",
+        [py, str(repo_root / "tools/gate_fn_driver_example_naming.py")],
+    )
+    _run_checked(
+        "WinitAppDriver example hook coverage",
+        [py, str(repo_root / "tools/gate_winit_driver_example_hook_coverage.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (no verbose models_mut action handlers)",
+        [py, str(repo_root / "tools/gate_no_models_mut_in_action_handlers.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (only approved advanced on_action_notify cases)",
+        [
+            py,
+            str(repo_root / "tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py"),
+        ],
+    )
+    _run_checked(
+        "Teaching surfaces policy (default local-state path stays on use_local*)",
+        [py, str(repo_root / "tools/gate_no_use_state_in_default_teaching_surfaces.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (default path avoids explicit notify)",
+        [py, str(repo_root / "tools/gate_no_notify_in_default_teaching_surfaces.py")],
+    )
+    _run_checked(
+        "Material3 snackbar default surface policy (prefer action_id)",
+        [py, str(repo_root / "tools/gate_material3_snackbar_default_surface.py")],
+    )
+    _run_checked(
+        "Menu default surface policy (prefer action)",
+        [py, str(repo_root / "tools/gate_menu_action_default_surfaces.py")],
+    )
+    _run_checked(
+        "Curated internal menu surface policy (prefer action)",
+        [py, str(repo_root / "tools/gate_menu_action_curated_internal_surfaces.py")],
+    )
+    _run_checked(
+        "Compat runner default-surface policy",
+        [py, str(repo_root / "tools/gate_compat_runner_default_surface.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (no legacy stack helpers)",
+        [py, str(repo_root / "tools/gate_no_stack_in_cookbook.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (no legacy stack helpers in examples)",
+        [py, str(repo_root / "tools/gate_no_stack_in_examples.py")],
+    )
+    _run_checked(
+        "Teaching surfaces policy (no public stack helpers in ui kit)",
+        [py, str(repo_root / "tools/gate_no_public_stack_in_ui_kit.py")],
     )
 
     if not args.skip_portable_time:

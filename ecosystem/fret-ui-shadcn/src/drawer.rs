@@ -2,6 +2,7 @@
 //!
 //! Fret currently models drawers as a `Sheet` that defaults to the `Bottom` side.
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
@@ -22,6 +23,8 @@ use crate::layout as shadcn_layout;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
+
+pub type DrawerDirection = DrawerSide;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::{
     shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
@@ -31,7 +34,10 @@ use fret_ui_kit::declarative::motion_value::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -143,6 +149,15 @@ fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSid
     drawer_height
 }
 
+fn collect_built_drawer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 /// shadcn/ui `DrawerContent` (v4).
 #[derive(Debug)]
 pub struct DrawerContent {
@@ -160,6 +175,20 @@ impl DrawerContent {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             drag_handle_test_id: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DrawerContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerContentBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            drag_handle_test_id: None,
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -337,6 +366,98 @@ impl DrawerContent {
     }
 }
 
+pub struct DrawerContentBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    drag_handle_test_id: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn drag_handle_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.drag_handle_test_id = Some(id.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut content = DrawerContent::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer content build closure"),
+        ))
+        .refine_style(self.chrome)
+        .refine_layout(self.layout);
+        if let Some(id) = self.drag_handle_test_id {
+            content = content.drag_handle_test_id(id);
+        }
+        let content = content.into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DrawerContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DrawerContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerContentBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DrawerHeader` (v4).
 #[derive(Debug)]
 pub struct DrawerHeader {
@@ -347,6 +468,16 @@ impl DrawerHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DrawerHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerHeaderBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -374,6 +505,54 @@ impl DrawerHeader {
     }
 }
 
+pub struct DrawerHeaderBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeader::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer header build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DrawerFooter` (v4).
 #[derive(Debug)]
 pub struct DrawerFooter {
@@ -386,6 +565,16 @@ impl DrawerFooter {
         Self { children }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> DrawerFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DrawerFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
@@ -395,6 +584,54 @@ impl DrawerFooter {
         );
         let children = self.children;
         shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+    }
+}
+
+pub struct DrawerFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooter::new(collect_built_drawer_children(
+            cx,
+            self.build.expect("expected drawer footer build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DrawerFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerFooterBuild::into_element(self, cx)
     }
 }
 
@@ -465,8 +702,23 @@ impl Drawer {
     ///
     /// This bridges Fret's closure-root authoring model with the nested part mental model used by
     /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
-    pub fn compose(self) -> DrawerComposition {
+    pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
         DrawerComposition::new(self)
+    }
+
+    /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl UiChildIntoElement<H>,
+        content: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.into_element(
+            cx,
+            move |cx| trigger.into_child_element(cx),
+            move |cx| content.into_child_element(cx),
+        )
     }
 
     pub fn overlay_component(mut self, overlay: DrawerOverlay) -> Self {
@@ -593,7 +845,12 @@ impl Drawer {
         self
     }
 
-    /// Optional escape hatch: allow non-bottom drawers by forwarding to `Sheet`.
+    /// Upstream-aligned placement setter (`direction` in shadcn/ui / Vaul docs).
+    pub fn direction(self, direction: DrawerDirection) -> Self {
+        self.side(direction)
+    }
+
+    /// Optional compatibility escape hatch: allow non-bottom drawers by forwarding to `Sheet`.
     pub fn side(mut self, side: DrawerSide) -> Self {
         self.side = side;
         self.inner = self.inner.side(side);
@@ -975,15 +1232,22 @@ impl Drawer {
 }
 
 /// Recipe-level builder for composing a drawer from shadcn-style parts.
-pub struct DrawerComposition {
-    drawer: Drawer,
-    trigger: Option<DrawerTrigger>,
-    portal: DrawerPortal,
-    overlay: DrawerOverlay,
-    content: Option<AnyElement>,
+type DrawerDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum DrawerCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(DrawerDeferredContent<H>),
 }
 
-impl std::fmt::Debug for DrawerComposition {
+pub struct DrawerComposition<H: UiHost, TTrigger = DrawerTrigger> {
+    drawer: Drawer,
+    trigger: Option<TTrigger>,
+    portal: DrawerPortal,
+    overlay: DrawerOverlay,
+    content: Option<DrawerCompositionContent<H>>,
+}
+
+impl<H: UiHost, TTrigger> std::fmt::Debug for DrawerComposition<H, TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DrawerComposition")
             .field("drawer", &self.drawer)
@@ -995,7 +1259,7 @@ impl std::fmt::Debug for DrawerComposition {
     }
 }
 
-impl DrawerComposition {
+impl<H: UiHost> DrawerComposition<H> {
     pub fn new(drawer: Drawer) -> Self {
         Self {
             drawer,
@@ -1005,10 +1269,20 @@ impl DrawerComposition {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: DrawerTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<H: UiHost, TTrigger> DrawerComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> DrawerComposition<H, TNextTrigger> {
+        DrawerComposition {
+            drawer: self.drawer,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: DrawerPortal) -> Self {
@@ -1022,15 +1296,27 @@ impl DrawerComposition {
     }
 
     pub fn content(mut self, content: AnyElement) -> Self {
-        self.content = Some(content);
+        self.content = Some(DrawerCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(DrawerCompositionContent::Deferred(Box::new(content)));
         self
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: DrawerCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("Drawer::compose().trigger(...) must be provided before into_element()");
+            .expect("Drawer::compose().trigger(...) must be provided before into_element()")
+            .into_drawer_trigger(cx);
         let content = self
             .content
             .expect("Drawer::compose().content(...) must be provided before into_element()");
@@ -1038,8 +1324,22 @@ impl DrawerComposition {
         let portal = self.portal;
         let overlay = self.overlay;
 
-        self.drawer
-            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+        match content {
+            DrawerCompositionContent::Eager(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            DrawerCompositionContent::Deferred(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
     }
 }
 
@@ -1148,14 +1448,89 @@ pub struct DrawerTrigger {
     child: AnyElement,
 }
 
+pub struct DrawerTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl DrawerTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> DrawerTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        DrawerTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTrigger::new(
+            self.child
+                .expect("expected drawer trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait DrawerCompositionTriggerArg<H: UiHost> {
+    fn into_drawer_trigger(self, cx: &mut ElementContext<'_, H>) -> DrawerTrigger;
+}
+
+impl<H: UiHost> DrawerCompositionTriggerArg<H> for DrawerTrigger {
+    fn into_drawer_trigger(self, _cx: &mut ElementContext<'_, H>) -> DrawerTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> DrawerCompositionTriggerArg<H> for DrawerTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_drawer_trigger(self, cx: &mut ElementContext<'_, H>) -> DrawerTrigger {
+        DrawerTrigger::new(
+            self.child
+                .expect("expected drawer trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -1165,7 +1540,7 @@ impl DrawerTrigger {
 /// In Fret, drawers are backed by modal overlays, so this delegates to `DialogClose`.
 #[derive(Clone)]
 pub struct DrawerClose {
-    inner: crate::DialogClose,
+    inner: crate::SheetClose,
 }
 
 impl std::fmt::Debug for DrawerClose {
@@ -1177,18 +1552,14 @@ impl std::fmt::Debug for DrawerClose {
 impl DrawerClose {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            // DrawerClose should behave like a primitive close affordance (no forced positioning).
-            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
-            inner: crate::DialogClose::new(open)
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::new(open),
         }
     }
 
     /// Creates a close affordance that resolves the current drawer/dialog scope at render time.
     pub fn from_scope() -> Self {
         Self {
-            inner: crate::DialogClose::from_scope()
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::from_scope(),
         }
     }
 
@@ -1200,6 +1571,15 @@ impl DrawerClose {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.inner = self.inner.refine_layout(layout);
         self
+    }
+
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        self.inner.build(cx, child)
     }
 
     #[track_caller]
@@ -1241,6 +1621,25 @@ mod tests {
     };
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn drawer_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, DrawerTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(
+                out[0].kind,
+                fret_ui::element::ElementKind::Container(_)
+            ));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1463,6 +1862,52 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn drawer_compose_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-compose-content-with-from-scope",
+            |cx| {
+                let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![
+                    Drawer::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(DrawerPortal::new())
+                        .overlay(DrawerOverlay::new())
+                        .content_with(|cx| {
+                            let close = DrawerClose::from_scope().into_element(cx);
+                            DrawerContent::new(vec![close]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
@@ -2431,6 +2876,149 @@ mod tests {
                                         .h_px(Px(24.0)),
                                 )
                                 .into_element(cx);
+                            close_id_out.set(Some(close.id));
+                            DrawerContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                close,
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                    vec![drawer]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+            ui.layout_all(&mut app, &mut services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+        }
+
+        let close_element = close_id.get().expect("close element id");
+        let close_node = fret_ui::elements::node_for_element(&mut app, window, close_element)
+            .expect("close node");
+        let close_bounds = visual_bounds_for_element(&mut app, window, close_element)
+            .expect("close visual bounds");
+        let point = Point::new(
+            Px(close_bounds.origin.x.0 + 2.0),
+            Px(close_bounds.origin.y.0 + 2.0),
+        );
+        assert!(
+            close_bounds.contains(point),
+            "expected click point inside close bounds; point={point:?} bounds={close_bounds:?}"
+        );
+        assert!(
+            b.contains(point),
+            "expected click point inside window bounds; point={point:?} window={b:?}"
+        );
+
+        let pre_hit = ui.debug_hit_test(point).hit.unwrap_or_else(|| {
+            panic!("pre-hit missing; point={point:?} close_bounds={close_bounds:?} window={b:?}")
+        });
+        let pre_path = ui.debug_node_path(pre_hit);
+        assert!(
+            pre_path.contains(&close_node),
+            "expected click point to hit close subtree; point={point:?} hit={pre_hit:?} close={close_node:?} path={pre_path:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn drawer_close_build_with_child_closes_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+
+            let open_for_drawer = open.clone();
+
+            OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                "test",
+                |cx| {
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st| Vec::new(),
+                    );
+
+                    let close_id_out = close_id.clone();
+                    let drawer = Drawer::new(open_for_drawer.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let close = DrawerClose::from_scope().build(
+                                cx,
+                                crate::Button::new("Cancel")
+                                    .variant(crate::ButtonVariant::Outline)
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .relative()
+                                            .w_px(Px(96.0))
+                                            .h_px(Px(36.0)),
+                                    ),
+                            );
                             close_id_out.set(Some(close.id));
                             DrawerContent::new(vec![
                                 cx.container(ContainerProps::default(), |_cx| Vec::new()),

@@ -18,9 +18,17 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![
-            shadcn::Button::new("Rounded")
+            shadcn::Button::new("Get Started")
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                 .test_id("ui-gallery-button-rounded")
+                .into_element(cx),
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .a11y_label("Scroll to top")
+                .icon(IconId::new_static("lucide.arrow-up"))
+                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                .test_id("ui-gallery-button-rounded-icon")
                 .into_element(cx),
         ]
     })

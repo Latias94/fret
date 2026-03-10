@@ -39,7 +39,7 @@ impl View for EffectsLayerBasicsView {
         let effect_kind = cx
             .watch_model(&self.effect)
             .layout()
-            .copied_or(EffectKind::None);
+            .value_or(EffectKind::None);
 
         cx.on_action_notify_model_set::<act::None, EffectKind>(
             self.effect.clone(),
@@ -54,7 +54,7 @@ impl View for EffectsLayerBasicsView {
             EffectKind::Blur,
         );
 
-        let button = |cx: &mut ElementContext<'_, App>,
+        let button = |_cx: &mut ElementContext<'_, App>,
                       label: &'static str,
                       effect: EffectKind,
                       action: fret_runtime::ActionId,
@@ -67,8 +67,7 @@ impl View for EffectsLayerBasicsView {
                     shadcn::ButtonVariant::Outline
                 })
                 .action(action)
-                .into_element(cx)
-                .role(SemanticsRole::Button)
+                .a11y_role(SemanticsRole::Button)
                 .test_id(test_id)
         };
 
@@ -82,47 +81,49 @@ impl View for EffectsLayerBasicsView {
         };
 
         let preview_content = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("EffectLayer preview").into_element(cx),
+            ui::children![
+                cx;
+                shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
-                    let tile = |cx: &mut ElementContext<'_, App>, color: ColorRef| {
+                    let tile = |_cx: &mut ElementContext<'_, App>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))
                             .bg(color)
                             .rounded_md()
-                            .into_element(cx)
                     };
-                    [
+                    ui::children![
+                        cx;
                         tile(cx, ColorRef::Color(theme.color_token("chart.1"))),
                         tile(cx, ColorRef::Color(theme.color_token("chart.2"))),
                         tile(cx, ColorRef::Color(theme.color_token("chart.3"))),
                         tile(cx, ColorRef::Color(theme.color_token("chart.4"))),
                     ]
                 })
-                .gap(Space::N2)
-                .into_element(cx),
-                shadcn::Label::new("Toggle an effect above. This is a mechanism-level API.")
-                    .into_element(cx),
+                .gap(Space::N2),
+                shadcn::Label::new("Toggle an effect above. This is a mechanism-level API."),
             ]
         })
-        .gap(Space::N3)
-        .into_element(cx);
+        .gap(Space::N3);
 
         let preview = {
             // Keep a definite pixel-sized box here: percent-fill sizing inside a shrink-wrapped
             // effect layer can create cyclic layout dependencies.
-            let content = ui::container(move |_cx| [preview_content])
-                .w_px(Px(460.0))
-                .h_px(Px(180.0))
-                .p(Space::N4)
-                .bg(ColorRef::Color(theme.color_token("background")))
-                .into_element(cx);
-
             let body = if effect_kind == EffectKind::None {
-                content
+                ui::container(move |_cx| [preview_content])
+                    .w_px(Px(460.0))
+                    .h_px(Px(180.0))
+                    .p(Space::N4)
+                    .bg(ColorRef::Color(theme.color_token("background")))
+                    .into_element(cx)
             } else {
-                cx.effect_layer(EffectMode::FilterContent, chain, move |_cx| [content])
+                let content = ui::container(move |_cx| [preview_content])
+                    .w_px(Px(460.0))
+                    .h_px(Px(180.0))
+                    .p(Space::N4)
+                    .bg(ColorRef::Color(theme.color_token("background")));
+                ui::effect_layer(EffectMode::FilterContent, chain, move |_cx| [content])
+                    .into_element(cx)
             };
 
             ui::container(|_cx| [body])
@@ -132,21 +133,12 @@ impl View for EffectsLayerBasicsView {
                 .border_color(ColorRef::Color(theme.color_token("border")))
                 .rounded_md()
                 .overflow_hidden()
-                .into_element(cx)
                 .test_id(TEST_ID_PREVIEW)
         };
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Effects layer basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal example showing `EffectLayer` + `EffectChain` (Pixelate, Blur).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let controls = ui::h_flex(|cx| {
-            [
+            ui::children![
+                cx;
                 button(cx, "None", EffectKind::None, act::None.into(), TEST_ID_NONE),
                 button(
                     cx,
@@ -158,22 +150,34 @@ impl View for EffectsLayerBasicsView {
                 button(cx, "Blur", EffectKind::Blur, act::Blur.into(), TEST_ID_BLUR),
             ]
         })
-        .gap(Space::N2)
-        .into_element(cx);
+        .gap(Space::N2);
 
-        let content = shadcn::CardContent::new([
-            controls,
-            ui::v_flex(|_cx| [preview]).gap(Space::N3).into_element(cx),
-        ])
-        .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Effects layer basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A minimal example showing `EffectLayer` + `EffectChain` (Pixelate, Blur).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, controls);
+                    out.push_ui(cx, ui::v_flex(|cx| ui::children![cx; preview]).gap(Space::N3));
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(520.0));
 
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(520.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

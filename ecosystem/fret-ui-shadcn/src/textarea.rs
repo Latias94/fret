@@ -7,19 +7,20 @@ use fret_ui::element::{
     TextAreaProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{action, ElementContext, TextAreaStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
-    control_registry_model, ControlAction, ControlEntry, ControlId,
+    ControlAction, ControlEntry, ControlId, control_registry_model,
 };
-use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
 use crate::overlay_motion;
+use crate::text_value_model::IntoTextValueModel;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -108,9 +109,9 @@ impl std::fmt::Debug for Textarea {
 }
 
 impl Textarea {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             a11y_label: None,
             labelled_by_element: None,
             control_id: None,
@@ -229,7 +230,7 @@ impl Textarea {
 
 pub fn textarea<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<String>,
+    model: impl IntoTextValueModel,
     a11y_label: Option<Arc<str>>,
     labelled_by_element: Option<GlobalElementId>,
     control_id: Option<ControlId>,
@@ -245,6 +246,7 @@ pub fn textarea<H: UiHost>(
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 ) -> AnyElement {
+    let model = model.into_text_value_model();
     let show_resize_handle = resizable && !disabled;
 
     let theme_live = Theme::global(&*cx.app);
@@ -711,7 +713,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
-    use fret_ui::{focus_visible, UiTree};
+    use fret_ui::{UiTree, focus_visible};
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
     #[derive(Default)]

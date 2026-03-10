@@ -9,13 +9,21 @@ This document shows what we want a first-time Fret user to write when building a
 
 It is intentionally “golden path”: advanced apps may assemble crates manually.
 
+Taxonomy:
+
+- **Default** follow-up: this document is the richer third rung (`todo`) after `hello` and
+  `simple-todo`.
+- **Comparison**: `simple_todo_v2_target` remains a side-by-side evaluation surface, not the
+  onboarding default.
+- **Advanced**: gallery/interop/renderer/docking surfaces are outside this document's scope.
+
 ## Onboarding ladder (progressive disclosure)
 
 Prefer an explicit ladder instead of starting with the full baseline on minute 1:
 
 1. `hello` — the smallest runnable “Hello UI”
-2. `simple-todo` — **View runtime + typed actions + keyed lists** (no selectors/queries)
-3. `todo` — the best-practice baseline (**selectors + queries**) once you need derived/async state
+2. `simple-todo` - **View runtime + typed actions + keyed lists** (no selectors/queries; current practical shape is `LocalState<Vec<_>>` + payload row actions for view-owned lists)
+3. `todo` — the current best-practice baseline (**selectors + queries**) once you need derived/async state
 
 Templates (in this repository):
 
@@ -24,6 +32,11 @@ cargo run -p fretboard -- new hello --name hello-world
 cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run -p fretboard -- new todo --name my-todo
 ```
+
+Maintainer comparison target (not the onboarding default):
+
+- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list direction now also ships in `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold. Its value is comparison, not proving the default path is still missing.
 
 Related ADRs:
 
@@ -74,7 +87,7 @@ If you are unsure, start with `Layout` and tighten later.
 
 Dynamic lists should use stable keys:
 
-- Prefer `cx.keyed(id, |cx| ...)` for list rows.
+- Prefer `ui::keyed(id, |cx| ...)` for list rows.
 - If a list can insert/remove/reorder, assume it needs keys.
 
 ## Minimal `Cargo.toml`
@@ -139,15 +152,14 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
+- Start with `on_action_notify_locals` for multi-slot `LocalState<T>` transactions, `on_action_notify_transient` for app-only effects, and local `on_activate*` only when widget glue truly needs it. Drop down to `on_action_notify_models` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
-## App state (models)
+## App state (LocalState-first)
 
 ```rust,ignore
 use std::sync::Arc;
-use fret_runtime::Model;
 
 mod act {
     fret::actions!([
@@ -161,9 +173,9 @@ mod act {
 }
 
 #[derive(Clone)]
-struct TodoItem {
+struct TodoRow {
     id: u64,
-    done: Model<bool>,
+    done: bool,
     text: Arc<str>,
 }
 
@@ -174,13 +186,7 @@ enum TodoFilter {
     Completed,
 }
 
-struct TodoView {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    filter: Model<TodoFilter>,
-    next_id: Model<u64>,
-    tip_nonce: Model<u64>,
-}
+struct TodoView;
 ```
 
 
@@ -190,12 +196,16 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-The official baseline uses an explicit 3-layer model:
+Current status note (as of 2026-03-10): the `todo` scaffold is **LocalState-first** (view-owned slots)
+and uses typed payload actions + keyed lists for per-row interaction, while still showcasing selector
+and query hooks.
 
-1. Local mutable state (`Model<T>`):
-   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).
+The official baseline uses a 3-layer state split:
+
+1. Local mutable state (`LocalState<T>`):
+   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`, `tip_nonce`) in this baseline.
 2. Derived state (`fret-selector`):
-   - memoized projections/counters/filtered views derived from models.
+   - memoized projections/counters/filtered views derived from tracked locals.
 3. Async resource state (`fret-query`):
    - loading/error/success/cache lifecycle for remote or background resources.
 
@@ -204,6 +214,8 @@ Boundary rule:
 - keep domain mutations in typed action handlers,
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
+- prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
+  - For multi-slot `LocalState<T>` coordination, prefer `on_action_notify_locals` / `on_payload_action_notify_locals` over `on_action_notify_models`.
 
 ## Actions (UI -> app logic)
 
@@ -240,7 +252,7 @@ impl View for TodoView {
 
 The view runtime renders the same declarative IR (`Elements`) but provides a cohesive authoring loop:
 
-- view-local “hooks” (`use_selector`, `use_query`, `use_state`),
+- view-local hooks (`use_local*`, `use_selector`, `use_query`),
 - typed action handler registration,
 - `notify → dirty → reuse` semantics via view cache roots.
 
@@ -283,9 +295,10 @@ High-level sketch:
 ```rust,ignore
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState};
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 
 let handle = cx.use_query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned_or_default();
+let state: QueryState<T> = handle.layout_query(cx).value_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -299,7 +312,7 @@ cx.on_action_notify_models::<act::RefreshTip>({
 });
 
 // then include the nonce in the query key:
-let nonce = cx.watch_model(&tip_nonce).paint().copied_or(0);
+let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
 let handle = cx.use_query(tip_key(nonce), policy, move |token| fetch(token));
 ```
 

@@ -17,11 +17,7 @@ const TEST_ID_VALID: &str = "cookbook.form_basics.valid";
 const TEST_ID_SUBMIT: &str = "cookbook.form_basics.submit";
 const TEST_ID_RESET: &str = "cookbook.form_basics.reset";
 
-struct FormBasicsView {
-    name: Model<String>,
-    email: Model<String>,
-    error: Model<Option<String>>,
-}
+struct FormBasicsView;
 
 impl FormBasicsView {
     fn validate(name: &str, email: &str) -> Option<String> {
@@ -36,112 +32,106 @@ impl FormBasicsView {
         }
         None
     }
+
+    fn validate_in(
+        models: &mut fret_runtime::ModelStore,
+        name: &LocalState<String>,
+        email: &LocalState<String>,
+    ) -> Option<String> {
+        let name = name.read_in(models, Clone::clone).ok().unwrap_or_default();
+        let email = email.read_in(models, Clone::clone).ok().unwrap_or_default();
+        Self::validate(&name, &email)
+    }
 }
 
 impl View for FormBasicsView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            name: app.models_mut().insert(String::new()),
-            email: app.models_mut().insert(String::new()),
-            error: app.models_mut().insert(None::<String>),
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let name = cx
-            .watch_model(&self.name)
-            .layout()
-            .cloned_or_else(String::new);
-        let email = cx
-            .watch_model(&self.email)
-            .layout()
-            .cloned_or_else(String::new);
-        let error = cx.watch_model(&self.error).layout().cloned_or_default();
+        let name_state = cx.use_local::<String>();
+        let email_state = cx.use_local::<String>();
+        let error_state = cx.use_local::<Option<String>>();
+
+        let name = name_state.watch(cx).layout().value_or_else(String::new);
+        let email = email_state.watch(cx).layout().value_or_else(String::new);
+        let error = error_state.watch(cx).layout().value_or_default();
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.on_action_notify_models::<act::Submit>({
-            let name_model = self.name.clone();
-            let email_model = self.email.clone();
-            let error_model = self.error.clone();
-            move |models| {
-                let name = models
-                    .read(&name_model, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
-                let email = models
-                    .read(&email_model, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
+        cx.on_action_notify_locals::<act::Submit>({
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            let error_state = error_state.clone();
+            move |tx| {
+                let name = tx.value_or_else(&name_state, String::new);
+                let email = tx.value_or_else(&email_state, String::new);
                 let err = FormBasicsView::validate(&name, &email);
-                models.update(&error_model, |v| *v = err).is_ok()
+                tx.set(&error_state, err)
             }
         });
 
-        cx.on_action_notify_models::<act::Reset>({
-            let name_model = self.name.clone();
-            let email_model = self.email.clone();
-            let error_model = self.error.clone();
-            move |models| {
-                let ok = models.update(&name_model, String::clear).is_ok();
-                let ok = models.update(&email_model, String::clear).is_ok() && ok;
-                let ok = models.update(&error_model, |v| *v = None).is_ok() && ok;
-                ok
+        cx.on_action_notify_locals::<act::Reset>({
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            let error_state = error_state.clone();
+            move |tx| {
+                let ok = tx.set(&name_state, String::new());
+                let ok = tx.set(&email_state, String::new()) && ok;
+                tx.set(&error_state, None) && ok
             }
         });
 
-        cx.on_action_availability::<act::Submit>(move |_host, _acx| {
-            if can_submit {
-                CommandAvailability::Available
-            } else {
-                CommandAvailability::Blocked
+        cx.on_action_availability::<act::Submit>({
+            let name_state = name_state.clone();
+            let email_state = email_state.clone();
+            move |host, _acx| {
+                if FormBasicsView::validate_in(host.models_mut(), &name_state, &email_state)
+                    .is_none()
+                {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
             }
         });
         cx.on_action_availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
 
         let name_input = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("Name").into_element(cx),
-                shadcn::Input::new(self.name.clone())
+            ui::children![cx;
+                shadcn::Label::new("Name"),
+                shadcn::Input::new(&name_state)
                     .a11y_label("Name")
                     .placeholder("Jane Doe")
-                    .test_id(TEST_ID_NAME)
-                    .into_element(cx),
+                    .test_id(TEST_ID_NAME),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
         let email_input = ui::v_flex(|cx| {
-            [
-                shadcn::Label::new("Email").into_element(cx),
-                shadcn::Input::new(self.email.clone())
+            ui::children![cx;
+                shadcn::Label::new("Email"),
+                shadcn::Input::new(&email_state)
                     .a11y_label("Email")
                     .placeholder("jane@example.com")
                     .submit_command(act::Submit.into())
-                    .test_id(TEST_ID_EMAIL)
-                    .into_element(cx),
+                    .test_id(TEST_ID_EMAIL),
             ]
         })
-        .gap(Space::N1)
-        .into_element(cx);
+        .gap(Space::N1);
 
-        let error_row = match error {
-            Some(msg) => shadcn::Alert::new([
-                shadcn::AlertTitle::new("Validation error").into_element(cx),
-                shadcn::AlertDescription::new(msg).into_element(cx),
-            ])
-            .ui()
-            .test_id(TEST_ID_ERROR)
-            .into_element(cx),
-            None => shadcn::Alert::new([
-                shadcn::AlertTitle::new("OK").into_element(cx),
-                shadcn::AlertDescription::new("Ready to submit.").into_element(cx),
-            ])
-            .ui()
-            .test_id(TEST_ID_ERROR)
-            .into_element(cx),
+        let (error_title, error_description) = match error {
+            Some(msg) => ("Validation error", msg),
+            None => ("OK", "Ready to submit.".to_string()),
         };
+
+        let error_row = shadcn::Alert::build(|cx, out| {
+            out.push_ui(cx, shadcn::AlertTitle::new(error_title));
+            out.push_ui(cx, shadcn::AlertDescription::new(error_description));
+        })
+        .ui()
+        .test_id(TEST_ID_ERROR);
 
         let valid = shadcn::Badge::new(if can_submit { "Valid" } else { "Invalid" })
             .variant(if can_submit {
@@ -149,8 +139,8 @@ impl View for FormBasicsView {
             } else {
                 shadcn::BadgeVariant::Destructive
             })
-            .into_element(cx)
-            .attach_semantics(
+            .ui()
+            .semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_VALID)
@@ -159,27 +149,24 @@ impl View for FormBasicsView {
             );
 
         let buttons = ui::h_flex(|cx| {
-            [
+            ui::children![cx;
                 shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Submit)
                     .disabled(!can_submit)
-                    .test_id(TEST_ID_SUBMIT)
-                    .into_element(cx),
+                    .test_id(TEST_ID_SUBMIT),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
-                    .test_id(TEST_ID_RESET)
-                    .into_element(cx),
+                    .test_id(TEST_ID_RESET),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let body = ui::v_flex(|_cx| [name_input, email_input, error_row, valid, buttons])
-            .gap(Space::N3)
-            .into_element(cx);
+        let body =
+            ui::v_flex(|cx| ui::children![cx; name_input, email_input, error_row, valid, buttons])
+                .gap(Space::N3);
 
         let card = shadcn::Card::build(|cx, out| {
             out.push_ui(
@@ -196,17 +183,16 @@ impl View for FormBasicsView {
             );
             out.push_ui(
                 cx,
-                shadcn::CardContent::build(|_cx, out| {
-                    out.push(body);
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, body);
                 }),
             );
         })
         .ui()
         .w_full()
-        .max_w(Px(640.0))
-        .into_element(cx);
+        .max_w(Px(640.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

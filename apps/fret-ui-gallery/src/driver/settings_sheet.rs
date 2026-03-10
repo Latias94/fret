@@ -17,6 +17,17 @@ fn flex_row_wrap_label(cx: &mut ElementContext<'_, App>, text: &'static str) -> 
     cx.text_props(props)
 }
 
+fn switch_row(
+    cx: &mut ElementContext<'_, App>,
+    control: AnyElement,
+    label: &'static str,
+) -> AnyElement {
+    ui::h_flex(|cx| vec![control, flex_row_wrap_label(cx, label)])
+        .gap(Space::N2)
+        .items_start()
+        .into_element(cx)
+}
+
 pub(super) fn push_settings_sheet(
     cx: &mut ElementContext<'_, App>,
     settings_open: Model<bool>,
@@ -82,6 +93,21 @@ pub(super) fn push_settings_sheet(
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
+                    let chrome_show_workspace_tab_strip_switch = shadcn::Switch::new(
+                        chrome_show_workspace_tab_strip.clone(),
+                    )
+                    .a11y_label("Show workspace tab strip")
+                    .test_id("ui-gallery-settings-workspace-tab-strip")
+                    .into_element(cx);
+                    let edit_can_undo_switch = shadcn::Switch::new(settings_edit_can_undo.clone())
+                        .a11y_label("Can Undo")
+                        .disabled(true)
+                        .into_element(cx);
+                    let edit_can_redo_switch = shadcn::Switch::new(settings_edit_can_redo.clone())
+                        .a11y_label("Can Redo")
+                        .disabled(true)
+                        .into_element(cx);
+
                     let body = ui::v_stack(|cx| {
                         vec![
                             ui::v_stack(|cx| {
@@ -89,7 +115,7 @@ pub(super) fn push_settings_sheet(
                                     shadcn::SheetHeader::new(vec![
                                         shadcn::SheetTitle::new("Settings").into_element(cx),
                                         shadcn::SheetDescription::new(
-                                            "Menu bar presentation (OS vs in-window) + chrome toggles.",
+                                            "Menu bar presentation (OS vs in-window) + chrome/debug state.",
                                         )
                                         .into_element(cx),
                                     ])
@@ -99,50 +125,22 @@ pub(super) fn push_settings_sheet(
                                     os_select,
                                     in_window_select,
                                     cx.text("Chrome"),
-                                    ui::h_row(|cx| {
-                                        vec![
-                                            shadcn::Switch::new(
-                                                chrome_show_workspace_tab_strip.clone(),
-                                            )
-                                            .a11y_label("Show workspace tab strip")
-                                            .into_element(cx),
-                                            flex_row_wrap_label(cx, "Workspace tabs in the top bar"),
-                                        ]
-                                    })
-                                    .gap(Space::N2)
-                                    .items_center()
-                                    .into_element(cx),
+                                    switch_row(
+                                        cx,
+                                        chrome_show_workspace_tab_strip_switch,
+                                        "Workspace tabs in the top bar",
+                                    ),
                                     cx.text("Command availability (debug)"),
-                                    ui::h_row(|cx| {
-                                        vec![
-                                            shadcn::Switch::new(settings_edit_can_undo.clone())
-                                                .a11y_label("Can Undo")
-                                                .disabled(true)
-                                                .into_element(cx),
-                                            flex_row_wrap_label(
-                                                cx,
-                                                "edit.can_undo (enables OS/in-window Undo)",
-                                            ),
-                                        ]
-                                    })
-                                    .gap(Space::N2)
-                                    .items_center()
-                                    .into_element(cx),
-                                    ui::h_row(|cx| {
-                                        vec![
-                                            shadcn::Switch::new(settings_edit_can_redo.clone())
-                                                .a11y_label("Can Redo")
-                                                .disabled(true)
-                                                .into_element(cx),
-                                            flex_row_wrap_label(
-                                                cx,
-                                                "edit.can_redo (enables OS/in-window Redo)",
-                                            ),
-                                        ]
-                                    })
-                                    .gap(Space::N2)
-                                    .items_center()
-                                    .into_element(cx),
+                                    switch_row(
+                                        cx,
+                                        edit_can_undo_switch,
+                                        "edit.can_undo (enables OS/in-window Undo)",
+                                    ),
+                                    switch_row(
+                                        cx,
+                                        edit_can_redo_switch,
+                                        "edit.can_redo (enables OS/in-window Redo)",
+                                    ),
                                 ]
                             })
                             .layout(LayoutRefinement::default().w_full())

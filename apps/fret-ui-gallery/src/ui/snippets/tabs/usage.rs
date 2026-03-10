@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -32,6 +33,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .trigger(shadcn::TabsTrigger::new("password", "Password"));
 
     shadcn::TabsRoot::new(value)
+        .refine_layout(LayoutRefinement::default().w_px(Px(400.0)).min_w_0())
         .list(list)
         .contents([
             shadcn::TabsContent::new(

@@ -232,11 +232,7 @@ impl WebViewHost {
         before.saturating_sub(self.requests.len())
     }
 
-    fn drop_requests_for_window_close(
-        &mut self,
-        window: AppWindowId,
-        ids: &[WebViewId],
-    ) -> usize {
+    fn drop_requests_for_window_close(&mut self, window: AppWindowId, ids: &[WebViewId]) -> usize {
         use std::collections::HashSet;
 
         let ids: HashSet<WebViewId> = ids.iter().copied().collect();
@@ -400,10 +396,7 @@ fn with_webview_host_mut<H: GlobalsHost, R>(
     host.with_global_mut_untracked(WebViewHost::default, |state, _host| f(state))
 }
 
-fn with_webview_host<H: GlobalsHost, R>(
-    host: &H,
-    f: impl FnOnce(Option<&WebViewHost>) -> R,
-) -> R {
+fn with_webview_host<H: GlobalsHost, R>(host: &H, f: impl FnOnce(Option<&WebViewHost>) -> R) -> R {
     f(host.global::<WebViewHost>())
 }
 

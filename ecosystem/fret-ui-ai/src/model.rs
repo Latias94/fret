@@ -85,6 +85,8 @@ pub struct SourceItem {
     pub id: Arc<str>,
     pub title: Arc<str>,
     pub url: Option<Arc<str>>,
+    pub description: Option<Arc<str>>,
+    pub quote: Option<Arc<str>>,
     pub excerpt: Option<Arc<str>>,
 }
 
@@ -94,6 +96,8 @@ impl SourceItem {
             id: id.into(),
             title: title.into(),
             url: None,
+            description: None,
+            quote: None,
             excerpt: None,
         }
     }
@@ -103,8 +107,20 @@ impl SourceItem {
         self
     }
 
+    pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn quote(mut self, quote: impl Into<Arc<str>>) -> Self {
+        self.quote = Some(quote.into());
+        self
+    }
+
     pub fn excerpt(mut self, excerpt: impl Into<Arc<str>>) -> Self {
-        self.excerpt = Some(excerpt.into());
+        let excerpt = excerpt.into();
+        self.quote = Some(excerpt.clone());
+        self.excerpt = Some(excerpt);
         self
     }
 }

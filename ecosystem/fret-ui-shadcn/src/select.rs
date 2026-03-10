@@ -252,7 +252,6 @@ where
                         focusable: false,
                         a11y: PressableA11y {
                             hidden: true,
-                            test_id: Some(Arc::from(test_id)),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -462,6 +461,13 @@ where
                         ..Default::default()
                     },
                     move |_cx| vec![pressable],
+                );
+                let pressable = attach_test_id(
+                    pressable,
+                    match test_id_prefix.as_deref() {
+                        Some(prefix) => Arc::from(format!("{prefix}-{test_id}")),
+                        None => Arc::from(format!("select-{test_id}")),
+                    },
                 );
 
                 Some(pressable)
@@ -5363,6 +5369,134 @@ mod tests {
         assert!(ids.iter().copied().any(|id| id == "sel-listbox"));
         assert!(ids.iter().copied().any(|id| id == "sel-item-apple"));
         assert!(ids.iter().copied().any(|id| id == "sel-scroll-viewport"));
+    }
+
+    #[test]
+    fn select_test_id_prefix_stamps_scroll_buttons_when_overflowing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+        let items: Vec<SelectItem> = (0..50)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut FakeServices,
+                            window,
+                            bounds,
+                            model: &Model<Option<Arc<str>>>,
+                            open: &Model<bool>,
+                            items: &[SelectItem]| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "select-test-id-prefix-scroll-buttons",
+                |cx| {
+                    vec![
+                        Select::new(model.clone(), open.clone())
+                            .test_id_prefix("sel")
+                            .items(items.iter().cloned())
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        for _ in 0..3 {
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                &model,
+                &open,
+                &items,
+            );
+        }
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("sel-scroll-down-button")),
+            "expected prefixed scroll-down button when select overflows"
+        );
+
+        let viewport = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sel-scroll-viewport"))
+            .expect("prefixed select viewport");
+        let viewport_bounds = ui
+            .debug_node_bounds(viewport.id)
+            .expect("prefixed select viewport bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(
+                    Px(viewport_bounds.origin.x.0 + viewport_bounds.size.width.0 * 0.5),
+                    Px(viewport_bounds.origin.y.0 + viewport_bounds.size.height.0 * 0.5),
+                ),
+                delta: fret_core::Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &model,
+            &open,
+            &items,
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel");
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("sel-scroll-up-button")),
+            "expected prefixed scroll-up button after scrolling"
+        );
     }
 
     #[test]

@@ -85,7 +85,7 @@ backend crate. Avoid accumulating ad-hoc utilities in launch.
 
 ## Baseline (2026-02-12)
 
-Captured via `tools/audit_crate.ps1`:
+Captured via `tools/audit_crate.py`:
 
 - `fret-ui` top files:
   - `crates/fret-ui/src/tree/mod.rs` (~7723 lines)

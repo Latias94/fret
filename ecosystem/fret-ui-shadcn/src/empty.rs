@@ -4,6 +4,7 @@ use fret_core::{Edges, Px, TextAlign, TextOverflow};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug)]
@@ -292,26 +293,19 @@ impl EmptyDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let px = theme
-            .metric_by_key("component.empty.description_px")
-            .unwrap_or(Px(14.0));
-        let line_height = theme
-            .metric_by_key("component.empty.description_line_height")
-            .unwrap_or(Px(22.75));
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_balance()
-            .overflow(TextOverflow::Clip)
-            .text_align(TextAlign::Center)
-            .w_full()
-            .max_w(Px(384.0))
-            .min_w_0()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        scope_description_text(
+            ui::raw_text(self.text)
+                .text_balance()
+                .overflow(TextOverflow::Clip)
+                .text_align(TextAlign::Center)
+                .w_full()
+                .max_w(Px(384.0))
+                .min_w_0()
+                .into_element(cx),
+            &theme,
+            "component.empty.description",
+        )
     }
 }
 
@@ -360,5 +354,47 @@ impl EmptyContent {
             },
             move |_cx| children,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn empty_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            EmptyDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected EmptyDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.empty.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 }

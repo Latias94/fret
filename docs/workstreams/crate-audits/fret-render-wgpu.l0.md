@@ -38,7 +38,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-render-wgpu/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-render-wgpu`
+- `python tools/audit_crate.py --crate fret-render-wgpu`
 
 ## 4) Module ownership map (internal seams)
 

@@ -1,6 +1,11 @@
 use super::*;
 
 #[cfg(feature = "diagnostics-ws")]
+use fret_diag_protocol::{
+    DiagScreenshotRequestV1, DiagScreenshotWindowRequestV1, UiInspectConfigV1,
+};
+
+#[cfg(feature = "diagnostics-ws")]
 #[derive(Debug, Clone)]
 pub(super) struct PendingDevtoolsScreenshotRequest {
     pub(super) request_id: Option<u64>,

@@ -12,48 +12,60 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let file_tree = snippets::file_tree::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let notes = doc_layout::notes(
+    let api_reference = doc_layout::notes(
         cx,
         [
-            "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
-            "Composable children-style authoring is available today via `fret_ui_shadcn::collapsible_primitives`, while the top-level wrapper keeps a closure-based ergonomic API.",
-            "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
-            "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
-            "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
-            "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
+            "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
+            "`fret_ui_shadcn::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
+            "The top-level `fret_ui_shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, so no extra generic `compose()` API is needed here.",
+            "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
+            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
         ],
-    )
-    .test_id("ui-gallery-collapsible-notes");
+    );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Collapsible docs flow: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL.",
+            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("Uncontrolled disclosure with a compact trigger and a details list.")
+                .test_id_prefix("ui-gallery-collapsible-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
                 .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composable usage for Collapsible.")
+                .description("Copyable composable usage for `Collapsible` via the primitives path.")
+                .test_id_prefix("ui-gallery-collapsible-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
+                .test_id_prefix("ui-gallery-collapsible-controlled")
                 .code_rust_from_file_region(snippets::controlled_state::SOURCE, "example"),
             DocSection::new("Basic", basic)
-                .description("Uncontrolled disclosure with a simple text content body.")
+                .description(
+                    "Basic collapsible card outcome, authored through the compact Fret wrapper.",
+                )
+                .test_id_prefix("ui-gallery-collapsible-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Settings Panel", settings)
-                .description("Collapsible used to hide optional/advanced form fields.")
+                .description("Use a trigger button to reveal additional settings.")
+                .test_id_prefix("ui-gallery-collapsible-settings")
                 .code_rust_from_file_region(snippets::settings_panel::SOURCE, "example"),
             DocSection::new("File Tree", file_tree)
-                .description("Nested collapsibles with independent open state per node.")
+                .description("Use nested collapsibles to build a file tree.")
+                .test_id_prefix("ui-gallery-collapsible-file-tree")
                 .code_rust_from_file_region(snippets::file_tree::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .description("Direction provider should keep trigger/content alignment stable.")
+                .description(
+                    "Direction provider keeps trigger and content alignment stable under RTL.",
+                )
+                .test_id_prefix("ui-gallery-collapsible-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
+            DocSection::new("API Reference", api_reference)
+                .no_shell()
+                .test_id_prefix("ui-gallery-collapsible-api-reference")
+                .description("Public surface summary and ownership notes."),
         ],
     );
 

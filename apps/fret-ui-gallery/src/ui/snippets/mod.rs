@@ -7,7 +7,7 @@
 //! Prefer user-facing imports in snippet files (typically `use fret_ui_shadcn::prelude::*;`).
 
 pub mod accordion;
-#[cfg(feature = "gallery-dev")]
+#[cfg(feature = "gallery-ai")]
 pub mod ai;
 pub mod alert;
 pub mod alert_dialog;

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{
@@ -23,11 +24,13 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, ui,
+    Space, UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use fret_ui_kit::typography::scope_description_text;
 
 #[derive(Debug, Default)]
 struct DialogOpenProviderState {
@@ -146,14 +149,89 @@ pub struct DialogTrigger {
     child: AnyElement,
 }
 
+pub struct DialogTriggerBuild<H, T> {
+    child: Option<T>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
 impl DialogTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
     }
 
+    /// Builder-first variant that late-lands the trigger child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> DialogTriggerBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        DialogTriggerBuild {
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
+    }
+}
+
+impl<H: UiHost, T> DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTrigger::new(
+            self.child
+                .expect("expected dialog trigger child")
+                .into_child_element(cx),
+        )
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogTriggerBuild::into_element(self, cx)
+    }
+}
+
+#[doc(hidden)]
+pub trait DialogCompositionTriggerArg<H: UiHost> {
+    fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger;
+}
+
+impl<H: UiHost> DialogCompositionTriggerArg<H> for DialogTrigger {
+    fn into_dialog_trigger(self, _cx: &mut ElementContext<'_, H>) -> DialogTrigger {
+        self
+    }
+}
+
+impl<H: UiHost, T> DialogCompositionTriggerArg<H> for DialogTriggerBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn into_dialog_trigger(self, cx: &mut ElementContext<'_, H>) -> DialogTrigger {
+        DialogTrigger::new(
+            self.child
+                .expect("expected dialog trigger child")
+                .into_child_element(cx),
+        )
     }
 }
 
@@ -374,7 +452,7 @@ impl Dialog {
     ///
     /// This bridges Fret's closure-root authoring model with the nested part mental model used by
     /// shadcn/Radix/Base UI while keeping the underlying mechanism surface unchanged.
-    pub fn compose(self) -> DialogComposition {
+    pub fn compose<H: UiHost>(self) -> DialogComposition<H> {
         DialogComposition::new(self)
     }
 
@@ -679,15 +757,22 @@ impl Dialog {
 ///
 /// This builder stores already-authored Fret elements/parts and lowers them into the existing
 /// closure-based `into_element_parts(...)` entry point at the end.
-pub struct DialogComposition {
-    dialog: Dialog,
-    trigger: Option<DialogTrigger>,
-    portal: DialogPortal,
-    overlay: DialogOverlay,
-    content: Option<AnyElement>,
+type DialogDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum DialogCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(DialogDeferredContent<H>),
 }
 
-impl std::fmt::Debug for DialogComposition {
+pub struct DialogComposition<H: UiHost, TTrigger = DialogTrigger> {
+    dialog: Dialog,
+    trigger: Option<TTrigger>,
+    portal: DialogPortal,
+    overlay: DialogOverlay,
+    content: Option<DialogCompositionContent<H>>,
+}
+
+impl<H: UiHost, TTrigger> std::fmt::Debug for DialogComposition<H, TTrigger> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DialogComposition")
             .field("dialog", &self.dialog)
@@ -699,7 +784,7 @@ impl std::fmt::Debug for DialogComposition {
     }
 }
 
-impl DialogComposition {
+impl<H: UiHost> DialogComposition<H> {
     pub fn new(dialog: Dialog) -> Self {
         Self {
             dialog,
@@ -709,10 +794,20 @@ impl DialogComposition {
             content: None,
         }
     }
+}
 
-    pub fn trigger(mut self, trigger: DialogTrigger) -> Self {
-        self.trigger = Some(trigger);
-        self
+impl<H: UiHost, TTrigger> DialogComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> DialogComposition<H, TNextTrigger> {
+        DialogComposition {
+            dialog: self.dialog,
+            trigger: Some(trigger),
+            portal: self.portal,
+            overlay: self.overlay,
+            content: self.content,
+        }
     }
 
     pub fn portal(mut self, portal: DialogPortal) -> Self {
@@ -726,15 +821,27 @@ impl DialogComposition {
     }
 
     pub fn content(mut self, content: AnyElement) -> Self {
-        self.content = Some(content);
+        self.content = Some(DialogCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(DialogCompositionContent::Deferred(Box::new(content)));
         self
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: DialogCompositionTriggerArg<H>,
+    {
         let trigger = self
             .trigger
-            .expect("Dialog::compose().trigger(...) must be provided before into_element()");
+            .expect("Dialog::compose().trigger(...) must be provided before into_element()")
+            .into_dialog_trigger(cx);
         let content = self
             .content
             .expect("Dialog::compose().content(...) must be provided before into_element()");
@@ -742,9 +849,32 @@ impl DialogComposition {
         let portal = self.portal;
         let overlay = self.overlay;
 
-        self.dialog
-            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+        match content {
+            DialogCompositionContent::Eager(content) => self.dialog.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            DialogCompositionContent::Deferred(content) => self.dialog.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
     }
+}
+
+fn collect_built_dialog_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 /// shadcn/ui `DialogContent` (v4).
@@ -764,6 +894,20 @@ impl DialogContent {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             a11y_label: None,
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DialogContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogContentBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            a11y_label: None,
+            test_id: None,
+            _phantom: PhantomData,
         }
     }
 
@@ -832,6 +976,99 @@ impl DialogContent {
     }
 }
 
+pub struct DialogContentBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog content build closure"),
+        );
+        let mut content = DialogContent::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+        if let Some(label) = self.a11y_label {
+            content = content.a11y_label(label);
+        }
+        let content = content.into_element(cx);
+        if let Some(id) = self.test_id {
+            content.test_id(id)
+        } else {
+            content
+        }
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DialogContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogContentBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DialogClose` (v4-aligned recipe).
 ///
 /// Upstream shadcn's `DialogContent` renders a close affordance wired to the underlying Radix
@@ -894,6 +1131,32 @@ impl DialogClose {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    #[track_caller]
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl UiChildIntoElement<H>,
+    ) -> AnyElement {
+        let open = self.open.clone().unwrap_or_else(|| {
+            inherited_dialog_open(cx).unwrap_or_else(|| {
+                panic!("DialogClose::from_scope() must be used while rendering Dialog content")
+            })
+        });
+        let child = child.into_child_element(cx);
+        cx.pressable_add_on_activate_for(
+            child.id,
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      acx: fret_ui::action::ActionCx,
+                      _reason: fret_ui::action::ActivateReason| {
+                    let _ = host.models_mut().update(&open, |v| *v = false);
+                    host.request_redraw(acx.window);
+                },
+            ),
+        );
+        child
     }
 
     #[track_caller]
@@ -1005,6 +1268,16 @@ impl DialogHeader {
         Self { children }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> DialogHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogHeaderBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         use fret_ui_kit::declarative::ViewportQueryHysteresis;
@@ -1079,6 +1352,54 @@ impl DialogHeader {
     }
 }
 
+pub struct DialogHeaderBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeader::new(collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog header build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `DialogFooter` (v4).
 #[derive(Debug)]
 pub struct DialogFooter {
@@ -1089,6 +1410,16 @@ impl DialogFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> DialogFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        DialogFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -1133,6 +1464,54 @@ impl DialogFooter {
                 children,
             )
         }
+    }
+}
+
+pub struct DialogFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooter::new(collect_built_dialog_children(
+            cx,
+            self.build.expect("expected dialog footer build closure"),
+        ))
+        .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for DialogFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DialogFooterBuild::into_element(self, cx)
     }
 }
 
@@ -1182,41 +1561,53 @@ impl DialogTitle {
 }
 
 /// shadcn/ui `DialogDescription` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogDescription {
-    text: Arc<str>,
+    content: DialogDescriptionContent,
+}
+
+#[derive(Debug)]
+enum DialogDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl DialogDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: DialogDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: DialogDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
-        let px = theme
-            .metric_by_key("component.dialog.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.dialog.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-        let description = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx);
+        let description = match self.content {
+            DialogDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.dialog.description",
+            ),
+            DialogDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.dialog.description",
+            ),
+        };
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -1242,7 +1633,52 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
+    use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
+    use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    #[test]
+    fn dialog_trigger_build_push_ui_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, DialogTrigger::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[allow(dead_code)]
+    fn dialog_content_build_accepts_builder_first_sections<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        DialogContent::build(|cx, out| {
+            out.push_ui(
+                cx,
+                DialogHeader::build(|cx, out| {
+                    out.push_ui(cx, DialogTitle::new("Title"));
+                }),
+            );
+            out.push_ui(
+                cx,
+                DialogFooter::build(|cx, out| {
+                    out.push_ui(cx, crate::Button::new("Close"));
+                }),
+            );
+        })
+        .ui()
+        .test_id("content")
+        .into_element(cx)
+    }
 
     #[test]
     fn dialog_new_controllable_uses_controlled_model_when_provided() {
@@ -1321,19 +1757,86 @@ mod tests {
         assert_eq!(completed, Some(true));
     }
 
-    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
         match &el.kind {
-            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => {
-                return Some(props);
-            }
-            _ => {}
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
         }
-        for child in &el.children {
-            if let Some(found) = find_text(child, needle) {
-                return Some(found);
-            }
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        let node = find_text_element(el, needle)?;
+        match &node.kind {
+            fret_ui::element::ElementKind::Text(props) => Some(props),
+            _ => None,
         }
-        None
+    }
+
+    #[test]
+    fn dialog_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogDescription::new_children([cx.text("Nested description")]).into_element(cx)
+        });
+
+        let props = find_text(&element, "Nested description").expect("expected nested text child");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
+    #[test]
+    fn dialog_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogDescription::new("Description").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected DialogDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.dialog.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
@@ -1711,6 +2214,128 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+    #[test]
+    fn dialog_composition_trigger_accepts_late_landed_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-dialog-composition-trigger-accepts-late-child",
+            |cx| {
+                vec![
+                    Dialog::new(open.clone())
+                        .compose()
+                        .trigger(DialogTrigger::build(
+                            crate::Button::new("Open").test_id("dialog-compose-trigger-late-child"),
+                        ))
+                        .portal(DialogPortal::new())
+                        .overlay(DialogOverlay::new())
+                        .content(DialogContent::new([cx.text("Content")]).into_element(cx))
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn dialog_compose_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-dialog-compose-content-with-from-scope",
+            |cx| {
+                let trigger = DialogTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![
+                    Dialog::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(DialogPortal::new())
+                        .overlay(DialogOverlay::new())
+                        .content_with(|cx| {
+                            let close = DialogClose::from_scope().into_element(cx);
+                            DialogContent::new(vec![close]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

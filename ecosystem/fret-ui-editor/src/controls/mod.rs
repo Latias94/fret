@@ -17,7 +17,7 @@ pub mod vec_edit;
 pub use axis_drag_value::{AxisDragValue, AxisDragValueOptions, AxisDragValueResetAction};
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{ColorEdit, ColorEditOptions};
-pub use drag_value::DragValue;
+pub use drag_value::{DragValue, DragValueOptions};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};
 pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};
 pub use icon_button::{IconButton, IconButtonOptions, OnIconButtonActivate};

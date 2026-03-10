@@ -102,10 +102,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
         shift_easing.y2,
     );
 
-    let items = cx
-        .watch_model(&stack_shift_list)
-        .paint()
-        .cloned_or_default();
+    let items = cx.watch_model(&stack_shift_list).paint().value_or_default();
     let active_count = items.iter().filter(|i| !i.exiting).count();
     let exiting_count = items.iter().filter(|i| i.exiting).count();
 
@@ -189,7 +186,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
     .test_id("ui-gallery-motion-presets-stack-shift-controls");
 
     let list_panel = cx.keyed("stack_shift_list_demo", |cx| {
-        let items = cx.watch_model(&stack_shift_list).paint().cloned_or_default();
+        let items = cx.watch_model(&stack_shift_list).paint().value_or_default();
 
         let row_h = Px(34.0);
         let gap = Px(8.0);

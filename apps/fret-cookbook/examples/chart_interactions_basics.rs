@@ -317,8 +317,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
     let toolbar = ui::h_flex(|cx| {
         let x_span_badge = shadcn::Badge::new(format!("X span: {x_span:.2}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_X_SPAN)
@@ -328,8 +327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
 
         let hover_badge = shadcn::Badge::new(format!("Hover index: {hover_index:.0}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_HOVER_INDEX)
@@ -340,8 +338,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         let selected_index = st.selected.map(|v| v as f64).unwrap_or(-1.0);
         let selected_badge = shadcn::Badge::new(format!("Selected index: {selected_index:.0}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_SELECTED_INDEX)
@@ -349,47 +346,33 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
                     .numeric_range(-1.0, (st.base_x.max - st.base_x.min).max(1.0)),
             );
 
-        vec![
+        ui::children![
+            cx;
             shadcn::Button::new("Zoom in (X)")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ZOOM_IN)
-                .test_id(TEST_ID_ZOOM_IN)
-                .into_element(cx),
+                .test_id(TEST_ID_ZOOM_IN),
             shadcn::Button::new("Zoom out (X)")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_ZOOM_OUT)
-                .test_id(TEST_ID_ZOOM_OUT)
-                .into_element(cx),
+                .test_id(TEST_ID_ZOOM_OUT),
             shadcn::Button::new("Reset view")
                 .variant(shadcn::ButtonVariant::Outline)
                 .on_click(CMD_RESET_VIEW)
-                .test_id(TEST_ID_RESET_VIEW)
-                .into_element(cx),
+                .test_id(TEST_ID_RESET_VIEW),
             shadcn::Button::new("Select hovered")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_SELECT_HOVER)
-                .into_element(cx),
+                .on_click(CMD_SELECT_HOVER),
             shadcn::Button::new("Clear selection")
                 .variant(shadcn::ButtonVariant::Ghost)
-                .on_click(CMD_CLEAR_SELECTION)
-                .into_element(cx),
+                .on_click(CMD_CLEAR_SELECTION),
             x_span_badge,
             hover_badge,
             selected_badge,
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
-
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Chart interactions basics").into_element(cx),
-        shadcn::CardDescription::new(
-            "Minimal shared delinea engine + retained ChartCanvas. App-owned zoom + selection; axis pointer hover for exploration.",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    .items_center();
 
     let canvas = chart_canvas(cx, st);
 
@@ -400,27 +383,41 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         .p(Space::N2)
         .w_full()
         .h_full()
-        .min_h(Px(420.0))
-        .into_element(cx);
+        .min_h(Px(420.0));
 
-    let content = ui::v_flex(|_cx| vec![toolbar, canvas_shell])
-        .gap(Space::N3)
-        .w_full()
-        .h_full()
-        .min_w_0()
-        .into_element(cx);
-
-    let card = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, shadcn::CardTitle::new("Chart interactions basics"));
+                out.push_ui(
+                    cx,
+                    shadcn::CardDescription::new(
+                        "Minimal shared delinea engine + retained ChartCanvas. App-owned zoom + selection; axis pointer hover for exploration.",
+                    ),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    ui::v_flex(|cx| ui::children![cx; toolbar, canvas_shell])
+                        .gap(Space::N3)
+                        .w_full()
+                        .h_full()
+                        .min_w_0(),
+                );
+            }),
+        );
+    })
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {
@@ -506,8 +503,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(shadcn::install_app)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }

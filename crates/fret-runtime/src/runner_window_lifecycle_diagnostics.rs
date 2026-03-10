@@ -1,7 +1,9 @@
 use std::collections::HashSet;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use fret_core::AppWindowId;
+use fret_core::{
+    AppWindowId,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 /// Diagnostics store for runner window lifecycle events (open/close).
 ///

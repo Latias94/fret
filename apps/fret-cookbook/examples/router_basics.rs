@@ -199,7 +199,7 @@ impl View for RouterBasicsView {
         let snapshot = cx
             .get_model_cloned(&snapshot_model, Invalidation::Layout)
             .expect("router snapshot should be readable");
-        let intents = cx.watch_model(&intents_model).layout().cloned_or_default();
+        let intents = cx.watch_model(&intents_model).layout().value_or_default();
 
         let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
         let can_back = self.store.can_navigate(cx.app, NavigationAction::Back);
@@ -209,22 +209,19 @@ impl View for RouterBasicsView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(!can_back)
             .action(act::RouterBack)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_BACK);
 
         let forward = shadcn::Button::new("Forward")
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(!can_forward)
             .action(act::RouterForward)
-            .into_element(cx)
             .test_id(TEST_ID_BTN_FORWARD);
 
         let location = cx.text(location_label).test_id(TEST_ID_LOCATION_LABEL);
 
-        let header_row = ui::h_flex(|_cx| [back, forward, location])
+        let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let home_label = cx.text("Home");
         let settings_label = cx.text("Settings");
@@ -286,32 +283,44 @@ impl View for RouterBasicsView {
             )
         };
 
-        let nav = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Nav").into_element(cx),
-                shadcn::CardDescription::new("Router links (hover prefetch + click navigate).")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|_cx| {
-                [home_link, settings_link, user_link, missing_link]
-            })
-            .gap(Space::N2)
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+        let nav = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Nav"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Router links (hover prefetch + click navigate).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| {
+                            ui::children![cx; home_link, settings_link, user_link, missing_link]
+                        })
+                        .gap(Space::N2),
+                    );
+                }),
+            );
+        })
         .ui()
-        .w_px(Px(200.0))
-        .into_element(cx);
+        .w_px(Px(200.0));
 
         let outlet = RouterOutlet::new(snapshot_model.clone())
             .test_id(TEST_ID_OUTLET)
-            .into_element_by_leaf(
+            .into_element_by_leaf_ui(
                 cx,
-                |cx, route, snap| {
+                |_cx, route, snap| {
                     let leaf = snap.leaf_match().expect("leaf match should exist");
                     let matched_path = leaf.matched_path.clone();
                     let params = leaf.params.clone();
+                    let depth = snap.match_depth();
 
                     let title = match route {
                         RouteId::Home => "Home",
@@ -325,106 +334,132 @@ impl View for RouterBasicsView {
                         Arc::from(format!("params={params:?}"))
                     };
 
-                    shadcn::Card::new([
-                        shadcn::CardHeader::new([
-                            shadcn::CardTitle::new(title).into_element(cx),
-                            shadcn::CardDescription::new(format!("matched_path={matched_path}"))
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::CardContent::new([
-                            cx.text(params_line),
-                            cx.text(format!("depth={}", snap.match_depth())),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .ui()
-                    .w_full()
-                    .into_element(cx)
+                    shadcn::Card::build(move |cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::CardHeader::build(|cx, out| {
+                                out.push_ui(cx, shadcn::CardTitle::new(title));
+                                out.push_ui(
+                                    cx,
+                                    shadcn::CardDescription::new(format!(
+                                        "matched_path={matched_path}"
+                                    )),
+                                );
+                            }),
+                        );
+                        out.push_ui(
+                            cx,
+                            shadcn::CardContent::build(|cx, out| {
+                                out.push_ui(cx, ui::text(params_line));
+                                out.push_ui(cx, ui::text(format!("depth={depth}")));
+                            }),
+                        );
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full())
                 },
-                |cx, snap| {
-                    shadcn::Card::new([shadcn::CardHeader::new([
-                        shadcn::CardTitle::new("Not found").into_element(cx),
-                        shadcn::CardDescription::new(format!(
-                            "location={}",
-                            snap.location.to_url()
-                        ))
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)])
-                    .ui()
-                    .w_full()
-                    .into_element(cx)
+                |_cx, snap| {
+                    let location = snap.location.to_url();
+
+                    shadcn::Card::build(move |cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::CardHeader::build(|cx, out| {
+                                out.push_ui(cx, shadcn::CardTitle::new("Not found"));
+                                out.push_ui(
+                                    cx,
+                                    shadcn::CardDescription::new(format!("location={}", location)),
+                                );
+                            }),
+                        );
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full())
                 },
             );
 
-        let intents_panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Prefetch intents").into_element(cx),
-                shadcn::CardDescription::new("Populated on link hover and navigation.")
-                    .into_element(cx),
-                shadcn::Button::new("Clear")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .action(act::ClearIntents)
-                    .into_element(cx)
-                    .test_id(TEST_ID_BTN_CLEAR_INTENTS),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(|cx| {
-                if intents.is_empty() {
-                    return vec![cx.text("<none>")];
-                }
-                intents
-                    .into_iter()
-                    .map(|i| {
-                        cx.text(format!(
-                            "{:?}: {} ({}) extra={:?}",
-                            i.route,
-                            i.location.to_url(),
-                            i.namespace,
-                            i.extra
-                        ))
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .gap(Space::N1)
-            .into_element(cx)
-            .test_id(TEST_ID_INTENTS_ROOT)])
-            .into_element(cx),
-        ])
+        let intents_panel = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Prefetch intents"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("Populated on link hover and navigation."),
+                    );
+                    out.push_ui(
+                        cx,
+                        shadcn::Button::new("Clear")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .action(act::ClearIntents)
+                            .test_id(TEST_ID_BTN_CLEAR_INTENTS),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| {
+                            if intents.is_empty() {
+                                return vec![cx.text("<none>")];
+                            }
+                            intents
+                                .into_iter()
+                                .map(|i| {
+                                    cx.text(format!(
+                                        "{:?}: {} ({}) extra={:?}",
+                                        i.route,
+                                        i.location.to_url(),
+                                        i.namespace,
+                                        i.extra
+                                    ))
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .gap(Space::N1)
+                        .test_id(TEST_ID_INTENTS_ROOT),
+                    );
+                }),
+            );
+        })
         .ui()
-        .w_px(Px(320.0))
-        .into_element(cx);
+        .w_px(Px(320.0));
 
         let content = ui::v_flex(|cx| {
-            [
+            ui::children![cx;
                 header_row,
-                ui::h_flex(|_cx| [nav, outlet, intents_panel])
+                ui::h_flex(|cx| ui::children![cx; nav, outlet, intents_panel])
                     .gap(Space::N3)
-                    .items_start()
-                    .into_element(cx),
+                    .items_start(),
             ]
         })
-        .gap(Space::N3)
-        .into_element(cx);
+        .gap(Space::N3);
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Router basics").into_element(cx),
-                shadcn::CardDescription::new(
-                    "A tiny routing example: links, outlet rendering, and back/forward.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Router basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A tiny routing example: links, outlet rendering, and back/forward.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .max_w(Px(980.0))
-        .into_element(cx);
+        .max_w(Px(980.0));
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

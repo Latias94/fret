@@ -19,6 +19,13 @@ use fret_runtime::{
 use crate::SettingsFileV1;
 use crate::menu_bar::MenuBarBaselineService;
 
+fn redraw_request_callsite_diagnostics_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_REDRAW_REQUEST_CALLSITE_DIAG").is_some_and(|value| !value.is_empty())
+    })
+}
+
 #[derive(Debug)]
 struct GlobalLeaseMarker {
     type_name: &'static str,
@@ -537,8 +544,19 @@ impl App {
     /// - This does not imply continuous frame progression. For animations or any behavior that
     ///   needs to advance without input events, use `Effect::RequestAnimationFrame` (typically via
     ///   `Cx::request_animation_frame()`), and re-issue it each frame while active.
+    #[track_caller]
     pub fn request_redraw(&mut self, window: AppWindowId) {
         self.redraw_requests.insert(window);
+        if redraw_request_callsite_diagnostics_enabled() {
+            let location = std::panic::Location::caller();
+            let frame_id = self.frame_id;
+            self.with_global_mut_untracked(
+                fret_runtime::WindowRedrawRequestDiagnosticsStore::default,
+                |store, _app| {
+                    store.record(window, frame_id, location);
+                },
+            );
+        }
     }
 
     /// Runner-owned monotonic tick id (increments once per event-loop turn).

@@ -1,17 +1,246 @@
 use super::*;
 
+use crate::regression_summary::{
+    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1, RegressionAttemptsV1,
+    RegressionCampaignSummaryV1, RegressionEvidenceV1, RegressionHighlightsV1,
+    RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1, RegressionNotesV1,
+    RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1,
+    RegressionTotalsV1,
+};
+
+fn repeat_run_bundle_artifact(run: &serde_json::Value) -> Option<String> {
+    run.get("bundle_artifact")
+        .or_else(|| run.get("bundle_json"))
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string())
+}
+
+fn repeat_run_to_regression_item(
+    run: &serde_json::Value,
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    script_path: &Path,
+) -> RegressionItemSummaryV1 {
+    let index = run.get("index").and_then(|v| v.as_u64()).unwrap_or(0);
+    let stage = run.get("stage").and_then(|v| v.as_str());
+    let lint_error_issues = run
+        .pointer("/lint/error_issues")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let status = if lint_error_issues > 0 {
+        RegressionStatusV1::FailedDeterministic
+    } else {
+        match stage {
+            Some("passed") => RegressionStatusV1::Passed,
+            Some("failed") => RegressionStatusV1::FailedDeterministic,
+            Some("error") | Some(_) | None => RegressionStatusV1::FailedTooling,
+        }
+    };
+    let reason_code = run
+        .get("reason_code")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string())
+        .or_else(|| (lint_error_issues > 0).then(|| "diag.repeat.lint_failed".to_string()))
+        .or_else(|| match stage {
+            Some("passed") => None,
+            Some("failed") => Some("diag.repeat.run_failed".to_string()),
+            Some("error") | Some(_) | None => Some("tooling.diag_repeat.run_error".to_string()),
+        });
+    let bundle_artifact = repeat_run_bundle_artifact(run);
+    let bundle_dir = run
+        .get("last_bundle_dir")
+        .and_then(|v| v.as_str())
+        .and_then(|v| (!v.trim().is_empty()).then_some(v.trim()))
+        .map(PathBuf::from)
+        .map(|path| {
+            if path.is_absolute() {
+                path
+            } else {
+                resolved_out_dir.join(path)
+            }
+        })
+        .map(|path| path.display().to_string());
+
+    RegressionItemSummaryV1 {
+        item_id: format!("repeat-run-{index}"),
+        kind: RegressionItemKindV1::Script,
+        name: format!("repeat run #{index}"),
+        status,
+        reason_code,
+        source_reason_code: run
+            .get("reason_code")
+            .and_then(|v| v.as_str())
+            .map(|v| v.to_string()),
+        lane: RegressionLaneV1::Correctness,
+        owner: None,
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: Some(RegressionAttemptsV1 {
+            attempts_total: 1,
+            attempts_passed: u32::from(status == RegressionStatusV1::Passed),
+            attempts_failed: u32::from(status != RegressionStatusV1::Passed),
+            retried: false,
+            repeat_summary_path: None,
+            shrink_summary_path: None,
+        }),
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact,
+            bundle_dir,
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: None,
+            compare_json: None,
+            extra: run.get("evidence").cloned(),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: Some(normalize_repo_relative_path(workspace_root, script_path)),
+            suite: None,
+            campaign_case: Some("repeat".to_string()),
+            metadata: None,
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: run
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string())
+                .or_else(|| {
+                    run.get("error")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string())
+                }),
+            details: Vec::new(),
+        }),
+    }
+}
+
+fn write_regression_summary_for_repeat(
+    workspace_root: &Path,
+    resolved_out_dir: &Path,
+    script_path: &Path,
+    generated_unix_ms: u64,
+    payload: &serde_json::Value,
+) {
+    let mut items = payload
+        .get("runs")
+        .and_then(|v| v.as_array())
+        .map(|runs| {
+            runs.iter()
+                .map(|run| {
+                    repeat_run_to_regression_item(
+                        run,
+                        workspace_root,
+                        resolved_out_dir,
+                        script_path,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if items.is_empty() && payload.get("status").and_then(|v| v.as_str()) != Some("passed") {
+        items.push(RegressionItemSummaryV1 {
+            item_id: "repeat".to_string(),
+            kind: RegressionItemKindV1::CampaignStep,
+            name: "repeat".to_string(),
+            status: RegressionStatusV1::FailedTooling,
+            reason_code: Some("tooling.diag_repeat.failed".to_string()),
+            source_reason_code: payload
+                .get("error_reason_code")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
+            lane: RegressionLaneV1::Correctness,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: None,
+            source: Some(RegressionSourceV1 {
+                script: Some(normalize_repo_relative_path(workspace_root, script_path)),
+                suite: None,
+                campaign_case: Some("repeat_setup".to_string()),
+                metadata: None,
+            }),
+            notes: Some(RegressionNotesV1 {
+                summary: Some("repeat failed before run-level rows were available".to_string()),
+                details: Vec::new(),
+            }),
+        });
+    }
+
+    let mut totals = RegressionTotalsV1::default();
+    let mixed_pass_and_fail = items
+        .iter()
+        .any(|item| item.status == RegressionStatusV1::Passed)
+        && items
+            .iter()
+            .any(|item| item.status != RegressionStatusV1::Passed);
+    if mixed_pass_and_fail {
+        for item in &mut items {
+            if item.status == RegressionStatusV1::FailedDeterministic {
+                item.status = RegressionStatusV1::FailedFlaky;
+            }
+        }
+    }
+    for item in &items {
+        totals.record_status(item.status);
+    }
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: normalize_repo_relative_path(workspace_root, script_path),
+            lane: RegressionLaneV1::Correctness,
+            profile: Some("repeat".to_string()),
+            schema_version: Some(1),
+            requested_by: Some("diag repeat".to_string()),
+            filters: None,
+        },
+        RegressionRunSummaryV1 {
+            run_id: generated_unix_ms.to_string(),
+            created_unix_ms: generated_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(resolved_out_dir.display().to_string()),
+            tool: "fretboard diag repeat".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    summary.items = items;
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+    summary.artifacts = Some(RegressionArtifactsV1 {
+        summary_dir: Some(resolved_out_dir.display().to_string()),
+        packed_report: None,
+        index_json: None,
+        html_report: None,
+    });
+
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    if let Err(err) = write_json_value(
+        &regression_summary_path,
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    ) {
+        eprintln!(
+            "warning: failed to write regression summary {}: {}",
+            regression_summary_path.display(),
+            err
+        );
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct RepeatCmdContext {
     pub pack_after_run: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_exit_path: PathBuf,
-    pub resolved_script_path: PathBuf,
-    pub resolved_script_trigger_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
-    pub resolved_script_result_trigger_path: PathBuf,
+    pub resolved_paths: ResolvedScriptPaths,
     pub pack_include_screenshots: bool,
     pub check_pixels_changed_test_id: Option<String>,
     pub check_pixels_unchanged_test_id: Option<String>,
@@ -21,6 +250,8 @@ pub(crate) struct RepeatCmdContext {
     pub launch_high_priority: bool,
     pub launch_write_bundle_json: bool,
     pub perf_repeat: u64,
+    pub check_memory_p90_max: Vec<(String, u64)>,
+    pub compare_enabled: bool,
     pub compare_eps_px: f32,
     pub compare_ignore_bounds: bool,
     pub compare_ignore_scene_fingerprint: bool,
@@ -32,19 +263,31 @@ pub(crate) struct RepeatCmdContext {
     pub poll_ms: u64,
 }
 
+fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
+    if env.iter().any(|(existing, _)| existing == key) {
+        return;
+    }
+    env.push((key.to_string(), value.to_string()));
+}
+
+fn merged_repeat_launch_env(
+    launch_env: &[(String, String)],
+    script_defaults: Vec<(String, String)>,
+) -> Vec<(String, String)> {
+    let mut merged = launch_env.to_vec();
+    for (key, value) in script_defaults {
+        push_env_if_missing(&mut merged, &key, &value);
+    }
+    merged
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     let RepeatCmdContext {
         pack_after_run,
         rest,
         workspace_root,
-        resolved_out_dir,
-        resolved_ready_path,
-        resolved_exit_path,
-        resolved_script_path,
-        resolved_script_trigger_path,
-        resolved_script_result_path,
-        resolved_script_result_trigger_path,
+        resolved_paths,
         pack_include_screenshots,
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
@@ -54,6 +297,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         launch_high_priority,
         launch_write_bundle_json,
         perf_repeat,
+        check_memory_p90_max,
+        compare_enabled,
         compare_eps_px,
         compare_ignore_bounds,
         compare_ignore_scene_fingerprint,
@@ -64,6 +309,16 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         timeout_ms,
         poll_ms,
     } = ctx;
+
+    let launch_fs_transport_cfg = resolved_paths.launch_fs_transport_cfg();
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_exit_path = resolved_paths.exit_path;
+    let resolved_script_path = resolved_paths.script_path;
+    let resolved_script_trigger_path = resolved_paths.script_trigger_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
+    let resolved_script_result_trigger_path = resolved_paths.script_result_trigger_path;
 
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
@@ -85,16 +340,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         || check_pixels_changed_test_id.is_some()
         || check_pixels_unchanged_test_id.is_some();
 
-    let repeat_launch_env = launch_env.clone();
+    let repeat_launch_env = merged_repeat_launch_env(&launch_env, script_env_defaults(&src));
     let reuse_process = launch.is_none() || reuse_launch;
-
-    let mut launch_fs_transport_cfg =
-        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
-    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
-    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
-    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
-    launch_fs_transport_cfg.script_result_trigger_path =
-        resolved_script_result_trigger_path.clone();
 
     let mut child = if reuse_process {
         maybe_launch_demo(
@@ -162,6 +409,68 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
         })
+    }
+
+    fn copy_if_exists(src: &Path, dst: &Path) {
+        if !src.is_file() {
+            return;
+        }
+        let _ = std::fs::copy(src, dst);
+    }
+
+    fn write_repeat_evidence_index_best_effort(
+        run_out_dir: &Path,
+        out_dir: &Path,
+        bundle_artifact: Option<&PathBuf>,
+    ) {
+        copy_if_exists(
+            &out_dir.join("resource.footprint.json"),
+            &run_out_dir.join("resource.footprint.json"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.macos_footprint.steady.json"),
+            &run_out_dir.join("resource.macos_footprint.steady.json"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_summary.txt"),
+            &run_out_dir.join("resource.vmmap_summary.txt"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_summary.steady.txt"),
+            &run_out_dir.join("resource.vmmap_summary.steady.txt"),
+        );
+        copy_if_exists(
+            &out_dir.join("resource.vmmap_regions_sorted.steady.txt"),
+            &run_out_dir.join("resource.vmmap_regions_sorted.steady.txt"),
+        );
+
+        let selected_bundle_json = bundle_artifact
+            .and_then(|p| {
+                if p.is_file() {
+                    Some(p.clone())
+                } else {
+                    let candidate = p.join("bundle.json");
+                    candidate.is_file().then_some(candidate)
+                }
+            })
+            .or_else(|| {
+                let candidate = run_out_dir.join("bundle.json");
+                candidate.is_file().then_some(candidate)
+            })
+            .map(|p| p.display().to_string());
+
+        let summary_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "repro_summary_repeat_v1",
+            "selected_bundle_json": selected_bundle_json,
+        });
+        let summary_path = run_out_dir.join("repro.summary.json");
+        let _ = write_json_value(&summary_path, &summary_json);
+        let _ = crate::evidence_index::write_evidence_index(
+            run_out_dir,
+            &summary_path,
+            Some(&summary_json),
+        );
     }
 
     fn repeat_tooling_reason_code_from_error(err: &str) -> &'static str {
@@ -389,30 +698,28 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         }
 
         let entry = match summary {
-            Ok(s) => {
-                let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
-
-                let bundle_artifact = s
-                    .last_bundle_dir
-                    .as_deref()
-                    .and_then(|d| (!d.trim().is_empty()).then_some(d.trim()))
-                    .map(PathBuf::from)
-                    .map(|p| {
-                        if p.is_absolute() {
-                            p
+            Ok(mut s) => {
+                let bundle_artifact = crate::paths::wait_for_bundle_artifact_from_script_result(
+                    &resolved_out_dir,
+                    &s,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if s.last_bundle_dir.is_none()
+                    && let Some(name) = bundle_artifact.as_ref().and_then(|artifact| {
+                        if artifact.is_dir() {
+                            artifact.file_name().and_then(|v| v.to_str())
                         } else {
-                            resolved_out_dir.join(p)
+                            artifact
+                                .parent()
+                                .and_then(|parent| parent.file_name())
+                                .and_then(|v| v.to_str())
                         }
                     })
-                    .and_then(|p| {
-                        if p.is_dir() {
-                            wait_for_bundle_artifact_in_dir(&p, timeout_ms, poll_ms)
-                        } else if p.is_file() {
-                            Some(p)
-                        } else {
-                            None
-                        }
-                    });
+                {
+                    s.last_bundle_dir = Some(name.to_string());
+                }
+                let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
 
                 if stage == "failed" {
                     failed_runs += 1;
@@ -465,6 +772,22 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                         "top_layout_engine_solve_time_us": top.layout_engine_solve_time_us,
                         "frame_id": top.frame_id,
                     }));
+                }
+
+                if let Some(bundle_artifact) = bundle_artifact.as_ref() {
+                    let run_out_dir = if bundle_artifact.is_dir() {
+                        bundle_artifact.clone()
+                    } else {
+                        bundle_artifact
+                            .parent()
+                            .map(Path::to_path_buf)
+                            .unwrap_or_else(|| resolved_out_dir.clone())
+                    };
+                    write_repeat_evidence_index_best_effort(
+                        &run_out_dir,
+                        &resolved_out_dir,
+                        Some(bundle_artifact),
+                    );
                 }
 
                 let mut lint: Option<serde_json::Value> = None;
@@ -523,7 +846,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut compare_to_baseline: Option<serde_json::Value> = None;
-                if stage == "passed" {
+                if compare_enabled && stage == "passed" {
                     if baseline_bundle.is_none() {
                         if let Some(bundle_artifact) = bundle_artifact.clone() {
                             baseline_run = Some(run_index);
@@ -586,8 +909,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                     "reason_code": s.reason_code,
                     "reason": s.reason,
                     "last_bundle_dir": s.last_bundle_dir,
-                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "perf": perf,
                     "lint": lint,
                     "evidence": evidence,
@@ -616,7 +939,149 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
 
     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
+    fn quantile_sorted(values: &[u64], q: f64) -> u64 {
+        if values.is_empty() {
+            return 0;
+        }
+        let q = q.clamp(0.0, 1.0);
+        let idx = ((values.len() - 1) as f64 * q).round() as usize;
+        *values.get(idx).unwrap_or(values.last().unwrap_or(&0))
+    }
+
+    fn read_u64_resource(resources: &serde_json::Value, key: &str) -> Option<u64> {
+        let process = resources
+            .get("process_footprint")
+            .unwrap_or(&serde_json::Value::Null);
+        let bundle = resources
+            .get("bundle_last_frame_stats")
+            .unwrap_or(&serde_json::Value::Null);
+        process
+            .get(key)
+            .and_then(|v| v.as_u64())
+            .or_else(|| bundle.get(key).and_then(|v| v.as_u64()))
+    }
+
+    let mut memory_checks: Option<serde_json::Value> = None;
+    let mut memory_check_failures: Vec<serde_json::Value> = Vec::new();
+
+    if !check_memory_p90_max.is_empty() {
+        let mut sample_dirs: Vec<PathBuf> = Vec::new();
+        let mut q: Vec<PathBuf> = vec![resolved_out_dir.clone()];
+        while let Some(dir) = q.pop() {
+            let evidence = dir.join("evidence.index.json");
+            if evidence.is_file() {
+                sample_dirs.push(dir);
+                continue;
+            }
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    q.push(path);
+                }
+            }
+        }
+
+        let mut checks_out: Vec<serde_json::Value> = Vec::new();
+        if sample_dirs.is_empty() {
+            memory_check_failures.push(serde_json::json!({
+                "kind": "no_samples",
+                "reason": "no evidence.index.json found under repeat out_dir; ensure bundles are written and evidence is materialized per run",
+            }));
+        }
+        for (key, threshold) in &check_memory_p90_max {
+            let mut values: Vec<u64> = Vec::new();
+            let mut missing: u64 = 0;
+
+            for dir in &sample_dirs {
+                let evidence_index_path = dir.join("evidence.index.json");
+                let Some(v) = read_json_value(&evidence_index_path) else {
+                    missing = missing.saturating_add(1);
+                    continue;
+                };
+                let Some(resources) = v.get("resources") else {
+                    missing = missing.saturating_add(1);
+                    continue;
+                };
+
+                match read_u64_resource(resources, key) {
+                    Some(n) => values.push(n),
+                    None => missing = missing.saturating_add(1),
+                }
+            }
+
+            values.sort_unstable();
+            let p90 = quantile_sorted(&values, 0.90);
+            let max = *values.last().unwrap_or(&0);
+
+            let mut failures: Vec<serde_json::Value> = Vec::new();
+            if missing > 0 {
+                failures.push(serde_json::json!({
+                    "kind": "missing_field",
+                    "missing_samples": missing,
+                }));
+            }
+            if values.is_empty() {
+                failures.push(serde_json::json!({
+                    "kind": "no_values",
+                    "reason": "field missing in all samples",
+                }));
+            }
+            if !values.is_empty() && p90 > *threshold {
+                failures.push(serde_json::json!({
+                    "kind": "p90_exceeded",
+                    "threshold": threshold,
+                    "observed_p90": p90,
+                }));
+            }
+
+            if !failures.is_empty() {
+                memory_check_failures.push(serde_json::json!({
+                    "key": key,
+                    "threshold": threshold,
+                    "observed_p90": p90,
+                    "observed_max": max,
+                    "samples_present": values.len(),
+                    "samples_missing": missing,
+                    "failures": failures,
+                }));
+            }
+
+            checks_out.push(serde_json::json!({
+                "key": key,
+                "threshold": threshold,
+                "observed_p90": p90,
+                "observed_max": max,
+                "samples_present": values.len(),
+                "samples_missing": missing,
+            }));
+        }
+
+        let out_path = resolved_out_dir.join("check.repeat_memory_p90_max.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "repeat_memory_p90_max",
+            "out_dir": resolved_out_dir.display().to_string(),
+            "samples_total": sample_dirs.len(),
+            "checks": checks_out,
+            "failures": memory_check_failures,
+        });
+        let _ = write_json_value(&out_path, &payload);
+        memory_checks = Some(serde_json::json!({
+            "evidence": out_path.display().to_string(),
+            "failures_len": memory_check_failures.len(),
+        }));
+    }
+
     let status = if failed_runs == 0 && differing_runs == 0 {
+        "passed"
+    } else {
+        "failed"
+    };
+    let status = if status == "passed" && memory_check_failures.is_empty() {
         "passed"
     } else {
         "failed"
@@ -660,11 +1125,13 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         "repeat": repeat,
         "baseline_run": baseline_run,
         "highlights": highlights,
+        "memory_checks": memory_checks,
         "error_reason_code": tooling_error_reason_code,
         "options": {
             "warmup_frames": warmup_frames,
             "compare_eps_px": compare_eps_px,
             "compare_ignore_bounds": compare_ignore_bounds,
+            "compare_enabled": compare_enabled,
             "compare_ignore_scene_fingerprint": compare_ignore_scene_fingerprint,
         },
         "failed_runs": failed_runs,
@@ -678,6 +1145,13 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     }
     let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
     std::fs::write(&out_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
+    write_regression_summary_for_repeat(
+        &workspace_root,
+        &resolved_out_dir,
+        &src,
+        now_unix_ms(),
+        &payload,
+    );
 
     if stats_json {
         println!("{pretty}");
@@ -689,4 +1163,59 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merged_repeat_launch_env_preserves_explicit_values() {
+        let merged = merged_repeat_launch_env(
+            &[(
+                "FRET_UI_GALLERY_START_PAGE".to_string(),
+                "overlay".to_string(),
+            )],
+            vec![
+                ("FRET_UI_GALLERY_START_PAGE".to_string(), "card".to_string()),
+                ("FRET_UI_GALLERY_NAV_QUERY".to_string(), "card".to_string()),
+            ],
+        );
+
+        assert_eq!(
+            merged,
+            vec![
+                (
+                    "FRET_UI_GALLERY_START_PAGE".to_string(),
+                    "overlay".to_string()
+                ),
+                ("FRET_UI_GALLERY_NAV_QUERY".to_string(), "card".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn repeat_run_bundle_artifact_accepts_legacy_bundle_json_alias() {
+        let run = serde_json::json!({
+            "bundle_json": "target/fret-diag/bundle.schema2.json"
+        });
+
+        assert_eq!(
+            repeat_run_bundle_artifact(&run).as_deref(),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
+
+    #[test]
+    fn repeat_run_bundle_artifact_prefers_canonical_bundle_artifact() {
+        let run = serde_json::json!({
+            "bundle_artifact": "target/fret-diag/canonical.schema2.json",
+            "bundle_json": "target/fret-diag/legacy.bundle.json"
+        });
+
+        assert_eq!(
+            repeat_run_bundle_artifact(&run).as_deref(),
+            Some("target/fret-diag/canonical.schema2.json")
+        );
+    }
 }

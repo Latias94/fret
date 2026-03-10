@@ -14,11 +14,11 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn Sheet demo (new-york-v4).",
+            "Preview follows shadcn Sheet demo (new-york-v4), and gallery sections mirror docs order before Fret-specific Parts.",
             "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
-            "Part surface adapters exist for shadcn-style call sites (SheetTrigger/SheetPortal/SheetOverlay).",
-            "Fret renders a default top-right close affordance in `SheetContent` (disable via `show_close_button(false)`).",
-            "Fret also exposes `SheetClose` for additional close affordances.",
+            "Default close affordance lives in `SheetContent`, matching upstream; disable it with `show_close_button(false)`.",
+            "`SheetClose` remains available for additional close affordances inside sheet content.",
+            "Part surface adapters exist for shadcn-style call sites (`SheetTrigger`/`SheetPortal`/`SheetOverlay`).",
         ],
     );
 
@@ -35,10 +35,6 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .title_test_id("ui-gallery-section-usage-title")
                 .description("Copyable shadcn-style composition reference for Sheet.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Parts", parts)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-parts")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-side")
@@ -51,6 +47,11 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Parts", parts)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-parts")
+                .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
+                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-sheet-notes"),

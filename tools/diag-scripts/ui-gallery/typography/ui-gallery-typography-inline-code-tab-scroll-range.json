@@ -49,6 +49,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "docsec-inline-code-tabs-trigger-code" },
       "delta_y": -120.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 600
@@ -85,6 +86,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "ui-gallery-typography-rtl" },
       "delta_y": -120.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 900

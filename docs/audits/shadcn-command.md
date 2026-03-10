@@ -16,7 +16,7 @@ instead of API compatibility.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/command.mdx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/command.mdx`
 - shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
 - cmdk repo: `repo-ref/cmdk`
 
@@ -59,7 +59,9 @@ Key upstream semantics:
 - Pass: `CommandDemo` matches the upstream split sizing: input wrapper uses `h-9` while the input uses `h-10`
   (the input overflows the wrapper slightly in the web golden).
 - Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input, and `pt-0` for sibling groups).
+- Pass: `Command` root chrome (rounded border + popover background) stays recipe-owned because upstream defines it in the component source.
 - Pass: `CommandPalette` defaults to a `w-full` root layout to avoid cmdk listbox width collapse when embedded in recipes (e.g. `Combobox`).
+- Note: Width caps such as upstream `max-w-sm` remain caller-owned; gallery `Usage` applies that at the call site rather than baking it into the recipe root.
 
 ### Visual/content conventions (shadcn)
 

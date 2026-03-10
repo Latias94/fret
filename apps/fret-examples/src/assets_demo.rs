@@ -4,7 +4,6 @@ use fret::kernel::core::{ImageColorSpace, SvgId};
 use fret::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::prelude::*;
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
 
@@ -30,7 +29,7 @@ struct AssetsDemoImageEvents {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("assets-demo")
         .window("assets_demo", (720.0, 520.0))
-        .ui_with_hooks(init_window, view, |d| d.on_event(on_event))?
+        .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
@@ -49,14 +48,24 @@ pub fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn init_window(_app: &mut App, _window: AppWindowId) -> () {}
+struct AssetsDemoView;
+
+impl View for AssetsDemoView {
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
+    }
+
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        render_view(cx.elements())
+    }
+}
 
 fn on_event(
     app: &mut App,
     _services: &mut dyn UiServices,
     window: AppWindowId,
     _ui: &mut UiTree<App>,
-    _state: &mut (),
+    _state: &mut fret::view::ViewWindowState<AssetsDemoView>,
     event: &Event,
 ) {
     match event {
@@ -122,7 +131,7 @@ fn on_event(
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
+fn render_view(cx: &mut ElementContext<'_, App>) -> fret::ViewElements {
     let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);

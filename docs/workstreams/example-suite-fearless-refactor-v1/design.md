@@ -104,7 +104,7 @@ We keep the existing reality (many apps/harnesses), but we reframe and reorganiz
 | Stage | Name | Form | Primary crates | Teaches | Run |
 |---|---|---|---|---|---|
 | 0 | hello | template | `fret` + `fret-ui-shadcn` | minimal UI + layout | `fretboard new hello ...` |
-| 1 | simple-todo | template | `fret` + `fret-ui-shadcn` | MVU + models + keyed lists | `fretboard new simple-todo ...` |
+| 1 | simple-todo | template | `fret` + `fret-ui-shadcn` | View runtime + typed actions + keyed lists (`LocalState<Vec<_>>` default path) | `fretboard new simple-todo ...` |
 | 2 | todo (golden path) | template + doc | + `fret-selector`, `fret-query` | derived/async state baseline | `fretboard new todo ...` |
 | 3 | components gallery | demo (cookbook-ish) | shadcn + overlays | “what exists” + overlay behaviors | `fretboard dev native --bin components_gallery` |
 | 4 | ui gallery | app (catalog) | `fret-ui-gallery` | per-component pages + conformance | `cargo run -p fret-ui-gallery` |
@@ -155,7 +155,7 @@ Cookbook implementation (initial):
 Suggested v1 sequencing (App Track):
 
 1) `cookbook.hello` -> first run, layout + theme baseline
-2) `cookbook.hello_counter` -> MVU + Model + keyed UI updates
+2) `cookbook.hello_counter` -> view runtime + `LocalState` + typed actions + keyed UI updates
 3) `cookbook.commands_keymap_basics` -> commands + shortcuts + availability gating
 4) `cookbook.text_input_basics` -> text input + submit/clear patterns
 5) `cookbook.overlay_basics` -> overlay lifecycle + focus restore baseline
@@ -193,12 +193,12 @@ recipes”, but they are still `Official` entry points.
 | ID | Level | Catalog | Track | Theme | Form | Native | Web | Teaches | Proposed gate |
 |---|---:|---|---|---|---|---|---|---|---|
 | hello | 0 | Official | App | layout | Template | ✅ | ✅ | window + layout + text | smoke (first frame) |
-| simple-todo | 1 | Official | App | state | Template | ✅ | ✅ | MVU + keyed lists | diag script: add/remove rows |
+| simple-todo | 1 | Official | App | state | Template | ✅ | ✅ | view runtime + typed actions + keyed lists (`LocalState<Vec<_>>` default) | diag script: add/remove rows |
 | todo | 2 | Official | App | state | Template | ✅ | (optional) | selectors + queries baseline | diag script: “golden path” actions |
 | components_gallery | 3 | Official | App | components | Demo | ✅ | ⛔ | component sampling + overlay behaviors | diag smoke (basic navigation) |
 | ui_gallery | 4 | Official | App | components | Gallery App | ✅ | ✅ | per-component pages + conformance | existing ui-gallery suites |
 | cookbook.hello | 0 | Official | App | layout | Example | ✅ | ⛔ | minimal “hello” runnable | diag smoke |
-| cookbook.hello_counter | 1 | Official | App | state | Example | ✅ | ⛔ | MVU + Model counter | diag smoke |
+| cookbook.hello_counter | 1 | Official | App | state | Example | ✅ | ⛔ | view runtime + `LocalState` counter + typed actions | diag smoke |
 | cookbook.simple_todo | 1 | Official | App | state | Example | ✅ | ⛔ | minimal todo list (copy/paste) | diag smoke |
 | cookbook.commands_keymap_basics | 2 | Official | App | input | Example | ✅ | ✅ | commands + shortcuts | diag script: key injection |
 | cookbook.undo_basics | 2 | Official | App | state | Example | ✅ | ✅ | app-owned undo/redo (`fret-undo`) | diag script: press_shortcut undo/redo |

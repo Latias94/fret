@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: workspace shell chrome under shadcn preset (screenshot)",
+    "tags": ["screenshots", "shadcn", "ui-gallery", "workspace", "workspace_shell"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
+    },
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+      "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
+      "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 960.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-frame" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-top-bar" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-bar" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-workspace-shell-chrome-shadcn-screenshot" },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-workspace-shell-chrome-shadcn-screenshot"
+    }
+  ]
+}

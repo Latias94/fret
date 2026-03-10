@@ -14,7 +14,7 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-dialog` (portal + dismiss + focus management)
 
@@ -52,6 +52,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   buttons while preserving `DialogClose::new(open)` as the explicit constructor.
 - Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Note: Public-surface drift remains around the default close affordance: upstream
+  `DialogContent` renders a close button by default and exposes `showCloseButton={false}`;
+  Fret currently models that choice explicitly with `DialogClose` / omission.
 
 ### Dismissal behavior
 

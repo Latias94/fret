@@ -182,6 +182,14 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
+    assert!(
+        scroll_handle.max_offset().x.0 > 0.01,
+        "expected a horizontal scroll range before drag autoscroll, got viewport={:?} content={:?} max={:?}",
+        scroll_handle.viewport_size(),
+        scroll_handle.content_size(),
+        scroll_handle.max_offset()
+    );
+
     let scroll_node = ui.children(root)[0];
     let selectable_node = ui.children(scroll_node)[0];
 

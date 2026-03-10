@@ -40,8 +40,8 @@ impl View for DragBasicsView {
         let origin = cx
             .watch_model(&self.origin)
             .layout()
-            .copied_or(Point::new(Px(0.0), Px(0.0)));
-        let drag_count = cx.watch_model(&self.drag_count).layout().copied_or(0);
+            .value_or(Point::new(Px(0.0), Px(0.0)));
+        let drag_count = cx.watch_model(&self.drag_count).layout().value_or(0);
 
         let pos_label = format!("Offset: ({:.0}, {:.0})", origin.x.0, origin.y.0);
 
@@ -123,24 +123,23 @@ impl View for DragBasicsView {
                 true
             });
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Drag basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A tiny pointer-capture drag example using a pointer region.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Drag basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A tiny pointer-capture drag example using a pointer region.",
+                ),
+            );
+        });
 
         let pos = shadcn::Badge::new(pos_label)
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
             .test_id(TEST_ID_POS);
 
         let drag_count_badge = shadcn::Badge::new(format!("Drags: {drag_count}"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 fret_ui::element::SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_DRAG_COUNT)
@@ -166,23 +165,18 @@ impl View for DragBasicsView {
                 .bg(ColorRef::Color(theme.color_token("primary")))
                 .rounded(Radius::Lg)
                 .text_color(ColorRef::Color(theme.color_token("primary-foreground")))
-                .into_element(cx)
                 .test_id(TEST_ID_DRAGGABLE);
 
             let offset_x = Px(origin.x.0.clamp(0.0, 480.0));
             let offset_y = Px(origin.y.0.clamp(0.0, 120.0));
 
-            let top_spacer = ui::container(|_cx| Vec::<AnyElement>::new())
-                .h_px(offset_y)
-                .into_element(cx);
-            let left_spacer = ui::container(|_cx| Vec::<AnyElement>::new())
-                .w_px(offset_x)
-                .into_element(cx);
+            let top_spacer = ui::container(|_cx| Vec::<AnyElement>::new()).h_px(offset_y);
+            let left_spacer = ui::container(|_cx| Vec::<AnyElement>::new()).w_px(offset_x);
 
-            let row = ui::h_flex(|_cx| [left_spacer, box_el]).into_element(cx);
-            let col = ui::v_flex(|_cx| [top_spacer, row]).into_element(cx);
+            let row = ui::h_flex(|cx| ui::children![cx; left_spacer, box_el]);
+            let col = ui::v_flex(|cx| ui::children![cx; top_spacer, row]);
 
-            let bounds = ui::container(|_cx| vec![col])
+            let bounds = ui::container(|cx| ui::children![cx; col])
                 .w_full()
                 .h_full()
                 .bg(ColorRef::Color(theme.color_token("muted")))
@@ -192,17 +186,24 @@ impl View for DragBasicsView {
             vec![bounds]
         });
 
-        let body = ui::v_flex(|_cx| [pos, drag_count_badge, draggable])
-            .gap(Space::N3)
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; pos, drag_count_badge, draggable])
+                            .gap(Space::N3),
+                    );
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(720.0));
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(720.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

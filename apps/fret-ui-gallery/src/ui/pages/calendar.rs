@@ -27,21 +27,49 @@ pub(super) fn preview_calendar(
     let locale = snippets::locale::render(cx);
     let responsive_mixed_semantics = snippets::responsive_mixed_semantics::render(cx);
 
+    let about = doc_layout::notes(
+        cx,
+        [
+            "Fret's `Calendar` plays the same role that React DayPicker does upstream, but the month grid and selection logic live in `fret_ui_headless::calendar` instead of a DOM package.",
+            "The shadcn recipe layer in `ecosystem/fret-ui-shadcn/src/calendar.rs` owns the visual parity surface: caption layout, navigation buttons, day-cell chrome, and slot-aware backgrounds.",
+        ],
+    );
+
+    let date_picker = doc_layout::notes(
+        cx,
+        [
+            "Use the dedicated `Date Picker` page when the calendar should be composed with a trigger, field, and popover; that composition remains a separate recipe rather than being folded into `Calendar` itself.",
+            "This mirrors the upstream docs split between the base `Calendar` component and higher-level date-picker recipes.",
+        ],
+    );
+
+    let selected_date_timezone = doc_layout::notes(
+        cx,
+        [
+            "Upstream documents a `timeZone` prop because JS `Date` can shift the highlighted day across offsets when a calendar works with date-times.",
+            "Fret `Calendar` selections are `time::Date`, so date-only selection does not need a calendar-level timezone prop to keep the chosen day stable.",
+            "If an app needs time-of-day or instant semantics, keep timezone conversion at the surrounding form / date-picker boundary rather than inside the base calendar recipe.",
+        ],
+    );
+
     let notes = doc_layout::notes(
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
-            "Calendar already exposes the important authoring surface (`new`, caption layout, locale, multi-month, week numbers, disabled matchers), so the main parity gap here is usage clarity rather than missing composition APIs.",
+            "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
+            "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
+            "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
             "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
-            "Diagnostics scripts depend on `ui-gallery.calendar.*` test_id prefixes and calendar section doc IDs.",
+            "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
+            "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements, so a generic children API is not currently warranted.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Calendar docs flow: Demo -> Usage. Gallery adds range, pickers, presets, locale, and regression-focused variants.",
+            "Preview mirrors the shadcn docs order first (`Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, examples, `RTL`), then appends Fret-only regression surfaces.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -52,9 +80,22 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            DocSection::new("About", about)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-about"),
+            DocSection::new("Date Picker", date_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-date-picker"),
+            DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-hijri")
+                .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+            DocSection::new("Selected Date (With TimeZone)", selected_date_timezone)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-selected-date-timezone"),
             DocSection::new("Basic", basic)
                 .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-single")
+                .test_id_prefix("ui-gallery-calendar-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Range Calendar", range)
                 .max_w(Px(980.0))
@@ -64,10 +105,6 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-caption")
                 .code_rust_from_file_region(snippets::month_year_selector::SOURCE, "example"),
-            DocSection::new("Date of Birth Picker", date_of_birth_picker)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-dob")
-                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
             DocSection::new("Presets", presets)
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-presets")
@@ -76,10 +113,6 @@ pub(super) fn preview_calendar(
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-time")
                 .code_rust_from_file_region(snippets::date_and_time_picker::SOURCE, "example"),
-            DocSection::new("Natural Language Picker", natural_language_picker)
-                .no_shell()
-                .test_id_prefix("ui-gallery-calendar-natural-language")
-                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
             DocSection::new("Booked dates", booked_dates)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-booked")
@@ -96,10 +129,14 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Persian / Hijri / Jalali Calendar", hijri)
+            DocSection::new("Date of Birth Picker", date_of_birth_picker)
                 .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-calendar-hijri")
-                .code_rust_from_file_region(snippets::hijri::SOURCE, "example"),
+                .test_id_prefix("ui-gallery-calendar-dob")
+                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
+            DocSection::new("Natural Language Picker", natural_language_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-natural-language")
+                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
             DocSection::new("Locale (WIP)", locale)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-locale")
@@ -117,5 +154,5 @@ pub(super) fn preview_calendar(
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-calendar")]
 }

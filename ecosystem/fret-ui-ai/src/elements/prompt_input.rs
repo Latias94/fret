@@ -2372,9 +2372,6 @@ impl PromptInputActionAddAttachments {
     }
 }
 
-#[deprecated(note = "Renamed to PromptInputActionAddAttachments (AI Elements-aligned menu item).")]
-pub type PromptInputActionAddAttachmentsMenuItem = PromptInputActionAddAttachments;
-
 #[derive(Clone)]
 /// Attachments chips row aligned with upstream prompt input attachment outcomes.
 pub struct PromptInputAttachmentsRow {

@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit - Drawer (new-york)
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -14,6 +13,7 @@ registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx`
 - Underlying primitive concept: `vaul` `Drawer` (a drawer-shaped modal surface built on top of a
   dialog-like primitive)
@@ -49,6 +49,8 @@ Upstream exports a thin wrapper around `vaul`:
 
 - Pass: Fret provides `Drawer` as a recipe driven by a `Model<bool>` open state.
 - Pass: Trigger/content composition matches the shadcn mental model.
+- Pass: `Drawer::direction(...)` now aliases the placement surface to match the upstream
+  `direction` prop, while `side(...)` remains as a compatibility escape hatch.
 - Pass: `DrawerTrigger` exists as a thin passthrough wrapper for taxonomy parity.
 - Pass: `DrawerPortal` is exposed for taxonomy parity (portal mounting is owned by the overlay
   manager in Fret).
@@ -57,18 +59,24 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
 - Pass: `DrawerClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
+- Pass: `DrawerClose::from_scope().build(cx, child)` supports composable child-close authoring,
+  which is the Fret-side approximation of upstream `DrawerClose asChild`.
 - Pass: `Drawer::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
-- Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog
-  substrate building blocks (`Title`/`Description`).
+- Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
+  reusing shared dialog substrate building blocks (`Title` / `Description`).
+- Note: Public-surface drift remains at the root authoring surface: Fret still uses a closure/
+  compose root instead of a fully nested children API, but `compose()` is the current recipe-level
+  bridge.
 
 ### Placement & sizing
 
-- Pass: Bottom/top drawers apply `mt-24`/`mb-24`-style edge gaps and cap height to `max-h-[80vh]`
+- Pass: Bottom/top drawers apply `mt-24` / `mb-24`-style edge gaps and cap height to `max-h-[80vh]`
   when using auto-height content.
 - Pass: Left/right drawers use `w-3/4` with an `sm:max-w-sm`-style cap (75% viewport width, capped
   at 384px).
-- Pass: Bottom drawers include the small "handle" affordance region above the content.
+- Pass: Bottom drawers include the small handle affordance region above the content.
+- Pass: Vaul-style snap points are modeled for bottom drawers via `Drawer::snap_points(...)`.
 
 ### Dismissal behavior
 
@@ -81,6 +89,23 @@ Upstream exports a thin wrapper around `vaul`:
   `Drawer::on_dismiss_request(...)` (delegates to `Sheet`).
 - Pass: Open lifecycle callbacks are available via `Drawer::on_open_change(...)` and
   `Drawer::on_open_change_complete(...)` (delegates to `Sheet`).
+- Pass: Bottom drawers support Vaul-style drag-to-dismiss from the handle affordance region.
+
+### Focus behavior
+
+- Pass: Modal barrier scoping prevents underlay focus traversal (ADR 0068).
+- Pass: Focus restore on close is deterministic to the trigger (modal close unmount path).
+
+## Known gaps / intentional differences
+
+- Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet; Fret currently
+  uses a simpler threshold/inertia-based settle-and-dismiss policy.
+
+## Validation
+
+- `cargo check -p fret-ui-shadcn`
+- `cargo nextest run -p fret-ui-shadcn drawer::tests`
+- `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 
 ## Authoring note: `compose()`
 
@@ -91,21 +116,3 @@ style than the raw closure root.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
 - Limitation: this is still not a full React-style nested children API; Fret stores already-built
   elements and assembles them at the final call site.
-- Pass: Bottom drawers support Vaul-style drag-to-dismiss from a small handle affordance region.
-
-### Focus behavior
-
-- Pass: Modal barrier scoping prevents underlay focus traversal (ADR 0068).
-- Pass: Focus restore on close is deterministic to the trigger (modal close unmount path).
-
-## Known gaps / intentional differences
-
-- Pass: Vaul-style snap points are modeled for bottom drawers via `Drawer::snap_points(...)`.
-- Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet (Fret currently
-  uses a simple threshold-based close).
-
-## Validation
-
-- `cargo check -p fret-ui-shadcn`
-- `cargo nextest run -p fret-ui-shadcn drawer::tests`
-- `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`

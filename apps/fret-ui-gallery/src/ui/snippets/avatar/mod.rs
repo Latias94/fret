@@ -6,12 +6,14 @@
 //!
 //! Keep `ui-gallery-avatar-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod badge_icon;
 pub mod basic;
 pub mod demo;
 pub mod dropdown;
 pub mod fallback_only;
 pub mod group;
 pub mod group_count;
+pub mod group_count_icon;
 pub mod rtl;
 pub mod sizes;
 pub mod usage;

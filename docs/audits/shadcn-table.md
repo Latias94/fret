@@ -13,8 +13,11 @@ This audit compares Fret's shadcn-aligned `Table` against the upstream shadcn/ui
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/table.mdx`
+There is no standalone `components/table.mdx` page in the current v4 repo snapshot. Use these sources
+instead:
+
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx`
+- Related docs: `repo-ref/ui/apps/v4/content/docs/components/base/data-table.mdx`
 
 ## Fret implementation
 
@@ -38,7 +41,9 @@ This audit compares Fret's shadcn-aligned `Table` against the upstream shadcn/ui
 ### Layout & behavior parity
 
 - Pass: The root `Table` recipe owns the responsive horizontal overflow container, matching the
-  upstream `relative w-full overflow-x-auto` wrapper outcome.
+  upstream `relative w-full overflow-x-auto` wrapper outcome. Width ownership also matches: the
+  recipe defaults to `w-full`, while caller layout refinements still override the inner table shell
+  when a fixed width or constrained demo needs it.
 - Pass: Header/body/footer/caption remain separate parts, preserving the same authoring boundaries as shadcn.
 - Pass: Table rows expose hover/selection-ready row chrome without forcing higher-level data-table policy
   into the base component.
@@ -47,9 +52,10 @@ This audit compares Fret's shadcn-aligned `Table` against the upstream shadcn/ui
 ## Conclusion
 
 - Result: This component does not currently indicate a missing mechanism-layer issue.
-- Result: The main missing piece was gallery/docs alignment with the upstream `Usage` section.
+- Result: Default-style ownership is already in the right place: responsive overflow and baseline full
+  width live in the recipe, while page-level sizing and wider data-table policy remain caller-owned.
 - Result: Complex data-grid behavior belongs in `DataTable` recipes, not the base `Table` component.
 
 ## Validation
 
-- `cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-shadcn --lib table_root_defaults_to_w_full_but_allows_overrides table_build_ui_builder_path_applies_layout_patches --status-level fail`

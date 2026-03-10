@@ -9,13 +9,18 @@ use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
+use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 #[derive(Default)]
 struct DemoModels {
     removed_ids: Option<Model<Vec<Arc<str>>>>,
+}
+
+#[derive(Default)]
+struct HoverCardModels {
+    open: Option<Model<bool>>,
 }
 
 fn demo_items<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> Vec<ui_ai::AttachmentData> {
@@ -81,9 +86,21 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let on_remove = on_remove.clone();
             let key = Arc::<str>::from(format!("attachments-inline-{}", item_id.as_ref()));
             cx.keyed(key, move |cx| {
+                let open = cx.with_state(HoverCardModels::default, |st| st.open.clone());
+                let open = match open {
+                    Some(model) => model,
+                    None => {
+                        let model = cx.app.models_mut().insert(false);
+                        cx.with_state(HoverCardModels::default, |st| st.open = Some(model.clone()));
+                        model
+                    }
+                };
+                let hover_card_test_id = (item_id.as_ref() == "att-image")
+                    .then_some("ui-ai-attachment-inline-att-image-hover-card");
                 let mut attachment = ui_ai::Attachment::new(item.clone())
                     .variant(ui_ai::AttachmentVariant::Inline)
-                    .on_remove(on_remove.clone());
+                    .on_remove(on_remove.clone())
+                    .hovered_model(open.clone());
                 if item_id.as_ref() == "att-image" {
                     attachment = attachment.test_id("ui-ai-attachment-inline-att-image");
                 }
@@ -158,13 +175,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 .gap(Space::N2)
                 .items_start()
                 .into_element(cx);
-                let hover_content = shadcn::HoverCardContent::new(vec![hover_content])
-                    .refine_style(ChromeRefinement::default().p(Space::N2))
-                    .into_element(cx);
+                let trigger = ui_ai::AttachmentHoverCardTrigger::new(trigger).into_element(cx);
+                let mut hover_content = ui_ai::AttachmentHoverCardContent::new(vec![hover_content]);
+                if let Some(test_id) = hover_card_test_id {
+                    hover_content = hover_content.test_id(test_id);
+                }
 
-                shadcn::HoverCard::new(trigger, hover_content)
-                    .open_delay_frames(0)
-                    .close_delay_frames(0)
+                ui_ai::AttachmentHoverCard::new(trigger, hover_content)
+                    .open_model(open)
                     .into_element(cx)
             })
         })

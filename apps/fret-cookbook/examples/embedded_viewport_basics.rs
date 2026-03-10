@@ -293,14 +293,14 @@ fn view(
     let clicks = cx
         .watch_model(&embedded_models.clicks)
         .paint()
-        .copied_or_default();
-    let uv_x = cx.watch_model(&diag.uv_x).paint().copied_or_default();
-    let uv_y = cx.watch_model(&diag.uv_y).paint().copied_or_default();
-    let target_w = cx.watch_model(&diag.target_w).paint().copied_or_default();
-    let target_h = cx.watch_model(&diag.target_h).paint().copied_or_default();
-    let kind = cx.watch_model(&diag.kind).paint().copied_or_default();
+        .value_or_default();
+    let uv_x = cx.watch_model(&diag.uv_x).paint().value_or_default();
+    let uv_y = cx.watch_model(&diag.uv_y).paint().value_or_default();
+    let target_w = cx.watch_model(&diag.target_w).paint().value_or_default();
+    let target_h = cx.watch_model(&diag.target_h).paint().value_or_default();
+    let kind = cx.watch_model(&diag.kind).paint().value_or_default();
 
-    let preset = cx.watch_model(&st.size_preset).paint().copied_or_default();
+    let preset = cx.watch_model(&st.size_preset).paint().value_or_default();
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
         2 => ((1280, 720), "1280×720"),
@@ -311,7 +311,7 @@ fn view(
     let fit = cx
         .watch_model(&st.fit)
         .paint()
-        .copied_or(ViewportFit::Contain);
+        .value_or(ViewportFit::Contain);
 
     let header = ui::v_flex(|cx| {
         ui::children![
@@ -322,61 +322,51 @@ fn view(
             ),
         ]
     })
-    .gap(Space::N1)
-    .into_element(cx);
+    .gap(Space::N1);
 
     let size_controls = ui::h_flex(|cx| {
         ui::children![
             cx;
-            shadcn::Button::new("640×360")
+            shadcn::Button::new("640?360")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_640)
                 .disabled(preset == 0)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_640),
-            shadcn::Button::new("960×540")
+            shadcn::Button::new("960?540")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_960)
                 .disabled(preset == 1)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_960),
-            shadcn::Button::new("1280×720")
+            shadcn::Button::new("1280?720")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_1280)
                 .disabled(preset == 2)
-                .into_element(cx)
                 .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .into_element(cx),
+                .orientation(shadcn::SeparatorOrientation::Vertical),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)
                 .disabled(fit == ViewportFit::Contain)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_CONTAIN),
             shadcn::Button::new("Cover")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_COVER)
                 .disabled(fit == ViewportFit::Cover)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_COVER),
             shadcn::Button::new("Stretch")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_STRETCH)
                 .disabled(fit == ViewportFit::Stretch)
-                .into_element(cx)
                 .test_id(TEST_ID_FIT_STRETCH),
         ]
     })
     .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
+    .items_center();
 
     let clicks_badge = shadcn::Badge::new(format!("Clicks: {clicks}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_CLICKS)
@@ -385,8 +375,7 @@ fn view(
 
     let uv_x_badge = shadcn::Badge::new(format!("uv.x: {:.3}", uv_x))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_UV_X)
@@ -395,8 +384,7 @@ fn view(
         );
     let uv_y_badge = shadcn::Badge::new(format!("uv.y: {:.3}", uv_y))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_UV_Y)
@@ -406,8 +394,7 @@ fn view(
 
     let target_w_badge = shadcn::Badge::new(format!("target.w: {:.0}", target_w))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_W)
@@ -415,8 +402,7 @@ fn view(
         );
     let target_h_badge = shadcn::Badge::new(format!("target.h: {:.0}", target_h))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_H)
@@ -425,8 +411,7 @@ fn view(
 
     let kind_badge = shadcn::Badge::new(format!("kind: {kind:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_KIND)
@@ -434,10 +419,9 @@ fn view(
         );
 
     let info = ui::h_flex(|cx| {
-        [
-            ui::text(format!("target_px_size preset: {preset_label}"))
-                .text_xs()
-                .into_element(cx),
+        ui::children![
+            cx;
+            ui::text(format!("target_px_size preset: {preset_label}")).text_xs(),
             clicks_badge,
             uv_x_badge,
             uv_y_badge,
@@ -448,18 +432,15 @@ fn view(
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
-    let hint = shadcn::Alert::new([
-        shadcn::AlertTitle::new("What this teaches").into_element(cx),
+    let hint = shadcn::Alert::new(ui::children![
+        cx;
+        shadcn::AlertTitle::new("What this teaches"),
         shadcn::AlertDescription::new(
-            "This panel renders into an offscreen texture and is presented via a ViewportSurface element. \
-Input does not arrive as normal UI pointer events; it is forwarded as ViewportInputEvent at the app level.",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
+            "This panel renders into an offscreen texture and is presented via a ViewportSurface element. Input does not arrive as normal UI pointer events; it is forwarded as ViewportInputEvent at the app level.",
+        ),
+    ]);
 
     let viewport = st
         .embedded
@@ -479,23 +460,31 @@ Input does not arrive as normal UI pointer events; it is forwarded as ViewportIn
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
-        .h_px(Px(420.0))
-        .into_element(cx);
+        .h_px(Px(420.0));
 
-    let content = ui::v_flex(|_cx| vec![hint, viewport_panel])
-        .gap(Space::N3)
-        .into_element(cx);
+    let content = ui::v_flex(|cx| ui::children![cx; hint, viewport_panel]).gap(Space::N3);
 
-    let card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![header, size_controls, info]).into_element(cx),
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardHeader::build(|cx, out| {
+                out.push_ui(cx, header);
+                out.push_ui(cx, size_controls);
+                out.push_ui(cx, info);
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, content);
+            }),
+        );
+    })
     .ui()
     .w_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }
@@ -516,8 +505,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(shadcn::install_app)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }

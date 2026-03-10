@@ -33,6 +33,13 @@ Active workstreams:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CRATE_PLAN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/OWNERSHIP_AUDIT.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/PARITY_MATRIX.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/IMGUI_LIKE_PRESET.md`
+- `docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md`
 - `docs/workstreams/shadcn-motion-parity-audit-v1/DESIGN.md`
 - `docs/workstreams/shadcn-motion-parity-audit-v1/TODO.md`
 - `docs/workstreams/shadcn-motion-parity-audit-v1/MILESTONES.md`

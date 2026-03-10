@@ -4,6 +4,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::context_menu as snippets;
 
 pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
     let usage = snippets::usage::render(cx);
     let submenu = snippets::submenu::render(cx);
@@ -13,13 +14,15 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let checkboxes = snippets::checkboxes::render(cx);
     let radio = snippets::radio::render(cx);
     let destructive = snippets::destructive::render(cx);
+    let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
         cx,
         [
             "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
-            "Context Menu already exposes shadcn-style parts, and `ContextMenu::into_element_parts(...)` is the closest recipe-level bridge for docs-style authoring.",
+            "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, so the remaining gap is mostly docs/page parity rather than missing menu infrastructure.",
+            "A separate generic children API is not required here yet: typed menu entries stay explicit, while `into_element_parts(...)` keeps docs-style authoring ergonomic.",
             "Examples are snippet-backed: preview and code stay in sync.",
             "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
         ],
@@ -28,9 +31,15 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Context Menu examples aligned with upstream shadcn docs: Basic, Usage, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, RTL.",
+            "Context Menu examples aligned with upstream shadcn docs: Demo, Basic, Usage, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, Sides, RTL.",
         ),
         vec![
+            DocSection::new("Demo", demo)
+                .description(
+                    "Official-style combined example with submenu, toggles, and radio items.",
+                )
+                .test_id_prefix("ui-gallery-context-menu-demo")
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Right click on the trigger surface to open the menu.")
                 .test_id_prefix("ui-gallery-context-menu-basic")
@@ -68,13 +77,17 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("Use `variant=Destructive` for irreversible actions.")
                 .test_id_prefix("ui-gallery-context-menu-destructive")
                 .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
+            DocSection::new("Sides", sides)
+                .description("Control content placement with `side` props.")
+                .test_id_prefix("ui-gallery-context-menu-sides")
+                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("RTL layout keeps spacing and submenu direction parity-auditable.")
                 .test_id_prefix("ui-gallery-context-menu-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes),
+            DocSection::new("Notes", notes).test_id_prefix("ui-gallery-context-menu-notes"),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-context-menu")]
 }

@@ -10,14 +10,7 @@ mod util;
 pub(crate) struct ReproCmdContext {
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
-    pub resolved_out_dir: PathBuf,
-    pub resolved_ready_path: PathBuf,
-    pub resolved_exit_path: PathBuf,
-    pub resolved_script_path: PathBuf,
-    pub resolved_script_trigger_path: PathBuf,
-    pub resolved_script_result_path: PathBuf,
-    pub resolved_script_result_trigger_path: PathBuf,
-    pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub resolved_run_context: ResolvedRunContext,
     pub pack_out: Option<PathBuf>,
     pub ensure_ai_packet: bool,
     pub pack_ai_only: bool,
@@ -41,28 +34,61 @@ pub(crate) struct ReproCmdContext {
     pub renderdoc_markers: Vec<String>,
     pub renderdoc_no_outputs_png: bool,
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
+    pub max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images:
+        Option<LinearBytesVsImagesThreshold>,
     pub renderer_gpu_budget_thresholds: RendererGpuBudgetThresholds,
     pub code_editor_memory_thresholds: CodeEditorMemoryThresholds,
     pub render_text_font_db_thresholds: RenderTextFontDbThresholds,
     pub wgpu_hub_counts_thresholds: WgpuHubCountsThresholds,
     pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
+    pub max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images:
+        Option<LinearBytesVsImagesThreshold>,
     pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
     pub checks: diag_run::RunChecks,
+}
+
+fn bundle_artifact_alias_string(path: Option<&Path>) -> Option<String> {
+    path.map(|path| path.display().to_string())
+}
+
+fn build_repro_run_row(
+    script_path: &Path,
+    run_id: u64,
+    stage: Option<&str>,
+    step_index: Option<u64>,
+    reason: Option<&str>,
+    last_bundle_dir: Option<&str>,
+    bundle_path: Option<&Path>,
+) -> serde_json::Value {
+    let bundle_artifact = bundle_artifact_alias_string(bundle_path);
+    serde_json::json!({
+        "script_path": script_path.display().to_string(),
+        "run_id": run_id,
+        "stage": stage,
+        "step_index": step_index,
+        "reason": reason,
+        "last_bundle_dir": last_bundle_dir,
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_artifact_alias_string(bundle_path),
+    })
+}
+
+fn build_repro_packed_bundle_entry(item: &crate::ReproPackItem, idx: usize) -> serde_json::Value {
+    let bundle_artifact = item.bundle_artifact.display().to_string();
+    serde_json::json!({
+        "zip_prefix": repro_zip_prefix_for_script(item, idx),
+        "script_path": item.script_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": item.bundle_artifact.display().to_string(),
+    })
 }
 
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
         workspace_root,
-        resolved_out_dir,
-        resolved_ready_path,
-        resolved_exit_path,
-        resolved_script_path: _resolved_script_path,
-        resolved_script_trigger_path: _resolved_script_trigger_path,
-        resolved_script_result_path,
-        resolved_script_result_trigger_path: _resolved_script_result_trigger_path,
-        fs_transport_cfg,
+        resolved_run_context,
         pack_out,
         ensure_ai_packet,
         pack_ai_only,
@@ -86,15 +112,30 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         renderdoc_markers,
         renderdoc_no_outputs_png,
         resource_footprint_thresholds,
+        max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images,
         renderer_gpu_budget_thresholds,
         code_editor_memory_thresholds,
         render_text_font_db_thresholds,
         wgpu_hub_counts_thresholds,
         max_wgpu_metal_current_allocated_size_bytes,
+        max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images,
         max_render_text_atlas_bytes_live_estimate_total,
         check_redraw_hitches_max_total_ms_threshold,
         checks,
     } = ctx;
+
+    let ResolvedRunContext {
+        paths: resolved_paths,
+        fs_transport_cfg,
+    } = resolved_run_context;
+
+    let resolved_out_dir = resolved_paths.out_dir;
+    let resolved_ready_path = resolved_paths.ready_path;
+    let resolved_exit_path = resolved_paths.exit_path;
+    let _resolved_script_path = resolved_paths.script_path;
+    let _resolved_script_trigger_path = resolved_paths.script_trigger_path;
+    let resolved_script_result_path = resolved_paths.script_result_path;
+    let _resolved_script_result_trigger_path = resolved_paths.script_result_trigger_path;
 
     let checks_for_post_run = checks.clone();
 
@@ -104,6 +145,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id,
         check_gc_sweep_liveness,
         check_hover_layout_max,
+        check_hello_world_compare_idle_present_max_delta,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
         check_node_graph_cull_window_shifts_max,
@@ -345,9 +387,13 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let mut repro_process_footprint: Option<serde_json::Value> = None;
     let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
+    let mut macos_owned_unmapped_linear_vs_images_gate: Option<LinearBytesVsImagesGateResult> =
+        None;
     let mut renderer_gpu_budgets_gate: Option<RendererGpuBudgetsGateResult> = None;
     let mut wgpu_hub_counts_gate: Option<WgpuHubCountsGateResult> = None;
     let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
+    let mut wgpu_metal_allocated_size_linear_vs_images_gate: Option<LinearBytesVsImagesGateResult> =
+        None;
     let mut render_text_atlas_bytes_gate: Option<RenderTextAtlasBytesGateResult> = None;
     let mut code_editor_memory_gate: Option<CodeEditorMemoryGateResult> = None;
     let mut render_text_font_db_gate: Option<RenderTextFontDbGateResult> = None;
@@ -529,19 +575,20 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             selected_bundle_path = bundle_path.clone();
         }
 
-        run_rows.push(serde_json::json!({
-            "script_path": src.display().to_string(),
-            "run_id": result.run_id,
-            "stage": result.stage,
-            "step_index": result.step_index,
-            "reason": result.reason,
-            "last_bundle_dir": result.last_bundle_dir,
-            "bundle_json": bundle_path.as_ref().map(|p| p.display().to_string()),
-        }));
+        run_rows.push(build_repro_run_row(
+            &src,
+            result.run_id,
+            result.stage.as_deref(),
+            result.step_index,
+            result.reason.as_deref(),
+            result.last_bundle_dir.as_deref(),
+            bundle_path.as_deref(),
+        ));
 
         if result.stage.as_deref() == Some("passed") {
             let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                 || check_stale_scene_test_id.is_some()
+                || check_hello_world_compare_idle_present_max_delta.is_some()
                 || check_idle_no_paint_min.is_some()
                 || check_pixels_changed_test_id.is_some()
                 || check_pixels_unchanged_test_id.is_some()
@@ -640,7 +687,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 };
 
                 if let Err(err) = apply_post_run_checks(
-                    bundle_path,
+                    Some(bundle_path),
                     &resolved_out_dir,
                     &checks_for_post_run,
                     warmup_frames,
@@ -689,14 +736,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             pack_items
                 .iter()
                 .enumerate()
-                .map(|(idx, item)| {
-                    serde_json::json!({
-                        "zip_prefix": repro_zip_prefix_for_script(item, idx),
-                        "script_path": item.script_path.display().to_string(),
-                        "bundle_json": item.bundle_artifact.display().to_string(),
-                        "bundle_artifact": item.bundle_artifact.display().to_string(),
-                    })
-                })
+                .map(|(idx, item)| build_repro_packed_bundle_entry(item, idx))
                 .collect(),
         )
     } else {
@@ -729,6 +769,19 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             &resource_footprint_thresholds,
         )
         .ok();
+    }
+    if let Some(thr) = max_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        macos_owned_unmapped_linear_vs_images_gate =
+            check_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images(
+                &resolved_out_dir,
+                &repro_process_footprint_file,
+                bundle_path,
+                thr,
+            )
+            .ok();
     }
     if renderer_gpu_budget_thresholds.any() {
         let bundle_path = packed_bundle_artifact
@@ -773,6 +826,18 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             max_bytes,
         )
         .ok();
+    }
+    if let Some(thr) = max_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        wgpu_metal_allocated_size_linear_vs_images_gate =
+            check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images(
+                &resolved_out_dir,
+                bundle_path,
+                thr,
+            )
+            .ok();
     }
     if let Some(max_bytes) = max_render_text_atlas_bytes_live_estimate_total {
         let bundle_path = packed_bundle_artifact
@@ -898,6 +963,18 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         ));
         overall_reason_code = Some("tooling.resource_footprint.failed".to_string());
     }
+    if let Some(r) = macos_owned_unmapped_linear_vs_images_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "macOS owned unmapped memory linear-vs-images gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code =
+            Some("tooling.macos_owned_unmapped_linear_vs_images.failed".to_string());
+    }
     if let Some(r) = renderer_gpu_budgets_gate.as_ref()
         && r.failures > 0
         && overall_error.is_none()
@@ -941,6 +1018,18 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.wgpu_metal_allocated_size.failed".to_string());
+    }
+    if let Some(r) = wgpu_metal_allocated_size_linear_vs_images_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "wgpu Metal allocated size linear-vs-images gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code =
+            Some("tooling.wgpu_metal_allocated_size_linear_vs_images.failed".to_string());
     }
     if let Some(r) = render_text_atlas_bytes_gate.as_ref()
         && r.failures > 0
@@ -1003,4 +1092,50 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     println!("REPRO-OK");
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_repro_run_row_writes_canonical_bundle_artifact_first() {
+        let row = build_repro_run_row(
+            Path::new("tools/diag-scripts/sample.json"),
+            7,
+            Some("passed"),
+            Some(1),
+            Some("ok"),
+            Some("777-bundle"),
+            Some(Path::new("target/fret-diag/bundle.schema2.json")),
+        );
+
+        assert_eq!(
+            row.get("bundle_artifact").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+        assert_eq!(
+            row.get("bundle_json").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
+
+    #[test]
+    fn build_repro_packed_bundle_entry_dual_writes_legacy_alias() {
+        let item = crate::ReproPackItem {
+            script_path: PathBuf::from("tools/diag-scripts/sample.json"),
+            bundle_artifact: PathBuf::from("target/fret-diag/bundle.schema2.json"),
+        };
+
+        let row = build_repro_packed_bundle_entry(&item, 0);
+
+        assert_eq!(
+            row.get("bundle_artifact").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+        assert_eq!(
+            row.get("bundle_json").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+    }
 }

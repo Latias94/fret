@@ -33,17 +33,17 @@ impl View for HelloView {
             "RenderedAgain"
         };
 
-        let count = cx.use_state::<u32>();
-        let count_value = cx.watch_model(&count).layout().copied_or(0);
+        let count_state = cx.use_local::<u32>();
+        let count_value = count_state.layout(cx).value_or(0);
 
-        cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
+        cx.on_action_notify_local_update::<act::Click, u32>(&count_state, |v| {
             *v = v.saturating_add(1);
             println!("hello: clicked");
         });
 
         cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        ui::v_flex(|cx| {
+        let root = ui::v_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
@@ -58,9 +58,9 @@ impl View for HelloView {
         .gap(Space::N4)
         .items_center()
         .justify_center()
-        .test_id(TEST_ID_ROOT)
-        .into_element(cx)
-        .into()
+        .test_id(TEST_ID_ROOT);
+
+        root.into_element(cx).into()
     }
 }
 

@@ -26,26 +26,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     );
 
-    let content = shadcn::DialogContent::new([
-        shadcn::DialogClose::from_scope()
-            .into_element(cx)
-            .test_id("ui-gallery-dialog-parts-close"),
-        shadcn::DialogHeader::new([
-            shadcn::DialogTitle::new("Parts dialog").into_element(cx),
-            shadcn::DialogDescription::new("Part surface adapter for shadcn-style authoring.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx)
-    .test_id("ui-gallery-dialog-parts-content");
-
     shadcn::Dialog::new(open)
         .compose()
         .trigger(trigger)
         .portal(shadcn::DialogPortal::new())
         .overlay(shadcn::DialogOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            shadcn::DialogContent::new([
+                shadcn::DialogClose::from_scope()
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-parts-close"),
+                shadcn::DialogHeader::new([
+                    shadcn::DialogTitle::new("Parts dialog").into_element(cx),
+                    shadcn::DialogDescription::new(
+                        "Part surface adapter for shadcn-style authoring.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-dialog-parts-content")
+        })
         .into_element(cx)
 }
 // endregion: example

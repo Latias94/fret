@@ -146,6 +146,7 @@ pub(crate) struct ElementRecord {
     pub element: GlobalElementId,
     pub instance: ElementInstance,
     pub inherited_foreground: Option<Color>,
+    pub inherited_text_style: Option<fret_core::TextStyleRefinement>,
     pub semantics_decoration: Option<crate::element::SemanticsDecoration>,
     pub key_context: Option<Arc<str>>,
 }
@@ -204,6 +205,17 @@ pub(crate) fn with_element_record_for_node<H: UiHost, R>(
             .and_then(|w| w.instances.get(node))
             .map(f)
     })
+}
+
+pub(crate) fn inherited_text_style_for_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+) -> Option<fret_core::TextStyleRefinement> {
+    with_element_record_for_node(app, window, node, |record| {
+        record.inherited_text_style.clone()
+    })
+    .flatten()
 }
 
 #[allow(dead_code)]

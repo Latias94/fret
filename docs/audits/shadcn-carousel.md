@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit - Carousel
+# shadcn/ui v4 Audit — Carousel
 
 ## Upstream references (non-normative)
 
@@ -14,7 +14,7 @@ Embla-inspired authoring outcomes.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx`
 
 ## Fret implementation
 
@@ -27,28 +27,21 @@ Embla-inspired authoring outcomes.
 ### Authoring surface
 
 - Pass: `Carousel::new(items)` / `Carousel::items(...)` already cover the compact builder path.
-- Pass: `Carousel::into_element_parts(...)` plus `CarouselContent`, `CarouselItem`,
-  `CarouselPrevious`, and `CarouselNext` expose the upstream-shaped parts surface for copyable examples.
-- Pass: `opts(...)`, `orientation(...)`, spacing helpers, responsive item breakpoints, and plugin hooks
-  cover the important shadcn + Embla recipe outcomes.
-- Note: Because Fret already exposes both the compact builder and the parts authoring surface, it does
-  not need an additional generic `compose()` builder here.
+- Pass: `Carousel::into_element_parts(...)` plus `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` expose the upstream-shaped parts surface for copyable examples.
+- Pass: `opts(...)`, `orientation(...)`, spacing helpers, responsive item breakpoints, and plugin hooks cover the important shadcn + Embla recipe outcomes.
+- Pass: because Fret already exposes both the compact builder and the parts authoring surface, it does not need an additional generic `compose()` builder here.
 
 ### Layout & behavior parity
 
-- Pass: Responsive item sizing is representable via `CarouselItem::viewport_layout_breakpoint(...)`,
-  covering shadcn `md:basis-*` / `lg:basis-*` outcomes.
-- Pass: Spacing parity is modeled through `track_start_neg_margin` + `item_padding_start`, matching the
-  upstream `-ml-*` + `pl-*` recipe.
-- Pass: Orientation, loop, options, events, API snapshot/handle, and autoplay/wheel plugins are already
-  covered by the existing gallery surface.
+- Pass: responsive item sizing is representable via `CarouselItem::viewport_layout_breakpoint(...)`, covering shadcn `md:basis-*` / `lg:basis-*` outcomes.
+- Pass: spacing parity is modeled through `track_start_neg_margin` + `item_padding_start`, matching the upstream `-ml-*` + `pl-*` recipe.
+- Pass: orientation, loop, options, events, API snapshot/handle, and autoplay/wheel plugins are already covered by the existing gallery surface.
 
-## Conclusion
+### Defer rationale
 
-- Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing surface.
-- Result: The main missing piece for docs parity was a concise gallery `Usage` example.
-- Result: Composable authoring is already supported; follow-up work should focus on concrete engine/interaction
-  regressions only if they appear.
+- Pass: this surface has already been audited enough to show no obvious shadcn-facing mechanism or public-surface gap.
+- Pass: status remains `Defer` because carousel is not currently editor-critical for Fret's near-term core/ecosystem priorities.
+- Pass: follow-up work should only resume when a concrete engine, input, or layout regression appears.
 
 ## Validation
 

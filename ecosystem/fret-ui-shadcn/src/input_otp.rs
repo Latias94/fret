@@ -1,15 +1,19 @@
-use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
+use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     PositionStyle, SemanticsDecoration, ShadowLayerStyle, ShadowStyle, SizeStyle, TextInputProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -130,12 +134,16 @@ pub enum InputOtpSlotCornerMode {
 #[derive(Clone)]
 pub struct InputOtp {
     model: Model<String>,
+    a11y_label: Option<Arc<str>>,
+    labelled_by_element: Option<GlobalElementId>,
+    control_id: Option<ControlId>,
     length: usize,
     pattern: InputOtpPattern,
     group_size: Option<usize>,
     explicit_groups: Option<Vec<Vec<usize>>>,
     separator_mode: InputOtpSeparatorMode,
     aria_invalid: bool,
+    aria_required: bool,
     disabled: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -153,6 +161,9 @@ impl std::fmt::Debug for InputOtp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InputOtp")
             .field("model", &"<model>")
+            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("labelled_by_element", &self.labelled_by_element)
+            .field("control_id", &self.control_id)
             .field("length", &self.length)
             .field("pattern", &self.pattern)
             .field("group_size", &self.group_size)
@@ -162,6 +173,7 @@ impl std::fmt::Debug for InputOtp {
             )
             .field("separator_mode", &self.separator_mode)
             .field("aria_invalid", &self.aria_invalid)
+            .field("aria_required", &self.aria_required)
             .field("disabled", &self.disabled)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -187,12 +199,16 @@ impl InputOtp {
     pub fn new(model: Model<String>) -> Self {
         Self {
             model,
+            a11y_label: None,
+            labelled_by_element: None,
+            control_id: None,
             length: 6,
             pattern: InputOtpPattern::Digits,
             group_size: None,
             explicit_groups: None,
             separator_mode: InputOtpSeparatorMode::AutoBetweenGroups,
             aria_invalid: false,
+            aria_required: false,
             disabled: false,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
@@ -205,6 +221,21 @@ impl InputOtp {
             slot_line_height_px_override: None,
             slot_corner_mode: InputOtpSlotCornerMode::default(),
         }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
+        self.labelled_by_element = Some(label);
+        self
+    }
+
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
     }
 
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
@@ -239,6 +270,11 @@ impl InputOtp {
     /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn aria_required(mut self, aria_required: bool) -> Self {
+        self.aria_required = aria_required;
         self
     }
 
@@ -408,13 +444,19 @@ impl InputOtp {
                 chrome.preedit_color = Color::TRANSPARENT;
                 chrome.preedit_underline_color = Color::TRANSPARENT;
 
+                let has_a11y_label = self.a11y_label.is_some();
+                let control_id = self.control_id.clone();
+                let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+
                 let mut input = TextInputProps::new(self.model);
                 input.chrome = chrome;
                 input.text_style = slot_text_style.clone();
                 input.test_id = input_test_id.clone();
+                input.a11y_label = self.a11y_label.clone();
                 input.a11y_invalid = self
                     .aria_invalid
                     .then_some(fret_core::SemanticsInvalid::True);
+                input.a11y_required = self.aria_required;
                 input.enabled = !self.disabled;
                 input.focusable = !self.disabled;
                 input.layout = LayoutStyle {
@@ -433,9 +475,64 @@ impl InputOtp {
                     overflow: fret_ui::element::Overflow::Clip,
                     ..Default::default()
                 };
-                let input_el = cx.text_input(input);
+                let mut input_el = cx.text_input(input);
 
                 let input_id = input_el.id;
+                if let (Some(control_id), Some(control_registry)) =
+                    (control_id.clone(), control_registry.clone())
+                {
+                    let entry = ControlEntry {
+                        element: input_id,
+                        enabled: !self.disabled,
+                        action: ControlAction::FocusOnly,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+
+                let labelled_by_element = if self.labelled_by_element.is_some() {
+                    self.labelled_by_element
+                } else if has_a11y_label {
+                    None
+                } else if let (Some(control_id), Some(control_registry)) =
+                    (control_id.as_ref(), control_registry.as_ref())
+                {
+                    cx.app
+                        .models()
+                        .read(control_registry, |reg| {
+                            reg.label_for(cx.window, control_id).map(|l| l.element)
+                        })
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                let described_by_element = if let (Some(control_id), Some(control_registry)) =
+                    (control_id.as_ref(), control_registry.as_ref())
+                {
+                    cx.app
+                        .models()
+                        .read(control_registry, |reg| {
+                            reg.described_by_for(cx.window, control_id)
+                        })
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                if labelled_by_element.is_some() || described_by_element.is_some() {
+                    let mut decoration = SemanticsDecoration::default();
+                    if let Some(label) = labelled_by_element {
+                        decoration = decoration.labelled_by_element(label.0);
+                    }
+                    if let Some(desc) = described_by_element {
+                        decoration = decoration.described_by_element(desc.0);
+                    }
+                    input_el = input_el.attach_semantics(decoration);
+                }
                 let focused = cx.is_focused_element(input_id) && !self.disabled;
                 let active_slot_idx = focused.then(|| chars.len().min(length.saturating_sub(1)));
                 let fake_caret_idx = (focused && chars.len() < length).then_some(chars.len());
@@ -683,32 +780,37 @@ impl InputOtp {
                     };
 
                     if show_separator {
-                        pieces.push(cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Px(Px(24.0)),
-                                        height: Length::Px(Px(24.0)),
+                        pieces.push(
+                            cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(24.0)),
+                                            height: Length::Px(Px(24.0)),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
-                                    ..Default::default()
+                                    direction: Axis::Horizontal,
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
                                 },
-                                direction: Axis::Horizontal,
-                                gap: Px(0.0).into(),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                vec![decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::MINUS,
-                                    Some(Px(24.0)),
-                                    Some(ColorRef::Color(separator_color)),
-                                )]
-                            },
-                        ));
+                                move |cx| {
+                                    vec![decl_icon::icon_with(
+                                        cx,
+                                        ids::ui::MINUS,
+                                        Some(Px(24.0)),
+                                        Some(ColorRef::Color(separator_color)),
+                                    )]
+                                },
+                            )
+                            .attach_semantics(
+                                SemanticsDecoration::default().role(SemanticsRole::Separator),
+                            ),
+                        );
                     }
                 }
 
@@ -1544,6 +1646,71 @@ mod tests {
         assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 
+    #[test]
+    fn input_otp_control_id_uses_registry_labelled_by_and_described_by_elements() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let root = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "control-id-input-otp",
+            |cx| {
+                let id =
+                    fret_ui_kit::primitives::control_registry::ControlId::from("otp-verification");
+
+                cx.column(fret_ui::element::ColumnProps::default(), move |cx| {
+                    vec![
+                        crate::field::FieldLabel::new("Verification code")
+                            .for_control(id.clone())
+                            .into_element(cx),
+                        crate::field::FieldDescription::new(
+                            "Click the label to focus the OTP control.",
+                        )
+                        .for_control(id.clone())
+                        .into_element(cx),
+                        InputOtp::new(model.clone()).control_id(id).into_element(cx),
+                    ]
+                })
+            },
+        );
+
+        let label_id = root.children[0].id;
+        let desc_id = root.children[1].id;
+
+        fn find_text_input(el: &AnyElement) -> Option<&AnyElement> {
+            if matches!(el.kind, fret_ui::element::ElementKind::TextInput(_)) {
+                return Some(el);
+            }
+            for child in &el.children {
+                if let Some(found) = find_text_input(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let input = find_text_input(&root).expect("expected a TextInput node");
+        let decoration = input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(label_id.0));
+        assert_eq!(decoration.described_by_element, Some(desc_id.0));
+    }
+
     fn count_svg_icons(node: &AnyElement) -> usize {
         let mut out = match &node.kind {
             fret_ui::element::ElementKind::SvgIcon(_) => 1,
@@ -1553,6 +1720,15 @@ mod tests {
             out += count_svg_icons(child);
         }
         out
+    }
+
+    fn has_semantics_role(node: &AnyElement, role: SemanticsRole) -> bool {
+        if node.semantics_decoration.as_ref().and_then(|d| d.role) == Some(role) {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|child| has_semantics_role(child, role))
     }
 
     #[test]
@@ -1594,6 +1770,10 @@ mod tests {
 
         assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
         assert_eq!(count_svg_icons(&element), 1);
+        assert!(
+            has_semantics_role(&element, SemanticsRole::Separator),
+            "expected InputOTPSeparator to emit separator semantics like upstream role=separator"
+        );
     }
 
     #[test]

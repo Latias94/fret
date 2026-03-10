@@ -872,41 +872,48 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     )
                 };
 
+                let viewport_bounds = scroll_viewport_bounds(&handle, cx.bounds);
                 crate::widget::ScrollIntoViewResult::Handled {
                     did_scroll: {
                         // Scroll content is translated at paint/input time (children-only transform),
                         // so `descendant_bounds` is expressed in the unscrolled content coordinate
-                        // space. Map the viewport into that same space before computing the delta.
+                        // space. Map the effective viewport into that same space before computing
+                        // the delta.
                         let offset = handle.offset();
                         let viewport_in_content = Rect::new(
                             Point::new(
-                                Px(cx.bounds.origin.x.0 + offset.x.0),
-                                Px(cx.bounds.origin.y.0 + offset.y.0),
+                                Px(viewport_bounds.origin.x.0 + offset.x.0),
+                                Px(viewport_bounds.origin.y.0 + offset.y.0),
                             ),
-                            cx.bounds.size,
+                            viewport_bounds.size,
                         );
-                        scroll_handle_into_view_y(&handle, viewport_in_content, descendant_bounds)
+                        scroll_handle_into_view(&handle, viewport_in_content, descendant_bounds)
                     },
+                    propagated_bounds: Some(viewport_bounds),
                 }
             }
-            ElementInstance::VirtualList(props) => crate::widget::ScrollIntoViewResult::Handled {
-                did_scroll: {
-                    // VirtualList content is translated at paint/input time (children-only
-                    // transform), so `descendant_bounds` is expressed in the unscrolled content
-                    // coordinate space. Map the viewport into that same space before computing
-                    // the delta.
-                    let handle = props.scroll_handle.base_handle();
-                    let offset = handle.offset();
-                    let viewport_in_content = Rect::new(
-                        Point::new(
-                            Px(cx.bounds.origin.x.0 + offset.x.0),
-                            Px(cx.bounds.origin.y.0 + offset.y.0),
-                        ),
-                        cx.bounds.size,
-                    );
-                    scroll_handle_into_view_y(handle, viewport_in_content, descendant_bounds)
-                },
-            },
+            ElementInstance::VirtualList(props) => {
+                let handle = props.scroll_handle.base_handle();
+                let viewport_bounds = scroll_viewport_bounds(handle, cx.bounds);
+                crate::widget::ScrollIntoViewResult::Handled {
+                    did_scroll: {
+                        // VirtualList content is translated at paint/input time (children-only
+                        // transform), so `descendant_bounds` is expressed in the unscrolled content
+                        // coordinate space. Map the effective viewport into that same space before
+                        // computing the delta.
+                        let offset = handle.offset();
+                        let viewport_in_content = Rect::new(
+                            Point::new(
+                                Px(viewport_bounds.origin.x.0 + offset.x.0),
+                                Px(viewport_bounds.origin.y.0 + offset.y.0),
+                            ),
+                            viewport_bounds.size,
+                        );
+                        scroll_handle_into_view(handle, viewport_in_content, descendant_bounds)
+                    },
+                    propagated_bounds: Some(viewport_bounds),
+                }
+            }
             _ => crate::widget::ScrollIntoViewResult::NotHandled,
         }
     }
@@ -961,22 +968,62 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
     }
 }
 
-fn scroll_handle_into_view_y(
+fn scroll_viewport_bounds(handle: &crate::scroll::ScrollHandle, fallback: Rect) -> Rect {
+    // The scroll handle owns the authoritative viewport size after layout. Some scroll nodes can
+    // keep a zero-sized layout bounds entry in nested shrink-wrapping trees, so scroll-into-view
+    // must not rely on `cx.bounds.size` alone.
+    let viewport = handle.viewport_size();
+    Rect::new(
+        fallback.origin,
+        Size::new(
+            if viewport.width.0 > 0.0 {
+                viewport.width
+            } else {
+                fallback.size.width
+            },
+            if viewport.height.0 > 0.0 {
+                viewport.height
+            } else {
+                fallback.size.height
+            },
+        ),
+    )
+}
+
+fn scroll_handle_into_view(
     handle: &crate::scroll::ScrollHandle,
     viewport: Rect,
     child: Rect,
 ) -> bool {
+    let viewport_w = viewport.size.width.0.max(0.0);
     let viewport_h = viewport.size.height.0.max(0.0);
-    if viewport_h <= 0.0 {
+    if viewport_w <= 0.0 && viewport_h <= 0.0 {
         return false;
     }
 
+    let view_left = viewport.origin.x.0;
     let view_top = viewport.origin.y.0;
+    let view_right = view_left + viewport_w;
     let view_bottom = view_top + viewport_h;
+
+    let child_left = child.origin.x.0;
     let child_top = child.origin.y.0;
+    let child_right = child_left + child.size.width.0.max(0.0);
     let child_bottom = child_top + child.size.height.0.max(0.0);
 
-    let delta = if child_top < view_top {
+    let delta_x = if viewport_w <= 0.0 {
+        0.0
+    } else if child_left < view_left {
+        child_left - view_left
+    } else if child_right > view_right {
+        child_right - view_right
+    } else {
+        0.0
+    };
+
+    let delta_y = if viewport_h <= 0.0 {
+        0.0
+    } else if child_top < view_top {
         child_top - view_top
     } else if child_bottom > view_bottom {
         child_bottom - view_bottom
@@ -984,13 +1031,13 @@ fn scroll_handle_into_view_y(
         0.0
     };
 
-    if delta.abs() <= 0.01 {
+    if delta_x.abs() <= 0.01 && delta_y.abs() <= 0.01 {
         return false;
     }
 
     let prev = handle.offset();
-    handle.set_offset(Point::new(prev.x, Px(prev.y.0 + delta)));
+    handle.set_offset(Point::new(Px(prev.x.0 + delta_x), Px(prev.y.0 + delta_y)));
 
     let next = handle.offset();
-    (prev.y.0 - next.y.0).abs() > 0.01
+    (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
 }

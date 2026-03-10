@@ -7,7 +7,7 @@
     "target_hints": [
       "Sets theme preset to zinc/dark.",
       "Navigates to the AI Elements stack trace demo.",
-      "Captures screenshots for closed/open states and copy feedback."
+      "Captures screenshots for default-open, collapsed, and copy-feedback states."
     ]
   },
   "steps": [
@@ -59,7 +59,21 @@
       "timeout_frames": 1800
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-ai-stack-trace-closed-zinc-dark" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-content" } },
+      "timeout_frames": 600
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-stack-trace-open-zinc-dark" },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-header" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-content" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-stack-trace-collapsed-zinc-dark" },
 
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-header" } },
     {
@@ -67,9 +81,6 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-content" } },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-ai-stack-trace-open-zinc-dark" },
-
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-stack-trace-copy" } },
     {
       "type": "wait_until",
@@ -81,4 +92,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-stack-trace-zinc-dark", "max_snapshots": 240 }
   ]
 }
-

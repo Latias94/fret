@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
+};
 use fret_ui::element::{AnyElement, LayoutStyle, TextInkOverflow, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -21,6 +23,44 @@ pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
 
 pub(crate) fn text_prose_style(theme: &Theme) -> TextStyle {
     ui_typography::control_text_style(theme, UiTextSize::Prose)
+}
+
+pub(crate) fn text_xs_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&text_xs_style(theme))
+}
+
+pub(crate) fn text_sm_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&text_sm_style(theme))
+}
+
+pub(crate) fn text_base_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&text_base_style(theme))
+}
+
+pub(crate) fn text_prose_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&text_prose_style(theme))
+}
+
+fn scoped_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    refinement: TextStyleRefinement,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+) -> AnyElement {
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap,
+            overflow,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
@@ -69,20 +109,11 @@ pub fn text_nowrap<H: UiHost>(
 /// - `component.text.sm_line_height`
 #[track_caller]
 pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_sm_style(theme)
+        text_sm_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
 /// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
@@ -92,20 +123,11 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
 /// - `component.text.xs_line_height`
 #[track_caller]
 pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_xs_style(theme)
+        text_xs_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
 /// Declarative text helper that matches Tailwind's `text-base` default usage in shadcn recipes.
@@ -117,20 +139,11 @@ pub fn text_base<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_base_style(theme)
+        text_base_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
 /// Declarative text helper intended for typography pages (`prose`-like body copy).
@@ -150,20 +163,11 @@ pub fn text_prose<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_prose_style(theme)
+        text_prose_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
 /// `text_prose` variant that matches Tailwind's `break-words` intent:
@@ -172,43 +176,31 @@ pub fn text_prose_break_words<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_prose_style(theme)
+        text_prose_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::WordBreak,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(
+        cx,
+        text,
+        refinement,
+        TextWrap::WordBreak,
+        TextOverflow::Clip,
+    )
 }
 
-/// Bold variant of [`text_prose`], intended for typography table headers (`<th className=\"... font-bold\">`).
+/// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
 pub fn text_prose_bold<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let mut style = {
+    let mut refinement = {
         let theme = Theme::global(&*cx.app);
-        text_prose_style(theme)
+        text_prose_refinement(theme)
     };
-    style.weight = fret_core::FontWeight::BOLD;
+    refinement.weight = Some(FontWeight::BOLD);
 
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
 /// Returns the default label style and line-height baseline used by `primitives::label`.
@@ -223,8 +215,15 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let mut style = ui_typography::fixed_line_box_style(FontId::ui(), px, line_height);
-    style.weight = fret_core::FontWeight::MEDIUM;
+    style.weight = FontWeight::MEDIUM;
     (style, line_height)
+}
+
+pub(crate) fn label_text_refinement(theme: &Theme) -> (TextStyleRefinement, Px) {
+    let (style, line_height) = label_style(theme);
+    let mut refinement = ui_typography::composable_refinement_from_style(&style);
+    refinement.font = Some(FontId::ui());
+    (refinement, line_height)
 }
 
 /// Declarative helper intended for code-like inline text.
@@ -236,25 +235,16 @@ pub fn text_code_wrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        ui_typography::fixed_line_box_style(
+        ui_typography::composable_refinement_from_style(&ui_typography::fixed_line_box_style(
             FontId::monospace(),
             theme.metric_token("metric.font.mono_size"),
             theme.metric_token("metric.font.mono_line_height"),
-        )
+        ))
     };
 
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::Grapheme,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::Grapheme, TextOverflow::Clip)
 }
 
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).
@@ -262,20 +252,11 @@ pub fn text_prose_nowrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let style = {
+    let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_prose_style(theme)
+        text_prose_refinement(theme)
     };
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::None, TextOverflow::Clip)
 }
 
 /// Bold variant of [`text_prose_nowrap`].
@@ -283,20 +264,138 @@ pub fn text_prose_bold_nowrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let mut style = {
+    let mut refinement = {
         let theme = Theme::global(&*cx.app);
-        text_prose_style(theme)
+        text_prose_refinement(theme)
     };
-    style.weight = fret_core::FontWeight::BOLD;
+    refinement.weight = Some(FontWeight::BOLD);
 
-    cx.text_props(TextProps {
-        layout: LayoutStyle::default(),
-        text: text.into(),
-        style: Some(style),
-        color: None,
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    })
+    scoped_text(cx, text, refinement, TextWrap::None, TextOverflow::Clip)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+    use fret_ui::{Theme, ThemeConfig};
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Text Helpers Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 13.0),
+                    ("font.line_height".to_string(), 20.0),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_XS_PX.to_string(),
+                        12.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT.to_string(),
+                        16.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_SM_PX.to_string(),
+                        13.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT.to_string(),
+                        18.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_BASE_PX.to_string(),
+                        14.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT.to_string(),
+                        20.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_PROSE_PX.to_string(),
+                        16.0,
+                    ),
+                    (
+                        crate::theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string(),
+                        24.0,
+                    ),
+                    ("metric.font.mono_size".to_string(), 13.0),
+                    ("metric.font.mono_line_height".to_string(), 18.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        app
+    }
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn text_sm_scopes_inherited_refinement_without_leaf_style() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el =
+            elements::with_element_cx(&mut app, window, bounds, "test", |cx| text_sm(cx, "Hello"));
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_sm(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn prose_variants_and_code_wrap_install_semantic_inherited_overrides() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+        let mut expected_prose = {
+            let theme = Theme::global(&app);
+            text_prose_refinement(theme)
+        };
+        expected_prose.weight = Some(FontWeight::BOLD);
+
+        let prose_bold = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_prose_bold(cx, "Heading")
+        });
+        let ElementKind::Text(props) = &prose_bold.kind else {
+            panic!("expected text_prose_bold(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(prose_bold.inherited_text_style, Some(expected_prose));
+
+        let code = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_code_wrap(cx, "let answer = 42;")
+        });
+        let ElementKind::Text(props) = &code.kind else {
+            panic!("expected text_code_wrap(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Grapheme);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            code.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(FontId::monospace())
+        );
+    }
 }

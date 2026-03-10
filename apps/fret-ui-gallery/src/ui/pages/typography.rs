@@ -81,6 +81,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-typography-notes")
                 .description("API reference pointers and authoring notes."),
         ],
     );

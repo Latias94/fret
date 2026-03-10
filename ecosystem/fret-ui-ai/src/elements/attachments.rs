@@ -6,12 +6,14 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, ImageId, Px, SemanticsRole, TextOverflow, TextWrap, ViewportFit};
 use fret_icons::IconId;
+use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle,
     Length, MarginEdge, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
@@ -20,7 +22,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::button::ButtonStyle;
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant};
 
 pub type OnAttachmentActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 pub type OnAttachmentRemove = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
@@ -342,6 +344,7 @@ pub struct Attachment {
     preview_test_id: Option<Arc<str>>,
     info_test_id: Option<Arc<str>>,
     remove_test_id: Option<Arc<str>>,
+    hovered_model: Option<Model<bool>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -371,6 +374,7 @@ impl Attachment {
             preview_test_id: None,
             info_test_id: None,
             remove_test_id: None,
+            hovered_model: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -413,6 +417,11 @@ impl Attachment {
 
     pub fn remove_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.remove_test_id = Some(id.into());
+        self
+    }
+
+    pub fn hovered_model(mut self, model: Model<bool>) -> Self {
+        self.hovered_model = Some(model);
         self
     }
 
@@ -479,12 +488,19 @@ impl Attachment {
         let preview_test_id = self.preview_test_id;
         let info_test_id = self.info_test_id;
         let remove_test_id = self.remove_test_id;
+        let hovered_model = self.hovered_model;
 
         let mut hover = HoverRegionProps::default();
         hover.layout = decl_style::layout_style(&theme, item_layout);
 
         let el = cx.hover_region(hover, move |cx, hovered| {
             let children = children.clone();
+            if let Some(model) = hovered_model.clone() {
+                let current = cx.watch_model(&model).layout().copied().unwrap_or(!hovered);
+                if current != hovered {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = hovered);
+                }
+            }
             let row = control_chrome_pressable_with_id_props(cx, move |cx, _st, _id| {
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate({
@@ -1042,7 +1058,7 @@ pub struct AttachmentRemove {
     on_remove: Option<OnAttachmentRemove>,
     visible: bool,
     test_id: Option<Arc<str>>,
-    variant: AttachmentVariant,
+    variant: Option<AttachmentVariant>,
 }
 
 impl std::fmt::Debug for AttachmentRemove {
@@ -1065,7 +1081,7 @@ impl AttachmentRemove {
             on_remove: None,
             visible: true,
             test_id: None,
-            variant: AttachmentVariant::Grid,
+            variant: Some(AttachmentVariant::Grid),
         }
     }
 
@@ -1076,7 +1092,7 @@ impl AttachmentRemove {
             on_remove: None,
             visible: true,
             test_id: None,
-            variant: AttachmentVariant::Grid,
+            variant: None,
         }
     }
 
@@ -1111,12 +1127,19 @@ impl AttachmentRemove {
     }
 
     pub fn variant(mut self, variant: AttachmentVariant) -> Self {
-        self.variant = variant;
+        self.variant = Some(variant);
         self
+    }
+
+    fn resolved_variant(&self, parts: Option<&AttachmentChildParts>) -> AttachmentVariant {
+        self.variant
+            .or_else(|| parts.map(|parts| parts.variant()))
+            .unwrap_or(AttachmentVariant::Grid)
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let parts = use_attachment_parts(cx);
+        let variant = self.resolved_variant(parts.as_ref());
         let on_remove = self
             .on_remove
             .or_else(|| parts.as_ref().and_then(|p| p.on_remove.clone()));
@@ -1137,7 +1160,7 @@ impl AttachmentRemove {
         let mut btn = Button::new("")
             .a11y_label(label.clone())
             .variant(ButtonVariant::Ghost)
-            .size(match self.variant {
+            .size(match variant {
                 AttachmentVariant::Grid => ButtonSize::IconXs,
                 AttachmentVariant::Inline => ButtonSize::IconXs,
                 AttachmentVariant::List => ButtonSize::Icon,
@@ -1149,7 +1172,7 @@ impl AttachmentRemove {
                 host.request_redraw(action_cx.window);
             }));
 
-        match self.variant {
+        match variant {
             AttachmentVariant::Grid => {
                 // Upstream:
                 // - `size-6` (24px),
@@ -1190,6 +1213,180 @@ impl AttachmentRemove {
         cx.interactivity_gate(true, interactive, move |cx| {
             vec![cx.opacity(opacity, move |_cx| vec![btn])]
         })
+    }
+}
+
+#[derive(Debug)]
+pub enum AttachmentHoverCardContentArg {
+    Element(AnyElement),
+    Builder(AttachmentHoverCardContent),
+}
+
+impl From<AnyElement> for AttachmentHoverCardContentArg {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<AttachmentHoverCardContent> for AttachmentHoverCardContentArg {
+    fn from(value: AttachmentHoverCardContent) -> Self {
+        Self::Builder(value)
+    }
+}
+
+#[derive(Debug)]
+pub struct AttachmentHoverCard {
+    trigger: AnyElement,
+    content: AttachmentHoverCardContentArg,
+    open_delay_frames: u32,
+    close_delay_frames: u32,
+    open_model: Option<Model<bool>>,
+}
+
+impl AttachmentHoverCard {
+    pub fn new(trigger: AnyElement, content: impl Into<AttachmentHoverCardContentArg>) -> Self {
+        Self {
+            trigger,
+            content: content.into(),
+            open_delay_frames: 0,
+            close_delay_frames: 0,
+            open_model: None,
+        }
+    }
+
+    pub fn open_delay_frames(mut self, frames: u32) -> Self {
+        self.open_delay_frames = frames;
+        self
+    }
+
+    pub fn close_delay_frames(mut self, frames: u32) -> Self {
+        self.close_delay_frames = frames;
+        self
+    }
+
+    pub fn open_model(mut self, model: Model<bool>) -> Self {
+        self.open_model = Some(model);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let content = match self.content {
+            AttachmentHoverCardContentArg::Element(content) => content,
+            AttachmentHoverCardContentArg::Builder(content) => content.into_element(cx),
+        };
+
+        let mut hover = shadcn::HoverCard::new(self.trigger, content)
+            .open_delay_frames(self.open_delay_frames)
+            .close_delay_frames(self.close_delay_frames);
+
+        if let Some(open_model) = self.open_model {
+            hover = hover.open(Some(open_model));
+        }
+
+        hover.into_element(cx)
+    }
+}
+
+#[derive(Debug)]
+pub struct AttachmentHoverCardTrigger {
+    child: AnyElement,
+}
+
+impl AttachmentHoverCardTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+#[derive(Debug)]
+pub struct AttachmentHoverCardContent {
+    children: Vec<AnyElement>,
+    align: shadcn::HoverCardAlign,
+    side: Option<shadcn::HoverCardSide>,
+    side_offset: Option<Px>,
+    align_offset: Option<Px>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl AttachmentHoverCardContent {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            align: shadcn::HoverCardAlign::Start,
+            side: None,
+            side_offset: None,
+            align_offset: None,
+            chrome: ChromeRefinement::default().p(Space::N2),
+            layout: LayoutRefinement::default().w_auto().min_w_0(),
+            test_id: None,
+        }
+    }
+
+    pub fn align(mut self, align: shadcn::HoverCardAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: shadcn::HoverCardSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    fn into_builder(self) -> shadcn::HoverCardContent {
+        let mut content = shadcn::HoverCardContent::new(self.children)
+            .align(self.align)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+
+        if let Some(side) = self.side {
+            content = content.side(side);
+        }
+        if let Some(side_offset) = self.side_offset {
+            content = content.side_offset(side_offset);
+        }
+        if let Some(align_offset) = self.align_offset {
+            content = content.align_offset(align_offset);
+        }
+        if let Some(test_id) = self.test_id {
+            content = content.test_id(test_id);
+        }
+
+        content
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_builder().into_element(cx)
     }
 }
 
@@ -1259,7 +1456,13 @@ impl AttachmentEmpty {
             self.children
         };
 
-        let mut el = cx.container(props, move |_cx| content);
+        let centered = ui::h_flex(move |_cx| content)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items_center()
+            .justify_center()
+            .into_element(cx);
+
+        let mut el = cx.container(props, move |_cx| vec![centered]);
         if let Some(test_id) = self.test_id {
             el = el.attach_semantics(
                 SemanticsDecoration::default()
@@ -1268,5 +1471,75 @@ impl AttachmentEmpty {
             );
         }
         el
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_parts(variant: AttachmentVariant) -> AttachmentChildParts {
+        AttachmentChildParts {
+            data: AttachmentData::File(
+                AttachmentFileData::new("att-test")
+                    .filename("sample.txt")
+                    .media_type("text/plain"),
+            ),
+            variant,
+            hovered: false,
+            show_media_type: false,
+            label_color: None,
+            on_remove: None,
+            preview_test_id: None,
+            info_test_id: None,
+            remove_test_id: None,
+        }
+    }
+
+    #[test]
+    fn attachment_remove_from_context_uses_parent_variant() {
+        let remove = AttachmentRemove::from_context();
+
+        assert_eq!(
+            remove.resolved_variant(Some(&sample_parts(AttachmentVariant::Inline))),
+            AttachmentVariant::Inline
+        );
+        assert_eq!(
+            remove.resolved_variant(Some(&sample_parts(AttachmentVariant::List))),
+            AttachmentVariant::List
+        );
+    }
+
+    #[test]
+    fn attachment_hover_card_content_defaults_match_ai_elements_docs() {
+        let content = AttachmentHoverCardContent::new(Vec::<AnyElement>::new());
+
+        assert_eq!(content.align, shadcn::HoverCardAlign::Start);
+        assert!(content.side.is_none());
+        assert!(content.side_offset.is_none());
+        assert!(content.align_offset.is_none());
+        assert!(content.test_id.is_none());
+    }
+
+    #[test]
+    fn attachment_hover_card_trigger_is_layout_transparent() {
+        use fret_app::App;
+        use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let child = cx.text("trigger");
+            let child_id = child.id;
+
+            let trigger = AttachmentHoverCardTrigger::new(child).into_element(cx);
+
+            assert_eq!(trigger.id, child_id);
+        });
     }
 }

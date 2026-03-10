@@ -43,7 +43,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-runner-web/Cargo.toml`
-- `pwsh -NoProfile -File tools/check_layering.ps1`
+- `python tools/check_layering.py`
 
 ## 4) Module ownership map (internal seams)
 
@@ -91,4 +91,3 @@ Evidence anchors:
 
 - Should click slop and multi-click delay be a stable contract (documented and tested), or can it remain a runner implementation detail?
 - Where should browser differences (e.g. WheelEvent deltaMode) be normalized: runner-web vs core input normalization?
-

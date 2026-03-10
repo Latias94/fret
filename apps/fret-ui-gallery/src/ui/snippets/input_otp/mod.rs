@@ -2,6 +2,7 @@ pub mod alphanumeric;
 pub mod controlled;
 pub mod demo;
 pub mod disabled;
+pub mod form;
 pub mod four_digits;
 pub mod invalid;
 pub mod pattern;

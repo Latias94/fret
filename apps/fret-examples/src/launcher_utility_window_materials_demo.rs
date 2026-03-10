@@ -126,7 +126,7 @@ fn view(
     let status = cx
         .watch_model(&st.status)
         .layout()
-        .cloned_or_else(|| Arc::from("Idle"));
+        .value_or_else(|| Arc::from("Idle"));
 
     let effective_style = cx
         .app
@@ -181,8 +181,8 @@ fn view(
             let style_line = ui::text(style_text)
                 .font_monospace()
                 .text_sm()
-                .into_element(cx)
-                .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT));
+                .test_id(TEST_ID_STYLE_TEXT)
+                .into_element(cx);
             let status_line = ui::text(status)
                 .text_sm()
                 .text_color(ColorRef::Color(color_muted_foreground))

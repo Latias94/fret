@@ -36,6 +36,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
             V2StepState::ClickStable(_)
                 | V2StepState::ClickSelectableTextSpanStable(_)
                 | V2StepState::WaitBoundsStable(_)
+                | V2StepState::WaitSemanticsScrollStable(_)
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
@@ -66,6 +67,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
+        | UiActionStepV2::WaitSemanticsScrollStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
         | UiActionStepV2::DragPointer { .. }
@@ -146,6 +148,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitMs { .. } => "wait_ms",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
+        UiActionStepV2::WaitSemanticsScrollStable { .. } => "wait_semantics_scroll_stable",
         UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
@@ -976,6 +979,22 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitBoundsStable { .. } => {
             let handled = script_steps_wait::handle_wait_bounds_stable_step(
+                service,
+                window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::WaitSemanticsScrollStable { .. } => {
+            let handled = script_steps_wait::handle_wait_semantics_scroll_stable_step(
                 service,
                 window,
                 step_index,

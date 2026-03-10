@@ -421,7 +421,7 @@ fn resolve_bundle_dir_or_latest(
         if src.is_file() {
             return crate::resolve_bundle_root_dir(&src);
         }
-        return Ok(resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src));
+        return resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src);
     }
     resolve_latest_bundle_dir_path(out_dir)
 }

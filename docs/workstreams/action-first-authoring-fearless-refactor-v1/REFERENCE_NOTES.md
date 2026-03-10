@@ -1,12 +1,18 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Reference Notes
 
-Last updated: 2026-03-04
+Last updated: 2026-03-10
 
 This file is a quick pointer index to relevant upstream and in-tree references.
 
 ---
 
 ## Upstream (non-normative)
+
+Priority rule for this workstream:
+
+- GPUI/Zed is the primary authoring/runtime north-star.
+- gpui-component is only a secondary reference for selected builder/productization patterns, not the
+  framework-level target.
 
 - Zed/GPUI action dispatch and key routing:
   - `repo-ref/zed/crates/gpui/src/action.rs`
@@ -24,7 +30,7 @@ This file is a quick pointer index to relevant upstream and in-tree references.
 ### Workstream evidence + gates
 
 - Evidence checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
-- Scripted diagnostics gate runner: `tools/diag_gate_action_first_authoring_v1.ps1`
+- Scripted diagnostics gate runner: `tools/diag_gate_action_first_authoring_v1.py`
 
 ### Authoring + state helpers
 

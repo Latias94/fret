@@ -104,6 +104,47 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             self.app.next_share_sheet_token()
         }
 
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: action::ActionCx,
+            command: &fret_runtime::CommandId,
+            reason: action::ActivateReason,
+        ) {
+            let kind = match reason {
+                action::ActivateReason::Pointer => {
+                    fret_runtime::CommandDispatchSourceKindV1::Pointer
+                }
+                action::ActivateReason::Keyboard => {
+                    fret_runtime::CommandDispatchSourceKindV1::Keyboard
+                }
+            };
+            let source = fret_runtime::CommandDispatchSourceV1 {
+                kind,
+                element: Some(cx.target.0),
+                test_id: None,
+            };
+            self.app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.record(cx.window, app.tick_id(), command.clone(), source);
+                },
+            );
+        }
+
+        fn record_pending_action_payload(
+            &mut self,
+            cx: action::ActionCx,
+            action: &fret_runtime::ActionId,
+            payload: Box<dyn std::any::Any + Send + Sync>,
+        ) {
+            self.app.with_global_mut(
+                fret_runtime::WindowPendingActionPayloadService::default,
+                |svc, app| {
+                    svc.record(cx.window, app.tick_id(), action.clone(), payload);
+                },
+            );
+        }
+
         fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
             crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
         }

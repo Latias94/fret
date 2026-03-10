@@ -11,12 +11,12 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::{Invalidation, UiTree};
-use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
 use fret_ui_kit::ui;
+use fret_ui_kit::{LayoutRefinement, OverlayController};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Space};
 use std::sync::Arc;
@@ -337,6 +337,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                                 false,
                             )
                             .placeholder("Pick a start date")
+                            .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
                         ],
                     )

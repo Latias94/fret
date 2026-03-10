@@ -172,7 +172,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<TagsDemoDriver, TagsDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         TagsDemoDriver::default(),
         create_window_state,

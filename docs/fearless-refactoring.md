@@ -75,7 +75,7 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `ViewCx::on_action_notify_models`, `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
+- Handle actions via `ViewCx::on_action_notify_locals`, `ViewCx::on_action_notify_models` (shared graphs), `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
 
 Authoring and historical note:
 
@@ -143,7 +143,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
+- typed action handlers (`on_action_notify_locals`, `on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 
@@ -193,12 +193,12 @@ This avoids `vec![root].into()` boilerplate and makes it obvious your view has a
 
 ### Recipe: model reads during render (reduce boilerplate, keep invalidation explicit)
 
-When reading a `Model<T>` during rendering, prefer the “watch + read” helpers so invalidation is
-registered and the common `Option<T>` endings stay concise:
+When reading a `Model<T>` during rendering, prefer the “watch + value_*” helpers so invalidation is
+registered and the default read endings stay concise:
 
-- `cx.watch_model(&model).layout().cloned_or_default()`
-- `cx.watch_model(&model).paint().copied_or_default()`
-- `cx.watch_model(&model).layout().copied_or(fallback)`
+- `cx.watch_model(&model).layout().value_or_default()`
+- `cx.watch_model(&model).paint().value_or_default()`
+- `cx.watch_model(&model).layout().value_or(fallback)`
 
 ### Recipe: iterator-heavy children (borrow checker)
 

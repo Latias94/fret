@@ -7,6 +7,7 @@ use crate::json_bundle::{
 use crate::test_id_bloom::TestIdBloomV1;
 
 use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
+use super::resolve;
 use super::sidecars;
 use super::slice_payload::build_test_id_slice_payload_from_snapshot_and_nodes;
 use super::slice_streaming::{
@@ -881,13 +882,16 @@ pub(crate) fn cmd_slice(
     if let (Some(step_index), Some(bundle_arg)) = (step_index, bundle_arg.as_deref()) {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
         if src.is_dir() {
-            let bundle_path = crate::resolve_bundle_artifact_path(&src);
+            let (bundle_dir, bundle_path) = match resolve::resolve_bundle_ref(&src) {
+                Ok(resolved) => (resolved.bundle_dir, resolved.bundle_artifact),
+                Err(_) => (src.clone(), crate::resolve_bundle_artifact_path(&src)),
+            };
             let idx = if bundle_path.is_file() {
                 read_bundle_index_for_step_index(&bundle_path, warmup_frames)
                     .ok()
                     .flatten()
             } else {
-                try_read_bundle_index_from_dir(&src, warmup_frames)
+                try_read_bundle_index_from_dir(&bundle_dir, warmup_frames)
             };
 
             if let Some(idx) = idx

@@ -1,4 +1,6 @@
+use std::hash::Hash;
 use std::marker::PhantomData;
+use std::panic::Location;
 use std::sync::Arc;
 
 pub use crate::children;
@@ -6,13 +8,13 @@ pub use crate::children;
 use smallvec::SmallVec;
 
 use fret_core::{
-    AttributedText, Axis, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextSpan,
-    TextWrap,
+    AttributedText, Axis, Edges, EffectChain, EffectMode, FontId, FontWeight, Px, TextAlign,
+    TextOverflow, TextSpan, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
-    SelectableTextProps, SizeStyle, StackProps, TextProps,
+    AnyElement, ContainerProps, EffectLayerProps, FlexProps, InsetStyle, LayoutStyle, Length,
+    Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
+    ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -87,6 +89,28 @@ where
     }
 }
 
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ContainerPropsBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ContainerPropsBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ContainerPropsBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ContainerPropsBoxBuild<H, B>>::into_element(self, cx)
+    }
+}
+
 impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -118,6 +142,39 @@ where
     #[track_caller]
     fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         UiBuilder::<StackBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, K: Hash, F, T> UiChildIntoElement<H> for UiBuilder<KeyedBox<H, K, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> T,
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<KeyedBox<H, K, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<EffectLayerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<EffectLayerBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<EffectLayerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<EffectLayerBoxBuild<H, B>>::into_element(self, cx)
     }
 }
 
@@ -487,6 +544,23 @@ pub struct ContainerBoxBuild<H, B> {
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
+/// A raw-container variant that preserves caller-provided [`ContainerProps`] while still allowing
+/// builder-first child authoring to land at the last possible moment.
+#[derive(Debug, Clone)]
+pub struct ContainerPropsBox<H, F> {
+    pub(crate) props: ContainerProps,
+    pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+/// Sink-based variant of [`ContainerPropsBox`] for iterator-heavy or borrow-sensitive child flows.
+#[derive(Debug)]
+pub struct ContainerPropsBoxBuild<H, B> {
+    pub(crate) props: ContainerProps,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
 impl<H, F> ContainerBox<H, F> {
     pub fn new(children: F) -> Self {
         Self {
@@ -503,6 +577,26 @@ impl<H, B> ContainerBoxBuild<H, B> {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, F> ContainerPropsBox<H, F> {
+    pub fn new(props: ContainerProps, children: F) -> Self {
+        Self {
+            props,
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, B> ContainerPropsBoxBuild<H, B> {
+    pub fn new(props: ContainerProps, build: B) -> Self {
+        Self {
+            props,
             build: Some(build),
             _phantom: PhantomData,
         }
@@ -566,6 +660,41 @@ where
     }
 }
 
+impl<H: UiHost, F, I> ContainerPropsBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let props = self.props;
+        let children = self
+            .children
+            .expect("expected container-props children closure");
+        cx.container(props, move |cx| {
+            let children = children(cx);
+            collect_ui_children(cx, children)
+        })
+    }
+}
+
+impl<H: UiHost, B> ContainerPropsBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let props = self.props;
+        let build = self.build.expect("expected container-props build closure");
+        cx.container(props, move |cx| {
+            let mut out = Vec::new();
+            build(cx, &mut out);
+            out
+        })
+    }
+}
+
 /// Returns a patchable container builder.
 ///
 /// Usage:
@@ -585,6 +714,30 @@ where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     UiBuilder::new(ContainerBoxBuild::new(build))
+}
+
+/// Returns a raw `ContainerProps` root that still keeps child authoring on the late-landing path.
+pub fn container_props<H: UiHost, F, I>(
+    props: ContainerProps,
+    children: F,
+) -> UiBuilder<ContainerPropsBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    UiBuilder::new(ContainerPropsBox::new(props, children))
+}
+
+/// Sink-based variant of [`container_props`] for iterator-heavy or borrow-sensitive child flows.
+pub fn container_props_build<H: UiHost, B>(
+    props: ContainerProps,
+    build: B,
+) -> UiBuilder<ContainerPropsBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(ContainerPropsBoxBuild::new(props, build))
 }
 
 /// A patchable scroll area constructor for authoring ergonomics.
@@ -1064,6 +1217,233 @@ where
     UiBuilder::new(StackBox::new(children))
 }
 
+/// A keyed identity wrapper that keeps the original `cx.keyed(...)` callsite stable across
+/// builder-first / late-landing authoring paths.
+#[derive(Debug, Clone)]
+pub struct KeyedBox<H, K, F> {
+    pub(crate) callsite: &'static Location<'static>,
+    pub(crate) key: Option<K>,
+    pub(crate) child: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, K, F> KeyedBox<H, K, F> {
+    fn new(callsite: &'static Location<'static>, key: K, child: F) -> Self {
+        Self {
+            callsite,
+            key: Some(key),
+            child: Some(child),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, K, F> UiPatchTarget for KeyedBox<H, K, F> {
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, K: Hash, F, T> KeyedBox<H, K, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> T,
+    T: UiChildIntoElement<H>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            callsite,
+            key,
+            child,
+            _phantom: _,
+        } = self;
+        let key = key.expect("keyed box key already taken");
+        let child = child.expect("keyed box child already taken");
+        cx.keyed_at(callsite, key, |cx| child(cx).into_child_element(cx))
+    }
+}
+
+/// Returns an identity-preserving keyed wrapper for a single child subtree.
+///
+/// Prefer this over raw `cx.keyed(...)` inside `*_build(|cx, out| ...)` sinks when you want to
+/// stay on the builder-first path and avoid materializing `AnyElement` early.
+#[track_caller]
+pub fn keyed<H: UiHost, K: Hash, F, T>(key: K, child: F) -> UiBuilder<KeyedBox<H, K, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> T,
+    T: UiChildIntoElement<H>,
+{
+    UiBuilder::new(KeyedBox::new(Location::caller(), key, child))
+}
+
+#[derive(Debug, Clone)]
+pub struct EffectLayerBox<H, F> {
+    pub(crate) props: EffectLayerProps,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+#[derive(Debug)]
+pub struct EffectLayerBoxBuild<H, B> {
+    pub(crate) props: EffectLayerProps,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, F> EffectLayerBox<H, F> {
+    pub fn new(props: EffectLayerProps, children: F) -> Self {
+        Self {
+            props,
+            layout: LayoutRefinement::default(),
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+}
+
+impl<H, B> EffectLayerBoxBuild<H, B> {
+    pub fn new(props: EffectLayerProps, build: B) -> Self {
+        Self {
+            props,
+            layout: LayoutRefinement::default(),
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+}
+
+impl<H, F> UiPatchTarget for EffectLayerBox<H, F> {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H, B> UiPatchTarget for EffectLayerBoxBuild<H, B> {
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H, F> UiSupportsLayout for EffectLayerBox<H, F> {}
+impl<H, B> UiSupportsLayout for EffectLayerBoxBuild<H, B> {}
+
+impl<H: UiHost, F, I> EffectLayerBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let mut props = self.props;
+        decl_style::apply_layout_refinement(theme, self.layout, &mut props.layout);
+        let children = self
+            .children
+            .expect("expected effect layer children closure");
+        cx.effect_layer_props(props, move |cx| {
+            let children = children(cx);
+            collect_ui_children(cx, children)
+        })
+    }
+}
+
+impl<H: UiHost, B> EffectLayerBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let mut props = self.props;
+        decl_style::apply_layout_refinement(theme, self.layout, &mut props.layout);
+        let build = self.build.expect("expected effect layer build closure");
+        cx.effect_layer_props(props, move |cx| {
+            let mut out = Vec::new();
+            build(cx, &mut out);
+            out
+        })
+    }
+}
+
+/// Returns a patchable effect-layer builder.
+///
+/// Usage:
+/// - `ui::effect_layer(EffectMode::FilterContent, chain, |_cx| [child]).w_full().into_element(cx)`
+pub fn effect_layer<H: UiHost, F, I>(
+    mode: EffectMode,
+    chain: EffectChain,
+    children: F,
+) -> UiBuilder<EffectLayerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    effect_layer_props(
+        EffectLayerProps {
+            mode,
+            chain,
+            ..Default::default()
+        },
+        children,
+    )
+}
+
+/// Returns a patchable effect-layer builder with explicit props.
+pub fn effect_layer_props<H: UiHost, F, I>(
+    props: EffectLayerProps,
+    children: F,
+) -> UiBuilder<EffectLayerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    UiBuilder::new(EffectLayerBox::new(props, children))
+}
+
+/// Variant of [`effect_layer`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn effect_layer_build<H: UiHost, B>(
+    mode: EffectMode,
+    chain: EffectChain,
+    build: B,
+) -> UiBuilder<EffectLayerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    effect_layer_props_build(
+        EffectLayerProps {
+            mode,
+            chain,
+            ..Default::default()
+        },
+        build,
+    )
+}
+
+/// Variant of [`effect_layer_props`] that collects children into a sink.
+pub fn effect_layer_props_build<H: UiHost, B>(
+    props: EffectLayerProps,
+    build: B,
+) -> UiBuilder<EffectLayerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(EffectLayerBoxBuild::new(props, build))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextPreset {
     Xs,
@@ -1446,6 +1826,73 @@ mod tests {
             ]
         })
         .gap(Space::N2)
+        .into_element(cx)
+    }
+
+    // Compile-only: ensure effect-layer roots accept late builder children without forcing the
+    // child subtree to materialize before the effect boundary.
+    #[allow(dead_code)]
+    fn effect_layer_accepts_ui_builder_children<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        effect_layer(EffectMode::FilterContent, EffectChain::EMPTY, |_cx| {
+            [container(|_cx| [text("effect child")]).w_full().h_full()]
+        })
+        .w_full()
+        .into_element(cx)
+    }
+
+    // Compile-only: ensure keyed late-landing helpers preserve builder-first child authoring
+    // without falling back to raw `cx.keyed(...)` + eager `AnyElement` materialization.
+    #[allow(dead_code)]
+    fn keyed_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        v_flex_build(|cx, out| {
+            out.push_ui(cx, keyed("row-1", |_cx| text("row").test_id("row")));
+        })
+        .test_id("rows")
+        .into_element(cx)
+    }
+
+    // Compile-only: ensure low-level raw `ContainerProps` roots can still keep children on the
+    // builder-first path without forcing eager landing before the host container boundary.
+    #[allow(dead_code)]
+    fn container_props_accepts_ui_builder_children<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        container_props(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            |_cx| {
+                [h_flex(|_cx| [text("row"), text("meta")])
+                    .gap(Space::N2)
+                    .w_full()]
+            },
+        )
+        .test_id("container-props")
+        .into_element(cx)
+    }
+
+    // Compile-only: ensure the sink-based raw-container variant stays on the same child pipeline.
+    #[allow(dead_code)]
+    fn container_props_build_accepts_ui_builder_children<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        container_props_build(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            |cx, out| {
+                out.push_ui(cx, text("row"));
+            },
+        )
+        .test_id("container-props-build")
         .into_element(cx)
     }
 

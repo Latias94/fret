@@ -40,6 +40,22 @@ impl Renderer {
         }
 
         let registry_est = self.gpu_resources.diagnostics_estimated_bytes();
+        let path_intermediate_msaa_bytes_estimate = self
+            .path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_msaa_bytes);
+        let path_intermediate_resolved_bytes_estimate = self
+            .path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_resolved_bytes);
+        let path_intermediate_bytes_estimate = self
+            .path_intermediate
+            .as_ref()
+            .map_or(0, PathIntermediate::estimated_bytes);
+        let custom_effect_v3_pyramid_scratch_bytes_estimate = self
+            .custom_effect_v3_pyramid_scratch
+            .as_ref()
+            .map_or(0, v3_pyramid::CustomEffectV3PyramidScratch::estimated_bytes);
 
         let snap = RenderPerfSnapshot {
             frames: self.perf.frames,
@@ -115,6 +131,10 @@ impl Renderer {
             intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
             intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
             intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
+            path_intermediate_bytes_estimate,
+            path_intermediate_msaa_bytes_estimate,
+            path_intermediate_resolved_bytes_estimate,
+            custom_effect_v3_pyramid_scratch_bytes_estimate,
             gpu_images_live: registry_est.images_live,
             gpu_images_bytes_estimate: registry_est.images_bytes_estimate,
             gpu_images_max_bytes_estimate: registry_est.images_max_bytes_estimate,
@@ -432,15 +452,20 @@ impl Renderer {
         let samples = Self::path_msaa_samples_override_from_env().unwrap_or(samples);
         let samples = samples.max(1);
         let samples = samples.min(16);
-        if samples == 1 {
-            self.path_msaa_samples = 1;
-            return;
-        }
+        let next_samples = if samples == 1 {
+            1
+        } else {
+            // wgpu requires sample counts to be powers of two. Prefer a conservative downgrade to
+            // the nearest supported-shape value (rather than rounding up to a potentially
+            // unsupported count).
+            let pow2_floor = 1u32 << (31 - samples.leading_zeros());
+            pow2_floor.max(1)
+        };
 
-        // wgpu requires sample counts to be powers of two. Prefer a conservative downgrade to the
-        // nearest supported-shape value (rather than rounding up to a potentially unsupported count).
-        let pow2_floor = 1u32 << (31 - samples.leading_zeros());
-        self.path_msaa_samples = pow2_floor.max(1);
+        if self.path_msaa_samples != next_samples {
+            self.path_intermediate = None;
+        }
+        self.path_msaa_samples = next_samples;
     }
 
     pub fn debug_offscreen_blit_enabled(&self) -> bool {

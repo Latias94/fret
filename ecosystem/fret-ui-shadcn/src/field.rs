@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::LayoutDirection;
@@ -6,21 +7,22 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     LayoutStyle, MainAlign, PointerRegionProps, RowProps, SemanticsDecoration, SemanticsProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
 };
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
-fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
-    theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or_else(|| theme.color_token("muted.foreground"))
-}
+use fret_ui_kit::typography::{
+    description_text_refinement_with_fallbacks, muted_foreground_color,
+    scope_description_text_with_fallbacks,
+};
 
 fn peel_single_child_wrappers<'a>(mut element: &'a AnyElement) -> &'a AnyElement {
     loop {
@@ -81,39 +83,59 @@ fn is_field_legend_variant_legend(element: &AnyElement) -> bool {
     line_height.is_some_and(|lh| (lh.0 - 24.0).abs() <= 0.5)
 }
 
+fn passive_text_color(element: &AnyElement) -> Option<fret_core::Color> {
+    match &element.kind {
+        ElementKind::Text(props) => props.color.or(element.inherited_foreground),
+        ElementKind::StyledText(props) => props.color.or(element.inherited_foreground),
+        ElementKind::SelectableText(props) => props.color.or(element.inherited_foreground),
+        _ => None,
+    }
+}
+
+fn passive_text_line_height(element: &AnyElement) -> Option<Px> {
+    let explicit = match &element.kind {
+        ElementKind::Text(props) => props.style.as_ref().and_then(|style| style.line_height),
+        ElementKind::StyledText(props) => props.style.as_ref().and_then(|style| style.line_height),
+        ElementKind::SelectableText(props) => {
+            props.style.as_ref().and_then(|style| style.line_height)
+        }
+        _ => return None,
+    };
+
+    explicit.or_else(|| {
+        element
+            .inherited_text_style
+            .as_ref()
+            .and_then(|style| style.line_height)
+    })
+}
+
 fn is_field_description(
     muted: fret_core::Color,
     desc_line_height: Px,
     element: &AnyElement,
 ) -> bool {
     let element = peel_single_child_wrappers(element);
-    match &element.kind {
-        ElementKind::Text(props) => {
-            props.color == Some(muted)
-                && matches!(
-                    props.wrap,
-                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
-                )
-                && props
-                    .style
-                    .as_ref()
-                    .and_then(|s| s.line_height)
-                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
-        }
-        ElementKind::StyledText(props) => {
-            props.color == Some(muted)
-                && matches!(
-                    props.wrap,
-                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
-                )
-                && props
-                    .style
-                    .as_ref()
-                    .and_then(|s| s.line_height)
-                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
-        }
+    let is_wrapped_text = match &element.kind {
+        ElementKind::Text(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
+        ElementKind::StyledText(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
+        ElementKind::SelectableText(props) => matches!(
+            props.wrap,
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+        ),
         _ => false,
-    }
+    };
+
+    is_wrapped_text
+        && passive_text_color(element) == Some(muted)
+        && passive_text_line_height(element)
+            .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
 }
 
 fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
@@ -166,6 +188,52 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
         return true;
     }
     element.children.iter().any(subtree_has_flex_grow)
+}
+
+#[cfg(test)]
+fn kind_layout(kind: &ElementKind) -> Option<&LayoutStyle> {
+    match kind {
+        ElementKind::Container(props) => Some(&props.layout),
+        ElementKind::Semantics(props) => Some(&props.layout),
+        ElementKind::SemanticFlex(props) => Some(&props.flex.layout),
+        ElementKind::Pressable(props) => Some(&props.layout),
+        ElementKind::PointerRegion(props) => Some(&props.layout),
+        ElementKind::TextInputRegion(props) => Some(&props.layout),
+        ElementKind::InternalDragRegion(props) => Some(&props.layout),
+        ElementKind::Opacity(props) => Some(&props.layout),
+        ElementKind::InteractivityGate(props) => Some(&props.layout),
+        ElementKind::VisualTransform(props) => Some(&props.layout),
+        ElementKind::RenderTransform(props) => Some(&props.layout),
+        ElementKind::FractionalRenderTransform(props) => Some(&props.layout),
+        ElementKind::Anchored(props) => Some(&props.layout),
+        ElementKind::Column(props) => Some(&props.layout),
+        ElementKind::Row(props) => Some(&props.layout),
+        ElementKind::Stack(props) => Some(&props.layout),
+        ElementKind::Flex(props) => Some(&props.layout),
+        ElementKind::Grid(props) => Some(&props.layout),
+        ElementKind::Text(props) => Some(&props.layout),
+        ElementKind::StyledText(props) => Some(&props.layout),
+        ElementKind::SelectableText(props) => Some(&props.layout),
+        ElementKind::TextInput(props) => Some(&props.layout),
+        ElementKind::TextArea(props) => Some(&props.layout),
+        ElementKind::Image(props) => Some(&props.layout),
+        ElementKind::Canvas(props) => Some(&props.layout),
+        ElementKind::SvgIcon(props) => Some(&props.layout),
+        ElementKind::Spinner(props) => Some(&props.layout),
+        ElementKind::Scroll(props) => Some(&props.layout),
+        ElementKind::Scrollbar(props) => Some(&props.layout),
+        ElementKind::Spacer(props) => Some(&props.layout),
+        ElementKind::HoverRegion(props) => Some(&props.layout),
+        ElementKind::WheelRegion(props) => Some(&props.layout),
+        ElementKind::EffectLayer(props) => Some(&props.layout),
+        ElementKind::FocusScope(props) => Some(&props.layout),
+        ElementKind::RovingFlex(props) => Some(&props.flex.layout),
+        ElementKind::VirtualList(props) => Some(&props.layout),
+        ElementKind::ResizablePanelGroup(props) => Some(&props.layout),
+        ElementKind::ViewportSurface(props) => Some(&props.layout),
+        ElementKind::ViewCache(props) => Some(&props.layout),
+        _ => None,
+    }
 }
 
 fn kind_layout_mut(kind: &mut ElementKind) -> Option<&mut LayoutStyle> {
@@ -222,6 +290,20 @@ fn responsive_md_content_flex_1_min_w_0(mut element: AnyElement) -> AnyElement {
     layout.flex.shrink = 1.0;
     layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
     layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
+
+    element
+}
+
+fn approx_w_fit_under_stretch(mut element: AnyElement) -> AnyElement {
+    let Some(layout) = kind_layout_mut(&mut element.kind) else {
+        return element;
+    };
+
+    if matches!(layout.size.width, fret_ui::element::Length::Auto)
+        && layout.flex.align_self.is_none()
+    {
+        layout.flex.align_self = Some(CrossAlign::Start);
+    }
 
     element
 }
@@ -346,6 +428,17 @@ impl FieldSet {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldSetBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldSetBuild {
+            build: Some(build),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -381,18 +474,19 @@ impl FieldSet {
             let rest_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
             let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
-            let muted = muted_foreground(&theme);
+            let muted = muted_foreground_color(&theme);
             let desc_mt_neg_n1 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
             let desc_mt_neg_n1p5 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1p5));
-            let desc_line_height = theme
-                .metric_by_key("component.field.description_line_height")
-                .or_else(|| {
-                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                })
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
+            let desc_line_height = description_text_refinement_with_fallbacks(
+                &theme,
+                "component.field.description",
+                Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+            )
+            .line_height
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (
                 gap,
                 layout,
@@ -629,6 +723,19 @@ impl FieldGroup {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldGroupBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldGroupBuild {
+            build: Some(build),
+            slot: FieldGroupSlot::default(),
+            gap: None,
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn checkbox_group(mut self) -> Self {
         self.slot = FieldGroupSlot::CheckboxGroup;
         self
@@ -695,6 +802,157 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     FieldGroup::new(f(cx)).into_element(cx)
+}
+
+pub struct FieldSetBuild<H, B> {
+    build: Option<B>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_field_children(cx, self.build.expect("expected field-set build closure"));
+        FieldSet::new(children)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldSetBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldSetBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldSetBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldSetBuild::into_element(self, cx)
+    }
+}
+
+pub struct FieldGroupBuild<H, B> {
+    build: Option<B>,
+    slot: FieldGroupSlot,
+    gap: Option<MetricRef>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn checkbox_group(mut self) -> Self {
+        self.slot = FieldGroupSlot::CheckboxGroup;
+        self
+    }
+
+    pub fn gap(mut self, space: Space) -> Self {
+        self.gap = Some(MetricRef::space(space));
+        self
+    }
+
+    pub fn gap_px(mut self, px: Px) -> Self {
+        self.gap = Some(px.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_field_children(
+            cx,
+            self.build.expect("expected field-group build closure"),
+        );
+        let mut group = FieldGroup::new(children).refine_layout(self.layout);
+        if self.slot == FieldGroupSlot::CheckboxGroup {
+            group = group.checkbox_group();
+        }
+        if let Some(gap) = self.gap {
+            group = group.gap_px(gap.resolve(Theme::global(&*cx.app)));
+        }
+        group.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldGroupBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldGroupBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldGroupBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldGroupBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_field_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 #[derive(Debug)]
@@ -766,15 +1024,16 @@ impl FieldTitle {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
-        let el = ui::label(self.text)
-            .w_full()
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .text_align(align)
-            .into_element(cx);
+        let el = approx_w_fit_under_stretch(
+            ui::label(self.text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .text_align(align)
+                .into_element(cx),
+        );
 
         let field_state = field_state_prim::use_field_state_in_scope(cx, None);
         if field_state.disabled {
@@ -904,16 +1163,17 @@ impl FieldLabel {
                 );
                 cx.container(wrapper, move |_cx| children)
             } else {
-                ui::label(self.text)
-                    .layout(self.layout)
-                    .w_full()
-                    .text_size_px(px)
-                    .line_height_px(line_height)
-                    .font_medium()
-                    .text_color(fg)
-                    .wrap(TextWrap::Word)
-                    .text_align(align)
-                    .into_element(cx)
+                approx_w_fit_under_stretch(
+                    ui::label(self.text)
+                        .layout(self.layout)
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_medium()
+                        .text_color(fg)
+                        .wrap(TextWrap::Word)
+                        .text_align(align)
+                        .into_element(cx),
+                )
             };
 
             if let Some(test_id) = self.test_id {
@@ -1010,7 +1270,11 @@ impl FieldLabel {
                             let for_control_on_pointer = for_control.clone();
                             let control_snapshot_on_pointer = control_snapshot.clone();
                             cx.pointer_region_add_on_pointer_down(Arc::new(
-                                move |host, acx, _down| {
+                                move |host, acx, down| {
+                                    if down.hit_pressable_target.is_some() {
+                                        return false;
+                                    }
+
                                     let target = host
                                         .models_mut()
                                         .read(&control_registry_on_pointer, |reg| {
@@ -1056,6 +1320,9 @@ impl FieldLabel {
                                 if !up.is_click {
                                     return true;
                                 }
+                                if up.down_hit_pressable_target.is_some() {
+                                    return false;
+                                }
                                 let control = host
                                     .models_mut()
                                     .read(&control_registry_on_pointer_up, |reg| {
@@ -1078,7 +1345,7 @@ impl FieldLabel {
                                     return true;
                                 }
                                 host.request_focus(control.element);
-                                control.action.invoke(host);
+                                control.action.invoke(host, acx);
                                 host.request_redraw(acx.window);
                                 true
                             }));
@@ -1175,23 +1442,7 @@ impl FieldDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = muted_foreground(&theme);
-            let px = theme
-                .metric_by_key("component.field.description_px")
-                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
-                .or_else(|| theme.metric_by_key("font.size"))
-                .unwrap_or_else(|| theme.metric_token("font.size"));
-            let line_height = theme
-                .metric_by_key("component.field.description_line_height")
-                .or_else(|| {
-                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                })
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            (fg, px, line_height)
-        };
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let align = match crate::use_direction(cx, None) {
             LayoutDirection::Rtl => TextAlign::End,
@@ -1199,17 +1450,19 @@ impl FieldDescription {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        let el = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_normal()
-            .text_color(ColorRef::Color(fg))
-            .wrap(wrap)
-            .overflow(overflow)
-            .text_align(align)
-            .w_full()
-            .min_w_0()
-            .into_element(cx);
+        let el = scope_description_text_with_fallbacks(
+            ui::raw_text(self.text)
+                .wrap(wrap)
+                .overflow(overflow)
+                .text_align(align)
+                .w_full()
+                .min_w_0()
+                .into_element(cx),
+            &theme,
+            "component.field.description",
+            Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+            Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+        );
 
         if let Some(for_control) = self.for_control {
             let control_registry = control_registry_model(cx);
@@ -1482,6 +1735,21 @@ impl Field {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> FieldBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        FieldBuild {
+            build: Some(build),
+            orientation: FieldOrientation::default(),
+            invalid: false,
+            disabled: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     /// Apply the upstream `data-invalid` styling state to this field grouping.
     pub fn invalid(mut self, invalid: bool) -> Self {
         self.invalid = invalid;
@@ -1530,16 +1798,17 @@ impl Field {
                     &theme,
                     LayoutRefinement::default().w_full().min_w_0(),
                 );
-                let muted = muted_foreground(&theme);
+                let muted = muted_foreground_color(&theme);
                 let desc_mt_neg =
                     decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
-                let desc_line_height = theme
-                    .metric_by_key("component.field.description_line_height")
-                    .or_else(|| {
-                        theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-                    })
-                    .or_else(|| theme.metric_by_key("font.line_height"))
-                    .unwrap_or_else(|| theme.metric_token("font.line_height"));
+                let desc_line_height = description_text_refinement_with_fallbacks(
+                    &theme,
+                    "component.field.description",
+                    Some(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                    Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                )
+                .line_height
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
                 (
                     gap,
                     wrapper,
@@ -1714,6 +1983,98 @@ impl Field {
     }
 }
 
+pub struct FieldBuild<H, B> {
+    build: Option<B>,
+    orientation: FieldOrientation,
+    invalid: bool,
+    disabled: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn invalid(mut self, invalid: bool) -> Self {
+        self.invalid = invalid;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn orientation(mut self, orientation: FieldOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_field_children(cx, self.build.expect("expected field build closure"));
+        Field::new(children)
+            .orientation(self.orientation)
+            .invalid(self.invalid)
+            .disabled(self.disabled)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for FieldBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for FieldBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for FieldBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        FieldBuild::into_element(self, cx)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1726,7 +2087,7 @@ mod tests {
     };
     use fret_runtime::Model;
     use fret_ui::tree::UiTree;
-    use fret_ui_kit::primitives::control_registry::ControlId;
+    use fret_ui_kit::primitives::control_registry::{ControlId, control_registry_model};
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
@@ -1735,6 +2096,14 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(240.0)),
         )
+    }
+
+    fn any_element_has_text(element: &AnyElement, needle: &str) -> bool {
+        matches!(&element.kind, ElementKind::Text(props) if props.text.as_ref() == needle)
+            || element
+                .children
+                .iter()
+                .any(|child| any_element_has_text(child, needle))
     }
 
     struct FakeServices;
@@ -1817,6 +2186,25 @@ mod tests {
     }
 
     #[test]
+    fn field_build_collects_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Field::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, FieldLabel::new("Email"));
+                out.push_ui(cx, ui::text("Control"));
+            })
+            .into_element(cx)
+        });
+
+        assert!(any_element_has_text(&element, "Email"));
+        assert!(any_element_has_text(&element, "Control"));
+    }
+
+    #[test]
     fn field_vertical_defaults_to_gap_3() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1855,6 +2243,65 @@ mod tests {
             "expected Field gap ~ {}px, got {}px",
             expected.0,
             gap.0
+        );
+    }
+
+    #[test]
+    fn field_title_and_plain_label_approximate_upstream_w_fit_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let title = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldTitle::new("Price range").into_element(cx)
+        });
+        let title_layout = kind_layout(&title.kind).expect("expected FieldTitle layout");
+        assert_eq!(title_layout.size.width, fret_ui::element::Length::Auto);
+        assert_eq!(title_layout.flex.align_self, Some(CrossAlign::Start));
+
+        let label = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldLabel::new("Email").into_element(cx)
+        });
+        let label_layout = kind_layout(&label.kind).expect("expected FieldLabel layout");
+        assert_eq!(label_layout.size.width, fret_ui::element::Length::Auto);
+        assert_eq!(label_layout.flex.align_self, Some(CrossAlign::Start));
+    }
+
+    #[test]
+    fn field_description_scopes_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                FieldDescription::new("We will never share it.").into_element(cx)
+            });
+
+        let fret_ui::element::ElementKind::Text(props) = &element.kind else {
+            panic!("expected FieldDescription to be a text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(
+                &fret_ui_kit::typography::description_text_refinement_with_fallbacks(
+                    &theme,
+                    "component.field.description",
+                    Some(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_SM_PX),
+                    Some(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+                )
+            )
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
     }
 
@@ -2045,8 +2492,6 @@ mod tests {
 
         let column_node = ui.children(root)[0];
         let label_node = ui.children(column_node)[0];
-        let control_host_node = ui.children(column_node)[1];
-
         let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
         let nested_button_node = snap
             .nodes
@@ -2066,29 +2511,52 @@ mod tests {
             .debug_node_bounds(nested_button_node)
             .expect("nested button bounds");
         let label_bounds = ui.debug_node_bounds(label_node).expect("label bounds");
-        let control_bounds = ui
-            .debug_node_bounds(control_host_node)
-            .expect("control bounds");
-
-        let control_focus_target = ui
-            .debug_hit_test(center_of(control_bounds))
-            .hit
-            .expect("expected control center hit-test");
+        let registry_model = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-field-label-nested-pressable-focus-suppression-registry",
+            |cx| control_registry_model(cx),
+        );
+        let control_focus_target = app
+            .models()
+            .read(&registry_model, |reg| {
+                reg.control_for(window, &control_id)
+                    .map(|entry| entry.element)
+            })
+            .ok()
+            .flatten()
+            .and_then(|element| fret_ui::elements::node_for_element(&mut app, window, element))
+            .expect("expected registered control focus target");
 
         assert_eq!(ui.focus(), None);
 
         // Clicking the nested pressable should not cause the label to forward focus to the
         // associated control.
+        let nested_button_position = center_of(nested_button_bounds);
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
                 pointer_id: fret_core::PointerId(0),
-                position: center_of(nested_button_bounds),
+                position: nested_button_position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: nested_button_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_ne!(ui.focus(), Some(control_focus_target));

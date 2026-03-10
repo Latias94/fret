@@ -50,21 +50,33 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             }))
             .into_element(cx);
 
-        ui_ai::Artifact::new([
-            ui_ai::ArtifactHeader::new([
+        let header_text = ui::v_flex(move |cx| {
+            vec![
                 ui_ai::ArtifactTitle::new("Generated UI Spec").into_element(cx),
                 ui_ai::ArtifactDescription::new("A structured container with header actions.")
                     .into_element(cx),
-                ui_ai::ArtifactActions::new([
-                    ui_ai::ArtifactAction::new()
-                        .label("Export")
-                        .icon(fret_icons::IconId::new_static("lucide.download"))
-                        .into_element(cx),
-                    close,
-                ])
-                .into_element(cx),
-            ])
-            .into_element(cx),
+            ]
+        })
+        .layout(LayoutRefinement::default().min_w_0().flex_1())
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
+
+        let export_action = ui_ai::ArtifactAction::new()
+            .label("Export")
+            .icon(fret_icons::IconId::new_static("lucide.download"))
+            .into_element(cx);
+
+        let header_actions = ui::h_flex(move |cx| {
+            vec![ui_ai::ArtifactActions::new([export_action, close]).into_element(cx)]
+        })
+        .layout(LayoutRefinement::default().flex_shrink_0())
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+
+        ui_ai::Artifact::new([
+            ui_ai::ArtifactHeader::new([header_text, header_actions]).into_element(cx),
             ui_ai::ArtifactContent::new([
                 cx.text("Artifacts are chrome-only: apps own rendering, export, and lifecycle.")
             ])

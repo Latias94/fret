@@ -32,6 +32,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
 
@@ -330,7 +331,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
+        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
@@ -341,7 +342,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let radius = Px(24.0);
 
@@ -502,7 +503,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let debug_input = cx
             .watch_model(&controls.debug_input)
             .paint()
-            .copied_or(false);
+            .value_or(false);
 
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("CustomV2 (Glass/Chrome)").into_element(cx),
@@ -563,7 +564,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         .justify_between()
         .into_element(cx);
 
-        let uv_span_row = ui::v_flex(move |cx| {
+        let uv_span_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
             [
                 Self::label_row(cx, "Uv span", format!("{uv_span:.2}")),
                 shadcn::Slider::new(uv_span_model.clone())
@@ -638,40 +639,41 @@ impl CustomEffectV2GlassChromeWebDriver {
             let _ = models.update(&reset_controls.debug_input, |v| *v = false);
         });
 
-        let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
-            [
-                ui::h_flex(|cx| {
-                    [
-                        shadcn::Switch::new(enabled_model.clone())
-                            .a11y_label("Enable glass/chrome effect")
-                            .test_id("customv2.glass_chrome.enabled")
-                            .into_element(cx),
-                        shadcn::Label::new("Enable").into_element(cx),
-                    ]
-                })
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                mode_row,
-                quality_row,
-                sampling_row,
-                shadcn::Separator::new().into_element(cx),
-                uv_span_row,
-                strength_row,
-                shininess_row,
-                mix_row,
-                debug_row,
-                shadcn::Button::new("Reset")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .on_activate(reset.clone())
-                    .test_id("customv2.glass_chrome.reset")
+        let content =
+            shadcn::CardContent::new([ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
+                [
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(enabled_model.clone())
+                                .a11y_label("Enable glass/chrome effect")
+                                .test_id("customv2.glass_chrome.enabled")
+                                .into_element(cx),
+                            shadcn::Label::new("Enable").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
                     .into_element(cx),
-            ]
-        })
-        .gap(Space::N3)
-        .items_stretch()
-        .into_element(cx)])
-        .into_element(cx);
+                    mode_row,
+                    quality_row,
+                    sampling_row,
+                    shadcn::Separator::new().into_element(cx),
+                    uv_span_row,
+                    strength_row,
+                    shininess_row,
+                    mix_row,
+                    debug_row,
+                    shadcn::Button::new("Reset")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .on_activate(reset.clone())
+                        .test_id("customv2.glass_chrome.reset")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx)])
+            .into_element(cx);
 
         shadcn::Card::new([header, content])
             .ui()
@@ -931,7 +933,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo custom_effect_v2_glass_chrome_web_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     }
 }

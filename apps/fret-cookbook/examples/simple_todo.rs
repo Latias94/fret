@@ -8,6 +8,8 @@ mod act {
         Add = "cookbook.simple_todo.add.v1",
         ClearDone = "cookbook.simple_todo.clear_done.v1"
     ]);
+
+    fret::payload_actions!([Toggle(u64) = "cookbook.simple_todo.toggle.v1"]);
 }
 
 const TEST_ID_ROOT: &str = "cookbook.simple_todo.root";
@@ -18,73 +20,51 @@ const TEST_ID_PROGRESS: &str = "cookbook.simple_todo.progress";
 const TEST_ID_ROWS: &str = "cookbook.simple_todo.rows";
 const TEST_ID_ROW_PREFIX: &str = "cookbook.simple_todo.row.";
 
-#[derive(Clone)]
-struct TodoItem {
+#[derive(Debug, Clone)]
+struct TodoRow {
     id: u64,
-    done: Model<bool>,
+    done: bool,
     text: Arc<str>,
 }
 
-struct TodoState {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    next_id: Model<u64>,
-}
-
-struct SimpleTodoView {
-    st: TodoState,
-}
+struct SimpleTodoView;
 
 impl View for SimpleTodoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        let done_1 = app.models_mut().insert(false);
-        let done_2 = app.models_mut().insert(true);
-        let todos = app.models_mut().insert(vec![
-            TodoItem {
-                id: 1,
-                done: done_1,
-                text: Arc::from("Use keyed rows for dynamic lists"),
-            },
-            TodoItem {
-                id: 2,
-                done: done_2,
-                text: Arc::from("Try the shadcn theme tokens"),
-            },
-        ]);
-        let draft = app.models_mut().insert(String::new());
-
-        let next_id = app.models_mut().insert(3u64);
-
-        Self {
-            st: TodoState {
-                todos,
-                draft,
-                next_id,
-            },
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
-        let todos = cx.watch_model(&self.st.todos).layout().cloned_or_default();
-        let draft_value = cx.watch_model(&self.st.draft).layout().cloned_or_default();
+        let draft_state = cx.use_local::<String>();
+        let next_id_state = cx.use_local_with(|| 3u64);
+        let todos_state = cx.use_local_with(|| {
+            vec![
+                TodoRow {
+                    id: 1,
+                    done: false,
+                    text: Arc::from("Use keyed rows for dynamic lists"),
+                },
+                TodoRow {
+                    id: 2,
+                    done: true,
+                    text: Arc::from("Try the shadcn theme tokens"),
+                },
+            ]
+        });
 
-        let mut done_count = 0usize;
-        for t in &todos {
-            if cx.watch_model(&t.done).paint().copied_or_default() {
-                done_count += 1;
-            }
-        }
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
+
+        let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
-
         let add_enabled = !draft_value.trim().is_empty();
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_PROGRESS)
@@ -96,142 +76,143 @@ impl View for SimpleTodoView {
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(done_count == 0)
             .action(act::ClearDone)
-            .into_element(cx)
             .test_id(TEST_ID_CLEAR_DONE);
 
-        let header_actions = ui::h_flex(|_cx| [progress, clear_done_btn])
+        let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let add_btn = shadcn::Button::new("Add")
             .disabled(!add_enabled)
             .action(act::Add)
-            .into_element(cx)
             .test_id(TEST_ID_ADD);
 
-        let input = shadcn::Input::new(self.st.draft.clone())
+        let input = shadcn::Input::new(&draft_state)
             .a11y_label("New task")
-            .placeholder("Add a task…")
+            .placeholder("Add a task?")
             .submit_command(act::Add.into())
-            .into_element(cx)
             .test_id(TEST_ID_DRAFT);
 
-        let input_row = ui::h_flex(|_cx| [input, add_btn])
+        let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
         let rows = ui::v_flex_build(|cx, out| {
-            for t in &todos {
+            for row in &todos {
                 let theme = theme_for_rows.clone();
-                out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
+                out.push_ui(cx, ui::keyed(row.id, |_cx| todo_row(theme, row)));
             }
         })
         .gap(Space::N2)
-        .into_element(cx)
         .test_id(TEST_ID_ROWS);
 
-        let content = ui::v_flex(|_cx| [input_row, rows])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx);
-
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Simple todo").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Model + typed actions + keyed lists (no selector/query).",
-                )
-                .into_element(cx),
-                header_actions,
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Simple todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "LocalState<Vec<_>> + typed actions + keyed lists (no selector/query).",
+                        ),
+                    );
+                    out.push_ui(cx, header_actions);
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; input_row, rows])
+                            .gap(Space::N4)
+                            .w_full(),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .max_w(Px(560.0))
-        .into_element(cx);
+        .max_w(Px(560.0));
 
-        cx.on_action_notify_models::<act::Add>({
-            let todos = self.st.todos.clone();
-            let draft = self.st.draft.clone();
-            let next_id = self.st.next_id.clone();
-            move |models| {
-                let text = models
-                    .read(&draft, |v| v.trim().to_string())
-                    .ok()
-                    .unwrap_or_default();
+        cx.on_action_notify_locals::<act::Add>({
+            let draft_state = draft_state.clone();
+            let next_id_state = next_id_state.clone();
+            let todos_state = todos_state.clone();
+            move |tx| {
+                let text = tx
+                    .value_or_else(&draft_state, String::new)
+                    .trim()
+                    .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let done = models.insert(false);
-                let id = models.read(&next_id, |v| *v).ok().unwrap_or(0);
-                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
+                let id = tx.value_or(&next_id_state, 0);
+                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
 
-                let _ = models.update(&todos, |todos| {
-                    todos.push(TodoItem {
+                if !tx.update(&todos_state, |rows| {
+                    rows.push(TodoRow {
                         id,
-                        done,
+                        done: false,
                         text: Arc::from(text),
                     });
-                });
-                let _ = models.update(&draft, String::clear);
-                true
-            }
-        });
-
-        cx.on_action_notify_models::<act::ClearDone>({
-            let todos = self.st.todos.clone();
-            move |models| {
-                let snapshot = models.read(&todos, Clone::clone).ok().unwrap_or_default();
-
-                let mut remove_ids = Vec::new();
-                for t in &snapshot {
-                    let done = models.read(&t.done, |v| *v).ok().unwrap_or(false);
-                    if done {
-                        remove_ids.push(t.id);
-                    }
-                }
-                if remove_ids.is_empty() {
+                }) {
                     return false;
                 }
-
-                let _ = models.update(&todos, |todos| {
-                    todos.retain(|t| !remove_ids.contains(&t.id));
-                });
-                true
+                tx.set(&draft_state, String::new())
             }
         });
 
-        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+        cx.on_action_notify_locals::<act::ClearDone>({
+            let todos_state = todos_state.clone();
+            move |tx| {
+                tx.update_if(&todos_state, |rows| {
+                    let before = rows.len();
+                    rows.retain(|row| !row.done);
+                    rows.len() != before
+                })
+            }
+        });
+
+        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            },
+        );
+
+        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
-    let done = cx.watch_model(&item.done).paint().copied_or_default();
+fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChildIntoElement<App> {
+    let checkbox = shadcn::Checkbox::from_checked(row.done)
+        .action(act::Toggle)
+        .action_payload(row.id)
+        .a11y_label(row.text.clone());
 
-    let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
-
-    let text = ui::text(item.text.clone())
+    let text = ui::text(row.text.clone())
         .truncate()
         .text_sm()
-        .text_color(ColorRef::Color(if done {
+        .text_color(ColorRef::Color(if row.done {
             theme.color_token("muted-foreground")
         } else {
             theme.color_token("foreground")
-        }))
-        .into_element(cx);
+        }));
 
-    ui::h_flex(|_cx| [checkbox, text])
+    ui::h_flex(|cx| ui::children![cx; checkbox, text])
         .gap(Space::N2)
         .items_center()
         .w_full()
-        .into_element(cx)
-        .test_id(format!("{TEST_ID_ROW_PREFIX}{}", item.id))
+        .test_id(format!("{TEST_ID_ROW_PREFIX}{}", row.id))
 }
 
 fn main() -> anyhow::Result<()> {

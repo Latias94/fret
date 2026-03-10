@@ -136,7 +136,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
     let status = cx
         .watch_model(&st.status)
         .layout()
-        .cloned_or_else(|| Arc::from("Idle"));
+        .value_or_else(|| Arc::from("Idle"));
 
     let title = if is_overlay {
         "Overlay window (always-on-top)"
@@ -218,8 +218,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                 ])
                 .into_element(cx),
             ])
-            .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(root_test_id));
+            .test_id(root_test_id)
+            .into_element(cx);
 
             vec![header, content]
         },

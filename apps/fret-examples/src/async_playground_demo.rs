@@ -12,6 +12,7 @@ use fret_query::{
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
 use fret_ui::element::{PressableA11y, PressableProps};
+use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 
@@ -285,12 +286,12 @@ impl View for AsyncPlaygroundView {
         let selected = cx
             .watch_model(&self.st.selected)
             .layout()
-            .copied_or_default();
-        let dark = cx.watch_model(&self.st.dark).layout().copied_or_default();
+            .value_or_default();
+        let dark = cx.watch_model(&self.st.dark).layout().value_or_default();
         let global_slow = cx
             .watch_model(&self.st.global_slow)
             .layout()
-            .copied_or_default();
+            .value_or_default();
 
         let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
         let body = body(cx, &mut self.st, theme, global_slow, selected);
@@ -444,6 +445,7 @@ fn catalog_panel(
     theme: ThemeSnapshot,
     selected: QueryId,
 ) -> AnyElement {
+    let catalog_scroll = st.catalog_scroll.clone();
     let header = ui::text("Catalog")
         .font_semibold()
         .text_sm()
@@ -454,17 +456,21 @@ fn catalog_panel(
         .bg(ColorRef::Color(theme.color_token("card")))
         .into_element(cx);
 
-    let list = shadcn::ScrollArea::new([ui::v_flex_build(|cx, out| {
-        for id in QueryId::ALL {
-            out.push(catalog_item(cx, st, theme.clone(), selected, id));
-        }
+    let list = shadcn::ScrollArea::build(|cx, out| {
+        out.push_ui(
+            cx,
+            ui::v_flex_build(|cx, out| {
+                for id in QueryId::ALL {
+                    out.push(catalog_item(cx, st, theme.clone(), selected, id));
+                }
+            })
+            .gap(Space::N1)
+            .p(Space::N2)
+            .w_full()
+            .items_stretch(),
+        );
     })
-    .gap(Space::N1)
-    .p(Space::N2)
-    .w_full()
-    .items_stretch()
-    .into_element(cx)])
-    .scroll_handle(st.catalog_scroll.clone())
+    .scroll_handle(catalog_scroll)
     .type_(ScrollAreaType::Hover)
     .refine_layout(LayoutRefinement::default().size_full())
     .into_element(cx);
@@ -847,37 +853,24 @@ fn query_panel_for_mode(
 
     let handle = match mode {
         FetchMode::Sync => {
-            let search = cx
-                .watch_model(&st.search_input)
-                .layout()
-                .cloned_or_default();
-            let symbol = cx
-                .watch_model(&st.stock_symbol)
-                .layout()
-                .cloned_or_default();
+            let search = cx.watch_model(&st.search_input).layout().value_or_default();
+            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
             cx.use_query(key, policy.clone(), move |token| {
                 mock_fetch_sync(token, id, delay, fail_mode, search, symbol)
             })
         }
         FetchMode::Async => {
-            let search = cx
-                .watch_model(&st.search_input)
-                .layout()
-                .cloned_or_default();
-            let symbol = cx
-                .watch_model(&st.stock_symbol)
-                .layout()
-                .cloned_or_default();
+            let search = cx.watch_model(&st.search_input).layout().value_or_default();
+            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
             cx.use_query_async(key, policy.clone(), move |token| async move {
                 mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
             })
         }
     };
 
-    let state = cx
-        .watch_model(handle.model())
-        .layout()
-        .cloned_or_else(QueryState::<Arc<str>>::default);
+    let state = handle
+        .layout_query(cx)
+        .value_or_else(QueryState::<Arc<str>>::default);
 
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
@@ -1029,7 +1022,7 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut ElementContext<'_, App>, st: &AsyncPlaygroundState) -> FetchMode {
-    let tab = cx.watch_model(&st.tabs).layout().cloned_or_default();
+    let tab = cx.watch_model(&st.tabs).layout().value_or_default();
     match tab.as_deref() {
         Some("sync") => FetchMode::Sync,
         _ => FetchMode::Async,
@@ -1045,20 +1038,20 @@ fn query_policy(
     let stale_s = cx
         .watch_model(&config.stale_time_s)
         .layout()
-        .cloned_or_default();
+        .value_or_default();
     let cache_s = cx
         .watch_model(&config.cache_time_s)
         .layout()
-        .cloned_or_default();
+        .value_or_default();
     let keep_prev = cx
         .watch_model(&config.keep_prev)
         .layout()
-        .copied_or_default();
+        .value_or_default();
 
     let cancel_mode = cx
         .watch_model(&config.cancel_mode.value)
         .layout()
-        .cloned_or_default()
+        .value_or_default()
         .unwrap_or_else(|| Arc::<str>::from("cancel"));
     let cancel_mode = match cancel_mode.as_ref() {
         "keep" => QueryCancelMode::KeepInFlight,
@@ -1082,7 +1075,7 @@ fn query_fail_mode(
     let config = st.configs.get(&id).expect("missing config");
     cx.watch_model(&config.fail_mode)
         .layout()
-        .copied_or_default()
+        .value_or_default()
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
@@ -1110,14 +1103,8 @@ fn query_key_for_id(
     st: &AsyncPlaygroundState,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
-    let search = cx
-        .watch_model(&st.search_input)
-        .layout()
-        .cloned_or_default();
-    let symbol = cx
-        .watch_model(&st.stock_symbol)
-        .layout()
-        .cloned_or_default();
+    let search = cx.watch_model(&st.search_input).layout().value_or_default();
+    let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
     query_key_for_params(id, search, symbol)
 }
 

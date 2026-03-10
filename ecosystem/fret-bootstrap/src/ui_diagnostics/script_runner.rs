@@ -629,6 +629,7 @@ impl UiDiagnosticsService {
             UiActionStepV2::ClickStable { .. }
                 | UiActionStepV2::ClickSelectableTextSpanStable { .. }
                 | UiActionStepV2::WaitBoundsStable { .. }
+                | UiActionStepV2::WaitSemanticsScrollStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }

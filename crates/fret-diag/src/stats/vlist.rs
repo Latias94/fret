@@ -114,12 +114,13 @@ pub(crate) fn check_bundle_for_vlist_policy_key_stable_json(
         .collect();
 
     let out_path = out_dir.join("check.vlist_policy_key_stable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_policy_key_stable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "examined_snapshots": examined_snapshots,
@@ -207,12 +208,13 @@ pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     }
 
     let out_path = out_dir.join("check.vlist_visible_range_refreshes_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_visible_range_refreshes_min",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "min_total_refreshes": min_total_refreshes,
@@ -301,12 +303,13 @@ pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     }
 
     let out_path = out_dir.join("check.vlist_visible_range_refreshes_max.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_visible_range_refreshes_max",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "max_total_refreshes": max_total_refreshes,
@@ -516,12 +519,13 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_explainable_json(
     }
 
     let out_path = out_dir.join("check.vlist_window_shifts_explainable.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_window_shifts_explainable",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "total_shifts": total_shifts,
@@ -644,12 +648,13 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     }
 
     let out_path = out_dir.join("check.vlist_window_shifts_non_retained_max.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_window_shifts_non_retained_max",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "max_total_non_retained_shifts": max_total_non_retained_shifts,
@@ -825,12 +830,13 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     }
 
     let out_path = out_dir.join(format!("check.vlist_window_shifts_{kind}_max.json"));
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": format!("vlist_window_shifts_{kind}_max"),
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "max_total_kind_shifts": max_total_kind_shifts,
@@ -980,12 +986,13 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
     }
 
     let out_path = out_dir.join("check.vlist_window_shifts_have_prepaint_actions.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "vlist_window_shifts_have_prepaint_actions",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
         "offenders": offenders,

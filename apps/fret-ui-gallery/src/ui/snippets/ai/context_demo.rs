@@ -26,12 +26,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .model_id("openai:gpt-5")
         .usage(usage)
         .test_id_root("ui-ai-context-demo-root")
-        .into_element_with_children(cx, |cx| {
-            let trigger = ui_ai::ContextTrigger::default()
+        .children([
+            ui_ai::ContextTrigger::default()
                 .test_id("ui-ai-context-demo-trigger")
-                .into_element(cx);
-
-            let content = ui_ai::ContextContent::new([
+                .into_element(cx),
+            ui_ai::ContextContent::new([
                 ui_ai::ContextContentHeader::default()
                     .test_id("ui-ai-context-demo-header")
                     .into_element(cx),
@@ -56,10 +55,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .into_element(cx),
             ])
             .test_id("ui-ai-context-demo-content")
-            .into_element(cx);
-
-            (trigger, content)
-        });
+            .into_element(cx),
+        ])
+        .into_element(cx);
 
     centered(cx, context)
 }

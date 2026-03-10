@@ -366,23 +366,23 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
         return vec![shadcn::typography::h3(cx, msg)].into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
     let show_user0_probe = cx
         .watch_model(&st.show_user0_probe)
         .layout()
-        .copied_or(false);
+        .value_or(false);
     let show_user1_probe = cx
         .watch_model(&st.show_user1_probe)
         .layout()
-        .copied_or(false);
+        .value_or(false);
     let use_non_filterable_user0 = cx
         .watch_model(&st.use_non_filterable_user0)
         .layout()
-        .copied_or(false);
+        .value_or(false);
     let use_non_filterable_user1 = cx
         .watch_model(&st.use_non_filterable_user1)
         .layout()
-        .copied_or(false);
+        .value_or(false);
     let user0_image = if use_non_filterable_user0 {
         user0_non_filterable
     } else {

@@ -151,6 +151,7 @@ pub(super) enum V2StepState {
     ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
     LongPress(V2LongPressState),
     WaitBoundsStable(V2WaitBoundsStableState),
+    WaitSemanticsScrollStable(V2WaitSemanticsScrollStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -220,6 +221,14 @@ pub(super) struct V2WaitBoundsStableState {
     pub(super) remaining_frames: u32,
     pub(super) stable_count: u32,
     pub(super) last_bounds: Option<fret_core::Rect>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2WaitSemanticsScrollStableState {
+    pub(super) step_index: usize,
+    pub(super) remaining_frames: u32,
+    pub(super) stable_count: u32,
+    pub(super) last_value: Option<f64>,
 }
 
 #[derive(Debug, Clone)]

@@ -34,13 +34,13 @@ fn ensure_open<H: UiHost>(
 fn side_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     title: &'static str,
-    side: shadcn::DrawerSide,
+    direction: shadcn::DrawerDirection,
     open: Model<bool>,
     test_id_prefix: &'static str,
 ) -> AnyElement {
     let open_for_trigger = open.clone();
     let open_for_close = open.clone();
-    shadcn::Drawer::new(open).side(side).into_element(
+    shadcn::Drawer::new(open).direction(direction).into_element(
         cx,
         move |cx| {
             shadcn::Button::new(title)
@@ -54,7 +54,7 @@ fn side_button<H: UiHost>(
                 shadcn::DrawerHeader::new([
                     shadcn::DrawerTitle::new(format!("{title} Drawer")).into_element(cx),
                     shadcn::DrawerDescription::new(
-                        "Use the `side` prop to control drawer placement.",
+                        "Use the `direction` prop to control drawer placement.",
                     )
                     .into_element(cx),
                 ])
@@ -83,28 +83,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             side_button(
                 cx,
                 "Top",
-                shadcn::DrawerSide::Top,
+                shadcn::DrawerDirection::Top,
                 top_open.clone(),
                 "ui-gallery-drawer-side-top",
             ),
             side_button(
                 cx,
                 "Right",
-                shadcn::DrawerSide::Right,
+                shadcn::DrawerDirection::Right,
                 right_open.clone(),
                 "ui-gallery-drawer-side-right",
             ),
             side_button(
                 cx,
                 "Bottom",
-                shadcn::DrawerSide::Bottom,
+                shadcn::DrawerDirection::Bottom,
                 bottom_open.clone(),
                 "ui-gallery-drawer-side-bottom",
             ),
             side_button(
                 cx,
                 "Left",
-                shadcn::DrawerSide::Left,
+                shadcn::DrawerDirection::Left,
                 left_open.clone(),
                 "ui-gallery-drawer-side-left",
             ),

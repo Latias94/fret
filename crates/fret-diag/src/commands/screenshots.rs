@@ -254,7 +254,7 @@ fn build_aggregated_screenshots(
     })
 }
 
-fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
+pub(crate) fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
     let try_dir = |dir: &Path| -> Option<(PathBuf, PathBuf)> {
         let manifest = dir.join("manifest.json");
         if manifest.is_file() {
@@ -434,7 +434,7 @@ mod tests {
                 "generated_unix_ms": 1,
                 "files": [
                     {
-                        "id": "script_result_json",
+                        "id": "script_result",
                         "path": "script.result.json"
                     }
                 ]

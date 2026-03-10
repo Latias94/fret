@@ -482,6 +482,16 @@ pub struct RenderPerfSnapshot {
     pub intermediate_pool_evictions: u64,
     pub intermediate_pool_free_bytes: u64,
     pub intermediate_pool_free_textures: u64,
+    /// Best-effort estimate for the persistent path-MSAA scratch currently retained by the renderer.
+    ///
+    /// This includes both the multisampled color target and the resolved single-sample texture.
+    pub path_intermediate_bytes_estimate: u64,
+    /// Best-effort estimate for the multisampled portion of `path_intermediate_bytes_estimate`.
+    pub path_intermediate_msaa_bytes_estimate: u64,
+    /// Best-effort estimate for the resolved single-sample portion of `path_intermediate_bytes_estimate`.
+    pub path_intermediate_resolved_bytes_estimate: u64,
+    /// Best-effort estimate for the retained CustomEffectV3 pyramid scratch texture.
+    pub custom_effect_v3_pyramid_scratch_bytes_estimate: u64,
     // GPU registry live resource estimates (best-effort).
     //
     // These are diagnostics-only estimates derived from descriptors the runner provides for

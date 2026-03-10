@@ -14,7 +14,7 @@ pub fn render(
     let preset = cx
         .watch_model(&motion_preset)
         .paint()
-        .cloned_or_default()
+        .value_or_default()
         .unwrap_or_else(|| Arc::from("theme"));
 
     let select = shadcn::Select::new(motion_preset, motion_preset_open)

@@ -13,6 +13,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -341,6 +342,40 @@ impl Calendar {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Creates a calendar with a shadcn-style controlled/uncontrolled selection model.
+    ///
+    /// This is a convenience surface for docs/gallery-style authoring where callers care about
+    /// the selected date but do not want to manually allocate a month model. The visible month is
+    /// initialized from the selected date when available, otherwise from `default_selected`, and
+    /// finally from `OffsetDateTime::now_utc().date()`.
+    ///
+    /// Use `Calendar::new(...)` when the month model must be owned externally.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected: Option<Model<Option<Date>>>,
+        default_selected: Option<Date>,
+    ) -> Self {
+        let initial_selected = default_selected.or_else(|| {
+            selected
+                .as_ref()
+                .and_then(|model| model.read_ref(&*cx.app, |value| *value).ok().flatten())
+        });
+        let selected =
+            controllable_state::use_controllable_model(cx, selected, || initial_selected).model();
+
+        let today = OffsetDateTime::now_utc().date();
+        let default_month = initial_selected
+            .map(CalendarMonth::from_date)
+            .unwrap_or_else(|| CalendarMonth::from_date(today));
+        let month =
+            controllable_state::use_controllable_model(cx, None::<Model<CalendarMonth>>, || {
+                default_month
+            })
+            .model();
+
+        Self::new(month, selected)
     }
 
     pub fn week_start(mut self, week_start: Weekday) -> Self {
@@ -2503,6 +2538,112 @@ fn calendar_day_cell<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ContainerProps, ElementKind, Length};
+    #[test]
+    fn calendar_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let selected_date = Date::from_calendar_date(2026, Month::January, 15).unwrap();
+        let controlled = app.models_mut().insert(Some(selected_date));
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let calendar = Calendar::new_controllable(cx, Some(controlled.clone()), None);
+            assert_eq!(calendar.selected, controlled);
+
+            let month = cx
+                .watch_model(&calendar.month)
+                .layout()
+                .copied()
+                .expect("calendar month model");
+            assert_eq!(month, CalendarMonth::from_date(selected_date));
+        });
+    }
+
+    #[test]
+    fn calendar_new_controllable_applies_default_selected_and_month() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let default_selected = Date::from_calendar_date(2026, Month::February, 12).unwrap();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let calendar = Calendar::new_controllable(cx, None, Some(default_selected));
+
+            let selected = cx
+                .watch_model(&calendar.selected)
+                .layout()
+                .copied()
+                .flatten();
+            let month = cx
+                .watch_model(&calendar.month)
+                .layout()
+                .copied()
+                .expect("calendar month model");
+
+            assert_eq!(selected, Some(default_selected));
+            assert_eq!(month, CalendarMonth::from_date(default_selected));
+        });
+    }
+
+    #[test]
+    fn calendar_root_width_is_intrinsic_unless_caller_overrides_it() {
+        fn find_calendar_root_container(root: &AnyElement) -> &ContainerProps {
+            let mut stack = vec![root];
+            while let Some(node) = stack.pop() {
+                if let ElementKind::Container(props) = &node.kind
+                    && props.background.is_some()
+                {
+                    return props;
+                }
+                stack.extend(node.children.iter());
+            }
+            panic!("expected Calendar root to contain a background-bearing container");
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::March));
+            let selected = cx.app.models_mut().insert(None::<Date>);
+
+            let intrinsic = Calendar::new(month.clone(), selected.clone()).into_element(cx);
+            let fill = Calendar::new(month, selected)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
+
+            let intrinsic_layout = &find_calendar_root_container(&intrinsic).layout;
+            let fill_layout = &find_calendar_root_container(&fill).layout;
+
+            assert!(
+                matches!(intrinsic_layout.size.width, Length::Px(px) if px.0 > 0.0),
+                "expected Calendar root to resolve to an intrinsic pixel width by default, got={:?}",
+                intrinsic_layout.size.width
+            );
+            assert_eq!(
+                fill_layout.size.width,
+                Length::Fill,
+                "expected caller-owned refine_layout(.w_full()) to override the intrinsic width"
+            );
+        });
+    }
 
     #[test]
     fn calendar_day_grid_step_matches_direction_semantics() {

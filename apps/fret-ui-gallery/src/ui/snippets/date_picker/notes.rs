@@ -20,6 +20,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ),
                 shadcn::typography::muted(
                     cx,
+                    "Trigger width stays caller-owned: add `w_full`, fixed widths, or max-width constraints at the example/form layer.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "The compact builder keeps recipe-owned overlay chrome (`PopoverContent` remains `w-auto p-0`).",
+                ),
+                shadcn::typography::muted(
+                    cx,
                     "Natural language picker uses a small built-in parser (subset of chrono-node behavior).",
                 ),
             ]

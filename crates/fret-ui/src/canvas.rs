@@ -77,6 +77,8 @@ pub(crate) trait UiCanvasHost {
     fn bounds(&self) -> Rect;
     fn scale_factor(&self) -> f32;
     fn text_font_stack_key(&mut self) -> u64;
+    fn inherited_foreground(&self) -> Option<Color>;
+    fn inherited_text_style(&mut self) -> Option<fret_core::TextStyleRefinement>;
 
     fn theme(&mut self) -> &Theme;
     fn request_redraw(&mut self);
@@ -116,6 +118,17 @@ impl<'a, 'b, H: UiHost> UiCanvasHost for UiCanvasHostAdapter<'a, 'b, H> {
             .global::<fret_runtime::TextFontStackKey>()
             .map(|k| k.0)
             .unwrap_or(0)
+    }
+
+    fn inherited_foreground(&self) -> Option<Color> {
+        self.cx.inherited_foreground()
+    }
+
+    fn inherited_text_style(&mut self) -> Option<fret_core::TextStyleRefinement> {
+        let Some(window) = self.cx.window else {
+            return None;
+        };
+        crate::declarative::frame::inherited_text_style_for_node(self.cx.app, window, self.cx.node)
     }
 
     fn theme(&mut self) -> &Theme {
@@ -172,6 +185,20 @@ impl<'a> CanvasPainter<'a> {
 
     pub fn theme(&mut self) -> &Theme {
         self.host.theme()
+    }
+
+    pub fn inherited_foreground(&self) -> Option<Color> {
+        self.host.inherited_foreground()
+    }
+
+    pub fn inherited_text_style(&mut self) -> Option<fret_core::TextStyleRefinement> {
+        self.host.inherited_text_style()
+    }
+
+    pub fn resolved_passive_text_style(&mut self, explicit: Option<TextStyle>) -> TextStyle {
+        let theme = self.host.theme().snapshot();
+        let inherited = self.host.inherited_text_style();
+        crate::text_props::resolve_text_style(theme, explicit, inherited.as_ref())
     }
 
     pub fn request_redraw(&mut self) {

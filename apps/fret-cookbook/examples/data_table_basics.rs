@@ -57,14 +57,15 @@ impl View for DataTableBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Data table basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A shadcn-style DataTable backed by the TanStack-aligned headless engine: sorting, filtering, pagination, and virtualized rows.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Data table basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A shadcn-style DataTable backed by the TanStack-aligned headless engine: sorting, filtering, pagination, and virtualized rows.",
+                ),
+            );
+        });
 
         let toolbar = shadcn::DataTableToolbar::new(
             self.table_state.clone(),
@@ -76,12 +77,10 @@ impl View for DataTableBasicsView {
                 "score" => Arc::from("Score"),
                 _ => Arc::clone(&col.id),
             },
-        )
-        .into_element(cx);
+        );
 
         let pagination =
-            shadcn::DataTablePagination::new(self.table_state.clone(), self.table_output.clone())
-                .into_element(cx);
+            shadcn::DataTablePagination::new(self.table_state.clone(), self.table_output.clone());
 
         let data_table = shadcn::DataTable::new()
             .output_model(self.table_output.clone())
@@ -115,24 +114,27 @@ impl View for DataTableBasicsView {
             .rounded_md()
             .overflow_hidden()
             .size_full()
-            .into_element(cx)
             .test_id(TEST_ID_TABLE);
 
-        let content =
-            shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, table_slot, pagination])
-                .gap(Space::N3)
-                .h_full()
-                .into_element(cx)])
-            .into_element(cx);
+        let content = shadcn::CardContent::build(|cx, out| {
+            out.push_ui(
+                cx,
+                ui::v_flex(|cx| ui::children![cx; toolbar, table_slot, pagination])
+                    .gap(Space::N3)
+                    .h_full(),
+            );
+        });
 
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .h_full()
-            .max_w(Px(1180.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(cx, content);
+        })
+        .ui()
+        .w_full()
+        .h_full()
+        .max_w(Px(1180.0));
 
-        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+        let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
         vec![root].into()
     }
 }

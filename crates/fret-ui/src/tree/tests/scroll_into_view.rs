@@ -507,3 +507,519 @@ fn scroll_into_view_does_not_drift_scroll_when_descendant_is_already_visible() {
         scroll_handle.offset()
     );
 }
+
+#[test]
+fn scroll_into_view_continues_past_nested_scroll_when_inner_target_is_already_visible() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let target_id = std::rc::Rc::new(std::cell::Cell::new(None::<GlobalElementId>));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-into-view-nested-scroll-outer-continues",
+        {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+            let target_id = target_id.clone();
+            move |cx| {
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: {
+                            let mut layout = crate::element::LayoutStyle::default();
+                            layout.size.width = crate::element::Length::Px(Px(200.0));
+                            layout.size.height = crate::element::Length::Px(Px(100.0));
+                            layout.overflow = crate::element::Overflow::Clip;
+                            layout
+                        },
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(outer_handle.clone()),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    {
+                        let inner_handle = inner_handle.clone();
+                        move |cx| {
+                            vec![cx.flex(
+                                crate::element::FlexProps {
+                                    layout: crate::element::LayoutStyle::default(),
+                                    direction: fret_core::Axis::Vertical,
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: crate::element::MainAlign::Start,
+                                    align: crate::element::CrossAlign::Stretch,
+                                    wrap: false,
+                                },
+                                {
+                                    let inner_handle = inner_handle.clone();
+                                    move |cx| {
+                                        let target_id = target_id.clone();
+                                        let top = cx.container(
+                                            crate::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(120.0));
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        );
+                                        let inner = cx.scroll(
+                                            crate::element::ScrollProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(60.0));
+                                                    layout.overflow = crate::element::Overflow::Clip;
+                                                    layout
+                                                },
+                                                axis: crate::element::ScrollAxis::Y,
+                                                scroll_handle: Some(inner_handle.clone()),
+                                                probe_unbounded: true,
+                                                ..Default::default()
+                                            },
+                                            |cx| {
+                                                vec![cx.flex(
+                                                    crate::element::FlexProps {
+                                                        layout: crate::element::LayoutStyle::default(),
+                                                        direction: fret_core::Axis::Vertical,
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
+                                                        justify: crate::element::MainAlign::Start,
+                                                        align: crate::element::CrossAlign::Stretch,
+                                                        wrap: false,
+                                                    },
+                                                    |cx| {
+                                                        (0..6)
+                                                            .map(|index| {
+                                                                cx.keyed(index, |cx| {
+                                                                    cx.pressable_with_id(
+                                                                        crate::element::PressableProps {
+                                                                            layout: {
+                                                                                let mut layout = crate::element::LayoutStyle::default();
+                                                                                layout.size.width = crate::element::Length::Fill;
+                                                                                layout.size.height = crate::element::Length::Px(Px(40.0));
+                                                                                layout
+                                                                            },
+                                                                            enabled: true,
+                                                                            focusable: true,
+                                                                            ..Default::default()
+                                                                        },
+                                                                        |_cx, _st, id| {
+                                                                            if index == 0 {
+                                                                                target_id.set(Some(id));
+                                                                            }
+                                                                            Vec::new()
+                                                                        },
+                                                                    )
+                                                                })
+                                                            })
+                                                            .collect::<Vec<_>>()
+                                                    },
+                                                )]
+                                            },
+                                        );
+                                        let bottom = cx.container(
+                                            crate::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(40.0));
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        );
+                                        vec![top, inner, bottom]
+                                    }
+                                },
+                            )]
+                        }
+                    },
+                )]
+            }
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let outer_scroll_node = ui.children(root)[0];
+    let target_id = target_id.get().expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
+
+    let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
+        &mut app,
+        window,
+        inner_handle.binding_key(),
+    );
+    let inner_scroll_element = bound
+        .first()
+        .copied()
+        .expect("expected inner scroll to be registered for its handle");
+    let inner_scroll_node = crate::declarative::node_for_element_in_window_frame(
+        &mut app,
+        window,
+        inner_scroll_element,
+    )
+    .expect("expected inner scroll node");
+    let inner_scroll_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("inner scroll bounds");
+    assert!(
+        inner_scroll_bounds.size.height.0 > 0.5,
+        "expected inner scroll node to have a non-zero viewport bounds; bounds={inner_scroll_bounds:?} viewport={:?}",
+        inner_handle.viewport_size(),
+    );
+
+    assert!(
+        inner_handle.max_offset().y.0 > 0.5,
+        "expected nested inner scroll to have a real scroll range before scroll_into_view: viewport={:?} content={:?} max={:?}",
+        inner_handle.viewport_size(),
+        inner_handle.content_size(),
+        inner_handle.max_offset(),
+    );
+
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    assert!(
+        did_scroll,
+        "expected nested scroll_into_view to continue to the outer scroll ancestor"
+    );
+    assert!(
+        inner_handle.offset().y.0.abs() <= 0.01,
+        "expected inner scroll to remain stable when the target is already visible inside it: offset={:?}",
+        inner_handle.offset(),
+    );
+    assert!(
+        outer_handle.offset().y.0 > 0.5,
+        "expected outer scroll to move once the target lives below the outer viewport: offset={:?}",
+        outer_handle.offset(),
+    );
+
+    let _ = outer_scroll_node;
+    let _ = target_node;
+}
+
+#[test]
+fn scroll_into_view_scrolls_inner_and_outer_nested_scroll_ancestors() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let target_id = std::rc::Rc::new(std::cell::Cell::new(None::<GlobalElementId>));
+    let target_index = 5usize;
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-into-view-nested-scroll-both-ancestors",
+        {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+            let target_id = target_id.clone();
+            move |cx| {
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: {
+                            let mut layout = crate::element::LayoutStyle::default();
+                            layout.size.width = crate::element::Length::Px(Px(200.0));
+                            layout.size.height = crate::element::Length::Px(Px(100.0));
+                            layout.overflow = crate::element::Overflow::Clip;
+                            layout
+                        },
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(outer_handle.clone()),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    {
+                        let inner_handle = inner_handle.clone();
+                        move |cx| {
+                            vec![cx.flex(
+                                crate::element::FlexProps {
+                                    layout: crate::element::LayoutStyle::default(),
+                                    direction: fret_core::Axis::Vertical,
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: crate::element::MainAlign::Start,
+                                    align: crate::element::CrossAlign::Stretch,
+                                    wrap: false,
+                                },
+                                {
+                                    let inner_handle = inner_handle.clone();
+                                    move |cx| {
+                                        let target_id = target_id.clone();
+                                        let top = cx.container(
+                                            crate::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(120.0));
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        );
+                                        let inner = cx.scroll(
+                                            crate::element::ScrollProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(60.0));
+                                                    layout.overflow = crate::element::Overflow::Clip;
+                                                    layout
+                                                },
+                                                axis: crate::element::ScrollAxis::Y,
+                                                scroll_handle: Some(inner_handle.clone()),
+                                                probe_unbounded: true,
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![cx.flex(
+                                                    crate::element::FlexProps {
+                                                        layout: crate::element::LayoutStyle::default(),
+                                                        direction: fret_core::Axis::Vertical,
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
+                                                        justify: crate::element::MainAlign::Start,
+                                                        align: crate::element::CrossAlign::Stretch,
+                                                        wrap: false,
+                                                    },
+                                                    |cx| {
+                                                        (0..8)
+                                                            .map(|index| {
+                                                                cx.keyed(index, |cx| {
+                                                                    cx.pressable_with_id(
+                                                                        crate::element::PressableProps {
+                                                                            layout: {
+                                                                                let mut layout = crate::element::LayoutStyle::default();
+                                                                                layout.size.width = crate::element::Length::Fill;
+                                                                                layout.size.height = crate::element::Length::Px(Px(40.0));
+                                                                                layout
+                                                                            },
+                                                                            enabled: true,
+                                                                            focusable: true,
+                                                                            ..Default::default()
+                                                                        },
+                                                                        |_cx, _st, id| {
+                                                                            if index == target_index {
+                                                                                target_id.set(Some(id));
+                                                                            }
+                                                                            Vec::new()
+                                                                        },
+                                                                    )
+                                                                })
+                                                            })
+                                                            .collect::<Vec<_>>()
+                                                    },
+                                                )]
+                                            },
+                                        );
+                                        let bottom = cx.container(
+                                            crate::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout = crate::element::LayoutStyle::default();
+                                                    layout.size.width = crate::element::Length::Fill;
+                                                    layout.size.height = crate::element::Length::Px(Px(40.0));
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        );
+                                        vec![top, inner, bottom]
+                                    }
+                                },
+                            )]
+                        }
+                    },
+                )]
+            }
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let outer_scroll_node = ui.children(root)[0];
+    let target_id = target_id.get().expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
+
+    assert!(
+        inner_handle.max_offset().y.0 > 0.5,
+        "expected nested inner scroll to have a real scroll range before scroll_into_view: viewport={:?} content={:?} max={:?}",
+        inner_handle.viewport_size(),
+        inner_handle.content_size(),
+        inner_handle.max_offset(),
+    );
+
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    assert!(
+        did_scroll,
+        "expected nested scroll_into_view to report scrolling"
+    );
+    assert!(
+        inner_handle.offset().y.0 > 0.5,
+        "expected inner scroll to move to reveal the target within the nested viewport: offset={:?}",
+        inner_handle.offset(),
+    );
+    assert!(
+        outer_handle.offset().y.0 > 0.5,
+        "expected outer scroll to also move after the nested viewport remains below the outer viewport: offset={:?}",
+        outer_handle.offset(),
+    );
+
+    let _ = outer_scroll_node;
+    let _ = target_node;
+}
+
+#[test]
+fn scroll_into_view_scrolls_horizontal_scroll_container_when_descendant_is_offscreen() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let mut target_id: Option<GlobalElementId> = None;
+    let target_index = 4usize;
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(80.0)));
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-into-view-horizontal",
+        |cx| {
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Px(Px(100.0));
+                        layout.size.height = crate::element::Length::Px(Px(80.0));
+                        layout.overflow = crate::element::Overflow::Clip;
+                        layout
+                    },
+                    axis: crate::element::ScrollAxis::X,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: crate::element::MainAlign::Start,
+                            align: crate::element::CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            (0..8)
+                                .map(|index| {
+                                    cx.keyed(index, |cx| {
+                                        cx.pressable_with_id(
+                                            crate::element::PressableProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        crate::element::LayoutStyle::default();
+                                                    layout.size.width =
+                                                        crate::element::Length::Px(Px(60.0));
+                                                    layout.size.height =
+                                                        crate::element::Length::Px(Px(40.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                ..Default::default()
+                                            },
+                                            |_cx, _st, id| {
+                                                if index == target_index {
+                                                    target_id = Some(id);
+                                                }
+                                                Vec::new()
+                                            },
+                                        )
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_id = target_id.expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
+
+    assert!(
+        scroll_handle.max_offset().x.0 > 0.01,
+        "expected a horizontal scroll range, got viewport={:?} content={:?} max={:?}",
+        scroll_handle.viewport_size(),
+        scroll_handle.content_size(),
+        scroll_handle.max_offset()
+    );
+
+    let before = scroll_handle.offset();
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    let after = scroll_handle.offset();
+
+    assert!(
+        did_scroll,
+        "expected horizontal scroll_into_view to report scrolling"
+    );
+    assert!(
+        after.x.0 > before.x.0 + 0.5,
+        "expected horizontal scroll_into_view to increase x offset: before={:?} after={:?}",
+        before,
+        after
+    );
+}

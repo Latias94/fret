@@ -1,13 +1,18 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextWrap};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, Length, PositionStyle, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+
+use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
@@ -41,6 +46,17 @@ impl AlertAction {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> AlertActionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertActionBuild {
+            build: Some(build),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -49,6 +65,18 @@ impl AlertAction {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let has_explicit_width = self
+            .layout
+            .size
+            .as_ref()
+            .and_then(|size| size.width.as_ref())
+            .is_some();
+        let has_explicit_height = self
+            .layout
+            .size
+            .as_ref()
+            .and_then(|size| size.height.as_ref())
+            .is_some();
         let mut layout = decl_style::layout_style(
             theme,
             LayoutRefinement::default()
@@ -57,8 +85,12 @@ impl AlertAction {
                 .right(Space::N3)
                 .merge(self.layout),
         );
-        layout.size.width = Length::Auto;
-        layout.size.height = Length::Auto;
+        if !has_explicit_width {
+            layout.size.width = Length::Auto;
+        }
+        if !has_explicit_height {
+            layout.size.height = Length::Auto;
+        }
 
         cx.container(
             ContainerProps {
@@ -79,6 +111,19 @@ impl Alert {
             variant: AlertVariant::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> AlertBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertBuild {
+            build: Some(build),
+            variant: AlertVariant::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
         }
     }
 
@@ -116,6 +161,140 @@ pub fn alert<H: UiHost>(
         ChromeRefinement::default(),
         LayoutRefinement::default(),
     )
+}
+
+pub struct AlertBuild<H, B> {
+    build: Option<B>,
+    variant: AlertVariant,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn variant(mut self, variant: AlertVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_alert_children(cx, self.build.expect("expected alert build closure"));
+        Alert::new(children)
+            .variant(self.variant)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for AlertBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for AlertBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertBuild::into_element(self, cx)
+    }
+}
+
+pub struct AlertActionBuild<H, B> {
+    build: Option<B>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_alert_children(
+            cx,
+            self.build.expect("expected alert action build closure"),
+        );
+        AlertAction::new(children)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertActionBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertActionBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_alert_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -290,14 +469,28 @@ fn alert_with_patch<H: UiHost>(
     .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Alert))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertTitle {
-    text: Arc<str>,
+    content: AlertTitleContent,
+}
+
+#[derive(Debug)]
+enum AlertTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl AlertTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: AlertTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: AlertTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -312,15 +505,91 @@ impl AlertTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_weight(FontWeight::MEDIUM)
-            // Tailwind: `tracking-tight` ~= `-0.025em`.
-            .letter_spacing_em(-0.025)
-            .wrap(TextWrap::Word)
-            .into_element(cx)
+        match self.content {
+            AlertTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_weight(FontWeight::MEDIUM)
+                // Tailwind: `tracking-tight` ~= `-0.025em`.
+                .letter_spacing_em(-0.025)
+                .wrap(TextWrap::Word)
+                .into_element(cx),
+            AlertTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_alert_title_text_style_recursive(child, px, line_height);
+                }
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_weight(FontWeight::MEDIUM)
+                        .letter_spacing_em(-0.025)
+                        .wrap(TextWrap::Word)
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
     }
+}
+
+fn patch_alert_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    weight: FontWeight,
+) {
+    fn patch_text_style(
+        style: &mut Option<fret_core::TextStyle>,
+        px: Px,
+        line_height: Px,
+        weight: FontWeight,
+    ) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = weight;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        style_value.letter_spacing_em = Some(if weight == FontWeight::MEDIUM {
+            -0.025
+        } else {
+            0.0
+        });
+        *style = Some(style_value);
+    }
+
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::StyledText(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::SelectableText(props) => {
+            patch_text_style(&mut props.style, px, line_height, weight);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_alert_text_style_recursive(child, px, line_height, weight);
+    }
+}
+
+fn patch_alert_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
+    patch_alert_text_style_recursive(el, px, line_height, FontWeight::MEDIUM);
 }
 
 #[derive(Debug)]
@@ -350,30 +619,25 @@ impl AlertDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("muted-foreground");
-        let px = theme
-            .metric_by_key("component.alert.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
-        let line_height = theme
-            .metric_by_key("component.alert.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => ui::text(text)
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_weight(FontWeight::NORMAL)
-                .wrap(TextWrap::Word)
-                .into_element(cx)
-                .inherit_foreground(fg),
-            AlertDescriptionContent::Children(children) => ui::v_flex(move |_cx| children)
-                .gap(Space::N1)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full())
-                .into_element(cx)
-                .inherit_foreground(fg),
+            AlertDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
+            AlertDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.alert.description",
+            ),
         }
     }
 }
@@ -383,7 +647,9 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextOverflow};
+    use fret_core::{
+        AppWindowId, AttributedText, Color, Point, Px, Rect, Size, TextOverflow, TextSpan,
+    };
     use fret_icons::IconId;
     use fret_ui::element::{ElementKind, InsetEdge, SpacingLength};
     use fret_ui_kit::declarative::icon as decl_icon;
@@ -400,6 +666,66 @@ mod tests {
         el.children
             .iter()
             .find_map(find_first_inherited_foreground_node)
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
+    }
+
+    fn find_first_selectable_text(
+        el: &AnyElement,
+    ) -> Option<&fret_ui::element::SelectableTextProps> {
+        if let ElementKind::SelectableText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_selectable_text)
+    }
+
+    #[test]
+    fn alert_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDescription::new_children([cx.text("Nested body")]).into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Nested body").expect("expected nested text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested alert description child to be text");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
     }
 
     #[test]
@@ -452,6 +778,145 @@ mod tests {
     }
 
     #[test]
+    fn alert_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = AttributedText::new(
+                Arc::<str>::from("Alert title rendered from a rich text child"),
+                Arc::<[TextSpan]>::from([TextSpan::new(
+                    "Alert title rendered from a rich text child".len(),
+                )]),
+            );
+
+            AlertTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let ElementKind::StyledText(props) = &element.kind else {
+            panic!(
+                "expected AlertTitle::new_children(single child) to keep the rich text node, got {:?}",
+                element.kind
+            );
+        };
+
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected AlertTitle children to receive explicit title text style");
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.alert.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.alert.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, FontWeight::MEDIUM);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(style.letter_spacing_em, Some(-0.025));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_description_children_scope_rich_text_with_description_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = AttributedText::new(
+                Arc::<str>::from("Alert description rendered from a rich text child"),
+                Arc::<[TextSpan]>::from([TextSpan::new(
+                    "Alert description rendered from a rich text child".len(),
+                )]),
+            );
+
+            AlertDescription::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected AlertDescription children to keep the rich text node");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_description_children_preserve_interactive_spans_under_description_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = AttributedText::new(
+                Arc::<str>::from("Open support article"),
+                Arc::<[TextSpan]>::from([TextSpan::new("Open support article".len())]),
+            );
+
+            let mut props = fret_ui::element::SelectableTextProps::new(rich);
+            props.interactive_spans =
+                Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+                    range: 0.."Open support article".len(),
+                    tag: Arc::<str>::from("support-article"),
+                }]);
+
+            AlertDescription::new_children([cx.selectable_text_props(props)]).into_element(cx)
+        });
+
+        let props = find_first_selectable_text(&element)
+            .expect("expected AlertDescription children to keep selectable text nodes");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+
+        let theme = Theme::global(&app).snapshot();
+        assert_eq!(props.interactive_spans.len(), 1);
+        assert_eq!(props.interactive_spans[0].tag.as_ref(), "support-article");
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.alert.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
+    #[test]
     fn alert_with_action_reserves_right_padding_like_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -478,6 +943,45 @@ mod tests {
         };
 
         assert_eq!(props.padding.right, SpacingLength::Px(Px(72.0)));
+    }
+
+    #[test]
+    fn alert_build_collects_children_on_builder_path() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, AlertTitle::new("Heads up!"));
+                out.push_ui(cx, AlertDescription::new("Built via Alert::build"));
+                out.push_ui(
+                    cx,
+                    AlertAction::build(|cx, out| {
+                        out.push(cx.text("Undo"));
+                    }),
+                );
+            })
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected Alert::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.padding.right, SpacingLength::Px(Px(72.0)));
+        assert!(
+            find_text_element(&element, "Built via Alert::build").is_some(),
+            "expected Alert::build to retain nested description content"
+        );
     }
 
     #[test]
@@ -513,6 +1017,35 @@ mod tests {
             props.layout.inset.right,
             InsetEdge::Px(MetricRef::space(Space::N3).resolve(theme))
         );
+        assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
+    }
+
+    #[test]
+    fn alert_action_build_preserves_upstream_offsets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertAction::build(|cx, out| {
+                out.push(cx.text("Undo"));
+            })
+            .refine_layout(LayoutRefinement::default().w_px(Px(88.0)))
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected AlertAction::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
     }
 

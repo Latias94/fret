@@ -13,11 +13,27 @@ This crate intentionally favors:
 - **Official**: boring, stable, onboarding-friendly; should compile fast and avoid optional subsystems.
 - **Lab**: higher ceiling; feature-gated to keep cold compile time down.
 
+Repo-wide taxonomy mapping:
+
+- **Default**: `Official` examples that belong on the onboarding ladder
+- **Comparison**: explicit side-by-side evidence surfaces such as `simple_todo_v2_target`
+- **Advanced**: `Lab` examples plus any interop/renderer/docking-oriented `Official` references that
+  are useful after the boring ladder, not before it
+
 Full index (Bevy-style table of contents): [apps/fret-cookbook/EXAMPLES.md](./EXAMPLES.md)
 
 ## Recommended order (boring ladder)
 
-Start with these before jumping into the UI Gallery:
+Repo-wide default ladder:
+
+1. `hello` (template)
+2. `simple-todo` (template)
+3. `todo` (template / richer baseline)
+
+Cookbook fits immediately after the first two rungs: use it for focused, boring lessons before
+jumping into the gallery/reference surfaces.
+
+Start with these cookbook lessons before jumping into the UI Gallery:
 
 ```bash
 cargo run -p fretboard -- dev native --example hello
@@ -27,9 +43,19 @@ cargo run -p fretboard -- dev native --example text_input_basics
 cargo run -p fretboard -- dev native --example commands_keymap_basics
 ```
 
+If you need the richer third rung after that ladder, read:
+
+- `docs/examples/todo-app-golden-path.md`
+
 Then pick a topic:
 
-- State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
+Comparison target (reference-only; not part of the boring ladder):
+
+- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+  - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + payload-action path now used by `simple_todo`, `todo_demo`, and the simple-todo scaffold, so its role is to stay as a denser comparison surface for row-handler placement rather than a missing-default-path preview
+
+- Default follow-up topics: `hello_counter`, `form_basics`, `virtual_list_basics`
+- State + derived state: `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
 - Queries (feature-gated): `query_basics`
 - Routing (feature-gated): `router_basics`
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)
@@ -100,6 +126,8 @@ required cookbook features for known Lab examples and print what it enabled.
 Notes:
 
 - The recommended golden path examples use the view runtime + typed actions.
+- If you are choosing where to start, prefer the boring ladder here first and leave `Lab` /
+  comparison surfaces for after `hello` + `simple_todo`.
 - Cookbook examples intentionally avoid teaching legacy MVU. The legacy MVU inventory applies to
   maintainer demos (non-onboarding):
   [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../../docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md).

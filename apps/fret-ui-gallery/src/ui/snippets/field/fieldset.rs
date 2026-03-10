@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("fieldset.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -62,23 +63,31 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .gap(Space::N4)
     .into_element(cx);
 
-    shadcn::FieldSet::new([
-        shadcn::FieldLegend::new("Address Information").into_element(cx),
-        shadcn::FieldDescription::new("We need your address to deliver your order.")
-            .into_element(cx),
-        shadcn::FieldGroup::new([
-            shadcn::Field::new([
-                shadcn::FieldLabel::new("Street Address").into_element(cx),
-                shadcn::Input::new(street)
-                    .placeholder("123 Main St")
-                    .a11y_label("Street Address")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            row,
-        ])
-        .into_element(cx),
-    ])
+    shadcn::FieldSet::build(|cx, out| {
+        out.push_ui(cx, shadcn::FieldLegend::new("Address Information"));
+        out.push_ui(
+            cx,
+            shadcn::FieldDescription::new("We need your address to deliver your order."),
+        );
+        out.push_ui(
+            cx,
+            shadcn::FieldGroup::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::Field::build(|cx, out| {
+                        out.push_ui(cx, shadcn::FieldLabel::new("Street Address"));
+                        out.push_ui(
+                            cx,
+                            shadcn::Input::new(street)
+                                .placeholder("123 Main St")
+                                .a11y_label("Street Address"),
+                        );
+                    }),
+                );
+                out.push(row);
+            }),
+        );
+    })
     .refine_layout(max_w_md)
     .into_element(cx)
     .test_id("ui-gallery-field-fieldset")

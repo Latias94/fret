@@ -9,6 +9,13 @@ This note is a design-oriented snapshot focused on two questions:
 This document is not an ADR. If we agree on a direction, we should promote the chosen contract
 surface(s) into an ADR (and keep it narrow and hard-to-change).
 
+Positioning note:
+
+- **Default** onboarding stays on `hello` → `simple-todo` → `todo`.
+- This document is **advanced** guidance for interop and framework-shape evaluation.
+- Comparison samples such as `simple_todo_v2_target` are useful for ergonomics review, but they are
+  not the main interop teaching path.
+
 ## Background work (portable) and "heavy app" adapters
 
 Fret is intentionally main-thread oriented for UI/runtime mutation. The scalable pattern is:
@@ -37,7 +44,7 @@ When users say “the API feels complex”, it usually comes from these layers b
 1. **Mechanism runtime** (`crates/fret-ui`): tree, layout, hit-testing, events, effects, IDs.
 2. **Policy / authoring surface** (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `fret`):
    default padding/row height, focus policy, dismiss semantics, hover intent, tokens → styles.
-   For the `fret` golden path, keep the default first-contact handler surface on `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*`; treat raw `on_action_notify` as cookbook/reference-only host-side glue.
+   For the `fret` golden path, keep the default first-contact handler surface on `on_action_notify_locals`, `on_action_notify_models` (shared graphs), `on_action_notify_transient`, and local `on_activate*`; treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 3. **Embedding surfaces** (viewport panels, retained-widget bridge): how to host “foreign” systems.
 
 To keep the core contract stable, the ergonomics work should focus on (2) while (1) stays minimal.
@@ -74,6 +81,12 @@ Runnable Tier A demo (native):
 
 - `cargo run -p fret-demo --bin embedded_viewport_demo`
 - Cookbook: `docs/interop-tier-a-embedded-viewport.md`
+
+Treat Tier A embedding as an advanced surface:
+
+- useful once the default app path is already understood,
+- not part of first-contact onboarding,
+- intentionally separate from the `hello` / `simple-todo` / `todo` ladder.
 
 Instead, a practical interop strategy is:
 
@@ -137,7 +150,7 @@ If we want to evaluate ergonomics concretely, measure:
 
 - How many times the user has to write `vec![...]` / `.collect::<Vec<_>>()`.
 - How much state wiring is required (`Model` + observation + invalidation).
-- Whether a simple todo app can stay on `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` without reaching for raw `on_action_notify` or single-model aliases.
+- Whether a simple todo app can stay on `on_action_notify_locals`, `on_action_notify_transient`, and local `on_activate*` without reaching for raw `on_action_notify` or single-model aliases.
 - How easy it is to embed a foreign viewport panel (Tier A) next to normal UI.
 
 The current `apps/fret-examples/src/todo_demo.rs` is a good baseline because it already exercises:

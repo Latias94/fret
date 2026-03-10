@@ -150,7 +150,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn build_fn_driver() -> FnDriver<Histogram2DDemoDriver, Histogram2DDemoWindowState> {
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
     FnDriver::new(
         Histogram2DDemoDriver::default(),
         create_window_state,

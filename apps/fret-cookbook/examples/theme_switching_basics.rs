@@ -24,7 +24,6 @@ fn apply_scheme(app: &mut App, scheme: &str) {
 
 struct ThemeSwitchingBasicsView {
     window: AppWindowId,
-    scheme: Model<Option<Arc<str>>>,
     applied_scheme: Option<Arc<str>>,
 }
 
@@ -34,16 +33,16 @@ impl View for ThemeSwitchingBasicsView {
 
         Self {
             window,
-            scheme: app.models_mut().insert(Some(Arc::from(SCHEME_LIGHT))),
             applied_scheme: Some(Arc::from(SCHEME_LIGHT)),
         }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let scheme = cx
-            .watch_model(&self.scheme)
+        let scheme_state = cx.use_local_with(|| Some::<Arc<str>>(Arc::from(SCHEME_LIGHT)));
+        let scheme: Arc<str> = scheme_state
+            .watch(cx)
             .layout()
-            .cloned_or_default()
+            .value_or_default()
             .unwrap_or_else(|| Arc::from(SCHEME_LIGHT));
 
         let applied_mismatch = match self.applied_scheme.as_ref() {
@@ -63,28 +62,27 @@ impl View for ThemeSwitchingBasicsView {
             _ => "Light",
         };
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Theme switching basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal example that toggles between shadcn New York v4 Light/Dark.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
+        let header = shadcn::CardHeader::build(|cx, out| {
+            out.push_ui(cx, shadcn::CardTitle::new("Theme switching basics"));
+            out.push_ui(
+                cx,
+                shadcn::CardDescription::new(
+                    "A minimal example that toggles between shadcn New York v4 Light/Dark.",
+                ),
+            );
+        });
 
         let scheme_row = ui::h_flex(|cx| {
-            [
-                shadcn::Label::new("Active scheme:").into_element(cx),
-                shadcn::Badge::new(scheme_label)
-                    .into_element(cx)
-                    .test_id(TEST_ID_SCHEME),
+            ui::children![
+                cx;
+                shadcn::Label::new("Active scheme:"),
+                shadcn::Badge::new(scheme_label).test_id(TEST_ID_SCHEME),
             ]
         })
         .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
-        let scheme_toggle = shadcn::ToggleGroup::single(self.scheme.clone())
+        let scheme_toggle = shadcn::ToggleGroup::single(scheme_state.clone_model())
             .items([
                 shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [cx.text("Light")])
                     .a11y_label("Light")
@@ -94,56 +92,68 @@ impl View for ThemeSwitchingBasicsView {
                     .test_id(TEST_ID_TOGGLE_DARK),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .into_element(cx)
             .test_id(TEST_ID_TOGGLE);
 
         // Avoid `ui::h_flex` here: its internal flex sizing forces `width: fill` by default, which
         // can cause children to get a much larger hit box than intended.
-        let toggle_row = ui::h_row(|_cx| [scheme_toggle])
-            .justify_center()
-            .w_full()
-            .into_element(cx);
+        let toggle_row = ui::h_row(|_cx| [scheme_toggle]).justify_center().w_full();
 
-        let sample = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Sample surface").into_element(cx),
-                shadcn::CardDescription::new("Buttons + tokens should match the active scheme.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([ui::h_flex(|cx| {
-                [
-                    shadcn::Button::new("Default").into_element(cx),
-                    shadcn::Button::new("Outline")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .into_element(cx),
-                    shadcn::Button::new("Secondary")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .into_element(cx)])
-            .into_element(cx),
-        ])
+        let sample = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Sample surface"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Buttons + tokens should match the active scheme.",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::h_flex(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::Button::new("Default"),
+                                shadcn::Button::new("Outline")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                                shadcn::Button::new("Secondary")
+                                    .variant(shadcn::ButtonVariant::Secondary),
+                            ]
+                        })
+                        .gap(Space::N2),
+                    );
+                }),
+            );
+        })
         .ui()
         .w_full()
-        .into_element(cx)
         .test_id(TEST_ID_SAMPLE_CARD);
 
-        let content_body = ui::v_flex(|_cx| [scheme_row, toggle_row, sample])
-            .gap(Space::N5)
-            .w_full()
-            .into_element(cx);
-        let content = shadcn::CardContent::new([content_body]).into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(cx, header);
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        ui::v_flex(|cx| ui::children![cx; scheme_row, toggle_row, sample])
+                            .gap(Space::N5)
+                            .w_full(),
+                    );
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(560.0));
 
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(560.0))
-            .into_element(cx);
-
-        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
     }
 }
 

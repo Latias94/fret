@@ -30,7 +30,7 @@ fn row<H: UiHost>(
             shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(icon_size)
-                .a11y_label("Open")
+                .a11y_label("Submit")
                 .icon(IconId::new_static("lucide.arrow-up-right"))
                 .into_element(cx),
         ]
@@ -40,6 +40,12 @@ fn row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![
+            row(
+                cx,
+                "Extra Small",
+                shadcn::ButtonSize::Xs,
+                shadcn::ButtonSize::IconXs,
+            ),
             row(
                 cx,
                 "Small",

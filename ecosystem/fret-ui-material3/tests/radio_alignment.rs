@@ -977,7 +977,7 @@ fn snackbar_action_emits_command_and_dismisses() {
         let _id = controller.show(
             &mut action_host,
             window,
-            Snackbar::new("Saved").action("Undo", cmd.clone()),
+            Snackbar::new("Saved").action_id("Undo", cmd.clone()),
         );
     }
 
@@ -7953,7 +7953,7 @@ fn material3_headless_snackbar_suite_goldens_v1() {
                 snapshot_case(
                     "short.single_line",
                     Snackbar::new("Saved")
-                        .action("Undo", CommandId::new("material3_snackbar_action"))
+                        .action_id("Undo", CommandId::new("material3_snackbar_action"))
                         .duration(SnackbarDuration::Short),
                 ),
             );
@@ -7963,7 +7963,7 @@ fn material3_headless_snackbar_suite_goldens_v1() {
                     "long.two_line",
                     Snackbar::new("Update available")
                         .supporting_text("Restart the app to apply the latest changes.")
-                        .action("Restart", CommandId::new("material3_snackbar_action"))
+                        .action_id("Restart", CommandId::new("material3_snackbar_action"))
                         .duration(SnackbarDuration::Long),
                 ),
             );

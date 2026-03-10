@@ -174,14 +174,14 @@ fn view(
 ) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let preset = cx.watch_model(&st.preset).paint().copied_or_default();
+    let preset = cx.watch_model(&st.preset).paint().value_or_default();
     let fit = cx
         .watch_model(&st.fit)
         .paint()
-        .copied_or(ViewportFit::Contain);
-    let target_w = cx.watch_model(&st.target_w).paint().copied_or_default();
-    let target_h = cx.watch_model(&st.target_h).paint().copied_or_default();
-    let ingest = cx.watch_model(&st.ingest).paint().copied_or_default();
+        .value_or(ViewportFit::Contain);
+    let target_w = cx.watch_model(&st.target_w).paint().value_or_default();
+    let target_h = cx.watch_model(&st.target_h).paint().value_or_default();
+    let ingest = cx.watch_model(&st.ingest).paint().value_or_default();
 
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
@@ -189,67 +189,63 @@ fn view(
         _ => (DEFAULT_TARGET_PX_SIZE, "960×540"),
     };
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Tier A interop: external texture import (basics)").into_element(cx),
-        shadcn::CardDescription::new(
-            "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let header = shadcn::CardHeader::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::CardTitle::new("Tier A interop: external texture import (basics)"),
+        );
+        out.push_ui(
+            cx,
+            shadcn::CardDescription::new(
+                "Presenting a per-frame imported wgpu::TextureView as a stable RenderTargetId via EngineFrameUpdate deltas (ADR 0234).",
+            ),
+        );
+    });
 
     let controls = ui::h_flex(|cx| {
-        [
+        ui::children![
+            cx;
             shadcn::Button::new("640×360")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_640)
                 .disabled(preset == 0)
-                .test_id(TEST_ID_SIZE_640)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_640),
             shadcn::Button::new("960×540")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_960)
                 .disabled(preset == 1)
-                .test_id(TEST_ID_SIZE_960)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_960),
             shadcn::Button::new("1280×720")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_SIZE_1280)
                 .disabled(preset == 2)
-                .test_id(TEST_ID_SIZE_1280)
-                .into_element(cx),
+                .test_id(TEST_ID_SIZE_1280),
             shadcn::Separator::new()
-                .orientation(shadcn::SeparatorOrientation::Vertical)
-                .into_element(cx),
+                .orientation(shadcn::SeparatorOrientation::Vertical),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)
                 .disabled(fit == ViewportFit::Contain)
-                .test_id(TEST_ID_FIT_CONTAIN)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_CONTAIN),
             shadcn::Button::new("Cover")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_COVER)
                 .disabled(fit == ViewportFit::Cover)
-                .test_id(TEST_ID_FIT_COVER)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_COVER),
             shadcn::Button::new("Stretch")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_STRETCH)
                 .disabled(fit == ViewportFit::Stretch)
-                .test_id(TEST_ID_FIT_STRETCH)
-                .into_element(cx),
+                .test_id(TEST_ID_FIT_STRETCH),
         ]
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
     let target_w_badge = shadcn::Badge::new(format!("target.w: {target_w:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_W)
@@ -257,8 +253,7 @@ fn view(
         );
     let target_h_badge = shadcn::Badge::new(format!("target.h: {target_h:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_TARGET_H)
@@ -266,8 +261,7 @@ fn view(
         );
     let fit_badge = shadcn::Badge::new(format!("fit: {:.0}", fit_code(fit)))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_FIT_CODE)
@@ -275,8 +269,7 @@ fn view(
         );
     let ingest_badge = shadcn::Badge::new(format!("ingest: {ingest:.0}"))
         .variant(shadcn::BadgeVariant::Secondary)
-        .into_element(cx)
-        .attach_semantics(
+        .a11y(
             SemanticsDecoration::default()
                 .role(SemanticsRole::Meter)
                 .test_id(TEST_ID_INGEST_CODE)
@@ -284,10 +277,9 @@ fn view(
         );
 
     let info = ui::h_flex(|cx| {
-        [
-            ui::text(format!("target_px_size preset: {preset_label}"))
-                .text_xs()
-                .into_element(cx),
+        ui::children![
+            cx;
+            ui::text(format!("target_px_size preset: {preset_label}")).text_xs(),
             target_w_badge,
             target_h_badge,
             fit_badge,
@@ -296,18 +288,15 @@ fn view(
     })
     .gap(Space::N2)
     .items_center()
-    .wrap()
-    .into_element(cx);
+    .wrap();
 
-    let hint = shadcn::Alert::new([
-        shadcn::AlertTitle::new("Key idea").into_element(cx),
+    let hint = shadcn::Alert::new(ui::children![
+        cx;
+        shadcn::AlertTitle::new("Key idea"),
         shadcn::AlertDescription::new(
-            "Instead of mutating the renderer's render target registry directly, this example emits explicit per-frame \
-EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps registry mutation staged through the runner.",
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
+            "Instead of mutating the renderer's render target registry directly, this example emits explicit per-frame EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps registry mutation staged through the runner.",
+        ),
+    ]);
 
     let mut surface_style = LayoutStyle::default();
     surface_style.size.width = Length::Fill;
@@ -329,24 +318,26 @@ EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps regi
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
-        .h_px(Px(420.0))
-        .into_element(cx);
+        .h_px(Px(420.0));
 
-    let content = ui::v_flex(|_cx| vec![controls, info, hint, surface_panel])
-        .gap(Space::N3)
-        .into_element(cx);
+    let content =
+        ui::v_flex(|cx| ui::children![cx; controls, info, hint, surface_panel]).gap(Space::N3);
 
-    let card = shadcn::Card::new(vec![
-        header,
-        shadcn::CardContent::new(vec![content]).into_element(cx),
-    ])
+    let card = shadcn::Card::build(|cx, out| {
+        out.push_ui(cx, header);
+        out.push_ui(
+            cx,
+            shadcn::CardContent::build(|cx, out| {
+                out.push_ui(cx, content);
+            }),
+        );
+    })
     .ui()
     .w_full()
     .h_full()
-    .max_w(Px(1100.0))
-    .into_element(cx);
+    .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+    let root = fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }
@@ -481,8 +472,10 @@ fn main() -> anyhow::Result<()> {
         .install_app(shadcn::install_app)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
-        .with_default_diagnostics();
+        .with_lucide_icons();
+
+    #[cfg(feature = "cookbook-diag")]
+    let builder = builder.with_default_diagnostics();
 
     builder.run().map_err(anyhow::Error::from)
 }

@@ -245,11 +245,7 @@ impl DatePicker {
                             .content_justify_start()
                             .text_weight(FontWeight::NORMAL)
                             .refine_style(trigger_chrome.clone())
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .merge(trigger_layout.clone()),
-                            );
+                            .refine_layout(trigger_layout.clone());
                         if let Some(control_id) = control_id.clone() {
                             button = button.control_id(control_id);
                         }
@@ -447,6 +443,13 @@ mod tests {
         ui.layout_all(app, services, bounds, 1.0);
     }
 
+    fn find_first_pressable(el: &AnyElement) -> Option<fret_ui::element::PressableProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Pressable(props) => Some(props.clone()),
+            _ => el.children.iter().find_map(find_first_pressable),
+        }
+    }
+
     #[test]
     fn date_picker_focuses_selected_day_on_open() {
         let window = AppWindowId::default();
@@ -513,6 +516,74 @@ mod tests {
         assert!(
             focused_sem.flags.selected,
             "expected focused day to be selected"
+        );
+    }
+
+    #[test]
+    fn date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        let intrinsic = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "date-picker-trigger-intrinsic-width",
+            |cx| {
+                let open = cx.app.models_mut().insert(false);
+                let month = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::March));
+                let selected = cx.app.models_mut().insert(None::<Date>);
+
+                DatePicker::new(open, month, selected).into_element(cx)
+            },
+        );
+        let fill = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "date-picker-trigger-fill-width",
+            |cx| {
+                let open = cx.app.models_mut().insert(false);
+                let month = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::March));
+                let selected = cx.app.models_mut().insert(None::<Date>);
+
+                DatePicker::new(open, month, selected)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+            },
+        );
+
+        let intrinsic_pressable = find_first_pressable(&intrinsic).unwrap_or_else(|| {
+            panic!("expected DatePicker trigger to render a Pressable: {intrinsic:#?}")
+        });
+        let fill_pressable = find_first_pressable(&fill).unwrap_or_else(|| {
+            panic!("expected DatePicker trigger to render a Pressable: {fill:#?}")
+        });
+
+        assert_eq!(
+            intrinsic_pressable.layout.size.width,
+            fret_ui::element::Length::Auto
+        );
+        assert_eq!(
+            fill_pressable.layout.size.width,
+            fret_ui::element::Length::Fill
         );
     }
 }

@@ -88,17 +88,11 @@ impl View for QueryAsyncTokioDemoView {
             });
         }
 
-        cx.on_action_notify_models::<act::ToggleFailMode>({
-            let fail_mode_state = fail_mode_state.clone();
-            move |models| fail_mode_state.update_in(models, |value| *value = !*value)
-        });
+        cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = cx
-            .watch_local(&fail_mode_state)
-            .layout()
-            .copied_or_default();
+        let fail_mode = fail_mode_state.watch(cx).layout().value_or_default();
 
         let query_handle = cx.use_query_async(
             demo_key(),
@@ -122,10 +116,9 @@ impl View for QueryAsyncTokioDemoView {
             },
         );
 
-        let query_state = cx
-            .watch_model(query_handle.model())
-            .layout()
-            .cloned_or_else(QueryState::<DemoData>::default);
+        let query_state = query_handle
+            .layout(cx)
+            .value_or_else(QueryState::<DemoData>::default);
 
         let status_label = match query_state.status {
             QueryStatus::Idle => "Idle",

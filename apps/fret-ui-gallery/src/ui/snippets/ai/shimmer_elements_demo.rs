@@ -3,12 +3,14 @@ pub const SOURCE: &str = include_str!("shimmer_elements_demo.rs");
 // region: example
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let theme = fret_ui::Theme::global(&*cx.app).snapshot();
     let heading_style = TextStyle {
         font: FontId::ui(),
         size: Px(24.0),
@@ -43,6 +45,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let custom = ui_ai::Shimmer::new(Arc::<str>::from("Custom styled shimmer text"))
         .text_style(custom_style)
         .into_element(cx);
+    let inherited = typography::scope_text_style_with_color(
+        ui_ai::Shimmer::new(Arc::<str>::from(
+            "Inherited shimmer from subtree typography",
+        ))
+        .use_resolved_passive_text()
+        .into_element(cx),
+        typography::preset_text_refinement(
+            &theme,
+            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+        ),
+        typography::muted_foreground_color(&theme),
+    );
 
     let item = |cx: &mut ElementContext<'_, H>, label: &'static str, el: AnyElement| {
         ui::v_stack(move |cx| {
@@ -64,6 +78,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             item(cx, "As heading", heading),
             item(cx, "As span (inline)", inline),
             item(cx, "As div with custom styling", custom),
+            item(cx, "With inherited subtree typography", inherited),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

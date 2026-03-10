@@ -826,7 +826,7 @@ mod tests {
         Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
         TextService,
     };
-    use fret_ui::element::{ElementKind, PressableProps};
+    use fret_ui::element::{ElementKind, Length, PressableProps};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
 
@@ -915,6 +915,19 @@ mod tests {
         None
     }
 
+    fn assert_pressable_height_px(props: &PressableProps, expected: f32, context: &str) {
+        match &props.layout.size.height {
+            Length::Px(px) => {
+                assert!(
+                    (px.0 - expected).abs() <= 1e-6,
+                    "expected {context} height to be {expected}px, got {}px",
+                    px.0
+                );
+            }
+            _ => panic!("expected {context} height to resolve to px"),
+        }
+    }
+
     #[test]
     fn native_select_trigger_stamps_combobox_role_and_expanded_state() {
         let window = AppWindowId::default();
@@ -951,6 +964,49 @@ mod tests {
         let trigger = find_pressable_by_test_id(&element, "native-select-trigger")
             .expect("trigger pressable");
         assert_eq!(trigger.a11y.expanded, Some(true));
+    }
+
+    #[test]
+    fn native_select_size_matches_upstream_default_and_sm_heights() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let default_element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "native-select-size-default",
+            |cx| {
+                NativeSelect::new(value.clone(), open.clone())
+                    .option(NativeSelectOption::new("a", "A"))
+                    .trigger_test_id("native-select-trigger-default")
+                    .into_element(cx)
+            },
+        );
+        let default_trigger =
+            find_pressable_by_test_id(&default_element, "native-select-trigger-default")
+                .expect("default trigger pressable");
+        assert_pressable_height_px(default_trigger, 36.0, "default native select trigger");
+
+        let small_element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "native-select-size-sm",
+            |cx| {
+                NativeSelect::new(value, open)
+                    .size(NativeSelectSize::Sm)
+                    .option(NativeSelectOption::new("a", "A"))
+                    .trigger_test_id("native-select-trigger-sm")
+                    .into_element(cx)
+            },
+        );
+        let small_trigger = find_pressable_by_test_id(&small_element, "native-select-trigger-sm")
+            .expect("small trigger pressable");
+        assert_pressable_height_px(small_trigger, 32.0, "small native select trigger");
     }
 
     #[test]

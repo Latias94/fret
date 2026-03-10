@@ -9,14 +9,15 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shadcn/ui v4 docs and the
-`new-york-v4` implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Checkbox` against the upstream shadcn/ui v4 docs and the
+base implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx`
-- Underlying primitive: Radix `@radix-ui/react-checkbox`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/checkbox.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/examples/base/checkbox-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-basic.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-description.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-group.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-invalid.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-table.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-rtl.tsx`
+- Underlying primitive: Base UI `@base-ui/react/checkbox`
 
 ## Fret implementation
 
@@ -41,6 +42,12 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 
 - Pass: Exposes `SemanticsRole::Checkbox` and `checked` state.
 
+### Gallery / docs parity
+
+- Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Checked State`, `Invalid State`, `Basic`, `Description`, `Disabled`, `Group`, `Table`, `RTL`, and `API Reference`.
+- Pass: `Label Association` and `With Title` remain as explicit Fret-only follow-ups after the upstream path because they document field/label composition rather than the base checkbox recipe itself.
+- Pass: the remaining parity work for this component is page/docs clarity; no extra generic children or `compose()` API is warranted.
+
 ### Visual parity (new-york)
 
 - Pass: Unchecked state uses `border-input` and transparent background.
@@ -52,6 +59,7 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib checkbox`
+- `cargo test -p fret-ui-shadcn --lib field_label_click_mirrors_checkbox_action_sequence --message-format short`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_checkbox_demo_control_size`).
 - Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
@@ -59,5 +67,6 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 
 ## Follow-ups (recommended)
 
+- Pass: Snapshot/action checkboxes now participate in `control_id` / label forwarding without falling back to a model-backed registry entry; label activation mirrors command dispatch, payload forwarding, and state toggles when applicable.
 - Pass: Supports Radix `checked="indeterminate"` (tri-state) via `Checkbox::new_tristate`.
   - Note: Semantics currently maps indeterminate to `checked: None`.

@@ -1,3 +1,5 @@
+#[cfg(test)]
+use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -22,7 +24,7 @@ pub(crate) struct RuntimeTaffyDumpConfig {
     pub(crate) out_dir: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) interactive_resize_text_width_cache_entries: usize,
     pub(crate) keep_alive_view_cache_scratch_disabled: bool,
@@ -31,7 +33,6 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) scroll_defer_unbounded_probe_on_resize: bool,
     pub(crate) scroll_defer_unbounded_probe_on_invalidation: bool,
     pub(crate) scroll_defer_unbounded_probe_stable_frames: u8,
-    pub(crate) scroll_extents_post_layout: bool,
 
     pub(crate) debug_pointer_region_move_hook: bool,
     pub(crate) debug_pointer_region_move_backtrace: bool,
@@ -90,8 +91,42 @@ pub(crate) enum LayoutEngineSweepPolicy {
 }
 
 pub(crate) fn ui_runtime_config() -> &'static UiRuntimeEnvConfig {
+    #[cfg(test)]
+    if let Some(config) = UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| *slot.borrow()) {
+        return config;
+    }
+
     static CONFIG: OnceLock<UiRuntimeEnvConfig> = OnceLock::new();
     CONFIG.get_or_init(UiRuntimeEnvConfig::from_env)
+}
+
+#[cfg(test)]
+thread_local! {
+    static UI_RUNTIME_CONFIG_TEST_OVERRIDE: RefCell<Option<&'static UiRuntimeEnvConfig>> =
+        const { RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) struct UiRuntimeConfigTestOverrideGuard;
+
+#[cfg(test)]
+impl Drop for UiRuntimeConfigTestOverrideGuard {
+    fn drop(&mut self) {
+        UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| {
+            slot.borrow_mut().take();
+        });
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn scoped_ui_runtime_config_test_override(
+    config: UiRuntimeEnvConfig,
+) -> UiRuntimeConfigTestOverrideGuard {
+    let leaked: &'static UiRuntimeEnvConfig = Box::leak(Box::new(config));
+    UI_RUNTIME_CONFIG_TEST_OVERRIDE.with(|slot| {
+        *slot.borrow_mut() = Some(leaked);
+    });
+    UiRuntimeConfigTestOverrideGuard
 }
 
 impl UiRuntimeEnvConfig {
@@ -144,13 +179,6 @@ impl UiRuntimeEnvConfig {
                 .and_then(|v| v.parse::<u8>().ok())
                 .unwrap_or(2)
                 .min(60);
-
-        // Default-off: prototype flag for the scroll-extents DOM/GPUI parity workstream.
-        //
-        // When enabled, scroll layout attempts to avoid deep unbounded measurement probes by
-        // deriving extents from post-layout geometry (best-effort), with a fallback to unbounded
-        // probing when correctness requires it (e.g. at the scroll extent edge).
-        let scroll_extents_post_layout = env_is_one("FRET_UI_SCROLL_EXTENTS_POST_LAYOUT");
 
         let debug_pointer_region_move_hook = env_present("FRET_DEBUG_POINTER_REGION_MOVE_HOOK");
         let debug_pointer_region_move_backtrace =
@@ -316,7 +344,6 @@ impl UiRuntimeEnvConfig {
             scroll_defer_unbounded_probe_on_resize,
             scroll_defer_unbounded_probe_on_invalidation,
             scroll_defer_unbounded_probe_stable_frames,
-            scroll_extents_post_layout,
             debug_pointer_region_move_hook,
             debug_pointer_region_move_backtrace,
             debug_scroll_wheel_vlist,

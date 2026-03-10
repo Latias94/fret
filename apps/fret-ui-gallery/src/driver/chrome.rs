@@ -1,5 +1,7 @@
 use fret_app::{App, CommandId, Model};
+use fret_core::SemanticsRole;
 use fret_ui::element::AnyElement;
+use fret_ui::element::SemanticsProps;
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn as shadcn;
 use fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE_PREFIX;
@@ -30,7 +32,8 @@ pub(super) fn tab_strip_view(
             .get_model_cloned(workspace_dirty_tabs, Invalidation::Layout)
             .unwrap_or_default();
 
-        WorkspaceTabStrip::new(selected.clone())
+        let tab_strip = WorkspaceTabStrip::new(selected.clone())
+            .pane_id(super::UI_GALLERY_WORKSPACE_PANE_ID)
             .test_id_root("ui-gallery-workspace-tabstrip")
             .tab_test_id_prefix("ui-gallery-workspace-tab")
             .tabs(workspace_tab_ids.iter().map(|tab_id| {
@@ -54,7 +57,8 @@ pub(super) fn tab_strip_view(
                 )))
                 .dirty(dirty)
             }))
-            .into_element(cx)
+            .into_element(cx);
+        tab_strip
     })
 }
 
@@ -63,7 +67,7 @@ pub(super) fn top_bar_view(
     left: Vec<AnyElement>,
     tab_strip: Option<AnyElement>,
 ) -> AnyElement {
-    WorkspaceTopBar::new()
+    let top_bar = WorkspaceTopBar::new()
         .left(left)
         .center(tab_strip.into_iter())
         .right(vec![
@@ -80,5 +84,14 @@ pub(super) fn top_bar_view(
                 .on_click(fret_app::core_commands::COMMAND_PALETTE)
                 .into_element(cx),
         ])
-        .into_element(cx)
+        .into_element(cx);
+
+    cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Toolbar,
+            test_id: Some(Arc::from("ui-gallery-top-bar")),
+            ..Default::default()
+        },
+        |_cx| [top_bar],
+    )
 }

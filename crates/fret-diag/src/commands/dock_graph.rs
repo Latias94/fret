@@ -24,8 +24,8 @@ pub(crate) fn cmd_dock_graph(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
-    let bundle_path = crate::resolve_bundle_artifact_path(&src);
+    let resolved = resolve::resolve_bundle_ref(&src)?;
+    let bundle_path = resolved.bundle_artifact;
 
     let bytes = std::fs::read(&bundle_path).map_err(|e| {
         format!(

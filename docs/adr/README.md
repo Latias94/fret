@@ -178,6 +178,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - **Editor-grade code editor workstream**: `docs/adr/0185-code-editor-ecosystem-v1.md`, `docs/adr/0179-text-navigation-and-word-boundaries-v1.md`, `docs/adr/0180-web-ime-and-text-input-bridge-v1.md`, `docs/adr/0188-code-editor-display-fragments-and-displaymap-composition-v1.md`
+- **Editor ecosystem theming / skinning boundary**: `docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md`, `docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`, `docs/adr/0270-theme-token-contract-tiers-and-missing-token-policy-v1.md`, `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - **Observability + diagnostics bundles + scripted UI interaction tests**: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
@@ -427,6 +428,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0150-pointer-identity-and-multi-pointer-capture.md`
 - `docs/adr/0151-multi-pointer-drag-sessions-and-routing-keys.md`
 - `docs/adr/0152-polychrome-glyphs-and-emoji-pipeline-v1.md`
+- `docs/adr/0316-editor-ecosystem-token-namespaces-and-skinning-boundary-v1.md`
 - `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`

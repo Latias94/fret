@@ -15,18 +15,19 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let notes = doc_layout::notes(
         cx,
         [
-            "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
+            "Gallery sections mirror shadcn Drawer docs first; `Snap Points` is a Fret/Vaul-specific extra appended afterward.",
             "`Drawer::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
+            "`Drawer::direction(...)` now mirrors the upstream Vaul/shadcn prop name; `side(...)` remains as a compatibility escape hatch.",
             "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
             "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
-            "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
+            "`DrawerClose::from_scope().build(cx, child)` gives a composable close-child surface that maps more directly to upstream `DrawerClose asChild` usage.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Drawer docs order with an extra snap-points recipe: Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL.",
+            "Preview follows shadcn Drawer docs order first, then appends a Fret-specific `Snap Points` recipe.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -37,23 +38,24 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .title_test_id("ui-gallery-section-usage-title")
                 .description("Copyable shadcn-style composition reference for Drawer.")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Snap Points", snap_points)
-                .description("Drag settles to the nearest snap point (Vaul-style).")
-                .code_rust_from_file_region(snippets::snap_points::SOURCE, "example"),
             DocSection::new("Scrollable Content", scrollable_content)
                 .description("Keep actions visible while the content area scrolls.")
                 .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example"),
             DocSection::new("Sides", sides)
-                .description("Use the `side` prop to control drawer placement.")
+                .description("Use the `direction` prop to control drawer placement.")
                 .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
-            DocSection::new("Responsive Dialog", responsive_dialog).descriptions([
-                "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
-                "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
-            ])
-            .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example"),
+            DocSection::new("Responsive Dialog", responsive_dialog)
+                .descriptions([
+                    "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
+                    "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
+                ])
+                .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Drawer layout should follow right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Snap Points", snap_points)
+                .description("Drag settles to the nearest snap point (Vaul-style).")
+                .code_rust_from_file_region(snippets::snap_points::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
                 .description("Implementation notes and regression guidelines."),

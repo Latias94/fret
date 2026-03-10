@@ -83,6 +83,72 @@ pub(crate) fn start_pack_last_bundle(app: &mut App, st: &mut State) -> Result<()
     Ok(())
 }
 
+pub(crate) fn start_pack_bundle_dir(
+    app: &mut App,
+    st: &mut State,
+    bundle_dir_raw: &str,
+) -> Result<(), String> {
+    let in_flight = app
+        .models()
+        .read(&st.pack_in_flight, |v| *v)
+        .unwrap_or(false);
+    if in_flight {
+        return Err("pack already in progress".to_string());
+    }
+
+    let repo_root = repo_root_from_script_paths(&st.script_paths);
+    let out_dir = app
+        .models()
+        .read(&st.target_out_dir, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "no target out_dir available for pack".to_string())?;
+
+    let bundle_dir_abs = if is_abs_path(bundle_dir_raw) {
+        PathBuf::from(bundle_dir_raw)
+    } else {
+        repo_root.join(bundle_dir_raw)
+    };
+    if !bundle_dir_abs.join("bundle.json").is_file() {
+        return Err(format!(
+            "selected bundle dir has no bundle.json: {}",
+            bundle_dir_abs.to_string_lossy()
+        ));
+    }
+
+    let pack_dir = repo_root.join(".fret").join("diag").join("packs");
+    let _ = std::fs::create_dir_all(&pack_dir);
+
+    let bundle_name = bundle_dir_abs
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+    let out_path = pack_dir.join(format!("{bundle_name}-{}.zip", now_unix_ms()));
+
+    let args = vec![
+        "--dir".to_string(),
+        out_dir,
+        "--pack-out".to_string(),
+        out_path.to_string_lossy().to_string(),
+        "--include-all".to_string(),
+        "pack".to_string(),
+        bundle_dir_abs.to_string_lossy().to_string(),
+    ];
+
+    let tx = st.pack_tx.clone();
+    std::thread::spawn(move || {
+        let result = fret_diag::diag_cmd(args);
+        let _ = tx.send(PackJobResult { out_path, result });
+    });
+
+    let _ = app.models_mut().update(&st.pack_in_flight, |v| *v = true);
+    let _ = app.models_mut().update(&st.pack_last_error, |v| *v = None);
+
+    Ok(())
+}
+
 fn ensure_bundle_dir_materialized(
     app: &mut App,
     st: &mut State,

@@ -15,7 +15,7 @@ Base UI `Tabs.Root` behavior.
 
 ## Upstream references (source of truth)
 
-- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/tabs.mdx`
 - shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx`
 - shadcn demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/tabs-demo.tsx`
 - Base UI root contract: `repo-ref/base-ui/packages/react/src/tabs/root/TabsRoot.tsx`
@@ -54,6 +54,8 @@ Base UI `Tabs.Root` behavior.
 
 - Pass: Root/list/trigger tokens align with shadcn v4 defaults (`h-9`, `p-[3px]`, muted list chrome,
   active trigger background/border/shadow conventions).
+- Note: Default-style ownership remains split on purpose: root width constraints such as upstream
+  `className="w-[400px]"` stay caller-owned, while list/trigger/content chrome remains recipe-owned.
 - Pass: `TabsContent` defaults to filling the remaining main-axis space (shadcn `flex-1` intent).
 - Pass: Trigger content remains rich (icons/badges/custom children).
 

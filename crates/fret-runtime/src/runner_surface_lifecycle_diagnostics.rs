@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use fret_core::time::{SystemTime, UNIX_EPOCH};
 
 /// Diagnostics store for runner surface lifecycle transitions.
 ///

@@ -5,7 +5,8 @@ use fret_core::scene::{BlendMode, CustomEffectPyramidRequestV1, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
     ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
-    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
+    UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -30,6 +31,11 @@ pub struct AnyElement {
     /// `currentColor`-style paint inheritance can resolve this value during paint without adding a
     /// new layout node.
     pub inherited_foreground: Option<Color>,
+    /// Layout-transparent inherited passive-text typography installed on this subtree root.
+    ///
+    /// This is consumed by passive text leaves (`Text`, `StyledText`, `SelectableText`) via the
+    /// runtime's inherited text-style cascade (ADR 0314) without introducing a layout wrapper.
+    pub inherited_text_style: Option<TextStyleRefinement>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
     /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
@@ -43,6 +49,7 @@ impl AnyElement {
             kind,
             children,
             inherited_foreground: None,
+            inherited_text_style: None,
             semantics_decoration: None,
             key_context: None,
         }
@@ -54,6 +61,18 @@ impl AnyElement {
     /// value at paint time.
     pub fn inherit_foreground(mut self, foreground: Color) -> Self {
         self.inherited_foreground = Some(foreground);
+        self
+    }
+
+    /// Attach a subtree-local inherited passive-text refinement without introducing a layout wrapper.
+    ///
+    /// Descendants that render passive text (`Text`, `StyledText`, `SelectableText`) resolve this
+    /// refinement through the runtime's inherited text-style cascade.
+    pub fn inherit_text_style(mut self, refinement: TextStyleRefinement) -> Self {
+        match self.inherited_text_style.as_mut() {
+            Some(existing) => existing.merge(&refinement),
+            None => self.inherited_text_style = Some(refinement),
+        }
         self
     }
 
@@ -2309,16 +2328,16 @@ impl TextProps {
         }
     }
 
-    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
-        crate::text_props::resolve_text_style(theme, self.style.clone())
+    pub(crate) fn resolved_text_style_with_inherited(
+        &self,
+        theme: crate::ThemeSnapshot,
+        inherited: Option<&fret_core::TextStyleRefinement>,
+    ) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone(), inherited)
     }
 
     pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
         crate::text_props::build_text_input_plain(self.text.clone(), style)
-    }
-
-    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
-        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 
@@ -2336,16 +2355,16 @@ impl StyledTextProps {
         }
     }
 
-    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
-        crate::text_props::resolve_text_style(theme, self.style.clone())
+    pub(crate) fn resolved_text_style_with_inherited(
+        &self,
+        theme: crate::ThemeSnapshot,
+        inherited: Option<&fret_core::TextStyleRefinement>,
+    ) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone(), inherited)
     }
 
     pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
         crate::text_props::build_text_input_attributed(&self.rich, style)
-    }
-
-    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
-        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 
@@ -2364,16 +2383,16 @@ impl SelectableTextProps {
         }
     }
 
-    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
-        crate::text_props::resolve_text_style(theme, self.style.clone())
+    pub(crate) fn resolved_text_style_with_inherited(
+        &self,
+        theme: crate::ThemeSnapshot,
+        inherited: Option<&fret_core::TextStyleRefinement>,
+    ) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone(), inherited)
     }
 
     pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
         crate::text_props::build_text_input_attributed(&self.rich, style)
-    }
-
-    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
-        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 

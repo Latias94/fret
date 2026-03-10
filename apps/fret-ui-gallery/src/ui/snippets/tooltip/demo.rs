@@ -9,17 +9,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
+            let content = shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                cx,
+                "Add to library",
+            )]);
+
             vec![
-                shadcn::Tooltip::new(
+                shadcn::Tooltip::build(
+                    cx,
                     shadcn::Button::new("Hover")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-tooltip-demo-trigger")
-                        .into_element(cx),
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        "Add to library",
-                    )])
-                    .into_element(cx),
+                        .test_id("ui-gallery-tooltip-demo-trigger"),
+                    content,
                 )
                 .arrow(true)
                 .arrow_test_id("ui-gallery-tooltip-demo-arrow")
