@@ -29,6 +29,8 @@ Current status:
 - the main first-contact docs now mostly agree on the same taxonomy,
 - the remaining work is to keep that framing stable across repo entry points rather than widening
   the default API surface.
+- this productization pass does **not** redefine the north-star: GPUI-style authoring/runtime
+  remains the target, while product packaging/docs are a secondary stabilization layer.
 - Audit update (as of 2026-03-10): `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now records
   that the remaining drift is wording-level, not structural; the root README and `fret` crate
   README were the only ingress surfaces needing small ladder/action-first alignment fixes in this

@@ -1,12 +1,18 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Reference Notes
 
-Last updated: 2026-03-04
+Last updated: 2026-03-10
 
 This file is a quick pointer index to relevant upstream and in-tree references.
 
 ---
 
 ## Upstream (non-normative)
+
+Priority rule for this workstream:
+
+- GPUI/Zed is the primary authoring/runtime north-star.
+- gpui-component is only a secondary reference for selected builder/productization patterns, not the
+  framework-level target.
 
 - Zed/GPUI action dispatch and key routing:
   - `repo-ref/zed/crates/gpui/src/action.rs`

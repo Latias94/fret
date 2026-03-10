@@ -845,6 +845,9 @@ Current sequencing note (as of 2026-03-09):
 - [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
   - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
   - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, and `docs/ui-ergonomics-and-interop.md` now repeat the same ladder/taxonomy at the repo-root, first-hour, crate-guidance, and ergonomics-guidance entry points, `docs/examples/README.md` states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` points back to the same ladder instead of presenting the facade README as the canonical example host.
+  - North-star clarification (as of 2026-03-10): this productization/document pass does **not**
+    change the v2 target. GPUI/Zed-style authoring/runtime remains the primary north-star;
+    gpui-component is at most a secondary source of selected builder/productization cues.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
     - `README.md`
