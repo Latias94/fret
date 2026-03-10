@@ -842,6 +842,26 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         });
     }
 
+    /// Register a typed payload action handler that mutates `LocalState<T>` and participates in
+    /// the tracked-write rerender rule when the closure returns `handled=true`.
+    ///
+    /// This is intentionally narrow: it exists for keyed-list / payload-row style mutations where
+    /// the remaining visible boilerplate is mostly `host.models_mut()` + `LocalState` cloning at
+    /// the root action table.
+    pub fn on_payload_action_notify_local_update_if<A, T>(
+        &mut self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        self.on_payload_action::<A>(move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+
     /// Register a typed unit action availability handler.
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,
@@ -1092,6 +1112,27 @@ mod tests {
         }));
         assert!(host.redraws.is_empty());
         assert!(host.notifies.is_empty());
+    }
+
+    #[test]
+    fn local_state_update_action_if_can_use_payload_from_closure() {
+        let mut host = FakeHost::default();
+        let local = LocalState {
+            model: host.models.insert(vec![1u64, 2, 3]),
+        };
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(9),
+        };
+
+        assert!(local.update_action_if(&mut host, action_cx, |values| {
+            let remove_id = 2u64;
+            let before = values.len();
+            values.retain(|value| *value != remove_id);
+            values.len() != before
+        }));
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
     }
 
     #[cfg(feature = "shadcn")]

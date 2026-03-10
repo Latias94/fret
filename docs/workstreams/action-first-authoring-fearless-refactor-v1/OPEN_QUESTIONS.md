@@ -95,5 +95,5 @@ This must stay aligned with:
 
 Status (as of 2026-03-04):
 
-- The v1 view-cache + action-first gates are green (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
+- The v1 view-cache + action-first gates are green (`python tools/diag_gate_action_first_authoring_v1.py`).
 - Inspection/picking may still affect reuse decisions; gaps should be documented as explicit reuse reasons in cache-root diagnostics.

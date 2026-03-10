@@ -47,7 +47,7 @@ Evidence anchors:
 
 Evidence anchors:
 
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-shadcn`
+- `python tools/audit_crate.py --crate fret-ui-shadcn`
 - `ecosystem/fret-ui-shadcn/src/select.rs`
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 
@@ -100,4 +100,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - Do we want a formal “exports policy” for `fret-ui-shadcn` (what is stable vs internal), or do we rely purely on convention and review?
-

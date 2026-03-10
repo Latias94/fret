@@ -20,6 +20,10 @@ def read_text(path: Path) -> str:
         fail(GATE_NAME, f"failed to read {path.relative_to(WORKSPACE_ROOT)}: {exc}")
 
 
+def rustdoc_only(text: str) -> str:
+    return "\n".join(line for line in text.splitlines() if line.startswith("//!"))
+
+
 def require_snippets(path: Path, text: str, snippets: list[str]) -> list[str]:
     missing: list[str] = []
     for snippet in snippets:
@@ -62,6 +66,7 @@ def forbid_regexes(path: Path, text: str, patterns: list[str]) -> list[str]:
 
 def main() -> None:
     lib_text = read_text(LIB_RS)
+    lib_rustdoc_text = rustdoc_only(lib_text)
     app_entry_text = read_text(APP_ENTRY_RS)
     readme_text = read_text(README_MD)
 
@@ -83,10 +88,21 @@ def main() -> None:
             APP_ENTRY_RS,
             app_entry_text,
             patterns=[
-                r"\bpub\s+fn\s+ui_with_hooks\s*<",
                 r"\bpub\s+fn\s+view_with_hooks\s*<",
-                r"\bpub\s+fn\s+run_ui_with_hooks\s*<",
+                r"\bpub\s+fn\s+run_view_with_hooks\s*<",
                 r"\bfn\s+finish_builder\s*<",
+            ],
+        )
+    )
+    problems.extend(
+        forbid_regexes(
+            APP_ENTRY_RS,
+            app_entry_text,
+            patterns=[
+                r"\bpub\s+fn\s+ui\s*<",
+                r"\bpub\s+fn\s+ui_with_hooks\s*<",
+                r"\bpub\s+fn\s+run_ui\s*<",
+                r"\bpub\s+fn\s+run_ui_with_hooks\s*<",
             ],
         )
     )
@@ -96,8 +112,6 @@ def main() -> None:
             readme_text,
             snippets=[
                 'FretApp::new("hello")',
-                "fret::App::new(...).window(...).ui(...)?",
-                "fret::App::new(...).window(...).ui_with_hooks(...)?",
                 "fret::App::new(...).window(...).view::<V>()?",
                 "fret::App::new(...).window(...).view_with_hooks::<V>(...)?",
             ],
@@ -112,15 +126,17 @@ def main() -> None:
                 "fret::app_with_hooks",
                 "fret::run(",
                 "fret::run_with_hooks",
+                "fret::App::new(...).window(...).ui(...)?",
+                "fret::App::new(...).window(...).ui_with_hooks(...)?",
             ],
         )
     )
     problems.extend(
         require_snippets(
             LIB_RS,
-            lib_text,
+            lib_rustdoc_text,
             snippets=[
-                "fret::App::new(...).window(...).ui(...)?",
+                "fret::App::new(...).window(...).view::<V>()?",
                 "fret::run_native_with_fn_driver(...)",
             ],
         )
@@ -128,12 +144,14 @@ def main() -> None:
     problems.extend(
         forbid_snippets(
             LIB_RS,
-            lib_text,
+            lib_rustdoc_text,
             snippets=[
                 "fret::app(",
                 "fret::app_with_hooks",
                 "fret::run(",
                 "fret::run_with_hooks",
+                "fret::App::new(...).window(...).ui(...)?",
+                "fret::App::new(...).window(...).ui_with_hooks(...)?",
             ],
         )
     )

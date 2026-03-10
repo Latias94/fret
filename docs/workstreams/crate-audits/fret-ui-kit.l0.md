@@ -45,8 +45,8 @@ Evidence anchors:
 Evidence anchors:
 
 - `ecosystem/fret-ui-kit/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-kit`
-- `pwsh -NoProfile -File tools/report_largest_files.ps1 -Top 30 -MinLines 800`
+- `python tools/audit_crate.py --crate fret-ui-kit`
+- `python tools/report_largest_files.py --top 30 --min-lines 800`
 
 ## 4) Module ownership map (internal seams)
 
@@ -99,7 +99,7 @@ Evidence anchors:
    - Move scenario matrices to `ecosystem/fret-ui-kit/tests/fixtures/*.json` (or `src/window_overlays/fixtures/`), keep a thin harness — gate: existing nextest coverage + add at least one decode fixture test.
 3. Split `src/declarative/table.rs` by responsibility (`model`, `layout`, `virtualization`, `interaction`, `tests`) under `declarative/table/` — gate: `cargo nextest run -p fret-ui-kit`.
 4. Decide the long-term home for diagnostics-only exports:
-   - Keep public but move behind a `diagnostics` feature, or relocate to a dedicated diagnostics crate — gate: `cargo nextest run -p fret-ui-kit` + `tools/check_layering.ps1`.
+   - Keep public but move behind a `diagnostics` feature, or relocate to a dedicated diagnostics crate — gate: `cargo nextest run -p fret-ui-kit` + `python tools/check_layering.py`.
 
 ## 8) Open questions / decisions needed
 

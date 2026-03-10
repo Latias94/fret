@@ -4,90 +4,39 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 
 fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        2,
-        [
-            shadcn::TableHead::new("Part").into_element(cx),
-            shadcn::TableHead::new("Fret surface").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |part: &'static str, surface: &'static str| {
+        shadcn::TableRow::build(2, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(surface)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("VoiceSelector")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("UI root with controlled/uncontrolled `value_model` / `open_model` support plus a Rust-friendly `into_element_with_children(...)` compound entrypoint."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("VoiceSelectorTrigger + Value/Button")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Trigger chrome, selected summary, and button composition stay split so apps can mirror the official docs layout without hiding policy in the runtime."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("VoiceSelectorContent + Dialog")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Dialog shell with accessible title; `VoiceSelectorDialog` remains available for a command-palette style surface."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("VoiceSelectorInput + List")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Shared query model, filtering, highlight, and close-on-select behavior are already encapsulated at the selector / Command ecosystem layer."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(cx.text("Empty / Group / Item / Separator / Shortcut")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("These surfaces intentionally reuse `Command*` semantics so selector parity work stays aligned with shared command behavior instead of forking it."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            2,
-            [
-                shadcn::TableCell::new(
-                    cx.text("Name / Description / Gender / Accent / Age / Attributes / Bullet / Preview"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Policy-level presentation parts for AI voice metadata. These are good selector-level affordances and should not move down into `crates/fret-ui`."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(2, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Fret surface").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("VoiceSelector", "UI root with controlled/uncontrolled `value_model` / `open_model` support plus a Rust-friendly `into_element_with_children(...)` compound entrypoint."));
+                out.push_ui(cx, row("VoiceSelectorTrigger + Value/Button", "Trigger chrome, selected summary, and button composition stay split so apps can mirror the official docs layout without hiding policy in the runtime."));
+                out.push_ui(cx, row("VoiceSelectorContent + Dialog", "Dialog shell with accessible title; `VoiceSelectorDialog` remains available for a command-palette style surface."));
+                out.push_ui(cx, row("VoiceSelectorInput + List", "Shared query model, filtering, highlight, and close-on-select behavior are already encapsulated at the selector / Command ecosystem layer."));
+                out.push_ui(cx, row("Empty / Group / Item / Separator / Shortcut", "These surfaces intentionally reuse `Command*` semantics so selector parity work stays aligned with shared command behavior instead of forking it."));
+                out.push_ui(cx, row("Name / Description / Gender / Accent / Age / Attributes / Bullet / Preview", "Policy-level presentation parts for AI voice metadata. These are good selector-level affordances and should not move down into `crates/fret-ui`."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 pub(super) fn preview_ai_voice_selector_demo(

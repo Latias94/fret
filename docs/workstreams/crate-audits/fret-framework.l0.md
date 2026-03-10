@@ -45,7 +45,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-framework/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-framework`
+- `python tools/audit_crate.py --crate fret-framework`
 
 ## 4) Module ownership map (internal seams)
 

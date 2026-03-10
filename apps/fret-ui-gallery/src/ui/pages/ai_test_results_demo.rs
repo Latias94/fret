@@ -4,207 +4,83 @@ use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
 
 fn status_colors_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        3,
-        [
-            shadcn::TableHead::new("Status").into_element(cx),
-            shadcn::TableHead::new("Color").into_element(cx),
-            shadcn::TableHead::new("Use case").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row =
+        |status: &'static str, color: &'static str, use_case: &'static str| {
+            shadcn::TableRow::build(3, move |cx, out| {
+                out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
+                out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
+                out.push_ui(cx, shadcn::TableCell::build(ui::text(use_case)));
+            })
+        };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("passed")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Green")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Test succeeded")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("failed")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Red")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Test failed")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("skipped")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Yellow")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Test skipped")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("running")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Blue")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Test in progress")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(shadcn::TableHead::new("Status").into_element(cx));
+                        out.push(shadcn::TableHead::new("Color").into_element(cx));
+                        out.push(shadcn::TableHead::new("Use case").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("passed", "Green", "Test succeeded"));
+                out.push_ui(cx, row("failed", "Red", "Test failed"));
+                out.push_ui(cx, row("skipped", "Yellow", "Test skipped"));
+                out.push_ui(cx, row("running", "Blue", "Test in progress"));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        3,
-        [
-            shadcn::TableHead::new("Part").into_element(cx),
-            shadcn::TableHead::new("Key inputs").into_element(cx),
-            shadcn::TableHead::new("Notes").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |part: &'static str, inputs: &'static str, notes: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResults")).into_element(cx),
-                shadcn::TableCell::new(cx.text("summary")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Root surface; summary-driven parts can read from the root provider."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResultsHeader")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Header row with border-bottom + padding."))
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Key inputs").into_element(cx));
+                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
+                    })
                     .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResultsSummary")).into_element(cx),
-                shadcn::TableCell::new(cx.text("summary | from_context()")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Renders pass/fail/skip badges.")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResultsDuration")).into_element(cx),
-                shadcn::TableCell::new(cx.text("summary | from_context()")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Renders formatted duration when present."))
-                    .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResultsProgress")).into_element(cx),
-                shadcn::TableCell::new(cx.text("summary | from_context()")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Progress bar + pass ratio labels."))
-                    .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestResultsContent")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Padded wrapper for suites and rows."))
-                    .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestSuite")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("new(trigger, content) | named(name, status)"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Collapsible suite shell; root can now provide context for trigger/content parts."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestSuiteName")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("new(name, status) | from_context() | children(...)"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Trigger row; can read suite context from the root and accept custom label children."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestSuiteStats")).into_element(cx),
-                shadcn::TableCell::new(cx.text("passed, failed, skipped")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Optional trailing stats helper for custom suite rows."))
-                    .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("Test")).into_element(cx),
-                shadcn::TableCell::new(cx.text("name, status, duration_ms, details, on_activate"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Row surface with optional error details and activation seam."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("TestStatus / TestName / TestDuration"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("new(...) | from_context()"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Composable row parts for custom `Test::children(...)` layouts."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("TestResults", "summary", "Root surface; summary-driven parts can read from the root provider."));
+                out.push_ui(cx, row("TestResultsHeader", "children", "Header row with border-bottom + padding."));
+                out.push_ui(cx, row("TestResultsSummary", "summary | from_context()", "Renders pass/fail/skip badges."));
+                out.push_ui(cx, row("TestResultsDuration", "summary | from_context()", "Renders formatted duration when present."));
+                out.push_ui(cx, row("TestResultsProgress", "summary | from_context()", "Progress bar + pass ratio labels."));
+                out.push_ui(cx, row("TestResultsContent", "children", "Padded wrapper for suites and rows."));
+                out.push_ui(cx, row("TestSuite", "new(trigger, content) | named(name, status)", "Collapsible suite shell; root can now provide context for trigger/content parts."));
+                out.push_ui(cx, row("TestSuiteName", "new(name, status) | from_context() | children(...)", "Trigger row; can read suite context from the root and accept custom label children."));
+                out.push_ui(cx, row("TestSuiteStats", "passed, failed, skipped", "Optional trailing stats helper for custom suite rows."));
+                out.push_ui(cx, row("Test", "name, status, duration_ms, details, on_activate", "Row surface with optional error details and activation seam."));
+                out.push_ui(cx, row("TestStatus / TestName / TestDuration", "new(...) | from_context()", "Composable row parts for custom `Test::children(...)` layouts."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 pub(super) fn preview_ai_test_results_demo(

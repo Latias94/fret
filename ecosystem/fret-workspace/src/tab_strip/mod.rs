@@ -1773,7 +1773,7 @@ impl WorkspaceTabStrip {
 	                                                            if let Some(cmd) = close_cmd {
 	                                                                let mut item =
 	                                                                    ContextMenuItem::new("Close Tab")
-	                                                                        .on_select(cmd);
+	                                                                        .action(cmd);
 	                                                                if let Some(base) =
 	                                                                    menu_test_id_base.as_ref()
 	                                                                {
@@ -1787,7 +1787,7 @@ impl WorkspaceTabStrip {
 	                                                                if let Some(cmd) = tab_unpin_command(tab_id_for_menu.as_ref()) {
 	                                                                    let mut item =
 	                                                                        ContextMenuItem::new("Unpin Tab")
-	                                                                            .on_select(cmd);
+	                                                                            .action(cmd);
 	                                                                    if let Some(base) =
 	                                                                        menu_test_id_base.as_ref()
 	                                                                    {
@@ -1806,7 +1806,7 @@ impl WorkspaceTabStrip {
 	                                                            } else if let Some(cmd) = tab_pin_command(tab_id_for_menu.as_ref()) {
 	                                                                let mut item =
 	                                                                    ContextMenuItem::new("Pin Tab")
-	                                                                        .on_select(cmd);
+	                                                                        .action(cmd);
 	                                                                if let Some(base) =
 	                                                                    menu_test_id_base.as_ref()
 	                                                                {
@@ -1820,7 +1820,7 @@ impl WorkspaceTabStrip {
 	                                                                let mut item =
 	                                                                    ContextMenuItem::new("Close Other Tabs")
 	                                                                        .disabled(!has_others)
-	                                                                        .on_select(CommandId::new(
+	                                                                        .action(CommandId::new(
 	                                                                            crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS,
 	                                                                        ));
 	                                                                if let Some(base) =
@@ -1843,7 +1843,7 @@ impl WorkspaceTabStrip {
 	                                                                    "Close Tabs to the Left",
 	                                                                )
 	                                                                .disabled(!has_left)
-	                                                                .on_select(CommandId::new(
+	                                                                .action(CommandId::new(
 	                                                                    crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT,
 	                                                                ));
 	                                                                if let Some(base) =
@@ -1866,7 +1866,7 @@ impl WorkspaceTabStrip {
 	                                                                    "Close Tabs to the Right",
 	                                                                )
 	                                                                .disabled(!has_right)
-	                                                                .on_select(CommandId::new(
+	                                                                .action(CommandId::new(
 	                                                                    crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT,
 	                                                                ));
 	                                                                if let Some(base) =
@@ -1886,22 +1886,22 @@ impl WorkspaceTabStrip {
 	                                                            }
 	                                                            entries.push(ContextMenuEntry::Separator);
 	                                                            entries.push(ContextMenuEntry::Item(
-	                                                                ContextMenuItem::new("Split Right").on_select(
+	                                                                ContextMenuItem::new("Split Right").action(
 	                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
                                                                 ),
                                                             ));
                                                             entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Split Left").on_select(
+                                                                ContextMenuItem::new("Split Left").action(
                                                                     CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT),
                                                                 ),
                                                             ));
                                                             entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Split Up").on_select(
+                                                                ContextMenuItem::new("Split Up").action(
                                                                     CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP),
                                                                 ),
                                                             ));
                                                             entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Split Down").on_select(
+                                                                ContextMenuItem::new("Split Down").action(
                                                                     CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN),
                                                                 ),
                                                             ));

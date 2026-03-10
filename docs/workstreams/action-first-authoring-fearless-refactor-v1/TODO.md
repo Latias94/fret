@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 Related:
 
@@ -9,14 +9,29 @@ Related:
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
+- Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Post-app-entry retained-seam audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
+- Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
+- Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+- Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
+- DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
+- Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
+- Source alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SOURCE_ALIGNMENT_AUDIT_2026-03-09.md`
+- Author surface alignment audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- App-entry removal playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - Compat-driver inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_CALLER_INVENTORY.md`
 - Compat-driver policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`
+- Compat-driver quarantine playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md`
 - `use_state` inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - `use_state` policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
+- `use_state` surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 - Command-first widget audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md`
+- Command-first retained-seam decision: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md`
 
 ADRs (decision gates for this workstream):
 
@@ -272,7 +287,7 @@ ID format:
       - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-level command scope fallback for `workspace.*` commands)
     - Scripted diagnostics gate:
       - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
-      - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
+      - `tools/diag_gate_action_first_authoring_v1.py` (includes workspace shell demo gate)
 - [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-05):
@@ -338,9 +353,31 @@ ID format:
     - `apps/fret-cookbook/examples/gizmo_basics.rs`
     - `apps/fret-cookbook/examples/theme_switching_basics.rs`
     - `apps/fret-cookbook/examples/simple_todo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_chain_of_thought_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_checkpoint_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_test_results_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_persona_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/footer.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/rtl.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/table/actions.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs`
     - `apps/fret-cookbook/examples/drag_basics.rs`
     - `apps/fret-cookbook/examples/effects_layer_basics.rs`
     - `apps/fret-cookbook/examples/text_input_basics.rs`
+  - Next likely slice (as of 2026-03-09): keep this pass focused on remaining table-heavy ui-gallery
+    reference pages where `Table*::build(...)` removes real density noise without widening the
+    helper surface; `ai_artifact_demo.rs` does not currently need this pass, so any next slice
+    should be chosen only from remaining reference pages that still contain substantial eager
+    `Table*::new(...).into_element(cx)` sections after this selector/documentation cleanup.
   - Follow-up polish (same slice, 2026-03-07): late-landing cleanup continued on already-listed `assets_reload_epoch_basics`, `undo_basics`, and `embedded_viewport_basics` to keep builder-first composition consistent after the broader cookbook sweep.
   - Additional 2026-03-07 polish: trimmed remaining builder-path noise in those same pages (button/test_id ordering, alert/header late-landing, and small row composition cleanup) without changing their runtime contracts.
   - Additional 2026-03-07 follow-up: `icons_and_assets_basics` now keeps the page header, card shells, image/svg status rows, and the final content stack on the late-landing builder path, while `customv1_basics` folds `panel_shell(...)`, the preview/body stacks, and the top-level card body into `push_ui()` so only semantics-driven controls and the final scaffold boundary still land eagerly.
@@ -397,7 +434,7 @@ ID format:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
 - [x] AFA-gates-054 Add a small repo-local gate that prevents legacy MVU from drifting back into the cookbook.
   - Evidence:
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
+    - `tools/gate_no_mvu_in_cookbook.py`
 
 ---
 
@@ -432,7 +469,7 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
     - `examples/README.md`
     - `docs/examples/README.md`
     - `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
-- [ ] AFA-postv1-003 Decide whether all top-level example links should collapse to one canonical docs
+- [ ] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
   page while preserving `examples/README.md` as a GitHub portal alias.
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
@@ -486,12 +523,76 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
 
-Current sequencing note (as of 2026-03-08):
+Current sequencing note (as of 2026-03-09):
 
-- first: local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`), with the next concrete target being todo-like view-owned collections,
-- second: narrow widget-local action sugar (`AFA-postv1-003`) once the collection/shared-state boundary is clearer,
-- third: continue builder-first convergence where it removes real noise but avoid helper sprawl,
+- first: productize the current default path (onboarding ladder, default/comparison/advanced taxonomy, helper visibility) and keep docs/templates/examples aligned on that story,
+- productization note: treat `DataTable` as a separate business-table/reference-surface audit rather than continuing the primitive `Table` builder-first cleanup under that same bucket,
+- second: continue local-state / invalidation ergonomics (`AFA-postv1-001` + `AFA-postv1-004`) only where real medium-surface evidence still shows a state-boundary cliff after the doc/product pass,
+- builder-first note: `AFA-postv1-002` is now maintenance mode for this pass; reopen only if a new cross-surface host/root seam still forces eager landing across multiple real default-facing surfaces,
+- third: keep keyed-list / payload-row handler ergonomics (`AFA-postv1-003`) in maintenance mode unless a new medium surface shows the same row-local pressure beyond the current todo-style evidence,
 - fourth: only after the first three stabilize, re-evaluate narrow macros (`AFA-postv1-005`).
+- shortlist note: `POST_V1_SURFACE_SHORTLIST.md` now fixes the current priority order explicitly so
+  `DataTable` helper churn, broad macros, and compat cleanup do not displace the higher-value
+  default-path and invalidation work.
+- productization note (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now defines the
+  repo-wide ladder and label contract explicitly, and `README.md`, `docs/first-hour.md`,
+  `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, the examples index, todo
+  golden-path note, cookbook README/index, gallery README/page framing, and generated scaffold
+  READMEs now use that same default/comparison/advanced framing.
+- invalidation policy note (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now compresses the
+  post-v1 default rule into one short card: straightforward single-local writes stay on
+  `on_action_notify_local_*`, coordinated writes stay on `on_action_notify_models::<A>(...)`,
+  transient App/runtime effects stay on `on_action_notify_transient::<A>(...)`, and explicit
+  `notify()` / render-time invalidation remain escape hatches only for imperative/runtime/cache
+  boundaries.
+  - Classification update (as of 2026-03-09): the remaining default-path
+    `on_action_notify_models::<A>(...)` surfaces are now explicitly grouped as
+    coordinated-write ownership, command/keymap ownership, and cross-field form ownership so they
+    do not keep being mistaken for generic invalidation-helper gaps.
+- endgame summary note (as of 2026-03-09): `POST_V1_ENDGAME_SUMMARY.md` now compresses the current
+  state into one page: default-path convergence is effectively complete, `AFA-postv1-002` /
+  `003` / `004` are maintenance-mode tracks, `AFA-postv1-001` remains open only as an
+  architectural local-state question, and the remaining cleanup pressure is primarily in the
+  staged hard-delete/quarantine sequence.
+- app-entry removal note (as of 2026-03-09): `APP_ENTRY_REMOVAL_PLAYBOOK.md` now records the
+  historical patch shape for the `App::ui*` hard delete, so the repo no longer has to reconstruct
+  why that pre-release removal was safe.
+- compat-runner quarantine note (as of 2026-03-09):
+  `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the quarantine-first execution checklist for
+  `run_native_with_compat_driver(...)`, so a future facade-reduction pass can move that advanced
+  seam behind an explicit compat boundary without reopening the same policy debate.
+- `use_state` surface note (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records the
+  future keep-vs-deprecate execution checklist for the explicit raw-model seam, so a later
+  surface-reduction pass can proceed without relitigating whether the default local-state migration
+  is already complete.
+- hard-delete index note (as of 2026-03-09): `HARD_DELETE_ENDGAME_INDEX.md` now acts as the
+  one-page entrypoint for `App::ui*`, compat runner, `use_state`, and command-first retained-seam
+  cleanup, so future work can start from a single reviewer-facing summary before opening the
+  deeper matrix/checklist/playbooks.
+- command-first retained-seam note (as of 2026-03-09):
+  `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records the boundary rule for the remaining
+  command-shaped surfaces, so future work only reopens this lane on default-path leak or explicit
+  deprecation rather than treating it as generic residue.
+- source-alignment audit note (as of 2026-03-09): `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` now
+  records that the remaining hard-delete / retained-seam decisions are source-aligned, and the
+  missing compat-runner default-path gate is now closed by
+  `tools/gate_compat_runner_default_surface.py`.
+- author-surface audit note (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md`
+  now records that the remaining author-entry docs already align with the action-first story, and
+  `ecosystem/fret-ui-material3/README.md` now closes the last missing crate-entry surface.
+- endgame outlook note (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records
+  the repo's current execution forecast: `App::ui*` is now closed, while compat runner,
+  `use_state`, and command-first retained seams are the remaining lanes expected to stay unless a
+  later explicit product decision reopens them.
+- app-entry hard-delete update (as of 2026-03-10): `ecosystem/fret/src/app_entry.rs` no longer
+  exposes `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`, and the workstream docs now treat
+  that lane as closed pre-release rather than waiting on a published deprecation window.
+- retained-seam audit update (as of 2026-03-10):
+  `POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md` now records the narrower post-app-entry
+  verdict: `ViewCx::use_state::<T>()` remains a retained explicit raw-model seam because it still
+  underlies `use_local*`, and `run_native_with_compat_driver(...)` remains a retained advanced
+  interop seam because its caller families still carry real capability; neither is the next
+  delete-ready cleanup lane.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -507,8 +608,11 @@ Current sequencing note (as of 2026-03-08):
   - Next-phase note (as of 2026-03-08): with cookbook / app-grade / scaffold keyed-list defaults aligned, the immediate next work should focus on onboarding docs, default/comparison/advanced taxonomy, visual productization, and deprecation planning rather than more generic authoring helpers.
   - Update (as of 2026-03-08, query handle follow-up): query handle-side reads now stay handle-first across both `ViewCx` and `ElementContext` authoring surfaces. `TrackedStateExt` covers `QueryHandle<T>` in the `ViewCx` path, while `fret-ui-kit::declarative::QueryHandleWatchExt` covers `ElementContext` surfaces behind `state-query`, so cookbook `query_basics`, `fret-examples` `query_demo` / `query_async_tokio_demo` / `async_playground_demo` / `markdown_demo`, the scaffold query-tip template, `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/imui-state-integration-v1.md`, and `fret-markdown`'s MathJax/Mermaid helpers can all read query state from the handle side via `handle.layout(cx).value_*` / `handle.layout_query(cx).value_*` instead of reopening `handle.model()`.
   - Update (as of 2026-03-08, todo comparison target): `apps/fret-cookbook/examples/simple_todo_v2_target.rs` now keeps a keyed todo list in `LocalState<Vec<TodoRow>>` and uses payload actions for per-row toggle/remove, proving that the current runtime can already express small view-owned dynamic collections without `Model<Vec<_>>`.
-  - Update (as of 2026-03-08, checkbox source alignment): after comparing against `F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx` and its checkbox examples, `ecosystem/fret-ui-shadcn/src/checkbox.rs` now supports a shadcn-style checked snapshot path (`Checkbox::from_checked(...)`) plus `action(...)` / `action_payload(...)`. That removes the need for per-row checkbox models in the todo comparison target; the remaining visible noise shifts more clearly to root-level handler registration and widget-local listener/dispatch ergonomics.
-- [~] AFA-postv1-002 Investigate builder-first composition paths that reduce `ui::children!` and nested
+  - Update (as of 2026-03-08, checkbox source alignment): after comparing against `F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx` and its checkbox examples, `ecosystem/fret-ui-shadcn/src/checkbox.rs` now supports a shadcn-style checked snapshot path (`Checkbox::from_checked(...)`) plus `action(...)` / `action_payload(...)`. That removes the need for per-row checkbox models in the todo comparison target; the remaining visible noise shifts more clearly to root-level handler registration and keyed-row payload-action placement ergonomics.
+  - Review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now uses `simple_todo_v2_target`, `query_basics`, `commands_keymap_basics`, and `form_basics` as a focused medium-surface set. Current result: the remaining pressure is no longer local-state storage shape or explicit `notify()` burden; keyed-list pressure has shifted to root handler placement for payload row actions, query/client invalidation remains an intentional render-time escape hatch, and both command/keymap plus cross-field form coordination remain intentional root-level ownership boundaries rather than default sugar targets.
+  - Current boundary (as of 2026-03-09): the default local-state teaching path is now stable enough (`use_local*`, `value_*`, `value_in*`, `read_in`, `update_in_if`, direct text bridge, query-handle reads, and the todo-like `LocalState<Vec<_>>` path). The remaining distance to the GPUI-style north-star is no longer “missing default helper surface”; it is the deeper fact that `LocalState<T>` is still model-backed rather than plain-Rust/self-owned state, and some existing widget/runtime seams still intentionally bridge through `clone_model()` or explicit host/model boundaries.
+  - Current recommendation: keep `AFA-postv1-001` open as an architectural gap, not as an active helper-expansion track. Reopen additive API work only if a new real default-facing medium surface still feels materially blocked after the current `use_local*` path, and do not chase a fake plain-Rust story that would weaken shared-model interop, diagnostics, or dirty/notify determinism without a stronger runtime-level proposal.
+- [x] AFA-postv1-002 Investigate builder-first composition paths that reduce `ui::children!` and nested
   `into_element(cx)` in medium demos.
   - Goal: measure whether a builder-only path materially improves density without helper sprawl.
   - Evidence target: compare `hello_counter_demo` or `query_demo` against the current default path.
@@ -523,18 +627,34 @@ Current sequencing note (as of 2026-03-08):
   - Update (as of 2026-03-07): `DialogContent::build(...)` / `DialogHeader::build(...)` / `DialogFooter::build(...)` together with their `Sheet*::build(...)` counterparts now keep nested overlay sections on the same late-landing path while still landing at the existing dialog/sheet root boundary. `overlay_basics` correspondingly drops its remaining inner dialog content/header/footer eager landing cliffs, so the next overlay work is more about the still-older alert-dialog/drawer surfaces and other explicit `AnyElement` escape hatches than cookbook-local dialog glue.
   - Update (as of 2026-03-07): `AlertDialogContent::build(...)` / `AlertDialogHeader::build(...)` / `AlertDialogFooter::build(...)` together with their `Drawer*::build(...)` counterparts now keep the remaining shadcn overlay section seams on the same late-landing path while still landing at the existing alert-dialog/drawer root boundary. The UI Gallery `alert_dialog` / `drawer` demos now exercise that builder-first path directly, so the next overlay work is narrower root-level `AnyElement` escape hatches rather than section-local eager landings.
   - Update (as of 2026-03-07): `AlertDialogTrigger::build(...)` plus `AlertDialog::build(cx, trigger, content)` and the new generic `AlertDialog::compose().trigger(...)` / `Drawer::compose().trigger(...)` trigger-arg support now close the older root trigger seam too. The UI Gallery `alert_dialog/demo.rs`, `alert_dialog/parts.rs`, `alert_dialog/usage.rs`, `drawer/demo.rs`, and `drawer/usage.rs` now teach those narrower root helpers directly, so the remaining overlay gaps are mostly around broader root content/part sugar rather than trigger landing.
-- [ ] AFA-postv1-003 Investigate widget-local action sugar (`listener` / `dispatch` / `shortcut`)
-  without expanding the default helper surface prematurely.
-  - Goal: keep action-first semantics while lowering local event-wiring noise.
-  - Guardrail: only promote if at least two real demos/templates need the same shape.
+  - Follow-up conclusion (as of 2026-03-09): the later `Alert::build(...)`, `ScrollArea::build(...)`, and `FieldSet::build(...)` / `FieldGroup::build(...)` / `Field::build(...)` passes closed the last clearly repeated medium-surface families. The remaining visible density is now mostly adoption of existing builders, advanced/runtime-owned host seams, or intentionally separate product questions such as `DataTable`, not evidence that another generic builder-first helper surface is missing.
+  - Current conclusion: treat builder-first seam work as maintenance mode for this pass. Reopen only if a new cross-surface host/root seam appears that still forces eager `AnyElement` landing across multiple real default-facing surfaces.
+- [x] AFA-postv1-003 Investigate keyed-list / payload-row handler ergonomics without expanding the default helper surface prematurely.
+  - Goal: decide whether keyed dynamic lists need a narrower row-action/handler placement surface than the current root `on_payload_action_notify` path.
+  - Guardrail: do not treat command/keymap, query/runtime-trigger, or cross-field form handlers as evidence for this item; only keyed-list/payload-row pressure counts.
+  - Prototype update (as of 2026-03-09): `ecosystem/fret/src/view.rs` now exposes `ViewCx::on_payload_action_notify_local_update_if::<A, T>(...)` as a deliberately narrow keyed-list helper. It keeps action identity and root handler registration explicit, but removes the repeated `LocalState` clone + `host.models_mut()` boilerplate for payload-row mutations.
+  - Adoption update (as of 2026-03-09): `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-examples/src/todo_demo.rs`, and the generated `simple_todo` scaffold in `apps/fretboard/src/scaffold/templates.rs` now use that helper for row toggle/remove flows.
+  - Review update (as of 2026-03-09): `apps/fret-cookbook/examples/simple_todo.rs` now also uses `LocalState<Vec<TodoRow>>` plus payload row toggles on the default cookbook path, while `INVALIDATION_LOCAL_STATE_REVIEW.md` records that `query_basics`, `commands_keymap_basics`, and `form_basics` do **not** justify broader keyed-list sugar because their root handlers represent explicit ownership boundaries rather than accidental placement noise.
+  - Current conclusion: the narrow helper plus current adoption are sufficient for this pass. Keep broader keyed-list / payload-row sugar deferred and reopen only if another medium surface shows the same row-local handler-pressure pattern as the todo-like evidence slice.
 
 - [~] AFA-postv1-004 Evaluate v2 invalidation ergonomics: keep explicit `notify()` as a low-level runtime escape hatch while making local-state writes rerender implicitly by default.
   - Goal: preserve cache/debug determinism without forcing users to call `notify()` after most tracked state writes.
   - Evidence target: prototype one medium demo and confirm diagnostics still explain rebuild reasons.
-  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`; `LocalState::update_action` / `set_action` remain available for future widget-local experiments once widget-local dispatch ergonomics are revisited.
+  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`; `LocalState::update_action` / `set_action` remain available for future keyed-row/payload handler experiments if the narrower placement question is revisited.
   - Update (as of 2026-03-07): `ViewCx::on_action_notify_local_update` / `on_action_notify_local_set` / `on_action_notify_toggle_local_bool` now promote the same “tracked local write => redraw + notify” rule into a first-class authoring path. The current medium demos plus cookbook `hello_counter` and `query_basics` use those helpers for the simple local-state mutations, while `commands_keymap_basics` / `text_input_basics` validate command availability and widget interop on `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*`, `form_basics` shows that multi-field validation/reset flows can stay on the generic `on_action_notify_models` path, `simple_todo` demonstrates the first keyed-list hybrid where draft/ID counters move to local state but the dynamic collection itself remains an explicit `Model<Vec<_>>`, `drop_shadow_basics` proves the same local-state bridge on a pure toggle-only renderer demo, `markdown_and_code_basics` extends that bridge to a mixed editor/render-options page built from model-centered `Textarea` / `ToggleGroup` / `Switch` widgets, `assets_reload_epoch_basics` shows the same local-state path on a host/runtime escape-hatch page where the counter is local but the actual asset reload bump plus redraw/RAF scheduling intentionally stay in render-time code, `virtual_list_basics` closes the first virtualization hybrid by moving mode/toggle/jump controls to local state while intentionally keeping the items collection plus scroll/reorder coordination on explicit model/runtime surfaces, `theme_switching_basics` applies the same hybrid rule to theme selection by moving the chosen scheme to local state while keeping theme application plus redraw/RAF sync as render-time host effects, and `icons_and_assets_basics` now does the same for asset demos by moving the reload bump counter to local state while keeping asset reload epoch bump plus redraw/RAF synchronization as render-time host effects, while `customv1_basics` closes the same loop for renderer/effect demos by moving `enabled` / `strength` to local state and intentionally keeping effect registration, capability checks, and effect-layer plumbing render-time/runtime-owned. `notify()` remains a low-level escape hatch rather than a default teaching-surface step, Queue A and Queue B are now cleared, and the teaching-surface inventory treats the remaining explicit-model cookbook cases as intentionally advanced rather than pending default-surface migrations. The new `LocalState::read_in` / `revision_in` helpers keep even those generic `on_action_notify_models` / derived-revision closures on the local-state handle surface, so the remaining local-state pressure is increasingly about write-path policy rather than read-path leakage.
   - Update (as of 2026-03-08, follow-up): cookbook `customv1_basics` now uses `on_action_notify_toggle_local_bool` for its simple `enabled` flag, while `commands_keymap_basics` intentionally stays on the generic `on_action_notify_models` transaction for command availability gating but now reads the gate through `LocalState::read_in(...)` instead of reopening the raw model handle.
   - Update (as of 2026-03-08, tracked-write review): no additional invalidation helper is promoted into the default path for now. `LocalState::update_in` / `set_in` are now explicitly documented as store-only transaction helpers, while `LocalState::update_action` plus `ViewCx::on_action_notify_local_*` remain the first-class `tracked local write => request_redraw + notify` boundary. A focused unit test in `ecosystem/fret/src/view.rs` locks that contract so `notify()` can stay a low-level escape hatch instead of reappearing as a default teaching-surface step.
+  - Update (as of 2026-03-09, cookbook keyed-list alignment): `apps/fret-cookbook/examples/simple_todo.rs` now also uses `LocalState<Vec<TodoRow>>` plus payload row toggles, so the default cookbook keyed-list lesson no longer contradicts the scaffold/app-grade baseline. The remaining keyed-list comparison pressure is now concentrated in `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, which stays as the denser payload-row/root-handler evidence slice rather than as a “real default path” preview.
+  - Audit update (as of 2026-03-09, richer todo template): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit for now. The retained `Model<T>` graph is carrying the richer teaching goal itself (selector deps across nested row models, filter coordination, and query invalidation keyed by tracked state), so this surface should be treated as the third-rung selector/query baseline rather than as the next local-state migration target.
+  - Review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now records a focused review of `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`, `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`. Conclusion: on real medium surfaces, tracked writes already rerender without explicit `notify()`, query-trigger invalidation still belongs to the explicit render-time path, and command/keymap plus cross-field form handlers are often the runtime contract; the next plausible ergonomics move is therefore still **not** another invalidation helper, and `AFA-postv1-003` now looks like a much narrower keyed-list/payload-row question rather than a general medium-surface need.
+  - Policy draft update (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now makes the recommendation explicit: keep `notify()` as a public low-level escape hatch, keep tracked writes as the boring default rerender path, and do not spend near-term API budget on another generic invalidation helper unless a new medium-surface contradiction appears.
+  - Short-rule update (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now records the execution-facing split directly: use `on_action_notify_local_*` for straightforward single-local tracked writes, keep `on_action_notify_models::<A>(...)` for coordinated/root-owned writes, keep `on_action_notify_transient::<A>(...)` for transient runtime effects, and treat explicit `notify()` / render-time invalidation as escape hatches only when the real effect boundary lives outside the tracked write.
+  - Ownership-class update (as of 2026-03-09): the remaining default-path
+    `on_action_notify_models::<A>(...)` usage is now classified into three explicit buckets:
+    coordinated writes, command/keymap ownership, and cross-field form ownership. This narrows the
+    remaining policy question from “do we need another invalidation helper?” to “does a surface
+    really fall outside those three ownership classes?”.
+  - Gate update (as of 2026-03-09): `tools/gate_no_notify_in_default_teaching_surfaces.py` now locks the default ladder surfaces plus scaffold templates against explicit `cx.notify(...)` / `host.notify(...)`, and `tools/pre_release.py` runs that gate with the other teaching-surface policy checks.
 - [x] AFA-postv1-006 Audit model-centered widget contracts that still leak into gallery/reference surfaces.
   - Goal: separate true widget contract pressure from snippet-level authoring choices before designing new helper APIs.
   - Evidence target: audit note + one snippet cleanup that proves an existing uncontrolled path is sufficient.
@@ -543,7 +663,7 @@ Current sequencing note (as of 2026-03-08):
 - [x] AFA-postv1-007 Publish a post-v1 gap analysis against the current Rust-first UI best-practice target.
   - Goal: keep docs honest about what is already solved versus what still blocks GPUI/Zed-level authoring density.
   - Evidence target: align the workstream proposal, v2 golden path, and todo golden-path docs on the same ?current baseline vs north-star? statement.
-  - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, and `docs/examples/todo-app-golden-path.md` now explicitly record that the narrow text bridge landed and that the clearest remaining gap is small view-owned collection ergonomics (`Model<Vec<_>>` pressure in simple todo-style views), followed by widget-local action sugar and only then a macro re-evaluation.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`, and `docs/examples/todo-app-golden-path.md` now explicitly record that the narrow text bridge and keyed-list default path both landed; the remaining gap is framed as productization/default-path clarity first, then keyed-list / payload-row handler ergonomics, and only then a macro re-evaluation.
 
 - [x] AFA-postv1-009 Publish a hard-delete gap analysis for the remaining compatibility surfaces.
   - Goal: distinguish true legacy cleanup debt from advanced/interop surfaces we may keep on purpose.
@@ -553,7 +673,7 @@ Current sequencing note (as of 2026-03-08):
 - [x] AFA-postv1-010 Publish an app-entry policy decision draft for `view::<V>()` vs `.ui(...)`.
   - Goal: turn the hard-delete blocker into one explicit policy choice rather than an open-ended cleanup note.
   - Evidence target: a short decision draft with rationale, staged execution, and exit criteria before deprecation starts.
-  - Status (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now recommends `view::<V>()` / `view_with_hooks::<V>(...)` as the only default app-entry path, while `ui(...)` / `ui_with_hooks(...)` are treated as temporary advanced bridge surfaces on a path to future deprecation/removal once advanced demo migration is complete.
+  - Status (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now records the final pre-release outcome: `view::<V>()` / `view_with_hooks::<V>(...)` are the only app-entry path on `fret`, and `App::ui*` has been hard-deleted from the facade.
 
 - [x] AFA-postv1-011 Inventory the remaining in-tree `App::ui*` callers against the app-entry policy draft.
   - Goal: turn the app-entry policy into a concrete migration table instead of a generic “later cleanup” note.
@@ -572,17 +692,22 @@ Current sequencing note (as of 2026-03-08):
 - [x] AFA-postv1-012 Start staged deprecation for closure-root app entry on the `fret` facade.
   - Goal: make the policy decision visible in code and lock the default docs path while leaving a removal window for downstream users.
   - Evidence target: deprecated `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` plus a narrow gate that keeps `view::<V>()` as the only default path in `ecosystem/fret` README/rustdoc.
-  - Status (as of 2026-03-09): `ecosystem/fret/src/app_entry.rs` now marks the closure-root app-entry methods as deprecated advanced bridges, `ecosystem/fret/src/lib.rs` and `ecosystem/fret/README.md` now describe `view::<V>()` / `view_with_hooks::<V>(...)` as the only default path, and `ecosystem/fret/src/lib.rs` test `authoring_surface_policy_tests` locks that wording in-tree.
+  - Status (as of 2026-03-10): `ecosystem/fret/src/app_entry.rs` no longer exports the closure-root app-entry methods, `ecosystem/fret/src/lib.rs` and `ecosystem/fret/README.md` describe only `view::<V>()` / `view_with_hooks::<V>(...)` as the `fret` app-entry path, and `tools/gate_fret_builder_only_surface.py` plus `authoring_surface_policy_tests` now lock that hard-delete.
 
 - [x] AFA-postv1-013 Publish a hard-delete execution checklist for the remaining post-v1 compat surfaces.
   - Goal: turn the blocker inventory into an ordered, landable cleanup sequence instead of leaving the next phase as an implicit policy discussion.
   - Evidence target: one workstream note that classifies stage order, per-surface status, and exit criteria for app-entry closure surfaces, compat runner entry points, `use_state`, and command-first widget contracts.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md` now defines the execution order, exit criteria, and immediate next action, and `HARD_DELETE_GAP_ANALYSIS.md` now points to it as the operational follow-up.
 
-- [x] AFA-postv1-013b Define the `App::ui*` downstream deprecation window explicitly.
-  - Goal: stop treating app-entry removal timing as an abstract future decision and give downstream users a concrete minimum warning window.
-  - Evidence target: the app-entry policy draft and hard-delete execution checklist both record the same deprecation start date, earliest removal date, and release condition.
-  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md` now defines the window as 2026-03-09 → earliest removal 2026-06-09 plus one published deprecated release, and `HARD_DELETE_EXECUTION_CHECKLIST.md` / `HARD_DELETE_GAP_ANALYSIS.md` now consume that same rule.
+- [x] AFA-postv1-013c Publish a hard-delete status matrix that separates waiting/deferred seams from the next real cleanup track.
+  - Goal: make it obvious which remaining blockers are still code migration work versus policy-held advanced/non-default seams.
+  - Evidence target: one matrix that classifies `App::ui*`, compat runner, `use_state`, and command-first widget contracts by readiness and next action.
+  - Status (as of 2026-03-10): `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md` now records the narrowed endgame after the app-entry closure lane was removed pre-release: compat runner and `use_state` are retained advanced/non-default seams, and the remaining command-first widget family is the main implementation-scoped cleanup track.
+
+- [x] AFA-postv1-013f Hard-delete `App::ui*` from `fret` before the first public release.
+  - Goal: stop carrying a split app-entry mental model on the public facade when no published compatibility promise exists yet.
+  - Evidence target: remove `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` from `ecosystem/fret/src/app_entry.rs`, update README/rustdoc/tests/gates, and close the workstream docs as a completed lane rather than a waiting deprecation window.
+  - Status (as of 2026-03-10): the closure-root app-entry methods are gone from `fret`, `tools/gate_fret_builder_only_surface.py` now forbids their return, and the app-entry workstream docs now treat the lane as a completed pre-release hard delete.
 
 - [x] AFA-postv1-014 Publish a caller inventory for `run_native_with_compat_driver(...)`.
   - Goal: replace vague “plot/interop demos still use it” language with a concrete in-tree family breakdown before deciding whether the compat runner should be kept, quarantined, or removed.
@@ -599,6 +724,24 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: the policy draft, hard-delete checklist, and gap analysis all describe `run_native_with_compat_driver(...)` as a retained advanced low-level interop seam and no longer leave README/rustdoc alignment as open work.
   - Status (as of 2026-03-09): `COMPAT_DRIVER_POLICY_DECISION_DRAFT.md`, `HARD_DELETE_EXECUTION_CHECKLIST.md`, and `HARD_DELETE_GAP_ANALYSIS.md` now all treat the remaining work as policy/quarantine follow-up rather than docs wording cleanup.
 
+- [x] AFA-postv1-015c Publish a quarantine playbook for future compat-runner surface reduction.
+  - Goal: record the exact quarantine-first patch shape for `run_native_with_compat_driver(...)` so
+    future facade reduction does not have to improvise its sequencing.
+  - Evidence target: one execution note that states preconditions, patch shape, validation, release
+    wording, and abort conditions for moving the compat runner behind an explicit advanced boundary.
+  - Status (as of 2026-03-09): `COMPAT_DRIVER_QUARANTINE_PLAYBOOK.md` now records the
+    quarantine-first path, and the policy/checklist/status summary docs all point to it as the next
+    concrete action only if the repo later chooses surface reduction.
+
+- [x] AFA-postv1-015d Close the compat-runner default-surface gate gap.
+  - Goal: make the source-facing policy enforceable so first-contact docs cannot drift toward
+    `run_native_with_compat_driver(...)` while the seam remains intentionally retained.
+  - Evidence target: one narrow gate that requires advanced/non-default wording on the `fret`
+    facade surface and fails if approved first-contact docs start recommending compat-runner entry.
+  - Status (as of 2026-03-09): `tools/gate_compat_runner_default_surface.py` now enforces that
+    split, `tools/pre_release.py` runs it in the canonical policy suite, and
+    `SOURCE_ALIGNMENT_AUDIT_2026-03-09.md` records the source-vs-docs alignment result.
+
 - [x] AFA-postv1-016 Publish a caller inventory for `use_state::<T>()`.
   - Goal: replace vague “a few starter/reference snippets still use it” language with a concrete in-tree breakdown before deciding whether `use_state` should be kept, deprecated, or repointed later.
   - Evidence target: one inventory note that classifies current `use_state` callers by starter/reference/API-substrate role and distinguishes runtime callers from contract docs.
@@ -609,34 +752,150 @@ Current sequencing note (as of 2026-03-08):
   - Evidence target: one decision note that states the default teaching rule, the explicit low-level rule, and the preconditions for any future deprecation.
   - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md` now recommends keeping `use_state` for now as an explicit raw-model hook while `use_local*` remains the only default local-state teaching path; `HARD_DELETE_EXECUTION_CHECKLIST.md` now reflects Stage 4 with starter/reference cleanup complete, `docs/examples/todo-app-golden-path.md` no longer lists `use_state` as a generic default hook, and all current first-contact/reference code paths now follow that policy in code.
 
+- [x] AFA-postv1-017b Publish a surface playbook for future `use_state` reduction.
+  - Goal: record the exact keep-vs-deprecate execution path for `use_state` so the repo can revisit
+    the raw-model seam later without reopening the first-contact migration argument.
+  - Evidence target: one execution note that states preconditions, option split, patch shape,
+    validation, release wording, and abort conditions for either retaining or shrinking the public
+    `use_state` surface.
+  - Status (as of 2026-03-09): `USE_STATE_SURFACE_PLAYBOOK.md` now records that sequence, and the
+    policy/checklist/status summary docs all point to it as the concrete follow-up only if the repo
+    later chooses to revisit the public raw-model seam.
+
 - [x] AFA-postv1-018 Add a narrow default-path gate against reintroducing `use_state::<T>()`.
   - Goal: keep first-contact docs/templates/examples on `use_local*` after the current cleanup lands, without banning explicit raw-model usage in advanced/runtime code.
   - Evidence target: one narrow source/docs/template gate or equivalent repo-local assertion that fails if the approved first-contact surfaces drift back to `use_state`.
-  - Status (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference files (`hello`, `overlay_basics`, `imui_action_basics`, the gallery action-first snippet, and `docs/examples/todo-app-golden-path.md`), `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and `tools/pre_release.ps1` now runs the new gate alongside the other teaching-surface policy checks.
+  - Status (as of 2026-03-09): `tools/gate_no_use_state_in_default_teaching_surfaces.py` now guards the approved first-contact/reference files (`hello`, `overlay_basics`, `imui_action_basics`, the gallery action-first snippet, and `docs/examples/todo-app-golden-path.md`), `apps/fretboard/src/scaffold/templates.rs` keeps template output covered by unit assertions, and the canonical cross-platform runner `tools/pre_release.py` now runs the new gate alongside the other teaching-surface policy checks.
 
 - [x] AFA-postv1-019 Publish a command-first widget contract audit for the remaining post-v1 blocker families.
   - Goal: replace vague “public `CommandId`-first widget contracts still remain” language with a concrete family split and a landable migration order.
   - Evidence target: one workstream note that distinguishes command-catalog surfaces from app-facing builder APIs and recommends which widget families should gain action-first aliases first.
-  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now classifies the remaining pressure into already-aligned dual-surface widgets (`Button`, `CommandItem`), menu-family blockers (`ContextMenu*`, `Menubar*`), medium-risk app-facing surfaces (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`), and a staged alias-first migration order.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` now classifies the remaining pressure into already-aligned dual-surface widgets (`Button`, `CommandItem`), menu-family blockers (`DropdownMenu*`, `ContextMenu*`, `Menubar*`), medium-risk app-facing surfaces (`NavigationMenu*`, `BreadcrumbItem`, Material `Snackbar`), and a staged alias-first migration order.
+  - Docs alignment update (as of 2026-03-09): `docs/component-author-guide.md` now explicitly teaches the split between action-first public builder naming and command-pipeline/keymap lowering, so this track no longer has a stale top-level authoring doc leaking the old `CommandId`-first mental model.
 
 - [x] AFA-postv1-020 Land the first action-first alias pass for command-shaped widget builders.
   - Goal: prove that public builder naming can converge on the action-first story without rewriting command-centric internals.
   - Evidence target: at least one low-risk family (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) gains an action-first alias and docs/examples prefer it.
-  - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) now prefer the action-first spelling, and the first navigation-menu gating tests now use the alias as the default public path.
+  - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `Snackbar::action_command(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) plus the Material3 snackbar gallery snippet now prefer the action-first spelling, and the first navigation-menu/material3 coverage uses the aliases as the default public path.
+  - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs that narrow policy check.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.
   - Evidence target: `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem{Spec,}` and `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem{Spec,}` all gain `action(...)` aliases, and command-audit docs record the phase-2 progress.
   - Status (as of 2026-03-09): those aliases now exist in `ecosystem/fret-ui-shadcn/src/context_menu.rs` and `ecosystem/fret-ui-shadcn/src/menubar.rs`; the broader gallery menu surface now also prefers `action(...)` across the main context-menu and menubar snippets (`basic`, `usage`, `demo`, `checkboxes`/`checkbox`, `radio`, `destructive`, `groups`, `icons`, `shortcuts`, `sides`, `submenu`, `rtl`, `parts`, `with_icons`), and `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` records the pass while keeping command-centric routing/storage unchanged.
+  - Follow-up update (as of 2026-03-09): app/internal helper surfaces now also start converging on the same spelling: `ecosystem/fret-ui-shadcn/src/text_edit_context_menu.rs`, `ecosystem/fret-workspace/src/tab_strip/mod.rs`, and the focused keyboard/dismiss tests for context menu / menubar now use `action(...)` as the default builder name while still routing through the same command pipeline.
+  - Dropdown follow-up (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` now exposes `DropdownMenuItem::action(...)` / `trailing_action(...)`, `DropdownMenuCheckboxItem::action(...)`, `DropdownMenuRadioItemSpec::action(...)`, and `DropdownMenuRadioItem::action(...)`; the primary dropdown-menu gallery snippets (`basic`, `demo`) plus overlay preview surfaces now also prefer `action(...)`.
+  - Gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now keeps the primary ui-gallery dropdown-menu / context-menu / menubar teaching snippets plus the overlay preview menu surfaces on `action(...)`, and `tools/pre_release.py` runs that narrow policy check alongside the other default-surface gates.
+  - Curated internal follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` and `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now also prefer `action(...)` / `trailing_action(...)` for their stable action-bearing menu rows, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit internal/app-facing residue slice on the same spelling without broadening the policy to every advanced/internal menu surface.
+  - Intentional-retention inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now records that the main remaining command-shaped surfaces are command palette/catalog (`ecosystem/fret-ui-shadcn/src/command.rs`), `DataTable` business-table wiring (`ecosystem/fret-ui-shadcn/src/data_table.rs` plus gallery demos), compat/conformance tests, and out-of-scope callback widgets; the practical rule is to stop broad residue chasing unless a new default-facing leak appears.
 
-- [ ] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
-  - Goal: determine whether the next density win should now come from narrower widget-local action sugar (`listener` / `dispatch`) or from invalidation/write-path ergonomics, without re-expanding the helper surface.
-  - Evidence target: remove one of the remaining `simple_todo_v2_target` noise points in a migrated example or short design note.
+- [x] AFA-postv1-021b Publish a retained-seam decision draft for the remaining command-first lane.
+  - Goal: stop treating the remaining command-shaped surfaces as one generic migration bucket and
+    record which ones are permanent mechanism/catalog seams versus intentionally retained
+    advanced/internal residue.
+  - Evidence target: one decision note that states the split classification, reopen triggers, and
+    the rule for keeping this lane in maintenance mode.
+  - Status (as of 2026-03-09): `COMMAND_FIRST_RETAINED_SEAMS_DECISION_DRAFT.md` now records that
+    split, and the hard-delete index/status/checklist/endgame summary docs all point to it as the
+    current boundary rule for the command-first retained-seam lane.
+
+- [x] AFA-postv1-021c Audit component-author surfaces against the current action-first story.
+  - Goal: verify that crate-entry docs and top-level component author guidance do not still leak an
+    outdated command-first/default-path mental model.
+  - Evidence target: one short audit note plus any minimal README alignment needed to close a real
+    author-entry gap.
+  - Status (as of 2026-03-09): `AUTHOR_SURFACE_ALIGNMENT_AUDIT_2026-03-09.md` now records the
+    audit result, and `ecosystem/fret-ui-material3/README.md` now gives Material3 the same kind of
+    author-facing entrypoint that shadcn already had.
+
+- [x] AFA-postv1-021d Publish a blunt execution outlook for the remaining endgame surfaces.
+  - Goal: stop treating every retained seam as equally likely to be deleted and record the repo's
+    current best forecast for real removal vs long-term retention.
+  - Evidence target: one short note that classifies `App::ui*`, compat runner, `use_state`, and
+    command-first retained seams by expected outcome and reopen trigger.
+  - Status (as of 2026-03-09): `ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md` now records that forecast,
+    and the high-level endgame summary/index/milestones docs all point to it as the blunt
+    execution-level reading of the current cleanup track.
+
+- [x] AFA-postv1-022 Audit `DataTable` authoring as a separate post-v1 surface instead of treating it as more primitive `Table` builder cleanup.
+  - Goal: determine whether the remaining density pressure is really another `build(...)` / `into_element(cx)` problem or a higher-level business-table recipe/productization problem.
+  - Evidence target: one short audit note that classifies `DataTable` against primitive `Table`, the current gallery demos, and the v2 golden-path story.
+  - Status (as of 2026-03-09): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md` now concludes that primitive `Table` builder-first cleanup is largely closed for the current pass, while `DataTable` remains a denser business-table integration surface whose pressure comes from state/output/toolbar wiring rather than missing leaf builders.
+
+- [x] AFA-postv1-023 Decide whether the repo needs a curated `DataTable` default recipe or golden-path note.
+  - Goal: decide whether business-table authoring should stay purely advanced/reference-only or gain one deliberately scoped “default” recipe without widening the generic helper surface.
+  - Guardrail: any curated recipe must keep `TableState`, `output_model`, row-key strategy, and action/command boundaries visible rather than hiding them behind a macro or opaque helper.
+  - Status (as of 2026-03-09): decision made. The repo keeps a docs-first `DataTable` default recipe in `DATA_TABLE_GOLDEN_PATH.md`, treating `DataTable` as a medium/advanced business-table surface rather than a first-contact example, and defers helper/macro expansion until that curated recipe still proves insufficient in real demos.
+  - Evidence update (as of 2026-03-09): `apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs` and `apps/fret-ui-gallery/src/ui/pages/data_table.rs` now provide the first curated default-recipe gallery slice aligned with that note.
+  - Gate update (as of 2026-03-09): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json --dir target/fret-diag/ui-gallery-data-table-default-recipe --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery` passes locally and emits bounded artifacts for the curated recipe slice.
+
+- [x] AFA-postv1-024 Write a “current best practice vs v2 target” note.
+  - Goal: make the repo’s current recommended writing style explicit, and separate real remaining ergonomics gaps from already-closed migration tracks.
+  - Status (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now states that v1 migration is effectively complete, command-first residue is in maintenance mode, and the next high-value work is productization + tracked-write/invalidation ergonomics rather than more broad API churn.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+
+- [x] AFA-postv1-025 Tighten default/comparison/advanced ingress wording.
+  - Goal: make the repo entry points repeat the same ladder/taxonomy so users do not infer the default path from scattered examples.
+  - Status (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md` now records the current convergence snapshot, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, and `docs/ui-ergonomics-and-interop.md` now repeat the same ladder/taxonomy at the repo-root, first-hour, crate-guidance, and ergonomics-guidance entry points, `docs/examples/README.md` states that any unlabeled surface is a docs bug, `apps/fret-cookbook/README.md` plus `apps/fret-cookbook/EXAMPLES.md` frame cookbook as a follow-up layer after the `hello` / `simple-todo` ladder, `apps/fret-ui-gallery/README.md` repeats the same “use after the ladder” order explicitly, and `ecosystem/fret/README.md` points back to the same ladder instead of presenting the facade README as the canonical example host.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
+    - `README.md`
+    - `docs/first-hour.md`
+    - `docs/crate-usage-guide.md`
+    - `docs/ui-ergonomics-and-interop.md`
+    - `docs/examples/README.md`
+    - `apps/fret-cookbook/README.md`
+    - `apps/fret-cookbook/EXAMPLES.md`
+    - `apps/fret-ui-gallery/README.md`
+    - `ecosystem/fret/README.md`
+
+- [x] AFA-postv1-026 Close one medium-surface builder seam in the `Alert` family.
+  - Goal: prove that post-v1 builder-density work can stay narrow and evidence-driven instead of reopening broad helper expansion.
+  - Status (as of 2026-03-09): `Alert::build(...)` and `AlertAction::build(...)` now keep alert content/action composition on the builder path, and the first real surfaces (`form_basics`, `assets_reload_epoch_basics`, ui-gallery alert snippets) have migrated without widening the default authoring story beyond one component family.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/alert.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-cookbook/examples/form_basics.rs`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/alert/basic.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/alert/action.rs`
+
+- [x] AFA-postv1-027 Close one medium-surface builder seam in the `ScrollArea` family.
+  - Goal: keep the post-v1 builder-density pass focused on one runtime-owned root seam instead of reopening general helper expansion.
+  - Status (as of 2026-03-09): `ScrollArea::build(...)` now keeps viewport children on the builder path while preserving the existing axis / scrollbar / viewport-test-id configuration seam; the first real surfaces (`markdown_and_code_basics`, `async_playground_demo`, ui-gallery scroll-area demo) have migrated without broadening the default authoring story.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+    - `apps/fret-examples/src/async_playground_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs`
+
+- [x] AFA-postv1-028 Close one medium-surface builder seam in the `Field` family.
+  - Goal: reduce repeated form/field composition landings (`FieldSet` / `FieldGroup` / `Field`) without widening the helper surface beyond one already-dense family.
+  - Status (as of 2026-03-09): `FieldSet::build(...)`, `FieldGroup::build(...)`, and `Field::build(...)` now keep field-family children on the builder path, and the first real surfaces (`ui-gallery` field `input`, field `fieldset`, and form `demo`) have migrated without changing runtime ownership boundaries.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/field.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/field/input.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/field/fieldset.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/form/demo.rs`
+
+- [x] AFA-postv1-008 Decide the next additive API move after the local-collection comparison target.
+  - Goal: determine whether the next density win should come from **no new API at all yet** (productize the default path first) or from a narrow keyed-list / payload-row ergonomics pass, without re-expanding the helper surface.
+  - Evidence target: keep `V2_GOLDEN_PATH.md`, `POST_V1_AUTHORING_V2_PROPOSAL.md`, and onboarding docs aligned on the same next-step order before any new helper is promoted.
   - Status note: `apps/fret-cookbook/examples/simple_todo_v2_target.rs` now proves `LocalState<Vec<_>>` is already viable for a small keyed todo list and no longer needs per-row checkbox models either; label/control parity for snapshot/action discrete controls is now closed, so the remaining question is which write/event ergonomics buys the next density win.
   - Follow-up (as of 2026-03-08, skill alignment): the same decision tree is now captured in `.agents/skills/fret-shadcn-source-alignment/references/public-surface-parity.md` and `.agents/skills/fret-app-ui-builder/references/mind-models/mm-widget-state-surfaces.md`, so future `Switch` / `Toggle`-style audits can reuse one parity rubric before adding more app-side helpers.
   - Update (as of 2026-03-08, switch source alignment): `ecosystem/fret-ui-shadcn/src/switch.rs` now mirrors the checkbox-style narrow snapshot path via `Switch::from_checked(...)` plus `action(...)` / `action_payload(...)`, and `apps/fret-cookbook/examples/commands_keymap_basics.rs` now uses that path for both its local allow-command toggle and the disabled panel-open indicator.
   - Update (as of 2026-03-08, toggle source alignment): `ecosystem/fret-ui-shadcn/src/toggle.rs` now lands the same narrow snapshot/action pattern via `Toggle::from_pressed(...)` plus `action(...)` / `action_payload(...)`, and `apps/fret-cookbook/examples/toggle_basics.rs` now demonstrates the path on a minimal view-local example.
-  - Update (as of 2026-03-08, action-only control parity): `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs` plus `ecosystem/fret-ui-kit/src/primitives/control_registry.rs` now let label-forwarded pointer activation record command payload/source metadata, and `Checkbox` / `Switch` / `Toggle` all register command-backed `control_id` entries for snapshot/action paths. That closes the shared discrete-widget parity gap, so the next density decision can focus on widget-local action sugar vs broader invalidation ergonomics rather than on label forwarding.
+  - Update (as of 2026-03-08, action-only control parity): `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs` plus `ecosystem/fret-ui-kit/src/primitives/control_registry.rs` now let label-forwarded pointer activation record command payload/source metadata, and `Checkbox` / `Switch` / `Toggle` all register command-backed `control_id` entries for snapshot/action paths. That closes the shared discrete-widget parity gap, so the next density decision can focus on keyed-list / payload-row handler ergonomics vs broader invalidation ergonomics rather than on label forwarding.
+  - Update (as of 2026-03-09): the keyed-list/default local-collection target is now considered closed enough for planning purposes. The recommended next step is to **productize the existing path first** (`hello` → `simple-todo` → `todo`, default/comparison/advanced taxonomy, helper visibility), and to defer any new default helper until that narrative is stable.
+  - Update (as of 2026-03-09, business-table scope): `DATA_TABLE_AUTHORING_AUDIT.md` now records that `DataTable` should be treated as a separate productization/reference-surface question rather than as evidence that primitive `Table` builder-first cleanup is still incomplete.
+  - Status (as of 2026-03-09): decision made. The post-v1 execution order is now fixed in docs:
+    productize the current default path first, revisit local-state / invalidation only where real
+    medium-surface evidence still remains after that pass, then re-evaluate narrow keyed-list /
+    payload-row handler ergonomics, and keep macros last and optional.
 
 - [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
   - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
@@ -673,18 +932,18 @@ Current sequencing note (as of 2026-03-08):
         - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
         - Teaching-surface gate now covers ui-gallery pages/snippets for bare `cx.on_action*` regressions: `tools/gate_no_on_action_in_teaching_surfaces.py`
         - Advanced helper exceptions are now locked by allowlist: `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`
-        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
+        - Gate: `tools/gate_no_stack_in_ui_gallery_shell.py`
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
-    - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
+    - Gate: `tools/gate_no_public_stack_in_ui_kit.py`
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
   - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
     one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
-    - Gate: `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
+    - Gate: `tools/gate_no_stack_in_cookbook.py`
   - Done: examples no longer use `stack::hstack/vstack` authoring helpers.
-    - Gate: `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
+    - Gate: `tools/gate_no_stack_in_examples.py`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
@@ -717,7 +976,7 @@ Current sequencing note (as of 2026-03-08):
     - use a todo-like view-owned collection as the next comparison target for `use_local*` / invalidation ergonomics,
     - keep `on_action*` / `on_activate*` as the current closure story until that collection/shared-state boundary is better understood,
     - prefer template/doc guidance first for transient/App-effect patterns,
-    - re-evaluate widget-local sugar and macros only after one more round of template/demo authoring feedback.
+    - re-evaluate keyed-list / payload-row ergonomics and macros only after one more round of template/demo authoring feedback.
 - Post-v1 design review (as of 2026-03-06):
   - v1 is successful at architecture + teaching-surface convergence: action-first dispatch landed,
     `View` / `ViewCx` plus hooks are in tree, the default helper story narrowed, and MVU is hard-deleted

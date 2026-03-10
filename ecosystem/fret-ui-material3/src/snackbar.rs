@@ -70,9 +70,17 @@ impl Snackbar {
         self
     }
 
-    pub fn action(mut self, label: impl Into<Arc<str>>, command: CommandId) -> Self {
+    pub fn action(mut self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
         self.action = Some(ToastAction::new(label, command));
         self
+    }
+
+    pub fn action_id(self, label: impl Into<Arc<str>>, action: impl Into<CommandId>) -> Self {
+        self.action(label, action)
+    }
+
+    pub fn action_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
+        self.action(label, command)
     }
 
     pub fn duration(mut self, duration: SnackbarDuration) -> Self {

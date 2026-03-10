@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("actions.rs");
 
 // region: example
 use fret_app::App;
+use fret_ui_kit::ui::UiElementSinkExt;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -75,17 +76,12 @@ fn action_row(
         },
     );
 
-    shadcn::TableRow::new(
-        3,
-        vec![
-            shadcn::TableCell::new(cx.text(product)).into_element(cx),
-            shadcn::TableCell::new(cx.text(price)).into_element(cx),
-            {
-                let action_cell = align_end(cx, dropdown);
-                shadcn::TableCell::new(action_cell).into_element(cx)
-            },
-        ],
-    )
+    shadcn::TableRow::build(3, move |cx, out| {
+        let action_cell = align_end(cx, dropdown);
+        out.push_ui(cx, shadcn::TableCell::build(ui::text(product)));
+        out.push_ui(cx, shadcn::TableCell::build(ui::text(price)));
+        out.push_ui(cx, shadcn::TableCell::build(action_cell));
+    })
     .into_element(cx)
     .test_id(row_test_id)
 }
@@ -93,33 +89,42 @@ fn action_row(
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let (open_1, open_2, open_3) = ensure_models(cx);
 
-    shadcn::Table::new(vec![
-        shadcn::TableHeader::new(vec![
-            shadcn::TableRow::new(
-                3,
-                vec![
-                    shadcn::TableHead::new("Product")
-                        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
-                        .into_element(cx),
-                    shadcn::TableHead::new("Price")
-                        .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                        .into_element(cx),
-                    shadcn::TableHead::new("Actions")
-                        .refine_layout(LayoutRefinement::default().w_px(Px(120.0)))
-                        .into_element(cx),
-                ],
-            )
-            .border_bottom(true)
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::TableBody::new(vec![
-            action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"),
-            action_row(cx, "Mechanical Keyboard", "$89.99", open_2, "row-2"),
-            action_row(cx, "4K Monitor", "$299.99", open_3, "row-3"),
-        ])
-        .into_element(cx),
-    ])
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(
+                            shadcn::TableHead::new("Product")
+                                .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
+                                .into_element(cx),
+                        );
+                        out.push(
+                            shadcn::TableHead::new("Price")
+                                .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                                .into_element(cx),
+                        );
+                        out.push(
+                            shadcn::TableHead::new("Actions")
+                                .refine_layout(LayoutRefinement::default().w_px(Px(120.0)))
+                                .into_element(cx),
+                        );
+                    })
+                    .border_bottom(true)
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push(action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"));
+                out.push(action_row(cx, "Mechanical Keyboard", "$89.99", open_2, "row-2"));
+                out.push(action_row(cx, "4K Monitor", "$299.99", open_3, "row-3"));
+            }),
+        );
+    })
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
     .test_id("ui-gallery-table-actions")

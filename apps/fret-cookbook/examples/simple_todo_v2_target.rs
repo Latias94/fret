@@ -206,30 +206,26 @@ impl View for SimpleTodoV2TargetView {
             }
         });
 
-        cx.on_payload_action_notify::<act::Toggle>({
-            let todos_state = todos_state.clone();
-            move |host, _action_cx, id| {
-                todos_state.update_in_if(host.models_mut(), |rows| {
-                    if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                        row.done = !row.done;
-                        true
-                    } else {
-                        false
-                    }
-                })
-            }
-        });
+        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            },
+        );
 
-        cx.on_payload_action_notify::<act::Remove>({
-            let todos_state = todos_state.clone();
-            move |host, _action_cx, id| {
-                todos_state.update_in_if(host.models_mut(), |rows| {
-                    let before = rows.len();
-                    rows.retain(|row| row.id != id);
-                    rows.len() != before
-                })
-            }
-        });
+        cx.on_payload_action_notify_local_update_if::<act::Remove, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                let before = rows.len();
+                rows.retain(|row| row.id != id);
+                rows.len() != before
+            },
+        );
 
         fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
     }

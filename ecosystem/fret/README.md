@@ -13,7 +13,7 @@ applications while keeping the framework/kernel crates (`crates/*`) policy-light
 ## Boundary note
 
 `fret` is the golden-path authoring facade for application code. It is intentionally **not** the
-repo?s canonical example host.
+repo's canonical example host.
 
 - Use `docs/examples/README.md` for the canonical learning/index path.
 - Use `examples/README.md` as the GitHub-friendly portal.
@@ -26,6 +26,17 @@ For repository overview / architecture docs, see the monorepo README:
 https://github.com/Latias94/fret
 
 ## Quick start (in this repo)
+
+If you are learning the repo's default path, follow this ladder in order:
+
+1. `hello`
+2. `simple-todo`
+3. `todo`
+
+- Index: `docs/examples/README.md`
+- The generated template READMEs repeat the same ladder and explain where each rung fits.
+- Use `fretboard new todo` when you want the richer third-rung baseline, not as a replacement for
+  the first two rungs.
 
 Generate a runnable starter:
 
@@ -116,8 +127,6 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 - App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`
 - App authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
-- Closure-style UI surface (deprecated advanced bridge): `fret::App::new(...).window(...).ui(...)?`
-- Closure-style UI surface with driver hooks (deprecated advanced bridge): `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::run_native_with_configured_fn_driver(...)`
@@ -138,10 +147,6 @@ following seams first-class:
 The builder chain is now the only app-author entry story on `fret`. Advanced users still keep
 real extension seams without dropping to `fret-launch` immediately.
 
-The deprecated closure-root bridge remains available temporarily as:
-
-- `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}`
-
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
 
@@ -157,7 +162,6 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret::App::new(...).ui_with_hooks(...)` -> `fret_bootstrap::ui_app_with_hooks(...)` (deprecated bridge)
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
 - `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`

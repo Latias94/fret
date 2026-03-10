@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -51,16 +52,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .p_4()
     .into_element(cx);
 
-    let area = shadcn::ScrollArea::new([content])
-        .axis(fret_ui::element::ScrollAxis::Y)
-        .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
-        .refine_layout(LayoutRefinement::default().w_full().h_full())
-        .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-scroll-area-demo"),
-        );
+    let area = shadcn::ScrollArea::build(|cx, out| {
+        out.push_ui(cx, content);
+    })
+    .axis(fret_ui::element::ScrollAxis::Y)
+    .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
+    .refine_layout(LayoutRefinement::default().w_full().h_full())
+    .into_element(cx)
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-scroll-area-demo"),
+    );
 
     let props = decl_style::container_props(
         cx.theme(),

@@ -6,7 +6,7 @@ Status: L0 complete (quick scan; no deep dive yet)
 
 Portable kernel vocabulary: IDs, time tokens, input event types, scene recording, docking model, text primitives.
 
-## Snapshot (from `tools/audit_crate.ps1`)
+## Snapshot (from `tools/audit_crate.py`)
 
 - Largest files:
   - `crates/fret-core/src/dock/mutate.rs`
@@ -32,4 +32,3 @@ Portable kernel vocabulary: IDs, time tokens, input event types, scene recording
 1. Split `crates/fret-core/src/input/mod.rs` further by responsibility (pointer/ime/clipboard/external drop), keep facade minimal.
 2. Add/strengthen invariants tests around dock normalization + persistence roundtrips.
 3. Define a “serialization stability checklist” entry for `fret-core` persisted formats (ties to `BU-FR-core-014`).
-

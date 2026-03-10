@@ -38,7 +38,8 @@ pub fn render<H: UiHost>(
             let _ = controller.show(
                 host,
                 acx.window,
-                material3::Snackbar::new("Saved").action("Undo", CommandId::new(CMD_TOAST_ACTION)),
+                material3::Snackbar::new("Saved")
+                    .action_id("Undo", CommandId::new(CMD_TOAST_ACTION)),
             );
             host.request_redraw(acx.window);
         })
@@ -53,7 +54,7 @@ pub fn render<H: UiHost>(
                 acx.window,
                 material3::Snackbar::new("Update available")
                     .supporting_text("Restart the app to apply the latest changes.")
-                    .action("Restart", CommandId::new(CMD_TOAST_ACTION))
+                    .action_id("Restart", CommandId::new(CMD_TOAST_ACTION))
                     .duration(material3::SnackbarDuration::Long),
             );
             host.request_redraw(acx.window);

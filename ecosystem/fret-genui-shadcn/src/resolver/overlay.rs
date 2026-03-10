@@ -204,7 +204,7 @@ impl ShadcnResolver {
                         let is_unit = params.is_empty();
                         if is_action_id && is_unit {
                             menu_item =
-                                menu_item.on_select(CommandId::new(action.as_ref().to_string()));
+                                menu_item.action(CommandId::new(action.as_ref().to_string()));
                         } else if let Some(scope) = scope.clone() {
                             let element_key = element_key.clone();
                             let action_for_hook = action.clone();

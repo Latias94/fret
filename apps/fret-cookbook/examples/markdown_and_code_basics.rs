@@ -141,13 +141,16 @@ impl View for MarkdownAndCodeBasicsView {
 
         let preview_content =
             markdown::markdown_with(cx, &source, &components).test_id(TEST_ID_PREVIEW);
-        let preview_scroll = shadcn::ScrollArea::new([preview_content])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(MetricRef::Px(Px(420.0))),
-            )
-            .test_id(TEST_ID_PREVIEW_SCROLL);
+        let preview_scroll = shadcn::ScrollArea::build(|cx, out| {
+            out.push_ui(cx, preview_content);
+        })
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(420.0))),
+        )
+        .into_element(cx)
+        .test_id(TEST_ID_PREVIEW_SCROLL);
 
         let left = ui::v_flex(|cx| ui::children![cx; editor])
             .gap(Space::N2)

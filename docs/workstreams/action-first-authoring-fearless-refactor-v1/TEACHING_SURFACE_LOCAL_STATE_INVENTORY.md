@@ -113,16 +113,16 @@ The inventory above closes the default cookbook/template migration queue. The fo
 still useful in-tree references, but they should be treated as advanced/runtime-bound or
 component-contract examples rather than blockers for the post-v1 default path.
 
-### Explicit-model collection comparison targets
+### Keyed-list comparison / evidence targets
 
-- `apps/fret-cookbook/examples/simple_todo.rs`
 - `apps/fret-cookbook/examples/simple_todo_v2_target.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 
-Reason: `simple_todo.rs` remains useful as the explicit-model reference, while
-`simple_todo_v2_target.rs`, `todo_demo.rs`, and the scaffold simple-todo template now collectively
-prove that the v2 local-state keyed-list path is teachable across cookbook, app-grade, and generated
-app surfaces. See `EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` for the updated sequencing note.
+Reason: `simple_todo.rs`, `simple_todo_v2_target.rs`, `todo_demo.rs`, and the scaffold simple-todo
+template now all live on the same local-state keyed-list baseline. The dedicated comparison pressure
+has therefore narrowed to `simple_todo_v2_target.rs` (denser payload-row/root-handler shape) rather
+than to an explicit-model-vs-local-state split. See
+`EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` for the updated sequencing note.
 
 ### `apps/fret-examples` (advanced / runtime-bound)
 

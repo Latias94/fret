@@ -9,6 +9,24 @@ Design goals:
 - The default onboarding path stays short and stable (see [`apps/fret-cookbook/README.md`](./README.md)).
 - Higher-ceiling topics are feature-gated to keep cold compile time down.
 
+Taxonomy guide:
+
+- **Default**: the short, boring ladder plus stable copy/paste-ready lessons
+- **Comparison**: explicit side-by-side evidence surfaces such as `simple_todo_v2_target`
+- **Advanced**: feature-gated routing/query/table/interop/renderer/editor-grade topics
+
+If you are new to the repo, stay on the Default sections first and treat the Advanced sections
+below as later reference material.
+
+Repo-wide ladder reminder:
+
+1. `hello` (template)
+2. `simple-todo` (template)
+3. `todo` (template / richer baseline)
+
+This cookbook index starts after the first two rungs and is meant to provide focused follow-up
+lessons, not replace the ladder itself.
+
 How to run an example (recommended):
 
 ```bash
@@ -39,14 +57,14 @@ Notes:
 - Most suites are “smoke + screenshot + bundle”.
 - Some examples require additional features beyond `cookbook-diag` (listed below).
 
-## The bare minimum
+## Default — the bare minimum
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
 [`hello.rs`](./examples/hello.rs) | Official | `cargo run -p fretboard -- dev native --example hello` | `cookbook-hello`
 [`simple_todo.rs`](./examples/simple_todo.rs) | Official | `cargo run -p fretboard -- dev native --example simple_todo` | `cookbook-simple-todo`
 
-## Core UI + input + commands (onboarding-friendly)
+## Default — Core UI + input + commands
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
@@ -54,7 +72,7 @@ Example | Status | Run | Diag suite
 [`text_input_basics.rs`](./examples/text_input_basics.rs) | Official | `cargo run -p fretboard -- dev native --example text_input_basics` | `cookbook-text-input-basics`
 [`commands_keymap_basics.rs`](./examples/commands_keymap_basics.rs) | Official | `cargo run -p fretboard -- dev native --example commands_keymap_basics` | `cookbook-commands-keymap-basics`
 
-## App patterns (small, copy/paste-ready)
+## Default — App patterns (small, copy/paste-ready)
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
@@ -68,33 +86,33 @@ Example | Status | Run | Diag suite
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
-[`simple_todo_v2_target.rs`](./examples/simple_todo_v2_target.rs) | Comparison | `cargo run -p fretboard -- dev native --example simple_todo_v2_target` | -
+[`simple_todo_v2_target.rs`](./examples/simple_todo_v2_target.rs) | Comparison (payload-row / handler-placement) | `cargo run -p fretboard -- dev native --example simple_todo_v2_target` | -
 
-## Routing (feature-gated)
+## Advanced — Routing (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`router_basics.rs`](./examples/router_basics.rs) | Lab | `cookbook-router` | `cargo run -p fretboard -- dev native --example router_basics` | `cookbook-router-basics`
 
-## State + derived state
+## Default follow-up — State + derived state
 
 Example | Status | Run | Diag suite
 --- | --- | --- | ---
 [`virtual_list_basics.rs`](./examples/virtual_list_basics.rs) | Official | `cargo run -p fretboard -- dev native --example virtual_list_basics` | `cookbook-virtual-list-basics`
 
-## Async state / queries (feature-gated)
+## Advanced — Async state / queries (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`query_basics.rs`](./examples/query_basics.rs) | Lab | `cookbook-query` | `cargo run -p fretboard -- dev native --example query_basics` | `cookbook-query-basics`
 
-## Data / tables (feature-gated)
+## Advanced — Data / tables (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`data_table_basics.rs`](./examples/data_table_basics.rs) | Lab | `cookbook-table` | `cargo run -p fretboard -- dev native --example data_table_basics` | `cookbook-data-table-basics`
 
-## Theme + assets (feature-gated)
+## Advanced — Theme + assets (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
@@ -103,7 +121,7 @@ Example | Status | Feature | Run | Diag suite
 [`icons_and_assets_basics.rs`](./examples/icons_and_assets_basics.rs) | Lab | `cookbook-assets` | `cargo run -p fretboard -- dev native --example icons_and_assets_basics` | `cookbook-icons-and-assets-basics`
 [`image_asset_cache_basics.rs`](./examples/image_asset_cache_basics.rs) | Lab | `cookbook-image-assets,cookbook-renderer` | `cargo run -p fretboard -- dev native --example image_asset_cache_basics` | `cookbook-image-asset-cache-basics`
 
-## Rendering / effects (feature-gated)
+## Advanced — Rendering / effects (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
@@ -112,7 +130,7 @@ Example | Status | Feature | Run | Diag suite
 [`drop_shadow_basics.rs`](./examples/drop_shadow_basics.rs) | Lab | `cookbook-renderer` | `cargo run -p fretboard -- dev native --example drop_shadow_basics` | `cookbook-drop-shadow-basics`
 [`customv1_basics.rs`](./examples/customv1_basics.rs) | Lab | `cookbook-customv1` | `cargo run -p fretboard -- dev native --example customv1_basics` | `cookbook-customv1-basics`
 
-## Interop + advanced (feature-gated)
+## Advanced — Interop + editor-grade (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
@@ -121,20 +139,20 @@ Example | Status | Feature | Run | Diag suite
 [`external_texture_import_basics.rs`](./examples/external_texture_import_basics.rs) | Lab | `cookbook-interop` | `cargo run -p fretboard -- dev native --example external_texture_import_basics` | `cookbook-external-texture-import-basics`
 [`imui_action_basics.rs`](./examples/imui_action_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard -- dev native --example imui_action_basics` | `cookbook-imui-action-basics`
 
-## Content (feature-gated, still evolving)
+## Advanced — Content (feature-gated, still evolving)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`markdown_and_code_basics.rs`](./examples/markdown_and_code_basics.rs) | Preview | `cookbook-markdown` | `cargo run -p fretboard -- dev native --example markdown_and_code_basics` | `cookbook-markdown-and-code-basics`
 
-## Charts / gizmo (feature-gated)
+## Advanced — Charts / gizmo (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`chart_interactions_basics.rs`](./examples/chart_interactions_basics.rs) | Lab | `cookbook-chart` | `cargo run -p fretboard -- dev native --example chart_interactions_basics` | `cookbook-chart-interactions-basics`
 [`gizmo_basics.rs`](./examples/gizmo_basics.rs) | Lab | `cookbook-gizmo` | `cargo run -p fretboard -- dev native --example gizmo_basics` | `cookbook-gizmo-basics`
 
-## Utility / platform notes (feature-gated)
+## Advanced — Utility / platform notes (feature-gated)
 
 Example | Status | Feature | Run
 --- | --- | --- | ---

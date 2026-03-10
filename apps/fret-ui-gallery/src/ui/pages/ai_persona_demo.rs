@@ -17,108 +17,41 @@ fn states_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 fn props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        3,
-        [
-            shadcn::TableHead::new("API").into_element(cx),
-            shadcn::TableHead::new("Inputs").into_element(cx),
-            shadcn::TableHead::new("Notes").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |api: &'static str, inputs: &'static str, notes: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(api)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("Persona::new(state)"))
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(shadcn::TableHead::new("API").into_element(cx));
+                        out.push(shadcn::TableHead::new("Inputs").into_element(cx));
+                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
+                    })
                     .into_element(cx),
-                shadcn::TableCell::new(cx.text("PersonaState"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Required root state; matches the upstream state taxonomy."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("variant(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Obsidian | Mana | Opal | Halo | Glint | Command"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Visual shell selection; defaults to `Obsidian` like upstream docs."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("size(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text("Px"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Typed size override; default is 64px to match upstream `size-16`."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("show_label(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text("bool"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Gallery/documentation affordance; remains off by default for upstream-like output."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("refine_layout / refine_style"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text("LayoutRefinement / ChromeRefinement"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Typed equivalent to upstream `className` customization."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("into_element_with_children(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text("custom center visual"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Fret-specific extension for composable custom visuals without forking the shell."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row("Persona::new(state)", "PersonaState", "Required root state; matches the upstream state taxonomy."));
+                out.push_ui(cx, row("variant(...)", "Obsidian | Mana | Opal | Halo | Glint | Command", "Visual shell selection; defaults to `Obsidian` like upstream docs."));
+                out.push_ui(cx, row("size(...)", "Px", "Typed size override; default is 64px to match upstream `size-16`."));
+                out.push_ui(cx, row("show_label(...)", "bool", "Gallery/documentation affordance; remains off by default for upstream-like output."));
+                out.push_ui(cx, row("refine_layout / refine_style", "LayoutRefinement / ChromeRefinement", "Typed equivalent to upstream `className` customization."));
+                out.push_ui(cx, row("into_element_with_children(...)", "custom center visual", "Fret-specific extension for composable custom visuals without forking the shell."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 fn lifecycle_notes(cx: &mut ElementContext<'_, App>) -> AnyElement {

@@ -7,6 +7,7 @@ Related:
 - Caller inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md`
 - Teaching-surface local-state inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
+- Surface playbook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
 
 ## Decision summary
 
@@ -116,6 +117,9 @@ If the repo later wants to reduce surface area further, the correct order is:
 4. then decide whether `use_state` should be:
    - kept permanently as the explicit raw-model hook, or
    - deprecated as a compatibility alias.
+
+If that later reduction path is chosen, use `USE_STATE_SURFACE_PLAYBOOK.md` rather than
+reconstructing the decision/patch sequence ad hoc.
 
 What should **not** happen:
 
