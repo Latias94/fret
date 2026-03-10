@@ -15,24 +15,17 @@ pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         cx,
         [
             "`Separator::new()` and `Separator::orientation(...)` cover the public surface used by the upstream docs.",
-            "Separator remains a leaf primitive; width/height negotiation with surrounding rows and columns stays caller-owned, while the 1px rule chrome stays recipe-owned.",
+            "Separator remains a leaf primitive: surrounding width/height negotiation stays caller-owned, while the 1px rule chrome stays recipe-owned.",
             "Vertical separators often want `.flex_stretch_cross_axis(true)` inside fixed-height flex rows to match the upstream `self-stretch` outcome.",
-        ],
-    );
-
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/separator.rs` (Separator, SeparatorOrientation).",
-            "Separator is a minimal leaf primitive, so the main parity gap here is usage clarity rather than missing composition APIs.",
-            "Gallery sections now mirror shadcn Separator docs first: Demo, Usage, Vertical, Menu, List, RTL, API Reference.",
+            "No extra generic `compose()` / `asChild` surface is needed here because upstream composition happens around the separator rather than through the separator itself.",
+            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Separator docs order first, with dedicated examples for vertical, menu, list, and RTL usage.",
+            "Preview mirrors the shadcn Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -55,9 +48,6 @@ pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             DocSection::new("API Reference", api_reference)
                 .no_shell()
                 .description("Public surface summary and ownership notes."),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .description("Parity notes and implementation pointers."),
         ],
     );
 

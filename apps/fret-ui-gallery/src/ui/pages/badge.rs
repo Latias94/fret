@@ -18,26 +18,17 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         cx,
         [
             "`Badge::new(label)` and `variant(...)` cover the documented `default`, `secondary`, `destructive`, `outline`, `ghost`, and `link` recipe surface.",
-            "Link composition uses badge-owned render semantics (`BadgeRender::Link`) instead of a generic `asChild` merge surface; this matches the upstream outcome without widening the mechanism layer.",
-            "Icons, invalid state, and custom color overrides stay on the badge recipe surface; page-level width negotiation remains caller-owned.",
-        ],
-    );
-
-    let notes = doc_layout::notes(
-        cx,
-        [
-            "API reference: `ecosystem/fret-ui-shadcn/src/badge.rs`.",
-            "Gallery sections now mirror shadcn Badge docs first: Demo, Usage, Variants, With Icon, With Spinner, Link, Custom Colors, RTL, API Reference.",
-            "Badge already exposes the important recipe surface, so the remaining parity work is page/docs clarity rather than new composition APIs.",
-            "`Counts (Fret)` is intentionally left after the upstream path to preserve existing diag coverage for compact numeric badges without polluting the docs-aligned demo.",
-            "The Link render example installs a no-op `on_activate` so diag scripts do not launch a system browser; remove it to enable the default `Effect::OpenUrl` fallback.",
+            "`BadgeRender::Link` is the Fret equivalent of the upstream `render` / `asChild` outcome and keeps link semantics on the badge-owned render surface without widening the mechanism layer.",
+            "Icons, spinners, and custom color overrides stay on the badge recipe surface, while page-level width negotiation remains caller-owned.",
+            "`Counts (Fret)` intentionally stays after the upstream path so compact numeric badge diagnostics remain stable without polluting the docs-aligned example sequence.",
+            "This page is docs/public-surface parity work, not a mechanism-layer fix.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Badge docs order first, then appends a small Fret-specific `Counts` section to keep numeric badge diagnostics stable.",
+            "Preview mirrors the shadcn Badge docs path first: Demo, Usage, Variants, With Icon, With Spinner, Link, Custom Colors, RTL, and API Reference. `Counts (Fret)` stays as an explicit follow-up.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -50,18 +41,16 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("Use the `variant` prop to change the badge variant.")
                 .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
             DocSection::new("With Icon", with_icon)
-                .description(
-                    "Render an icon inside the badge (inline-start / inline-end patterns).",
-                )
+                .description("Render an icon inside the badge with inline-start / inline-end placement.")
                 .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
             DocSection::new("With Spinner", with_spinner)
-                .description("Render a spinner inside the badge (useful for loading states).")
+                .description("Render a spinner inside the badge for loading states.")
                 .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
             DocSection::new("Link", link)
-                .description("Badges can be composed with link semantics (upstream `render` / `asChild` outcome).")
+                .description("Badges can be composed with link semantics through the badge-owned render surface.")
                 .code_rust_from_file_region(snippets::link::SOURCE, "example"),
             DocSection::new("Custom Colors", colors)
-                .description("Customize badge colors with explicit background + text overrides.")
+                .description("Customize badge colors with explicit background and text overrides.")
                 .code_rust_from_file_region(snippets::colors::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Render the badge under an RTL direction provider.")
@@ -70,13 +59,10 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .no_shell()
                 .description("Public surface summary and ownership notes."),
             DocSection::new("Counts (Fret)", counts)
-                .description("Compact numeric badges kept as a Fret-specific follow-up for diag coverage.")
+                .description("Compact numeric badges kept as a focused Fret follow-up for diag coverage.")
                 .code_rust_from_file_region(snippets::counts::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .no_shell()
-                .description("API reference pointers and caveats."),
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-badge")]
 }
