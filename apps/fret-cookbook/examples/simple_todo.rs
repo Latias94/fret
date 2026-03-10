@@ -137,23 +137,23 @@ impl View for SimpleTodoView {
         .w_full()
         .max_w(Px(560.0));
 
-        cx.on_action_notify_models::<act::Add>({
+        cx.on_action_notify_locals::<act::Add>({
             let draft_state = draft_state.clone();
             let next_id_state = next_id_state.clone();
             let todos_state = todos_state.clone();
-            move |models| {
-                let text = draft_state
-                    .value_in_or_else(models, String::new)
+            move |tx| {
+                let text = tx
+                    .value_or_else(&draft_state, String::new)
                     .trim()
                     .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let id = next_id_state.value_in_or(models, 0);
-                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
+                let id = tx.value_or(&next_id_state, 0);
+                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
 
-                if !todos_state.update_in(models, |rows| {
+                if !tx.update(&todos_state, |rows| {
                     rows.push(TodoRow {
                         id,
                         done: false,
@@ -162,14 +162,14 @@ impl View for SimpleTodoView {
                 }) {
                     return false;
                 }
-                draft_state.set_in(models, String::new())
+                tx.set(&draft_state, String::new())
             }
         });
 
-        cx.on_action_notify_models::<act::ClearDone>({
+        cx.on_action_notify_locals::<act::ClearDone>({
             let todos_state = todos_state.clone();
-            move |models| {
-                todos_state.update_in_if(models, |rows| {
+            move |tx| {
+                tx.update_if(&todos_state, |rows| {
                     let before = rows.len();
                     rows.retain(|row| !row.done);
                     rows.len() != before

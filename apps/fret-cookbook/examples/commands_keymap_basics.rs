@@ -1,7 +1,7 @@
 use fret::prelude::*;
 use fret_app::{
-    format_sequence, CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord,
-    KeymapService, Platform, PlatformFilter,
+    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
+    PlatformFilter, format_sequence,
 };
 use fret_core::{KeyCode, Modifiers};
 use fret_ui::CommandAvailability;

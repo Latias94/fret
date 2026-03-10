@@ -1,6 +1,6 @@
 use fret::prelude::*;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui::CommandAvailability;
+use fret_ui::element::SemanticsDecoration;
 
 mod act {
     fret::actions!([

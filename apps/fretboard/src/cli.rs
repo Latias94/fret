@@ -48,7 +48,7 @@ pub(crate) fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
-  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette]
+  fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette] [--no-check]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
   fretboard new simple-todo # non-interactive (template shortcut)
