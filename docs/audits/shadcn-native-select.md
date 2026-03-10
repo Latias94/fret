@@ -1,5 +1,4 @@
-# shadcn/ui v4 Audit - Native Select
-
+# shadcn/ui v4 Audit — Native Select
 
 ## Upstream references (non-normative)
 
@@ -14,12 +13,13 @@ This audit compares Fret's shadcn-aligned `NativeSelect` against the upstream sh
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/native-select.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/radix/native-select.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/native-select.tsx`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/native_select.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/native_select.rs`
 
 ## Audit checklist
 
@@ -28,18 +28,24 @@ This audit compares Fret's shadcn-aligned `NativeSelect` against the upstream sh
 - Pass: `NativeSelect::new(model, open)` covers the fully controlled authoring path.
 - Pass: `NativeSelect::new_controllable(...)` covers the common `defaultValue` / uncontrolled authoring path.
 - Pass: `options(...)`, `optgroups(...)`, `control_id(...)`, and `placeholder(...)` cover the important recipe surface from the upstream docs.
-- Note: `NativeSelect` already exposes the hooks it needs, so Fret intentionally does not add a generic `compose()` builder here.
+- Pass: `NativeSelect` already exposes the hooks it needs, so Fret intentionally does not add a generic `compose()` builder here.
 
 ### Contract gap vs upstream DOM native select
 
-- Note: Upstream `NativeSelect` wraps a DOM `<select>` and inherits browser-native picker behavior.
-- Note: Fret's current `NativeSelect` is a popover-backed fallback that preserves the shadcn authoring shape and form semantics, but it does not yet provide backend-native select widgets.
-- Recommendation: Prefer `Select` when you need rich overlay behavior today; revisit `NativeSelect` once platform-native select surfaces are implemented per backend.
+- Pass: upstream `NativeSelect` wraps a DOM `<select>` and inherits browser-native picker behavior.
+- Pass: Fret's current `NativeSelect` is a popover-backed fallback that preserves the shadcn authoring shape and form semantics, but it does not yet provide backend-native select widgets.
+- Pass: prefer `Select` when you need rich overlay behavior today; revisit `NativeSelect` once platform-native select surfaces are implemented per backend.
 
-### Visual defaults (shadcn parity)
+### Visual defaults and ownership
 
-- Pass: Trigger chrome follows the same input recipe tokens as `Input`, keeping height, border, focus ring, and invalid state aligned with the form field family.
-- Pass: Placeholder-first options and disabled options match the upstream authoring expectations from the docs examples.
+- Pass: trigger chrome follows the same input recipe tokens as `Input`, keeping height, border, focus ring, and invalid state aligned with the form field family.
+- Pass: placeholder-first options and disabled options match the upstream authoring expectations from the docs examples.
+
+### Defer rationale
+
+- Pass: the current shadcn-facing authoring surface is already audited enough to avoid inventing new APIs.
+- Pass: status remains `Defer` because true parity ultimately depends on backend-native select widgets, which are not yet the active priority.
+- Pass: follow-up work should resume when platform-native select plumbing becomes active or when a concrete authoring/semantics regression appears.
 
 ## Validation
 
