@@ -282,6 +282,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
       MCP all consume normalized `reason_code` / `top_reason_codes` directly; residual
       `error_reason_code` / `reason_code_counts` fields are now explicitly classified as
       producer-local report naming rather than shared consumer drift
+    - follow-up audit: `docs/workstreams/diag-fearless-refactor-v2/PRODUCER_LOCAL_REASON_CODE_NAMING_AUDIT_V1.md`
+      now confirms `diag_repeat`, `diag_suite`, and `diag_repro` only keep local wrapper/counter
+      naming, so no immediate rename slice is justified unless those producer summaries are already
+      being refactored for another reason
   - [x] evidence bundle/artifact paths,
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/ORCHESTRATED_OUTPUT_EVIDENCE_PATH_CONTRACT_V1.md`
     - implementation: orchestrated outputs keep canonical item evidence fields in
