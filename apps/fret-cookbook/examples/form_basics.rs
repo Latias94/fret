@@ -1,6 +1,6 @@
 use fret::prelude::*;
-use fret_ui::CommandAvailability;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -119,20 +119,17 @@ impl View for FormBasicsView {
         })
         .gap(Space::N1);
 
-        let error_row = match error {
-            Some(msg) => shadcn::Alert::new(ui::children![cx;
-                shadcn::AlertTitle::new("Validation error"),
-                shadcn::AlertDescription::new(msg),
-            ])
-            .ui()
-            .test_id(TEST_ID_ERROR),
-            None => shadcn::Alert::new(ui::children![cx;
-                shadcn::AlertTitle::new("OK"),
-                shadcn::AlertDescription::new("Ready to submit."),
-            ])
-            .ui()
-            .test_id(TEST_ID_ERROR),
+        let (error_title, error_description) = match error {
+            Some(msg) => ("Validation error", msg),
+            None => ("OK", "Ready to submit.".to_string()),
         };
+
+        let error_row = shadcn::Alert::build(|cx, out| {
+            out.push_ui(cx, shadcn::AlertTitle::new(error_title));
+            out.push_ui(cx, shadcn::AlertDescription::new(error_description));
+        })
+        .ui()
+        .test_id(TEST_ID_ERROR);
 
         let valid = shadcn::Badge::new(if can_submit { "Valid" } else { "Invalid" })
             .variant(if can_submit {

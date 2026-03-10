@@ -39,7 +39,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-render/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-render`
+- `python tools/audit_crate.py --crate fret-render`
 
 ## 4) Module ownership map (internal seams)
 
@@ -69,9 +69,8 @@ Evidence anchors:
 ## 7) Recommended refactor steps (small, gated)
 
 1. Keep the facade stable and minimal — outcome: reduce churn for downstream crates — gate: `cargo nextest run -p fret-render`.
-2. When multiple backends are introduced, switch to feature-gated backend selection (`default = ["wgpu"]`) and tighten the re-export surface — outcome: avoid pulling wgpu in contexts that don’t need it — gate: `pwsh -NoProfile -File tools/check_layering.ps1` + targeted `nextest` runs.
+2. When multiple backends are introduced, switch to feature-gated backend selection (`default = ["wgpu"]`) and tighten the re-export surface — outcome: avoid pulling wgpu in contexts that don’t need it — gate: `python tools/check_layering.py` + targeted `nextest` runs.
 
 ## 8) Open questions / decisions needed
 
 - Do we want `fret-render` to remain “default backend alias” long-term, or should downstream move to explicit backend crates (with `fret-render` becoming a minimal trait/contract facade)?
-

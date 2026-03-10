@@ -48,7 +48,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `ecosystem/fret-docking/Cargo.toml`
-- `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-docking`
+- `python tools/audit_crate.py --crate fret-docking`
 
 ## 4) Module ownership map (internal seams)
 
@@ -93,7 +93,7 @@ Evidence anchors:
 ## 7) Recommended refactor steps (small, gated)
 
 1. Convert `ecosystem/fret-docking/src/dock/tests.rs` into a fixture-driven harness — outcome: stable, reviewable matrices — gate: `cargo nextest run -p fret-docking`.
-2. Split `ecosystem/fret-docking/src/dock/space.rs` into submodules by responsibility (layout, hit-testing, drag ops, tab bar, viewport overlay integration) — outcome: fewer merge conflicts and clearer ownership — gate: docking fixture tests + `pwsh -NoProfile -File tools/check_layering.ps1`.
+2. Split `ecosystem/fret-docking/src/dock/space.rs` into submodules by responsibility (layout, hit-testing, drag ops, tab bar, viewport overlay integration) — outcome: fewer merge conflicts and clearer ownership — gate: docking fixture tests + `python tools/check_layering.py`.
 3. Add a minimal docking interaction diag suite — outcome: catch regressions that unit tests miss — gate: `fretboard diag` suite (name TBD).
 
 ## 8) Open questions / decisions needed

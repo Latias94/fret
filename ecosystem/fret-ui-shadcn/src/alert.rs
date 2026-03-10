@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
@@ -9,7 +10,9 @@ use fret_ui_kit::declarative::style as decl_style;
 
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space,
+    UiChildIntoElement, UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout,
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
@@ -43,6 +46,17 @@ impl AlertAction {
         }
     }
 
+    pub fn build<H: UiHost, B>(build: B) -> AlertActionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertActionBuild {
+            build: Some(build),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -51,6 +65,18 @@ impl AlertAction {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let has_explicit_width = self
+            .layout
+            .size
+            .as_ref()
+            .and_then(|size| size.width.as_ref())
+            .is_some();
+        let has_explicit_height = self
+            .layout
+            .size
+            .as_ref()
+            .and_then(|size| size.height.as_ref())
+            .is_some();
         let mut layout = decl_style::layout_style(
             theme,
             LayoutRefinement::default()
@@ -59,8 +85,12 @@ impl AlertAction {
                 .right(Space::N3)
                 .merge(self.layout),
         );
-        layout.size.width = Length::Auto;
-        layout.size.height = Length::Auto;
+        if !has_explicit_width {
+            layout.size.width = Length::Auto;
+        }
+        if !has_explicit_height {
+            layout.size.height = Length::Auto;
+        }
 
         cx.container(
             ContainerProps {
@@ -81,6 +111,19 @@ impl Alert {
             variant: AlertVariant::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn build<H: UiHost, B>(build: B) -> AlertBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        AlertBuild {
+            build: Some(build),
+            variant: AlertVariant::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
         }
     }
 
@@ -118,6 +161,140 @@ pub fn alert<H: UiHost>(
         ChromeRefinement::default(),
         LayoutRefinement::default(),
     )
+}
+
+pub struct AlertBuild<H, B> {
+    build: Option<B>,
+    variant: AlertVariant,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn variant(mut self, variant: AlertVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_alert_children(cx, self.build.expect("expected alert build closure"));
+        Alert::new(children)
+            .variant(self.variant)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for AlertBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for AlertBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertBuild::into_element(self, cx)
+    }
+}
+
+pub struct AlertActionBuild<H, B> {
+    build: Option<B>,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_alert_children(
+            cx,
+            self.build.expect("expected alert action build closure"),
+        );
+        AlertAction::new(children)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertActionBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for AlertActionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertActionBuild::into_element(self, cx)
+    }
+}
+
+fn collect_built_alert_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -769,6 +946,45 @@ mod tests {
     }
 
     #[test]
+    fn alert_build_collects_children_on_builder_path() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, AlertTitle::new("Heads up!"));
+                out.push_ui(cx, AlertDescription::new("Built via Alert::build"));
+                out.push_ui(
+                    cx,
+                    AlertAction::build(|cx, out| {
+                        out.push(cx.text("Undo"));
+                    }),
+                );
+            })
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected Alert::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.padding.right, SpacingLength::Px(Px(72.0)));
+        assert!(
+            find_text_element(&element, "Built via Alert::build").is_some(),
+            "expected Alert::build to retain nested description content"
+        );
+    }
+
+    #[test]
     fn alert_action_uses_upstream_offsets_and_merges_layout_refinement() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -801,6 +1017,35 @@ mod tests {
             props.layout.inset.right,
             InsetEdge::Px(MetricRef::space(Space::N3).resolve(theme))
         );
+        assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
+    }
+
+    #[test]
+    fn alert_action_build_preserves_upstream_offsets() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertAction::build(|cx, out| {
+                out.push(cx.text("Undo"));
+            })
+            .refine_layout(LayoutRefinement::default().w_px(Px(88.0)))
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected AlertAction::build root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
     }
 

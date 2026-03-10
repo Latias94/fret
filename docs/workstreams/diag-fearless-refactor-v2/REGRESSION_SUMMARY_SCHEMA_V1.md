@@ -6,6 +6,7 @@ Tracking docs:
 
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`
 
 ## 0) Why this note exists
 
@@ -80,6 +81,14 @@ Purpose:
 - explain what logical run was requested,
 - preserve lane/profile vocabulary,
 - carry selection context without depending on CLI arguments being preserved elsewhere.
+
+Vocabulary rule:
+
+- `lane` should use the canonical lane set from
+  `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`.
+- persisted broad scheduled runs should prefer `nightly`; `full` may be accepted as a user-facing
+  alias at selection time but should not become a second persisted broad-lane term unless the repo
+  later gives it different semantics.
 
 ### 3.2 `run`
 
@@ -259,10 +268,10 @@ Recommended fields:
 
 - `bundle_artifact: string | null`
 - `bundle_dir: string | null`
-- `triage_json: string | null`
-- `script_result_json: string | null`
-- `ai_packet_dir: string | null`
-- `pack_path: string | null`
+- `triage_artifact: string | null`
+- `script_result: string | null`
+- `share_artifact: string | null`
+- `packed_report: string | null`
 - `screenshots_manifest: string | null`
 - `perf_summary_json: string | null`
 - `compare_json: string | null`
@@ -272,6 +281,14 @@ Purpose:
 
 - keep one stable place to look for artifacts,
 - allow lane-specific extras without widening the root schema too often.
+
+Compatibility rule:
+
+- producers may continue to read legacy names such as `triage_json`, `script_result_json`,
+  `ai_packet_dir`, and `pack_path`,
+- newly written docs and new emitters should prefer `triage_artifact`, `script_result`,
+  `share_artifact`, and `packed_report`,
+- consumers should ignore unknown fields and may support both spellings during migration.
 
 ### 5.4 `source`
 
@@ -316,12 +333,14 @@ Rules:
 
 - `status` is the canonical bucket for dashboards and summaries.
 - `reason_code` refines the failure or skip cause.
+- presentation surfaces may relabel these statuses for humans, but must not persist alternate
+  machine-readable bucket names.
 
 ### 6.2 `reason_code`
 
 Rules:
 
-- use existing stable reason-code conventions where possible,
+- use the normalized naming rules from `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`,
 - do not force consumers to parse free-form `reason` strings,
 - campaign-level logic may wrap lower-level failures, but should preserve the original reason code when possible.
 
@@ -329,6 +348,13 @@ Suggested compatibility pattern:
 
 - `reason_code`: the normalized campaign-level code,
 - `source_reason_code`: the lower-level originating code when different.
+
+Recommended first bucket families:
+
+- `tooling.*`
+- `script.*`
+- `policy.*`
+- `perf.*`
 
 ## 7) Lane-specific expectations
 
@@ -393,7 +419,10 @@ Recommended rules:
 - additive fields are preferred,
 - unknown fields must be ignored by consumers,
 - `schema_version` must only change for incompatible structure changes,
-- lane-specific extras should prefer `evidence.extra` or `source.metadata` before widening the root repeatedly.
+- lane-specific extras should prefer `evidence.extra` or `source.metadata` before widening the root repeatedly,
+- legacy evidence-field spellings may be supported during migration, but new schema notes and new
+  emitters should prefer the canonical evidence path names from
+  `M3_ORCHESTRATION_VOCABULARY_AND_CONTRACT_V1.md`.
 
 ## 10) Suggested minimal example
 
@@ -427,7 +456,7 @@ Recommended rules:
       "kind": "script",
       "name": "dialog escape focus restore",
       "status": "failed_deterministic",
-      "reason_code": "assert.focus_restore.mismatch",
+      "reason_code": "script.assert.focus_restore.mismatch",
       "lane": "smoke",
       "timing": { "duration_ms": 1420 },
       "attempts": {
@@ -441,10 +470,10 @@ Recommended rules:
       "evidence": {
         "bundle_artifact": "target/fret-diag/.../bundle.schema2.json",
         "bundle_dir": "target/fret-diag/...",
-        "triage_json": "target/fret-diag/.../triage.json",
-        "script_result_json": "target/fret-diag/.../script.result.json",
-        "ai_packet_dir": "target/fret-diag/.../ai.packet",
-        "pack_path": null,
+        "triage_artifact": "target/fret-diag/.../triage.json",
+        "script_result": "target/fret-diag/.../script.result.json",
+        "share_artifact": "target/fret-diag/.../ai.packet",
+        "packed_report": null,
         "screenshots_manifest": null,
         "perf_summary_json": null,
         "compare_json": null,
@@ -465,7 +494,7 @@ Recommended rules:
   "highlights": {
     "first_failure": {
       "item_id": "ui-gallery-dialog-escape-focus-restore",
-      "reason_code": "assert.focus_restore.mismatch"
+      "reason_code": "script.assert.focus_restore.mismatch"
     }
   },
   "artifacts": {
@@ -490,12 +519,12 @@ Recommended rules:
       "fretboard diag perf": 8
     },
     "by_reason_code": {
-      "assert.focus_restore.mismatch": 2,
+      "script.assert.focus_restore.mismatch": 2,
       "diag.perf.threshold_failed": 2
     }
   },
   "top_reason_codes": [
-    { "reason_code": "assert.focus_restore.mismatch", "count": 2 },
+    { "reason_code": "script.assert.focus_restore.mismatch", "count": 2 },
     { "reason_code": "diag.perf.threshold_failed", "count": 2 }
   ],
   "failing_summaries": [

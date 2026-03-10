@@ -7,10 +7,13 @@ surface for the `fret` facade.
 
 Current recommended entry paths:
 
-- `fret::App::new(...).window(...).ui(...)?`
-- `fret::App::new(...).window(...).ui_with_hooks(...)?`
 - `fret::App::new(...).window(...).view::<V>()?`
 - `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
+
+Update (2026-03-10):
+
+- `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` were removed from `fret` before the first
+  published release.
 
 Companion naming decisions:
 
@@ -74,9 +77,7 @@ use fret::prelude::*;
 fn main() -> fret::Result<()> {
     FretApp::new("hello")
         .window("Hello", (560.0, 360.0))
-        .ui(|_app, _window| (), |cx, _st| {
-            shadcn::Label::new("Hello from Fret!").into_element(cx).into()
-        })?
+        .view::<HelloView>()?
         .run()
 }
 ```
@@ -97,11 +98,8 @@ The current builder surface is intentionally small but complete enough for gener
 - `ui_assets_budgets(...)`
 - `install_app(...)` / `install(...)`
 - `register_icon_pack(...)`
-- `ui(init_window, view)`
-- `ui_with_hooks(init_window, view, configure)`
 - `view::<V>()`
 - `view_with_hooks::<V>(configure)`
-- `run_ui(...)` / `run_ui_with_hooks(...)`
 - `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
 
 This is enough to keep the first-app story compact while leaving real seams available.
@@ -111,7 +109,7 @@ This is enough to keep the first-app story compact while leaving real seams avai
 The key refinement in this round is that advanced driver configuration no longer requires dropping
 back to the older top-level helpers.
 
-`ui_with_hooks(...)` and `view_with_hooks(...)` keep the following hooks reachable on the builder
+`view_with_hooks(...)` keeps the following hooks reachable on the builder
 path:
 
 - event handling,
@@ -168,11 +166,9 @@ It does not move policy into the wrong crate and does not create a second runtim
 
 The recommended documentation order is now:
 
-1. `fret::App::new(...).window(...).ui(...)?` for the simplest UI entry.
-2. `fret::App::new(...).window(...).ui_with_hooks(...)?` when driver customization is needed.
-3. `fret::App::new(...).window(...).view::<V>()?` / `view_with_hooks::<V>(...)` for the action-first
-   view runtime.
-4. Drop to `fret-bootstrap` or `fret-framework` only when runner/manual assembly ownership is the
+1. `fret::App::new(...).window(...).view::<V>()?` for the default app-author entry.
+2. `fret::App::new(...).window(...).view_with_hooks::<V>(...)?` when driver customization is needed.
+3. Drop to `fret-bootstrap` or `fret-framework` only when runner/manual assembly ownership is the
    actual need.
 
 ## Remaining questions

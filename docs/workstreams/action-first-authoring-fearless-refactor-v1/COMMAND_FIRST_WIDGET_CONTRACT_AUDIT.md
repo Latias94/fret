@@ -8,6 +8,7 @@ Related:
 - Hard-delete gap analysis: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_GAP_ANALYSIS.md`
 - Hard-delete execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- Intentional retained surfaces: `docs/workstreams/action-first-authoring-fearless-refactor-v1/COMMAND_FIRST_INTENTIONAL_SURFACES.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 
@@ -59,11 +60,12 @@ Current conclusion:
 | --- | --- | --- | --- | --- |
 | `Button` | `action(...)`, `action_payload(...)`, legacy `on_click(CommandId)` | generic pressable dispatch; default authoring already converged | Aligned | Keep current dual surface; treat `on_click(...)` as compat naming only |
 | `CommandItem` / command palette entries | `on_select(CommandId)` plus `on_select_action(...)` / `on_select_value_action(...)`; host-command catalog builders derive from `CommandMeta` | palette items naturally map to registry metadata, shortcut display, and gating snapshots | Mostly aligned | Keep command-first catalog APIs; keep action-first callback path for custom items |
+| `DropdownMenuItem` / `DropdownMenuCheckboxItem` / `DropdownMenuRadioItem` | `on_select(CommandId)` only (plus `trailing_on_select(...)` on item rows) | menu rows dispatch through command gating and may expose trailing command affordances | Default-facing blocker | Add `action(...)` / `trailing_action(...)` aliases first; keep command-centric internals and trailing command pipeline intact |
 | `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem` | `on_select(CommandId)` only | menu rows display shortcut labels and dispatch through command gating | Default-facing blocker | Add `action(...)` alias first; keep command-centric internals and shortcut display logic |
 | `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `on_select(CommandId)` only | same as context menu, plus stronger OS/menu parity expectations | Default-facing blocker | Same as context menu: action-first alias on public builders, command-centric core retained |
 | `NavigationMenuLink` / `NavigationMenuItem` | `on_click(CommandId)` only | current activation path reuses command gating/dispatch | Medium blocker | Add `action(...)` alias; this surface reads like a regular app-facing widget, not a registry API |
 | `BreadcrumbItem` | `on_click(CommandId)` plus `on_activate(...)` closure | historical command pipeline reuse | Medium blocker | Add `action(...)` alias; keep `on_click(...)` as compat name |
-| Material `Snackbar` | `action(label, CommandId)` only | toast action currently lowers to command dispatch | Medium blocker | Add `action_id(...)` or `action_action(...)`-style alias; keep explicit command variant for low-level use |
+| Material `Snackbar` | `action(...)` plus `action_id(...)` / `action_command(...)` aliases | toast action currently lowers to command dispatch | Aligned (dual surface) | Prefer `action_id(...)` in default-facing docs/examples; keep `action(...)` / `action_command(...)` as compat/low-level spellings |
 
 ---
 
@@ -75,6 +77,7 @@ Representative evidence:
 
 - `ecosystem/fret-ui-shadcn/src/button.rs`
 - `ecosystem/fret-ui-shadcn/src/command.rs`
+- `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
@@ -181,8 +184,9 @@ Representative evidence:
 
 Current shape:
 
-- `Snackbar::action(label, CommandId)` is command-shaped even though the surrounding API is a
-  higher-level app-facing notification recipe.
+- `Snackbar::action(label, CommandId)` still exists as the historical spelling,
+- `Snackbar::action_id(label, action)` and `Snackbar::action_command(label, command)` now provide
+  the explicit action-first / low-level split on top of the same toast dispatch path.
 
 Assessment:
 
@@ -192,21 +196,18 @@ Assessment:
 
 Recommendation:
 
-- Add a clearly named action-first variant.
-- Prefer a name that avoids ambiguity with the existing label-bearing method, for example:
-  - `action_id(label, action)`
-  - or rename the current method to `action_command(...)` and let `action(...)` become the
-    action-first spelling in a staged migration.
+- Keep `action_id(...)` as the default public spelling in docs/examples.
+- Keep `action_command(...)` and the historical `action(...)` spelling as additive compatibility
+  surfaces until the repo decides whether this family should deprecate command-shaped naming.
 
-### 6) One documentation note is now stale relative to the action-first surface
+### 6) Component author docs now need to stay aligned with the action-first surface
 
 Representative evidence:
 
 - `docs/component-author-guide.md`
 
-Current wording still says:
-
-- “Commands + shortcuts: always go through `CommandId` + keymap”
+Previous wording overstated the old rule by making the public authoring story sound fully
+`CommandId`-first.
 
 Assessment:
 
@@ -214,11 +215,16 @@ Assessment:
 - It is too strong for the current public authoring story because the repo now intentionally
   teaches typed actions first and only lowers to command IDs at the routing boundary.
 
-Recommendation:
+Status update (as of 2026-03-09):
 
-- Update this guide in a later follow-up so it distinguishes:
-  - runtime identity / menu-keymap integration,
-  - versus default public builder naming on ecosystem widgets.
+- `docs/component-author-guide.md` now distinguishes:
+  - default public builder naming (`action(...)` / typed actions first),
+  - versus runtime identity / menu-keymap integration lowering through the command pipeline.
+
+Practical implication:
+
+- this documentation mismatch is no longer a reason to treat command-first cleanup as an active
+  broad migration track.
 
 ---
 
@@ -243,20 +249,51 @@ Progress update (as of 2026-03-09):
   `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`.
 - The navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) now prefer
   `action(...)` as the default public spelling.
-- Material `Snackbar` is still pending in this phase.
+- Material `Snackbar::action_id(...)` and `Snackbar::action_command(...)` now exist in
+  `ecosystem/fret-ui-material3/src/snackbar.rs`.
+- The Material3 gallery snackbar snippet now prefers `action_id(...)`:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs`.
+- Material3 regression coverage also uses the alias in
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
+- A narrow default-surface gate now protects that choice:
+  `tools/gate_material3_snackbar_default_surface.py`.
 
 ### Phase 2 — Menu-family public alias pass
 
 Then add action-first aliases to:
 
-1. `ContextMenuItem` family
-2. `MenubarItem` family
+1. `DropdownMenuItem` family
+2. `ContextMenuItem` family
+3. `MenubarItem` family
 
 Guardrail:
 
-- keep shortcut display, gating, and command metadata integration unchanged internally.
+- keep shortcut display, trailing command affordances, gating, and command metadata integration unchanged internally.
 
-Progress update (as of 2026-03-09):
+Progress update (as of 2026-03-09, follow-up):
+
+- `DropdownMenuItem::action(...)` / `trailing_action(...)`,
+  `DropdownMenuCheckboxItem::action(...)`,
+  `DropdownMenuRadioItemSpec::action(...)`, and
+  `DropdownMenuRadioItem::action(...)` now exist in
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`.
+- The main dropdown-menu gallery teaching snippets now also prefer `action(...)`:
+  - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/basic.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs`
+- The gallery overlay preview surfaces now also prefer `action(...)` for dropdown/context menu rows:
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs`
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`
+- `tools/gate_menu_action_default_surfaces.py` now covers dropdown-menu snippets in addition to
+  context-menu / menubar snippets, plus the two overlay preview teaching surfaces above.
+- A final curated-internal follow-up also moved the remaining obvious app/internal dropdown menu
+  residue onto the same spelling:
+  - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+  - `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs`
+- `tools/gate_menu_action_curated_internal_surfaces.py` now protects those two intentionally
+  chosen internal/app-facing surfaces from drifting back to `.on_select(...)` /
+  `trailing_on_select(...)`.
+
+Previous phase-2 progress:
 
 - `ContextMenuItem::action(...)`, `ContextMenuCheckboxItem::action(...)`,
   `ContextMenuRadioItemSpec::action(...)`, and `ContextMenuRadioItem::action(...)` now exist in
@@ -316,3 +353,11 @@ The remaining `CommandId` blocker is now well-scoped:
 
 This means the next work is mostly surface cleanup and naming convergence, not another deep
 architecture change.
+
+Post-inventory update (as of 2026-03-09):
+
+- `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now records the remaining command-shaped surfaces that
+  the repo should intentionally keep for now (command palette/catalog, `DataTable`
+  business-table wiring, compat/conformance tests, and out-of-scope callback widgets).
+- Practical consequence: do not schedule another broad `.on_select(...)` cleanup pass unless a new
+  default-facing leak appears.

@@ -46,7 +46,7 @@ Evidence anchors:
 Evidence anchors:
 
 - `crates/fret-platform-native/Cargo.toml`
-- `pwsh -NoProfile -File tools/check_layering.ps1`
+- `python tools/check_layering.py`
 
 ## 4) Module ownership map (internal seams)
 
@@ -97,4 +97,3 @@ Evidence anchors:
 
 - Should `read_all` be allowed to partially succeed (some files read, some errors) as a stable contract? Today it does; confirm apps want that behavior.
 - Do we want deterministic error message strings (for tests), or should we avoid asserting exact strings and keep only structured error kinds in contracts?
-

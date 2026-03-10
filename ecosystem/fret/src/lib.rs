@@ -12,8 +12,6 @@
 //! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path.
 //! - `fret::App::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
 //!   app-author path when driver hooks are required.
-//! - `fret::App::new(...).window(...).ui(...)?` and `ui_with_hooks(...)` are deprecated advanced
-//!   bridge surfaces while older closure-root callers are phased out.
 //! - `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`,
 //!   and `fret::run_native_with_configured_fn_driver(...)` are the recommended advanced escape
 //!   hatches when you need runner-level customization but
@@ -722,20 +720,13 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
-    use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp, ViewElements};
+    use super::{App as FretApp, AppBuilder, IconRegistry, KernelApp};
     use crate::view::{View, ViewCx};
     use crate::{Defaults, prelude::FretApp as PreludeFretApp};
     use fret_app::CreateWindowRequest;
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
-    use fret_ui::ElementContext;
     use fret_ui::element::Elements;
-
-    fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> () {}
-
-    fn view(_cx: &mut ElementContext<'_, KernelApp>, _st: &mut ()) -> ViewElements {
-        ViewElements::default()
-    }
 
     fn install_app(_app: &mut KernelApp) {}
 
@@ -743,22 +734,22 @@ mod builder_surface_tests {
 
     fn register_icon_pack(_registry: &mut IconRegistry) {}
 
-    fn on_event(
+    fn on_view_event(
         _app: &mut KernelApp,
         _services: &mut dyn UiServices,
         _window: AppWindowId,
         _ui: &mut fret_ui::UiTree<KernelApp>,
-        _st: &mut (),
+        _st: &mut crate::view::ViewWindowState<SmokeView>,
         _event: &Event,
     ) {
     }
 
-    fn on_command(
+    fn on_view_command(
         _app: &mut KernelApp,
         _services: &mut dyn UiServices,
         _window: AppWindowId,
         _ui: &mut fret_ui::UiTree<KernelApp>,
-        _st: &mut (),
+        _st: &mut crate::view::ViewWindowState<SmokeView>,
         _command: &CommandId,
     ) {
     }
@@ -785,22 +776,6 @@ mod builder_surface_tests {
 
     fn viewport_input(_app: &mut KernelApp, _event: ViewportInputEvent) {}
 
-    fn record_engine_frame(
-        _app: &mut KernelApp,
-        _window: AppWindowId,
-        _ui: &mut fret_ui::UiTree<KernelApp>,
-        _st: &mut (),
-        _context: &crate::kernel::render::WgpuContext,
-        _renderer: &mut crate::kernel::render::Renderer,
-        _dt_s: f32,
-        _tick_id: TickId,
-        _frame_id: FrameId,
-    ) -> fret_launch::EngineFrameUpdate {
-        fret_launch::EngineFrameUpdate::default()
-    }
-
-    fn dock_op(_app: &mut KernelApp, _op: DockOp) {}
-
     fn record_view_engine_frame(
         _app: &mut KernelApp,
         _window: AppWindowId,
@@ -821,6 +796,8 @@ mod builder_surface_tests {
     ) {
     }
 
+    fn dock_op(_app: &mut KernelApp, _op: DockOp) {}
+
     struct SmokeView;
 
     impl View for SmokeView {
@@ -833,43 +810,18 @@ mod builder_surface_tests {
         }
     }
 
-    #[allow(deprecated)]
-    #[test]
-    fn app_builder_ui_with_hooks_smoke() {
-        let _builder = FretApp::new("builder-ui-smoke")
-            .window("Builder UI Smoke", (640.0, 480.0))
-            .install_app(install_app)
-            .install(install)
-            .register_icon_pack(register_icon_pack)
-            .ui_with_hooks(init_window, view, |driver| {
-                driver
-                    .on_event(on_event)
-                    .on_command(on_command)
-                    .handle_global_command(handle_global_command)
-                    .window_create_spec(window_create_spec)
-                    .window_created(window_created)
-                    .before_close_window(before_close_window)
-                    .viewport_input(viewport_input)
-                    .record_engine_frame(record_engine_frame)
-                    .dock_op(dock_op)
-            })
-            .expect("ui_with_hooks should build")
-            .configure(|config| {
-                assert_eq!(config.main_window_title, "Builder UI Smoke");
-                assert_eq!(config.main_window_size.width, 640.0);
-                assert_eq!(config.main_window_size.height, 480.0);
-            })
-            .init_app(|_app| {})
-            .install_custom_effects(install_custom_effects)
-            .on_gpu_ready(|_app, _context, _renderer| {});
-    }
-
     #[test]
     fn app_builder_view_with_hooks_smoke() {
         let _builder = FretApp::new("builder-view-smoke")
             .window("Builder View Smoke", (640.0, 480.0))
+            .install_app(install_app)
+            .install(install)
+            .register_icon_pack(register_icon_pack)
             .view_with_hooks::<SmokeView>(|driver| {
                 driver
+                    .on_event(on_view_event)
+                    .on_command(on_view_command)
+                    .handle_global_command(handle_global_command)
                     .window_create_spec(window_create_spec)
                     .window_created(window_created)
                     .before_close_window(before_close_window)
@@ -882,19 +834,21 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_title, "Builder View Smoke");
                 assert_eq!(config.main_window_size.width, 640.0);
                 assert_eq!(config.main_window_size.height, 480.0);
-            });
+            })
+            .init_app(|_app| {})
+            .install_custom_effects(install_custom_effects)
+            .on_gpu_ready(|_app, _context, _renderer| {});
     }
 
-    #[allow(deprecated)]
     #[test]
-    fn app_builder_ui_smoke() {
-        let _builder = AppBuilder::new("builder-ui-basic")
+    fn app_builder_view_smoke() {
+        let _builder = AppBuilder::new("builder-view-basic")
             .defaults(Defaults::desktop_app())
-            .window("Builder UI Basic", (800.0, 600.0))
-            .ui(init_window, view)
-            .expect("ui should build")
+            .window("Builder View Basic", (800.0, 600.0))
+            .view::<SmokeView>()
+            .expect("view should build")
             .configure(|config| {
-                assert_eq!(config.main_window_title, "Builder UI Basic");
+                assert_eq!(config.main_window_title, "Builder View Basic");
                 assert_eq!(config.main_window_size.width, 800.0);
                 assert_eq!(config.main_window_size.height, 600.0);
             })
@@ -985,27 +939,31 @@ mod authoring_surface_policy_tests {
     const README: &str = include_str!("../README.md");
     const LIB_RS: &str = include_str!("lib.rs");
 
+    fn crate_rustdoc() -> String {
+        LIB_RS
+            .lines()
+            .filter(|line| line.starts_with("//!"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     #[test]
-    fn readme_prefers_view_entry_and_marks_ui_bridge_deprecated() {
+    fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(README.contains(
             "App authors (default recommendation): `fret::App::new(...).window(...).view::<V>()?`"
         ));
-        assert!(README.contains(
-            "Closure-style UI surface (deprecated advanced bridge): `fret::App::new(...).window(...).ui(...)?`"
-        ));
         assert!(!README.contains(
-            "Closure-style UI surface (still available): `fret::App::new(...).window(...).ui(...)?`"
+            "fret::App::new(...).window(...).ui(...)?"
         ));
     }
 
     #[test]
-    fn crate_docs_no_longer_teach_ui_as_default_entry() {
-        assert!(LIB_RS.contains(
+    fn crate_docs_only_teach_view_entry() {
+        let rustdoc = crate_rustdoc();
+        assert!(rustdoc.contains(
             "//! - `fret::App::new(...).window(...).view::<V>()?` is the recommended app-author path."
         ));
-        assert!(LIB_RS.contains(
-            "//! - `fret::App::new(...).window(...).ui(...)?` and `ui_with_hooks(...)` are deprecated advanced"
-        ));
-        assert!(LIB_RS.contains(".view::<HelloView>()?"));
+        assert!(rustdoc.contains(".view::<HelloView>()?"));
+        assert!(!rustdoc.contains(".window(...).ui(...)?"));
     }
 }

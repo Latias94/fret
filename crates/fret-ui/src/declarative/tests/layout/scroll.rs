@@ -214,6 +214,162 @@ fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_height_as_unknown()
 }
 
 #[test]
+fn scroll_probe_unbounded_cache_respects_cross_axis_width_in_same_frame() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    struct WidthSensitiveMeasure;
+
+    impl<H: UiHost> Widget<H> for WidthSensitiveMeasure {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            match cx.constraints.available.width.definite() {
+                Some(width) if width.0 > 0.0 => Size::new(width, Px(24.0)),
+                _ => Size::new(Px(160.0), Px(96.0)),
+            }
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-cache-cross-axis-width-same-frame",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Auto;
+            scroll.layout.size.height = Length::Auto;
+            scroll.axis = crate::element::ScrollAxis::Y;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+            vec![cx.scroll(scroll, |_cx| Vec::new())]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let child = ui.create_node(WidthSensitiveMeasure);
+    ui.set_children(scroll, vec![child]);
+
+    let placeholder_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(0.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let placeholder = ui.measure_in(&mut app, &mut text, scroll, placeholder_constraints, 1.0);
+    assert!(
+        placeholder.height.0 >= 95.5,
+        "expected placeholder probe to measure the unbounded width variant first; size={placeholder:?}"
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(80.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let definite = ui.measure_in(&mut app, &mut text, scroll, definite_constraints, 1.0);
+    assert!(
+        (definite.height.0 - 24.0).abs() <= 0.5,
+        "expected same-frame remeasure to respect the definite cross-axis width instead of reusing the placeholder probe: placeholder={placeholder:?} definite={definite:?}"
+    );
+}
+
+#[test]
+fn scroll_probe_unbounded_cache_respects_cross_axis_height_in_same_frame() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    struct HeightSensitiveMeasure;
+
+    impl<H: UiHost> Widget<H> for HeightSensitiveMeasure {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            match cx.constraints.available.height.definite() {
+                Some(height) if height.0 > 0.0 => Size::new(Px(24.0), height),
+                _ => Size::new(Px(96.0), Px(160.0)),
+            }
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-cache-cross-axis-height-same-frame",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Auto;
+            scroll.layout.size.height = Length::Auto;
+            scroll.axis = crate::element::ScrollAxis::X;
+            scroll.probe_unbounded = true;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+            vec![cx.scroll(scroll, |_cx| Vec::new())]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+    let child = ui.create_node(HeightSensitiveMeasure);
+    ui.set_children(scroll, vec![child]);
+
+    let placeholder_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::MaxContent,
+            AvailableSpace::Definite(Px(0.0)),
+        ),
+    );
+    let placeholder = ui.measure_in(&mut app, &mut text, scroll, placeholder_constraints, 1.0);
+    assert!(
+        placeholder.width.0 >= 95.5,
+        "expected placeholder probe to measure the unbounded cross-axis height variant first; size={placeholder:?}"
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::MaxContent,
+            AvailableSpace::Definite(Px(80.0)),
+        ),
+    );
+    let definite = ui.measure_in(&mut app, &mut text, scroll, definite_constraints, 1.0);
+    assert!(
+        (definite.width.0 - 24.0).abs() <= 0.5,
+        "expected same-frame remeasure to respect the definite cross-axis height instead of reusing the placeholder probe: placeholder={placeholder:?} definite={definite:?}"
+    );
+}
+
+#[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

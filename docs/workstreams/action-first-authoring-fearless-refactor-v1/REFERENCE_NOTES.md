@@ -24,7 +24,7 @@ This file is a quick pointer index to relevant upstream and in-tree references.
 ### Workstream evidence + gates
 
 - Evidence checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
-- Scripted diagnostics gate runner: `tools/diag_gate_action_first_authoring_v1.ps1`
+- Scripted diagnostics gate runner: `tools/diag_gate_action_first_authoring_v1.py`
 
 ### Authoring + state helpers
 

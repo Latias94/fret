@@ -22,6 +22,11 @@ struct LoadedRegressionSummary {
     summary: RegressionSummaryV1,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum SummarizeOutputPresentation {
+    Text(String),
+}
+
 pub(crate) fn cmd_summarize(ctx: SummarizeCmdContext) -> Result<(), String> {
     let SummarizeCmdContext {
         rest,
@@ -62,25 +67,61 @@ pub(crate) fn cmd_summarize(ctx: SummarizeCmdContext) -> Result<(), String> {
         &serde_json::to_value(&aggregate).unwrap_or_else(|_| serde_json::json!({})),
     )?;
 
-    if stats_json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&aggregate).unwrap_or_else(|_| "{}".to_string())
-        );
-    } else {
-        println!(
-            "summarize: ok (summaries={}, items={}, failed={}, out_dir={})",
-            loaded.len(),
-            aggregate.totals.items_total,
-            aggregate.totals.failed_deterministic
-                + aggregate.totals.failed_flaky
-                + aggregate.totals.failed_tooling
-                + aggregate.totals.failed_timeout,
-            resolved_out_dir.display()
-        );
-    }
+    emit_summarize_output_presentation(build_summarize_output_presentation(
+        loaded.len(),
+        &aggregate,
+        &resolved_out_dir,
+        stats_json,
+    ));
 
     Ok(())
+}
+
+fn failed_regression_items_total(totals: &RegressionTotalsV1) -> u64 {
+    (totals.failed_deterministic
+        + totals.failed_flaky
+        + totals.failed_tooling
+        + totals.failed_timeout)
+        .into()
+}
+
+fn summarize_success_line(
+    summaries_total: usize,
+    aggregate: &RegressionSummaryV1,
+    resolved_out_dir: &Path,
+) -> String {
+    format!(
+        "regression summarize: ok (summaries={}, items={}, failed={}, out_dir={})",
+        summaries_total,
+        aggregate.totals.items_total,
+        failed_regression_items_total(&aggregate.totals),
+        resolved_out_dir.display()
+    )
+}
+
+fn build_summarize_output_presentation(
+    summaries_total: usize,
+    aggregate: &RegressionSummaryV1,
+    resolved_out_dir: &Path,
+    stats_json: bool,
+) -> SummarizeOutputPresentation {
+    if stats_json {
+        SummarizeOutputPresentation::Text(
+            serde_json::to_string_pretty(aggregate).unwrap_or_else(|_| "{}".to_string()),
+        )
+    } else {
+        SummarizeOutputPresentation::Text(summarize_success_line(
+            summaries_total,
+            aggregate,
+            resolved_out_dir,
+        ))
+    }
+}
+
+fn emit_summarize_output_presentation(presentation: SummarizeOutputPresentation) {
+    match presentation {
+        SummarizeOutputPresentation::Text(text) => println!("{text}"),
+    }
 }
 
 fn resolve_summary_inputs(
@@ -210,7 +251,7 @@ fn merge_source_metadata(
             serde_json::to_value(campaign_lane)
                 .ok()
                 .and_then(|v| v.as_str().map(|s| s.to_string()))
-                .unwrap_or_else(|| "full".to_string()),
+                .unwrap_or_else(|| "nightly".to_string()),
         ),
     );
     serde_json::Value::Object(obj)
@@ -251,7 +292,7 @@ fn aggregate_regression_summaries(
     let mut summary = RegressionSummaryV1::new(
         RegressionCampaignSummaryV1 {
             name: "summary-index".to_string(),
-            lane: RegressionLaneV1::Full,
+            lane: RegressionLaneV1::Nightly,
             profile: Some("aggregate".to_string()),
             schema_version: Some(1),
             requested_by: Some("diag summarize".to_string()),
@@ -305,7 +346,7 @@ fn regression_index_counters_json(loaded: &[LoadedRegressionSummary]) -> serde_j
         let lane = serde_json::to_value(loaded_summary.summary.campaign.lane)
             .ok()
             .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .unwrap_or_else(|| "full".to_string());
+            .unwrap_or_else(|| "nightly".to_string());
         *by_lane.entry(lane).or_default() += loaded_summary.summary.items.len() as u64;
 
         *by_tool
@@ -658,5 +699,47 @@ mod tests {
         assert_eq!(found[0], nested.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1));
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn failed_regression_items_total_sums_non_passed_totals() {
+        let totals = RegressionTotalsV1 {
+            items_total: 9,
+            passed: 5,
+            failed_deterministic: 1,
+            failed_flaky: 2,
+            failed_tooling: 1,
+            failed_timeout: 0,
+            skipped_policy: 0,
+            quarantined: 0,
+        };
+
+        assert_eq!(failed_regression_items_total(&totals), 4);
+    }
+
+    #[test]
+    fn summarize_success_line_includes_counts_and_out_dir() {
+        let aggregate = sample_summary("summary-index", RegressionLaneV1::Nightly, "case-a");
+        let line = summarize_success_line(3, &aggregate, Path::new("F:/repo/out"));
+
+        assert!(line.contains("regression summarize: ok"));
+        assert!(line.contains("summaries=3"));
+        assert!(line.contains("items=1"));
+        assert!(line.contains("failed=0"));
+        assert!(line.contains("out_dir=F:/repo/out"));
+    }
+
+    #[test]
+    fn build_summarize_output_presentation_uses_pretty_json_when_requested() {
+        let aggregate = sample_summary("summary-index", RegressionLaneV1::Nightly, "case-a");
+        let presentation =
+            build_summarize_output_presentation(1, &aggregate, Path::new("F:/repo/out"), true);
+
+        match presentation {
+            SummarizeOutputPresentation::Text(text) => {
+                assert!(text.contains("\"campaign\""));
+                assert!(text.contains("\"items\""));
+            }
+        }
     }
 }

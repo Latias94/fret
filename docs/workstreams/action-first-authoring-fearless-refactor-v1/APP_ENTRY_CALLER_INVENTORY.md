@@ -65,13 +65,14 @@ Current conclusion:
 
 ## Non-consumer references that still need cleanup attention
 
-These are not part of the migration table above, but they still matter for policy closure:
+These are not part of the migration table above; they now serve as historical evidence for the
+pre-release hard delete:
 
 | File | Why it matters |
 |---|---|
-| `ecosystem/fret/src/lib.rs` | rustdoc still contains closure-style `App::ui(...)` example text and should eventually follow the final policy decision |
-| `ecosystem/fret/src/app_entry.rs` | defines the public `ui(...)` / `ui_with_hooks(...)` surface; deprecation warnings now live here while removal is sequenced separately |
-| `ecosystem/fret/README.md` | now marks `ui(...)` / `ui_with_hooks(...)` as deprecated advanced bridges and is covered by an in-crate policy test |
+| `ecosystem/fret/src/lib.rs` | crate rustdoc now proves the facade teaches only `view::<V>()` / `view_with_hooks::<V>(...)` |
+| `ecosystem/fret/src/app_entry.rs` | the closure-root entry methods used to live here; the file now proves the hard delete landed |
+| `ecosystem/fret/README.md` | README now documents only the surviving builder-first entry path |
 
 ---
 
@@ -131,6 +132,7 @@ Status update:
 
 ## Practical verdict
 
-Based on the current caller set, the repo is **not blocked by lack of a `View`-based app entry API**.
-There are now no in-tree example/demo callers left on `App::ui(...)` / `ui_with_hooks(...)`.
-The remaining work is staged deprecation/removal sequencing plus any final lower-level exceptions that are intentionally kept outside the facade.
+Based on the current caller set, the repo was **not blocked by lack of a `View`-based app entry
+API**, which is why the pre-release hard delete was viable.
+There are no in-tree example/demo callers left on `App::ui(...)` / `ui_with_hooks(...)`, and the
+`fret` facade no longer exposes that closure-root path.

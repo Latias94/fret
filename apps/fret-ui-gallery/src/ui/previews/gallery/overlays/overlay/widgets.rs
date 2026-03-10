@@ -95,7 +95,7 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Apple")
                             .test_id("ui-gallery-dropdown-item-apple")
-                            .on_select(CMD_MENU_DROPDOWN_APPLE),
+                            .action(CMD_MENU_DROPDOWN_APPLE),
                     ),
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("More")
@@ -105,7 +105,7 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
                                 shadcn::DropdownMenuEntry::Item(
                                     shadcn::DropdownMenuItem::new("Nested action")
                                         .test_id("ui-gallery-dropdown-submenu-item-nested")
-                                        .on_select(CMD_MENU_CONTEXT_ACTION),
+                                        .action(CMD_MENU_CONTEXT_ACTION),
                                 ),
                                 shadcn::DropdownMenuEntry::Separator,
                                 shadcn::DropdownMenuEntry::Item(
@@ -114,7 +114,7 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
                             ]),
                     ),
                     shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Orange").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                        shadcn::DropdownMenuItem::new("Orange").action(CMD_MENU_DROPDOWN_ORANGE),
                     ),
                     shadcn::DropdownMenuEntry::Separator,
                     shadcn::DropdownMenuEntry::Item(
@@ -143,7 +143,7 @@ fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
                     shadcn::ContextMenuEntry::Item(
                         shadcn::ContextMenuItem::new("Action")
                             .test_id("ui-gallery-context-item-action")
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                            .action(CMD_MENU_CONTEXT_ACTION),
                     ),
                     shadcn::ContextMenuEntry::Separator,
                     shadcn::ContextMenuEntry::Item(
@@ -176,7 +176,7 @@ fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -
                     shadcn::ContextMenuEntry::Item(
                         shadcn::ContextMenuItem::new("Action (long label to force edge flip)")
                             .test_id("ui-gallery-context-edge-item-action")
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                            .action(CMD_MENU_CONTEXT_ACTION),
                     ),
                     shadcn::ContextMenuEntry::Separator,
                     shadcn::ContextMenuEntry::Item(

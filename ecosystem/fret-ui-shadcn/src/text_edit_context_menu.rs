@@ -12,16 +12,12 @@ use fret_ui::{ElementContext, UiHost};
 /// - Enable/disable behavior is driven by command gating + widget `command_availability`.
 pub fn text_edit_context_menu_entries() -> Vec<ContextMenuEntry> {
     vec![
-        ContextMenuEntry::Item(
-            ContextMenuItem::new("Copy").on_select(CommandId::from("edit.copy")),
-        ),
-        ContextMenuEntry::Item(ContextMenuItem::new("Cut").on_select(CommandId::from("edit.cut"))),
-        ContextMenuEntry::Item(
-            ContextMenuItem::new("Paste").on_select(CommandId::from("edit.paste")),
-        ),
+        ContextMenuEntry::Item(ContextMenuItem::new("Copy").action(CommandId::from("edit.copy"))),
+        ContextMenuEntry::Item(ContextMenuItem::new("Cut").action(CommandId::from("edit.cut"))),
+        ContextMenuEntry::Item(ContextMenuItem::new("Paste").action(CommandId::from("edit.paste"))),
         ContextMenuEntry::Separator,
         ContextMenuEntry::Item(
-            ContextMenuItem::new("Select All").on_select(CommandId::from("edit.select_all")),
+            ContextMenuItem::new("Select All").action(CommandId::from("edit.select_all")),
         ),
     ]
 }
@@ -32,12 +28,10 @@ pub fn text_edit_context_menu_entries() -> Vec<ContextMenuEntry> {
 /// (e.g. `SelectableText` / `SelectableLabel`).
 pub fn text_selection_context_menu_entries() -> Vec<ContextMenuEntry> {
     vec![
-        ContextMenuEntry::Item(
-            ContextMenuItem::new("Copy").on_select(CommandId::from("edit.copy")),
-        ),
+        ContextMenuEntry::Item(ContextMenuItem::new("Copy").action(CommandId::from("edit.copy"))),
         ContextMenuEntry::Separator,
         ContextMenuEntry::Item(
-            ContextMenuItem::new("Select All").on_select(CommandId::from("edit.select_all")),
+            ContextMenuItem::new("Select All").action(CommandId::from("edit.select_all")),
         ),
     ]
 }

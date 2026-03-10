@@ -420,12 +420,14 @@ fn finish_lint_report(
             .and_then(|v| v.as_str())
             .cmp(&b.get("code").and_then(|v| v.as_str()))
     });
+    let (bundle_artifact, bundle_json) =
+        crate::artifact_alias::bundle_artifact_alias_pair(bundle_path);
 
     let payload = serde_json::json!({
         "schema_version": 1,
         "kind": "lint",
-        "bundle_artifact": bundle_path.display().to_string(),
-        "bundle_json": bundle_path.display().to_string(),
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
         "warmup_frames": warmup_frames,
         "options": {
             "all_test_ids_bounds": opts.all_test_ids_bounds,
@@ -882,6 +884,61 @@ mod tests {
                     == Some("semantics.active_descendant_missing")
             }),
             "expected active_descendant missing finding"
+        );
+    }
+
+    #[test]
+    fn lint_payload_dual_writes_bundle_artifact_alias_pair() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "window": 1,
+                                    "focus": 1,
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "button",
+                                            "bounds": { "x": 0.0, "y": 0.0, "w": 20.0, "h": 20.0 },
+                                            "flags": { "focused": true },
+                                            "test_id": "ok",
+                                            "label": "Ok"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("target/fret-diag/bundle.schema2.json"),
+            0,
+            LintOptions::default(),
+        )
+        .expect("lint should succeed");
+
+        assert_eq!(
+            report
+                .payload
+                .get("bundle_artifact")
+                .and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
+        );
+        assert_eq!(
+            report.payload.get("bundle_json").and_then(|v| v.as_str()),
+            Some("target/fret-diag/bundle.schema2.json")
         );
     }
 }

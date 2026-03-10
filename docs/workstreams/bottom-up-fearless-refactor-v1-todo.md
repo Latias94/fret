@@ -21,8 +21,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
   - Evidence:
-    - `tools/gates_fast.ps1`
-    - `tools/gates_full.ps1`
+    - `tools/gates_fast.py`
+    - `tools/gates_full.py`
     - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Always-run gates”)
 
 - [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard diag`).
@@ -734,7 +734,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: identify which policy belongs in `fret-ui-kit` vs `fret-ui-shadcn` vs apps, and establish initial gates.
   - Evidence:
     - `docs/workstreams/crate-audits/fret-ui-kit.l0.md`
-    - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-kit`
+    - `python tools/audit_crate.py --crate fret-ui-kit`
     - `cargo nextest run -p fret-ui-kit`
 
 - [~] BU-FR-eco-043 Reduce “god test file” risk in `fret-ui-kit` overlays by moving scenario matrices to fixtures.

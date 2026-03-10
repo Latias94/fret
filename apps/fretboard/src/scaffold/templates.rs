@@ -917,19 +917,17 @@ impl View for TodoView {
             }
         });
 
-        cx.on_payload_action_notify::<act::Toggle>({
-            let todos_state = todos_state.clone();
-            move |host, _action_cx, id| {
-                todos_state.update_in_if(host.models_mut(), |rows| {
-                    if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                        row.done = !row.done;
-                        true
-                    } else {
-                        false
-                    }
-                })
-            }
-        });
+        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
+            &todos_state,
+            |rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            },
+        );
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary);
@@ -1127,8 +1125,10 @@ cargo run --release
 - Theme: shadcn new-york-v4 (Slate / Light)
 {icons_line}{palette_line}
 {ui_assets_line}
+- Ladder position: third rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
+- Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership for the todo/filter/query graph so selector deps, query invalidation keys, and shared row state stay obvious; prefer `simple-todo` if you only need a view-owned keyed list.
 - Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
@@ -1206,6 +1206,7 @@ cargo run --release
 - Theme: shadcn new-york-v4 (Slate / Light)
 {icons_line}{palette_line}
 {ui_assets_line}
+- Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
 - Default entrypoints: start with `on_action_notify_models` for coordinated writes, use payload actions for per-row list interactions, and keep `on_activate*` for local widget glue only.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
@@ -1256,6 +1257,7 @@ cargo run --release
 
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
 {icons_line}{palette_line}
+- Ladder position: first rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Default entrypoints: start with `on_action_notify_models`; use `on_activate*` only for local pressable glue.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
@@ -1345,7 +1347,7 @@ mod tests {
         assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
-        assert!(src.contains("cx.on_payload_action_notify::<act::Toggle>"));
+        assert!(src.contains("cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>("));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.use_local::<String>();"));
         assert!(src.contains("let next_id_state = cx.use_local_with(|| 3u64);"));
@@ -1379,6 +1381,7 @@ mod tests {
         assert!(hello.contains("Read model values near the top of `render()`"));
         assert!(hello.contains("Default entrypoints"));
         assert!(hello.contains("cookbook/reference-only host-side glue"));
+        assert!(hello.contains("first rung of the default onboarding path"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
@@ -1388,6 +1391,7 @@ mod tests {
         assert!(simple.contains("Read tracked state near the top of `render()`"));
         assert!(simple.contains("start with `on_action_notify_models`"));
         assert!(simple.contains("cookbook/reference-only host-side glue"));
+        assert!(simple.contains("second rung of the default onboarding path"));
 
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
@@ -1395,5 +1399,7 @@ mod tests {
         assert!(todo.contains(
             "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
         ));
+        assert!(todo.contains("Intentional state graph: this richer baseline keeps explicit `Model<T>` ownership"));
+        assert!(todo.contains("third rung of the default onboarding path"));
     }
 }

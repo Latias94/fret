@@ -1,7 +1,7 @@
 # Action-First Authoring - Post-v1 / v2 Authoring Proposal
 
 Status: Draft recommendation
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 
 Related:
 
@@ -25,17 +25,17 @@ v1 succeeded as an architectural reset:
 - default teaching surfaces converged on a smaller helper set.
 
 However, v1 did **not** fully reach the original GPUI/Zed-style authoring density goal. The current
-repo still exposes five recurring friction points in medium demos and the current simple-todo starter/default path:
+repo still exposes five recurring friction points in medium demos and the current teaching/product surfaces:
 
 1. `LocalState<T>` is still model-backed, so view-owned state does not yet feel like plain-Rust
    fields or collections.
-2. purely view-owned keyed collections no longer block the default path, but the comparison and
-   advanced surfaces still make the shared-state boundary feel too eager in some medium examples.
-3. render code still relies heavily on `watch_model(...)` / `models.update(...)` once coordination
-   crosses more than one field.
-4. `ui::children!` plus repeated `into_element(cx)` remain common composition patterns.
-5. widget-local event wiring still prefers root-level `on_action_notify_*` helpers instead of a
-   lighter `listener` / `dispatch` mental model.
+2. render code still relies heavily on generic tracked-store coordination once coordination crosses
+   more than one field, even though the focused keyed-list/default template path is now closed.
+3. `ui::children!` plus repeated `into_element(cx)` remain common composition patterns.
+4. keyed-list / payload-row event wiring still relies on visible root-level `on_action_notify_*`
+   ownership points, and the remaining question is whether that needs a narrower placement aid.
+5. product-facing guidance still needs a sharper default/comparison/advanced taxonomy so users do
+   not have to reverse-engineer the intended surface from scattered examples.
 
 The text-value widget cliff is no longer the main blocker: `Input` / `Textarea` now accept the
 narrow `IntoTextValueModel` bridge, so post-v1 code can pass `&LocalState<String>` directly.
@@ -165,7 +165,7 @@ our remaining gap is now fairly specific rather than architectural:
 - **Dioxus/Xilem-style local reactivity**: Fret now has a coherent local-state story, but it still
   splits into `LocalState<T>` vs `Model<T>` earlier than ideal for a simple todo-style view.
 - **Iced-style narrow sugar**: a small amount of layout/event sugar may still help, but only after
-  we finish the bigger state-boundary gap; macros are not the main missing piece right now.
+  we finish the bigger productization/state-boundary gap; macros are not the main missing piece right now.
 - **Slint-style alternate frontend**: optional DSL/visual tooling remains a valid future direction,
   but it is not required for v2 success as long as the Rust-first authoring path becomes dense and
   predictable.
@@ -355,33 +355,38 @@ closure intact.
 
 ## 8) Proposed migration order
 
-### Phase 1 ? state and invalidation semantics
+### Phase 1 — productize the default path
 
-- add `use_local` / `use_local_keyed`,
+- keep `hello` / `simple-todo` / `todo` as the explicit onboarding ladder,
+- tighten docs/templates so the default/comparison/advanced split is visible without reading workstream notes,
+- keep `use_local*` as the only default local-state teaching path and keep `notify()` documented as an escape hatch, not a first-contact step.
+
+### Phase 2 — state and invalidation follow-through
+
+- keep `use_local` / `use_local_keyed` as the additive default local-state path,
 - keep `use_state` as compat for now,
-- decide whether `use_state` becomes a deprecated alias or is repointed in a later major version,
-- make local-state writes request rerender automatically,
-- validate one todo-like view-owned collection so small apps no longer need `Model<Vec<_>>` by default just to keep keyed rows alive.
+- preserve the current rule that tracked local writes rerender implicitly,
+- only revisit state APIs if real medium-surface evidence still shows a state-boundary cliff after the productization/doc pass.
 
-### Phase 2 ? widget-local event ergonomics
+### Phase 3 — keyed-list / payload-row handler ergonomics
 
-- add `listener`, `dispatch`, and `shortcut` helpers,
+- only investigate a narrower row-action / payload-handler placement aid,
 - keep the root-level handler table as the underlying runtime mechanism,
-- migrate one medium demo to validate the story.
+- validate it only against keyed-list evidence surfaces, not command/query/form surfaces.
 
-### Phase 3 ? builder-first composition
+### Phase 4 — builder-first composition
 
 - improve `.child(...)` / `.children(...)` ergonomics,
 - keep `ui::children!` as compatibility-only/default-off teaching surface,
 - migrate `hello_counter_demo` and `query_demo` to compare density and readability.
 
-### Phase 4 ? narrow macro decision
+### Phase 5 — narrow macro decision
 
 - evaluate whether a small macro surface still buys real value after builder-first improvements,
 - if yes, add only narrowly-scoped macros,
 - if no, keep macros limited to actions and diagnostics/test helpers.
 
-### Phase 5 ? cleanup
+### Phase 6 — cleanup
 
 - remove old teaching-surface guidance,
 - gate against deprecated patterns in demos/templates,
@@ -427,8 +432,8 @@ Recommended goals:
 2. **Default-path density**
    - keep reducing the remaining `ui::children!` / `into_element(cx)` friction where evidence shows
      repeated medium-surface cost,
-   - investigate widget-local action sugar only if it improves at least two real surfaces without
-     widening the helper surface indiscriminately.
+   - investigate keyed-list / payload-row handler ergonomics only if it improves keyed-list evidence
+     surfaces without widening the helper surface indiscriminately.
 
 3. **Visual productization**
    - deepen theme/recipe assets and make the default app output feel more polished out of the box,

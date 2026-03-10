@@ -4,262 +4,92 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 
 fn file_status_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        3,
-        [
-            shadcn::TableHead::new("Status").into_element(cx),
-            shadcn::TableHead::new("Label").into_element(cx),
-            shadcn::TableHead::new("Color").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |cx: &mut ElementContext<'_, App>,
+               status: &'static str,
+               label: &'static str,
+               color: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(status)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(label)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(color)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("added")).into_element(cx),
-                shadcn::TableCell::new(cx.text("A")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Green")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("modified")).into_element(cx),
-                shadcn::TableCell::new(cx.text("M")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Yellow")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("deleted")).into_element(cx),
-                shadcn::TableCell::new(cx.text("D")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Red")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("renamed")).into_element(cx),
-                shadcn::TableCell::new(cx.text("R")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Blue")).into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(shadcn::TableHead::new("Status").into_element(cx));
+                        out.push(shadcn::TableHead::new("Label").into_element(cx));
+                        out.push(shadcn::TableHead::new("Color").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row(cx, "added", "A", "Green"));
+                out.push_ui(cx, row(cx, "modified", "M", "Yellow"));
+                out.push_ui(cx, row(cx, "deleted", "D", "Red"));
+                out.push_ui(cx, row(cx, "renamed", "R", "Blue"));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 fn parts_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let header = shadcn::TableHeader::new([shadcn::TableRow::new(
-        3,
-        [
-            shadcn::TableHead::new("Part").into_element(cx),
-            shadcn::TableHead::new("Key inputs").into_element(cx),
-            shadcn::TableHead::new("Notes").into_element(cx),
-        ],
-    )
-    .into_element(cx)])
-    .into_element(cx);
+    let row = |cx: &mut ElementContext<'_, App>,
+               part: &'static str,
+               inputs: &'static str,
+               notes: &'static str| {
+        shadcn::TableRow::build(3, move |cx, out| {
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(part)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(inputs)));
+            out.push_ui(cx, shadcn::TableCell::build(ui::text(notes)));
+        })
+    };
 
-    let body = shadcn::TableBody::new([
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("Commit")).into_element(cx),
-                shadcn::TableCell::new(cx.text("header, content, default_open")).into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Collapsible root surface; mechanism stays in shadcn/fret-ui primitives.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitHeader")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children, test_id")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Trigger row; nested actions should not toggle the disclosure."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitAuthor / CommitInfo")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Layout helpers for the left avatar slot and the main info column."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitAuthorAvatar")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(initials)")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Avatar fallback initials, matching the official example."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitMessage / CommitHash")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(text)")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Text leaves for the message and short hash."))
+    shadcn::Table::build(|cx, out| {
+        out.push_ui(
+            cx,
+            shadcn::TableHeader::build(|cx, out| {
+                out.push(
+                    shadcn::TableRow::build(3, |cx, out| {
+                        out.push(shadcn::TableHead::new("Part").into_element(cx));
+                        out.push(shadcn::TableHead::new("Key inputs").into_element(cx));
+                        out.push(shadcn::TableHead::new("Notes").into_element(cx));
+                    })
                     .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitMetadata")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Inline metadata row for hash, separator, and timestamp."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitSeparator")).into_element(cx),
-                shadcn::TableCell::new(cx.text("default() | new(text) | children(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Docs-aligned custom separator slot; defaults to `•`."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitTimestamp")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(date) | children(...)")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Relative time by default; custom children mirror the official API."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitActions")).into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Trailing action cluster; button activation stays app-owned."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitCopyButton")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(hash), on_copy(...), timeout(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Matches upstream copied-state suppression and exposes a hook for app effects.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(
-                    cx.text("CommitContent / CommitFiles / CommitFile / CommitFileInfo"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(cx.text("children")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Composable wrappers for the disclosure body and file rows."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitFileStatus")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(status) | children(...)")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Docs-aligned custom status slot; defaults to A/M/D/R labels."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitFileIcon")).into_element(cx),
-                shadcn::TableCell::new(cx.text("default()")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Muted file glyph matching the official chrome."))
-                    .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(cx.text("CommitFilePath")).into_element(cx),
-                shadcn::TableCell::new(cx.text("new(path), on_click(...), test_id(...)"))
-                    .into_element(cx),
-                shadcn::TableCell::new(cx.text(
-                    "Upstream is presentational; Fret adds an explicit file-open seam for apps.",
-                ))
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-        shadcn::TableRow::new(
-            3,
-            [
-                shadcn::TableCell::new(
-                    cx.text("CommitFileChanges / CommitFileAdditions / CommitFileDeletions"),
-                )
-                .into_element(cx),
-                shadcn::TableCell::new(cx.text("children | new(count)")).into_element(cx),
-                shadcn::TableCell::new(
-                    cx.text("Monospace change counters aligned with the official preview."),
-                )
-                .into_element(cx),
-            ],
-        )
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    shadcn::Table::new([header, body]).into_element(cx)
+                );
+            }),
+        );
+        out.push_ui(
+            cx,
+            shadcn::TableBody::build(|cx, out| {
+                out.push_ui(cx, row(cx, "Commit", "header, content, default_open", "Collapsible root surface; mechanism stays in shadcn/fret-ui primitives."));
+                out.push_ui(cx, row(cx, "CommitHeader", "children, test_id", "Trigger row; nested actions should not toggle the disclosure."));
+                out.push_ui(cx, row(cx, "CommitAuthor / CommitInfo", "children", "Layout helpers for the left avatar slot and the main info column."));
+                out.push_ui(cx, row(cx, "CommitAuthorAvatar", "new(initials)", "Avatar fallback initials, matching the official example."));
+                out.push_ui(cx, row(cx, "CommitMessage / CommitHash", "new(text)", "Text leaves for the message and short hash."));
+                out.push_ui(cx, row(cx, "CommitMetadata", "children", "Inline metadata row for hash, separator, and timestamp."));
+                out.push_ui(cx, row(cx, "CommitSeparator", "default() | new(text) | children(...)", "Docs-aligned custom separator slot; defaults to `•`."));
+                out.push_ui(cx, row(cx, "CommitTimestamp", "new(date) | children(...)", "Relative time by default; custom children mirror the official API."));
+                out.push_ui(cx, row(cx, "CommitActions", "children", "Trailing action cluster; button activation stays app-owned."));
+                out.push_ui(cx, row(cx, "CommitCopyButton", "new(hash), on_copy(...), timeout(...)", "Matches upstream copied-state suppression and exposes a hook for app effects."));
+                out.push_ui(cx, row(cx, "CommitContent / CommitFiles / CommitFile / CommitFileInfo", "children", "Composable wrappers for the disclosure body and file rows."));
+                out.push_ui(cx, row(cx, "CommitFileStatus", "new(status) | children(...)", "Docs-aligned custom status slot; defaults to A/M/D/R labels."));
+                out.push_ui(cx, row(cx, "CommitFileIcon", "default()", "Muted file glyph matching the official chrome."));
+                out.push_ui(cx, row(cx, "CommitFilePath", "new(path), on_click(...), test_id(...)", "Upstream is presentational; Fret adds an explicit file-open seam for apps."));
+                out.push_ui(cx, row(cx, "CommitFileChanges / CommitFileAdditions / CommitFileDeletions", "children | new(count)", "Monospace change counters aligned with the official preview."));
+            }),
+        );
+    })
+    .into_element(cx)
 }
 
 pub(super) fn preview_ai_commit_demo(

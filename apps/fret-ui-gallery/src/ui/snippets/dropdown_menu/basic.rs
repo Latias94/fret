@@ -22,12 +22,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::DropdownMenuLabel::new("My Account").into(),
                         shadcn::DropdownMenuItem::new("Profile")
                             .test_id("ui-gallery-dropdown-menu-basic-profile")
-                            .on_select("ui_gallery.menu.dropdown.apple")
+                            .action("ui_gallery.menu.dropdown.apple")
                             .into(),
                         shadcn::DropdownMenuItem::new("Billing")
                             // ui-gallery diag scripts: typeahead targets this item via `b` + Enter.
                             .test_id("ui-gallery-dropdown-menu-basic-billing")
-                            .on_select("ui_gallery.menu.dropdown.orange")
+                            .action("ui_gallery.menu.dropdown.orange")
                             .into(),
                         shadcn::DropdownMenuItem::new("Settings").into(),
                     ])

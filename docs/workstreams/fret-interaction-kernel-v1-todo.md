@@ -30,11 +30,11 @@ This is a working checklist for the `fret-interaction` kernel workstream.
 - [ ] Add/extend `fretboard diag` gates:
   - [x] title bar drag screenshots + stale paint check
     - Evidence: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json`
-    - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs with `--check-stale-paint imui-float-demo.a.activate`).
+    - Evidence: `tools/diag_gate_interaction_kernel_v1.py` (runs with `--check-stale-paint imui-float-demo.a.activate`).
     - Evidence: `tools/diag_gate_imui_v3.ps1` (also runs the script with stale-paint check).
   - [x] fractional DPI wrapping + no overlap
     - Evidence: `tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json`
-    - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs the script).
+    - Evidence: `tools/diag_gate_interaction_kernel_v1.py` (runs the script).
     - Evidence: `tools/diag_gate_imui_v3.ps1` (also runs the script).
 
 ## M2 — `fret-node` viewport / interaction migration
@@ -54,11 +54,11 @@ This is a working checklist for the `fret-interaction` kernel workstream.
     names the minimal primitives and the ownership boundaries.
 - [x] Add at least one diag repro for multi-window hover arbitration while dragging.
   - Deliverable: a `tools/diag-scripts/*.json` repro wired into a gate script (preferred:
-    `tools/diag_gate_interaction_kernel_v1.ps1` or a dedicated docking gate).
+    `tools/diag_gate_interaction_kernel_v1.py` or a dedicated docking gate).
   - Evidence: `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`
-  - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs the script with `--check-dock-drag-min`).
+  - Evidence: `tools/diag_gate_interaction_kernel_v1.py` (runs the script with `--check-dock-drag-min`).
 - [x] Strengthen the gate to require cross-window hover.
   - Prefer `--check-dock-drag-current-windows-min 2` (distinct `dock_drag.current_window` values)
     as the primary “cross-window hover happened” signal.
-  - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (enabled by default; use `-WeakDockHover` to skip).
+  - Evidence: `tools/diag_gate_interaction_kernel_v1.py` (enabled by default; use `--weak-dock-hover` to skip).
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`drag_pointer_path` supports `internal_drag_target` for deterministic cross-window hover routing).

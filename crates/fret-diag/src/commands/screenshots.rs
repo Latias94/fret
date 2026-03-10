@@ -434,7 +434,7 @@ mod tests {
                 "generated_unix_ms": 1,
                 "files": [
                     {
-                        "id": "script_result_json",
+                        "id": "script_result",
                         "path": "script.result.json"
                     }
                 ]
