@@ -438,7 +438,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (web listbox height, open-state goldens: `combobox-demo.open.json`, `combobox-demo.vp375x320.open.json`) |
 | date picker | `date_picker` | Present | In review | `Popover` + `Calendar` recipe; trigger width is caller-owned; audit: `docs/audits/shadcn-date-picker.md`; gates: `ecosystem/fret-ui-shadcn/src/date_picker.rs`, `apps/fret-ui-gallery/src/driver/render_flow.rs` |
-| data table / datagrid | `data_table` | Present | Unreviewed | Extension surface (not a `registry:ui` item upstream); `DataGrid` defaults to canvas; use `experimental::DataGridElement` for rich per-cell UI |
+| data table / datagrid | `data_table` | Present | In review | Audit: `docs/audits/shadcn-data-table.md`; this stays an extension surface rather than a tiny `registry:ui` leaf, and the gallery now makes that explicit via `Basic Table` / `Guide Demo` / `RTL` / `Guide Outline` / `API Reference`; `DataTable` + companion recipes remain recipe-owned while app-specific columns/data/filters and page negotiation stay caller-owned; existing web layout gates continue to cover `data-table-demo` geometry in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs` |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 
