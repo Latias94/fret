@@ -6,6 +6,7 @@ Last updated: 2026-03-09
 Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_POLICY_DECISION_DRAFT.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_REMOVAL_PLAYBOOK.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_STATUS_MATRIX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_EXECUTION_CHECKLIST.md`
@@ -58,6 +59,8 @@ When the first published deprecated release ships, add a short update here with:
 - publish date,
 - release note / changelog anchor,
 - confirmation that the published crate/docs include the deprecation and default-path wording.
+
+Use `APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md` as the exact backfill checklist for that update.
 
 The goal is not a long release narrative.
 The goal is a small auditable proof that the public compatibility window really existed.

@@ -13,6 +13,7 @@ Related:
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Endgame execution outlook: `docs/workstreams/action-first-authoring-fearless-refactor-v1/ENDGAME_EXECUTION_OUTLOOK_2026-03-09.md`
 - App-entry release evidence tracker: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md`
+- App-entry release handoff note: `docs/workstreams/action-first-authoring-fearless-refactor-v1/APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md`
 - Default-path productization: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
@@ -590,6 +591,10 @@ Current sequencing note (as of 2026-03-09):
   `App::ui*`: the repo has source-level deprecation and a fixed minimum window, but it still needs
   one published deprecated `fret` release plus the calendar checkpoint before removal/quarantine is
   executable.
+- app-entry release-handoff note (as of 2026-03-10):
+  `APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md` now records the exact fields and anchor sources to
+  copy back into the tracker after the first published deprecated `fret` release ships, and
+  `docs/release/v0.1.0-release-checklist.md` points release operators at that backfill step.
 
 - [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
   - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
@@ -710,6 +715,11 @@ Current sequencing note (as of 2026-03-09):
   - Goal: turn the remaining “wait for a published deprecated release” blocker into an explicit audit note instead of an implicit reminder hidden in other docs.
   - Evidence target: one short tracker that records the fixed dates, the missing published-release proof, and what evidence must be captured when that release ships.
   - Status (as of 2026-03-09): `APP_ENTRY_RELEASE_EVIDENCE_TRACKER_2026-03-09.md` now records that the repo has source-level deprecation plus a fixed earliest removal date, but still lacks the published-release artifact needed before `APP_ENTRY_REMOVAL_PLAYBOOK.md` can execute.
+
+- [x] AFA-postv1-013e Add a release handoff note for the `App::ui*` evidence backfill.
+  - Goal: make the eventual published-release proof a release-operator checklist instead of a workstream-only reminder.
+  - Evidence target: one short handoff note listing the exact fields/anchors to copy into the tracker, plus one hook from the release checklist into that note.
+  - Status (as of 2026-03-10): `APP_ENTRY_RELEASE_HANDOFF_NOTE_2026-03-10.md` now provides the backfill template and anchor sources, while `docs/release/v0.1.0-release-checklist.md` points post-release verification at the tracker/handoff pair.
 
 - [x] AFA-postv1-014 Publish a caller inventory for `run_native_with_compat_driver(...)`.
   - Goal: replace vague “plot/interop demos still use it” language with a concrete in-tree family breakdown before deciding whether the compat runner should be kept, quarantined, or removed.
