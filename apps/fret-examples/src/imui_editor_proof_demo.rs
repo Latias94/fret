@@ -96,7 +96,7 @@ pub fn run() -> anyhow::Result<()> {
                 .window_created(window_created)
                 .before_close_window(before_close_window)
         })?
-        .init_app(move |app| {
+        .setup_with(move |app| {
             configure_single_window_caps_if_requested(app);
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,

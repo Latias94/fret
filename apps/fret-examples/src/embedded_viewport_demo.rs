@@ -214,7 +214,7 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("embedded-viewport-demo")
         .window("embedded_viewport_demo", (1120.0, 720.0))
         .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?
-        .init_app(|app| {
+        .setup_with(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

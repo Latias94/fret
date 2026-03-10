@@ -16,7 +16,8 @@
 - [x] `window(title, size)`
 - [x] `defaults(...)` / `minimal_defaults()` / `config_files(...)`
 - [x] `ui_assets_budgets(...)`
-- [x] `install_app(...)` / `install(...)`
+- [x] `setup(...)`
+- [x] `setup_with(...)`
 - [x] `register_icon_pack(...)`
 - [x] `view::<V>()`
 - [x] `view_with_hooks::<V>(configure)`

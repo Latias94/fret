@@ -31,7 +31,7 @@ pub fn run() -> anyhow::Result<()> {
         .window("assets_demo", (720.0, 520.0))
         .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
-        .init_app(|app| {
+        .setup_with(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,

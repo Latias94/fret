@@ -317,7 +317,7 @@ fn main() -> anyhow::Result<()> {
 
         config.main_window_style = style;
     })
-    .init_app(|app| {
+    .setup_with(|app| {
         // Keep a consistent cookbook look (tokens, typography).
         fret_cookbook::install_cookbook_defaults(app);
 

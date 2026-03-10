@@ -310,6 +310,85 @@ pub mod advanced {
         ))
     }
 
+    /// Advanced builder hooks that intentionally stay off the default `FretApp` surface.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub trait FretAppAdvancedExt: Sized {
+        /// Install wiring that needs `UiServices` during bootstrap.
+        fn install(self, install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices))
+        -> Self;
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    impl FretAppAdvancedExt for crate::FretApp {
+        fn install(
+            self,
+            install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
+        ) -> Self {
+            self.install_services(install)
+        }
+    }
+
+    /// Advanced `UiAppBuilder` hooks that are intentionally excluded from the default app path.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub trait UiAppBuilderAdvancedExt: Sized {
+        /// Install wiring that needs `UiServices` during bootstrap.
+        fn install(self, install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices))
+        -> Self;
+
+        /// Install custom GPU effects at the renderer boundary (ADR 0299).
+        ///
+        /// Note: the callback receives the **kernel** app type (`fret_app::App`, re-exported here
+        /// as `KernelApp`), not the `fret::FretApp` builder-chain facade.
+        fn install_custom_effects(
+            self,
+            install: fn(&mut crate::KernelApp, &mut dyn fret_core::CustomEffectService),
+        ) -> Self;
+
+        /// Hook GPU-ready setup on the explicit advanced surface.
+        fn on_gpu_ready(
+            self,
+            f: impl FnOnce(
+                &mut crate::KernelApp,
+                &crate::kernel::render::WgpuContext,
+                &mut crate::kernel::render::Renderer,
+            ) + 'static,
+        ) -> Self;
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    impl<S: 'static> UiAppBuilderAdvancedExt for crate::UiAppBuilder<S> {
+        fn install(
+            self,
+            install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
+        ) -> Self {
+            Self {
+                inner: self.inner.install(install),
+            }
+        }
+
+        fn install_custom_effects(
+            self,
+            install: fn(&mut crate::KernelApp, &mut dyn fret_core::CustomEffectService),
+        ) -> Self {
+            Self {
+                inner: self.inner.install_custom_effects(install),
+            }
+        }
+
+        fn on_gpu_ready(
+            self,
+            f: impl FnOnce(
+                &mut crate::KernelApp,
+                &crate::kernel::render::WgpuContext,
+                &mut crate::kernel::render::Renderer,
+            ) + 'static,
+        ) -> Self {
+            Self {
+                inner: self.inner.on_gpu_ready(f),
+            }
+        }
+    }
+
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
         pub use crate::KernelApp;
@@ -582,7 +661,7 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn init_app(self, f: impl FnOnce(&mut crate::app::App)) -> Self {
+    pub fn setup_with(self, f: impl FnOnce(&mut crate::app::App)) -> Self {
         Self {
             inner: self.inner.init_app(f),
         }
@@ -591,28 +670,6 @@ impl<S: 'static> UiAppBuilder<S> {
     pub fn setup(self, setup: fn(&mut crate::app::App)) -> Self {
         Self {
             inner: self.inner.install_app(setup),
-        }
-    }
-
-    pub fn install(
-        self,
-        install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
-    ) -> Self {
-        Self {
-            inner: self.inner.install(install),
-        }
-    }
-
-    /// Install custom GPU effects at the renderer boundary (ADR 0299).
-    ///
-    /// Note: the callback receives the **kernel** app type (`fret_app::App`, re-exported here as
-    /// `KernelApp`), not the `fret::FretApp` builder-chain facade.
-    pub fn install_custom_effects(
-        self,
-        install: fn(&mut KernelApp, &mut dyn fret_core::CustomEffectService),
-    ) -> Self {
-        Self {
-            inner: self.inner.install_custom_effects(install),
         }
     }
 
@@ -651,19 +708,6 @@ impl<S: 'static> UiAppBuilder<S> {
     pub fn preload_icon_svgs_on_gpu_ready(self) -> Self {
         Self {
             inner: self.inner.preload_icon_svgs_on_gpu_ready(),
-        }
-    }
-
-    pub fn on_gpu_ready(
-        self,
-        f: impl FnOnce(
-            &mut KernelApp,
-            &crate::kernel::render::WgpuContext,
-            &mut crate::kernel::render::Renderer,
-        ) + 'static,
-    ) -> Self {
-        Self {
-            inner: self.inner.on_gpu_ready(f),
         }
     }
 
@@ -876,6 +920,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
     use super::{FretApp, IconRegistry, KernelApp};
+    use crate::advanced::{FretAppAdvancedExt as _, UiAppBuilderAdvancedExt as _};
     use crate::app::App;
     use crate::app::prelude::FretApp as AppPreludeFretApp;
     use crate::view::View;
@@ -1003,7 +1048,7 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_size.width, 640.0);
                 assert_eq!(config.main_window_size.height, 480.0);
             })
-            .init_app(|_app| {})
+            .setup_with(|_app| {})
             .install_custom_effects(install_custom_effects)
             .on_gpu_ready(|_app, _context, _renderer| {});
     }
@@ -1020,7 +1065,7 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_size.width, 800.0);
                 assert_eq!(config.main_window_size.height, 600.0);
             })
-            .init_app(|_app| {})
+            .setup_with(|_app| {})
             .on_gpu_ready(|_app, _context, _renderer| {});
     }
 
@@ -1142,6 +1187,16 @@ mod authoring_surface_policy_tests {
             .find("/// Component-author imports for reusable, portable UI crates.")
             .expect("component module marker should exist in fret facade");
         &LIB_RS[app_start..component_start]
+    }
+
+    fn ui_app_builder_impl_source() -> &'static str {
+        let start = LIB_RS
+            .find("impl<S: 'static> UiAppBuilder<S> {")
+            .expect("UiAppBuilder impl should exist in fret facade");
+        let end = LIB_RS
+            .find("#[cfg(all(not(target_arch = \"wasm32\"), feature = \"desktop\"))]\npub(crate) fn apply_desktop_defaults_with")
+            .expect("UiAppBuilder impl end marker should exist in fret facade");
+        &LIB_RS[start..end]
     }
 
     fn app_prelude_exports_symbol(symbol: &str) -> bool {
@@ -1279,6 +1334,18 @@ mod authoring_surface_policy_tests {
     fn app_builder_uses_setup_language_on_default_surface() {
         assert!(APP_ENTRY_RS.contains("pub fn setup("));
         assert!(!APP_ENTRY_RS.contains("pub fn install_app("));
+        assert!(!APP_ENTRY_RS.contains("pub fn install("));
+
+        let ui_app_builder = ui_app_builder_impl_source();
+        assert!(ui_app_builder.contains("pub fn setup_with("));
+        assert!(ui_app_builder.contains("pub fn setup("));
+        assert!(!ui_app_builder.contains("pub fn init_app("));
+        assert!(!ui_app_builder.contains("pub fn install("));
+        assert!(!ui_app_builder.contains("pub fn install_custom_effects("));
+        assert!(!ui_app_builder.contains("pub fn on_gpu_ready("));
+
+        assert!(LIB_RS.contains("pub trait FretAppAdvancedExt"));
+        assert!(LIB_RS.contains("pub trait UiAppBuilderAdvancedExt"));
     }
 
     #[test]

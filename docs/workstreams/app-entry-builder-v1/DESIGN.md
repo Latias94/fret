@@ -95,13 +95,21 @@ The current builder surface is intentionally small but complete enough for gener
 - `window(title, size)`
 - `defaults(...)` / `minimal_defaults()` / `config_files(...)`
 - `ui_assets_budgets(...)`
-- `install_app(...)` / `install(...)`
+- `setup(...)`
+- `setup_with(...)`
 - `register_icon_pack(...)`
 - `view::<V>()`
 - `view_with_hooks::<V>(configure)`
 - `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
 
 This is enough to keep the first-app story compact while leaving real seams available.
+
+Hooks that need `UiServices`, GPU-ready customization, or custom effect installation remain
+available only through explicit advanced builder extensions.
+
+This naming convergence applies to the `fret` facade builder surface. The lower-level
+`fret_bootstrap` raw/manual-assembly builders intentionally remain explicit and may keep older
+mechanism-oriented method names such as `init_app(...)`.
 
 ### 4) Advanced seams stay available on the builder path
 

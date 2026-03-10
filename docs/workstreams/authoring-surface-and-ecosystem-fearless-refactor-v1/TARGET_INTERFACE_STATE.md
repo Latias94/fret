@@ -108,6 +108,11 @@ App-level ecosystem integration seam:
 - `FretApp::setup(fn(&mut App))` is the canonical builder hook for app-level integrations such as
   command registration, theme/bootstrap setup, optional shadcn installs, router/query defaults,
   and other non-reusable product wiring.
+- `UiAppBuilder::setup_with(|app| ...)` is the inline closure variant for one-off app setup that
+  still belongs on the default app path.
+- lower-level raw bootstrap builders may keep mechanism-oriented names such as
+  `fret_bootstrap::ui_app(...).init_app(...)`; that naming does not define the default authoring
+  vocabulary.
 - callbacks that require `UiServices`, custom effect services, runner hooks, or manual assembly
   stay outside the default app path and should remain explicit advanced seams.
 
@@ -144,6 +149,7 @@ Target rule:
 Target exports:
 
 - `ui_app(...)` / `ui_app_with_hooks(...)` for explicit golden-path manual assembly
+- advanced builder extension traits (for `UiServices`, GPU-ready hooks, custom effects)
 - driver hooks
 - viewport embedding / interop seams
 - manual assembly surfaces

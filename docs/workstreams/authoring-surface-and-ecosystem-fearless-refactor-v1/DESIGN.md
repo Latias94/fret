@@ -186,6 +186,7 @@ It should **not** expose:
 App-level ecosystem integrations should converge on one default builder hook:
 
 - `FretApp::setup(fn(&mut App))`
+- `UiAppBuilder::setup_with(|app| ...)`
 
 This is where command registration, default theme/bootstrap installation, and optional app-level
 ecosystem wiring should attach.

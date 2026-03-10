@@ -92,15 +92,6 @@ impl FretApp {
         self
     }
 
-    /// Install wiring that needs `UiServices` during bootstrap.
-    pub fn install(
-        mut self,
-        install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
-    ) -> Self {
-        self.install_hooks.push(install);
-        self
-    }
-
     /// Register one or more custom icon packs (runs during bootstrap).
     pub fn register_icon_pack(mut self, register: fn(&mut crate::IconRegistry)) -> Self {
         self.register_icon_pack_hooks.push(register);
@@ -193,6 +184,14 @@ impl FretApp {
         ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
     ) -> Result<()> {
         self.view_with_hooks::<V>(configure)?.run()
+    }
+
+    pub(crate) fn install_services(
+        mut self,
+        install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
+    ) -> Self {
+        self.install_hooks.push(install);
+        self
     }
 }
 

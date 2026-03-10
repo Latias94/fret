@@ -973,7 +973,7 @@ pub fn run() -> anyhow::Result<()> {
                 .on_event(on_event)
                 .record_engine_frame(record_engine_frame)
         })?
-        .init_app(|app| {
+        .setup_with(|app| {
             app.set_global(PlatformCapabilities::default());
         });
 

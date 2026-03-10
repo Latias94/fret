@@ -37,7 +37,7 @@ pub fn run() -> anyhow::Result<()> {
         .view_with_hooks::<ImageHeavyMemoryView>(|driver| {
             driver.record_engine_frame(record_engine_frame)
         })?
-        .init_app(fret_bootstrap::install_default_i18n_backend)
+        .setup(fret_bootstrap::install_default_i18n_backend)
         .on_gpu_ready(upload_images)
         .run()
         .map_err(anyhow::Error::from)
