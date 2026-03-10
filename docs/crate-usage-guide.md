@@ -106,6 +106,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
+| Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -355,6 +356,8 @@ UI gallery-scale harnesses.
 
 Notes:
 
+- On the default app path, enable `fret`'s `router` feature and prefer the explicit
+  `fret::router::*` seam (`install_app`, `RouterUiStore`, `RouterOutlet`, link helpers).
 - `fret-router-ui` provides `RouterUiStore` (router + snapshot model) and pressable-based link/outlet helpers.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
   explicit view state) rather than treating router crates as a second default app runtime.

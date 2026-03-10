@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret_router::{
+use fret::router::{
     HistoryAdapter as _, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
-    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, SearchMap,
-    SearchValidationMode,
+    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+    Router, RouterOutlet, RouterUiSnapshot, RouterUiStore, SearchMap, SearchValidationMode,
+    router_link_to_with_test_id, router_link_with_test_id,
 };
-use fret_router_ui::{RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link_to_with_test_id};
 use fret_ui::{CommandAvailability, Invalidation};
 
 mod act {
@@ -146,7 +146,7 @@ impl View for RouterBasicsView {
                         let history = router.history();
                         let can_back = history.can_navigate(NavigationAction::Back);
                         let can_forward = history.can_navigate(NavigationAction::Forward);
-                        Ok::<_, fret_router::RouteSearchValidationFailure>((
+                        Ok::<_, RouteSearchValidationFailure>((
                             update,
                             next_snapshot,
                             can_back,
@@ -275,13 +275,7 @@ impl View for RouterBasicsView {
             let link = self
                 .store
                 .link_to_location(NavigationAction::Push, RouteLocation::parse("/missing"));
-            fret_router_ui::router_link_with_test_id(
-                cx,
-                &self.store,
-                link,
-                TEST_ID_LINK_MISSING,
-                [missing_label],
-            )
+            router_link_with_test_id(cx, &self.store, link, TEST_ID_LINK_MISSING, [missing_label])
         };
 
         let nav = shadcn::Card::build(|cx, out| {
@@ -464,16 +458,11 @@ impl View for RouterBasicsView {
     }
 }
 
-fn install_router_commands(app: &mut App) {
-    fret_router_ui::register_router_commands(app.commands_mut());
-    fret_app::install_command_default_keybindings_into_keymap(app);
-}
-
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-router-basics")
         .window("cookbook-router-basics", (1040.0, 620.0))
         .config_files(false)
-        .setup(install_router_commands)
+        .setup(fret::router::install_app)
         .setup(fret_cookbook::install_cookbook_defaults)
         .view::<RouterBasicsView>()?
         .run()

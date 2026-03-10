@@ -114,7 +114,10 @@ Companion docs:
   - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
   - [ ] Audit remaining advanced/component call sites and keep them explicit.
 - [ ] Migrate `fret-router` to the new explicit app/advanced extension seams.
+  - [x] Add an explicit `fret::router` facade module behind a `fret/router` feature.
+  - [x] Move the cookbook router example to the `fret::router::*` extension seam.
   - [ ] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
+  - [ ] Audit remaining direct imports of `fret-router` / `fret-router-ui` in first-party app-facing examples and docs.
 - [ ] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
 
 ## M4 — Migrate docs, templates, and examples

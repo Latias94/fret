@@ -47,6 +47,11 @@
 //!         .run()
 //! }
 //! ```
+//!
+//! Optional app-level extensions stay explicit:
+//!
+//! - enable `state` for grouped selector/query helpers on `AppUi`
+//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`
 
 pub use fret_app::App as KernelApp;
 
@@ -262,6 +267,47 @@ pub mod component {
 
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+    }
+}
+
+/// Optional router integration surface for app code.
+///
+/// This keeps the router story explicit:
+/// - `fret-router` remains the portable matching/history/guard core,
+/// - `fret-router-ui` remains the thin adoption layer,
+/// - `fret::router` gives app authors one curated import lane without pulling router types into
+///   `fret::app::prelude::*`.
+#[cfg(feature = "router")]
+pub mod router {
+    /// Raw router-core exports for advanced or fully explicit use.
+    pub mod core {
+        pub use fret_router::*;
+    }
+
+    /// Raw router-UI adoption exports for advanced or fully explicit use.
+    pub mod ui {
+        pub use fret_router_ui::*;
+    }
+
+    pub use fret_router::{
+        HistoryAdapter, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
+        RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+        Router, RouterBuildLocationError, RouterEvent, RouterTransition, SearchMap,
+        SearchValidationMode,
+    };
+    pub use fret_router_ui::{
+        RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
+        RouterOutlet, RouterUiSnapshot, RouterUiStore, register_router_commands, router_link,
+        router_link_to, router_link_to_with_test_id, router_link_with_props,
+        router_link_with_test_id, router_outlet, router_outlet_with_test_id,
+    };
+
+    /// Register recommended router commands on the app surface.
+    ///
+    /// Use this from `FretApp::setup(...)` so default command keybindings/config layering can see
+    /// the router commands before the bootstrap installs baseline keymaps.
+    pub fn install_app(app: &mut crate::app::App) {
+        register_router_commands(app.commands_mut());
     }
 }
 
@@ -1172,13 +1218,13 @@ mod tests {
 mod authoring_surface_policy_tests {
     const APP_ENTRY_RS: &str = include_str!("app_entry.rs");
     const ROOT_README: &str = include_str!("../../../README.md");
-    const README: &str = include_str!("../README.md");
     const DOCS_README: &str = include_str!("../../../docs/README.md");
     const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
     const TODO_APP_GOLDEN_PATH: &str =
         include_str!("../../../docs/examples/todo-app-golden-path.md");
     const AUTHORING_GOLDEN_PATH_V2: &str =
         include_str!("../../../docs/authoring-golden-path-v2.md");
+    const CRATE_README: &str = include_str!("../README.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
     const INTEGRATING_TOKIO_AND_REQWEST: &str =
         include_str!("../../../docs/integrating-tokio-and-reqwest.md");
@@ -1261,14 +1307,14 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
-        assert!(README.contains(
+        assert!(CRATE_README.contains(
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
-        assert!(README.contains("`state`: enable selector/query helpers on `AppUi`"));
-        assert!(!README.contains(".run_view::<"));
-        assert!(!README.contains(".install_app("));
-        assert!(!README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
-        assert!(!README.contains("currently backed by `ViewCx`"));
+        assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
+        assert!(!CRATE_README.contains(".run_view::<"));
+        assert!(!CRATE_README.contains(".install_app("));
+        assert!(!CRATE_README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
+        assert!(!CRATE_README.contains("currently backed by `ViewCx`"));
     }
 
     #[test]
@@ -1284,12 +1330,28 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn readme_keeps_advanced_builder_hooks_off_default_surface() {
-        assert!(README.contains("`fret::advanced::FretAppAdvancedExt::install(...)`"));
-        assert!(README.contains(
+        assert!(CRATE_README.contains("`fret::advanced::FretAppAdvancedExt::install(...)`"));
+        assert!(CRATE_README.contains(
             "`fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`"
         ));
-        assert!(!README.contains("`UiAppBuilder::on_gpu_ready(...)`"));
-        assert!(!README.contains("`UiAppBuilder::install_custom_effects(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::on_gpu_ready(...)`"));
+        assert!(!CRATE_README.contains("`UiAppBuilder::install_custom_effects(...)`"));
+    }
+
+    #[test]
+    fn readme_and_rustdoc_expose_router_as_explicit_optional_surface() {
+        assert!(CRATE_README.contains("- `router`: enable the explicit app-level router surface"));
+        assert!(
+            CRATE_README
+                .contains("`fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`")
+        );
+
+        let rustdoc = crate_rustdoc();
+        assert!(rustdoc.contains(
+            "//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`"
+        ));
+        assert!(LIB_RS.contains("pub mod router {"));
+        assert!(LIB_RS.contains("pub fn install_app(app: &mut crate::app::App) {"));
     }
 
     #[test]
@@ -1361,6 +1423,13 @@ mod authoring_surface_policy_tests {
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async(...)`"));
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async_local(...)`"));
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().query_async(...)`"));
+    }
+
+    #[test]
+    fn usage_docs_expose_router_as_explicit_extension_surface() {
+        assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `router` feature"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
 
     #[test]
@@ -1437,6 +1506,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("AnyElement"));
         assert!(!app_prelude_exports_symbol("ActionId"));
         assert!(!app_prelude_exports_symbol("TypedAction"));
+        assert!(!app_prelude_exports_symbol("RouterUiStore"));
+        assert!(!app_prelude_exports_symbol("RouterOutlet"));
         assert!(!app_prelude_exports_symbol("UiBuilder"));
         assert!(!app_prelude_exports_symbol("UiPatchTarget"));
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));

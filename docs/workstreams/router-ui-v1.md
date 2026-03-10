@@ -159,9 +159,10 @@ Default keybindings (recommended):
 - macOS: `Cmd+[` / `Cmd+]`
 - Windows/Linux: `Alt+Left` / `Alt+Right`
 
-Golden path: enable the `fret` `router` feature to register router commands early enough for
-`with_default_config_files()` to install the default keybindings before applying layered
-`.fret/keymap.json` overrides.
+Golden path: enable the `fret` `router` feature and call
+`FretApp::setup(fret::router::install_app)` so router commands are registered before
+`with_default_config_files()` installs the default keybindings and before layered
+`.fret/keymap.json` overrides are applied.
 
 If you register router commands later (after config layering), call
 `fret_app::install_command_default_keybindings_into_keymap(app)` again to ensure the defaults are
@@ -170,8 +171,8 @@ added to the baseline keymap (the installer is idempotent per command id).
 Menu bar integration:
 
 - `fret-workspace::menu::workspace_default_menu_bar(...)` accepts optional router command IDs.
-- `fret`'s `workspace_shell_model_default_menu(...)` wires these automatically when the
-  `router` feature is enabled.
+- `fret::router::install_app` intentionally limits itself to command registration; menu wiring
+  stays explicit for now.
 
 ## Evidence anchors (when implemented)
 

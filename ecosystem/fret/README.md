@@ -68,6 +68,13 @@ Enable selector/query helpers (optional):
 fret = { path = "../fret", features = ["state"] }
 ```
 
+Enable the explicit router extension surface (optional):
+
+```toml
+[dependencies]
+fret = { path = "../fret", features = ["router"] }
+```
+
 If your crate lives under `apps/` in this repository:
 
 ```toml
@@ -108,6 +115,7 @@ fn main() -> fret::Result<()> {
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
+- `router`: enable the explicit app-level router surface (`fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
@@ -154,6 +162,10 @@ following seams first-class:
 The default builder chain stays small and app-facing on `fret`. Advanced users still keep the same
 extension seams without dropping to `fret-launch` immediately, but the GPU/effects/bootstrap hooks
 now live explicitly under `fret::advanced` instead of the default inherent builder surface.
+
+Optional app-level ecosystems also stay explicit. For example, the router integration lives under
+`fret::router`; wire it with `FretApp::setup(fret::router::install_app)` instead of expecting it
+to appear in `fret::app::prelude::*`.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

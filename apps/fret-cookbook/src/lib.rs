@@ -201,8 +201,12 @@ mod authoring_surface_policy_tests {
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
 
+        assert!(ROUTER_EXAMPLE.contains("use fret::router::{"));
+        assert!(!ROUTER_EXAMPLE.contains("use fret_router::{"));
+        assert!(!ROUTER_EXAMPLE.contains("use fret_router_ui::{"));
         assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
         assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
+        assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));
 
         assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(DATA_TABLE_EXAMPLE.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
