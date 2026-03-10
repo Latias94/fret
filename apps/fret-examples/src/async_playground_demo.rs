@@ -239,7 +239,7 @@ impl View for AsyncPlaygroundView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let dark_for_theme = cx
             .app
             .models()

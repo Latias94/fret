@@ -557,7 +557,7 @@ impl View for LiquidGlassView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         cx.on_action_notify_models::<act::Reset>({
             let st = self.st.clone();
             move |models| {

@@ -66,7 +66,7 @@ impl View for HelloCounterView {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let count_state = cx.use_local_with(|| 0i64);

@@ -136,7 +136,7 @@ impl View for DropShadowDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let enabled = cx.watch_model(&self.st.enabled).layout().value_or_default();
         let stress = cx.watch_model(&self.st.stress).layout().value_or_default();
 

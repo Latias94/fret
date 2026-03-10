@@ -178,7 +178,7 @@ impl MarkdownDemoView {
 
     fn maybe_scroll_pending_anchor(
         &mut self,
-        cx: &mut ViewCx<'_, '_, KernelApp>,
+        cx: &mut AppUi<'_, '_>,
         viewport_region: Option<fret_ui::GlobalElementId>,
         padding_top: Px,
     ) {
@@ -352,7 +352,7 @@ $$
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         if cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES) {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);

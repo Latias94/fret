@@ -43,7 +43,7 @@ impl View for NodeGraphDemoView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         cx.elements()
             .observe_model(&self.graph, Invalidation::Paint);
         cx.elements().observe_model(&self.view, Invalidation::Paint);

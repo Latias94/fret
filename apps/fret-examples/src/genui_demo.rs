@@ -818,7 +818,7 @@ impl View for GenUiView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         cx.on_action_notify_transient::<act::ClearActions>(TRANSIENT_GENUI_CLEAR_ACTIONS);
         cx.on_action_notify_transient::<act::ApplyQueuedActions>(
             TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS,

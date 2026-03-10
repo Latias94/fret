@@ -40,7 +40,7 @@ impl View for TodoDemoView {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 

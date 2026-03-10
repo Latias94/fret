@@ -253,6 +253,14 @@ mod authoring_surface_policy_tests {
         );
     }
 
+    fn assert_view_runtime_example_uses_app_ui_aliases(src: &str) {
+        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
+        assert!(
+            !src.contains("fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements")
+        );
+        assert!(!src.contains("ViewCx<'_, '_, KernelApp>"));
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -284,6 +292,39 @@ mod authoring_surface_policy_tests {
             WINDOW_HIT_TEST_PROBE_DEMO,
         ] {
             assert_uses_advanced_surface(src);
+        }
+    }
+
+    #[test]
+    fn view_runtime_examples_prefer_app_ui_and_ui_aliases() {
+        for src in [
+            ASSETS_DEMO,
+            ASYNC_PLAYGROUND_DEMO,
+            CHART_DECLARATIVE_DEMO,
+            CUSTOM_EFFECT_V1_DEMO,
+            CUSTOM_EFFECT_V2_DEMO,
+            CUSTOM_EFFECT_V3_DEMO,
+            DROP_SHADOW_DEMO,
+            EMBEDDED_VIEWPORT_DEMO,
+            GENUI_DEMO,
+            HELLO_COUNTER_DEMO,
+            HELLO_WORLD_COMPARE_DEMO,
+            IMAGE_HEAVY_MEMORY_DEMO,
+            IMUI_EDITOR_PROOF_DEMO,
+            IMUI_FLOATING_WINDOWS_DEMO,
+            IMUI_HELLO_DEMO,
+            IMUI_NODE_GRAPH_DEMO,
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            IMUI_SHADCN_ADAPTER_DEMO,
+            LIQUID_GLASS_DEMO,
+            MARKDOWN_DEMO,
+            NODE_GRAPH_DEMO,
+            POSTPROCESS_THEME_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            QUERY_DEMO,
+            TODO_DEMO,
+        ] {
+            assert_view_runtime_example_uses_app_ui_aliases(src);
         }
     }
 

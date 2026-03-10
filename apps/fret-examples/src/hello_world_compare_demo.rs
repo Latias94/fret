@@ -258,7 +258,7 @@ fn capture_element_runtime_frame_sample(
     })
 }
 
-fn update_runtime_frame_sample_state(cx: &mut ViewCx<'_, '_, KernelApp>) {
+fn update_runtime_frame_sample_state(cx: &mut AppUi<'_, '_>) {
     if !runtime_sampling_enabled() {
         return;
     }
@@ -1016,7 +1016,7 @@ impl View for HelloWorldCompareView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());
         if self.flags.uses_animation_frame_loop() {
             cx.request_animation_frame();

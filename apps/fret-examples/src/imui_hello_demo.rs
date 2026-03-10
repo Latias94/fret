@@ -14,7 +14,7 @@ impl View for ImUiHelloView {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let count_state = cx.use_local_with(|| 0u32);
         let enabled_state = cx.use_local_with(|| false);
 

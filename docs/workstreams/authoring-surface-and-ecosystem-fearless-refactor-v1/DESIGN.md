@@ -341,7 +341,7 @@ must all teach the same default surface and avoid low-level leakage.
 ### Current shape (representative)
 
 ```rust
-fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+fn render(&mut self, cx: &mut AppUi<'_, '_, App>) -> Ui {
     let draft = cx.use_local::<String>();
     let todos = cx.use_local_with(seed_todos);
 

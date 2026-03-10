@@ -198,7 +198,7 @@ impl View for ChartDeclarativeView {
         Self { engine, spec }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         cx.elements()
             .observe_model(&self.engine, Invalidation::Paint);
 

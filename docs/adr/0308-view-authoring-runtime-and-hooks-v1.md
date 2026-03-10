@@ -107,13 +107,13 @@ The view runtime introduces a view object that renders into the existing IR:
 
 ```rust,ignore
 trait View: 'static {
-    fn render(&mut self, cx: &mut ViewCx) -> Elements;
+    fn render(&mut self, cx: &mut AppUi) -> Ui;
 }
 ```
 
 Where:
 
-- `Elements` is the existing declarative output type (vector/iterable of `AnyElement`),
+- `Ui` is the app-facing alias for the existing declarative output type (`Elements`),
 - the view runtime internally owns:
   - a stable identity root (so view-local state and caches are keyed deterministically),
   - a per-view handler table for `ActionId`.

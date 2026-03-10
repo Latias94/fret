@@ -388,7 +388,7 @@ struct MyView {
 }
 
 impl View for MyView {
-    fn render(&mut self, cx: &mut ViewCx<'_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, App>) -> Ui {
         let st = cx.watch_model(&self.st).layout().value_or_default();
 
         let derived = cx.use_selector(

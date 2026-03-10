@@ -17,7 +17,7 @@ impl View for ImUiResponseSignalsView {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let left_clicks = cx.use_local_with(|| 0u32);
         let secondary_clicks = cx.use_local_with(|| 0u32);
         let double_clicks = cx.use_local_with(|| 0u32);

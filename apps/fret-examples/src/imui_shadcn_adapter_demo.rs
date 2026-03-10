@@ -35,7 +35,7 @@ impl View for ImUiShadcnAdapterView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let count = cx.watch_model(&self.count).layout().value_or_default();
         let enabled = cx.watch_model(&self.enabled).paint().value_or_default();
         let value = cx.watch_model(&self.value).paint().value_or_default();

@@ -27,7 +27,7 @@ impl View for ImUiFloatingWindowsView {
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;

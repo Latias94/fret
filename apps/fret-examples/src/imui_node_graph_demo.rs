@@ -31,7 +31,7 @@ impl View for ImUiNodeGraphView {
         Self { graph, view }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let graph = self.graph.clone();
         let view = self.view.clone();
 
