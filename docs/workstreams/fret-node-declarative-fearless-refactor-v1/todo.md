@@ -1226,6 +1226,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_up_session/cleanup.rs` seams, so `pointer_up_session.rs` now mainly
     keeps root re-exports explicit while pending-release and snap-guide cleanup helpers stop
     sharing one inline module body.
+  - Progress: focus-session helpers now also route hint clearing, focus transitions, and
+    selection-only view-state updates through the private
+    `ui/canvas/widget/focus_session/hints.rs`,
+    `ui/canvas/widget/focus_session/focus.rs`, and
+    `ui/canvas/widget/focus_session/selection.rs` seams, so `focus_session.rs` now mainly keeps
+    root re-exports explicit while edge/port/node focus bookkeeping stops sharing one inline
+    helper file.
 
 ## M5 - Compatibility retained convergence
 
