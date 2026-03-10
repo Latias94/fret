@@ -202,10 +202,6 @@ pub use fret_framework as kernel;
 pub mod app {
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
-        // Temporary bridge: keep app call sites moving onto the new import path before we tighten
-        // the surface contents and delete the broad legacy exports.
-        pub use crate::prelude::*;
-
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
         #[cfg(feature = "shadcn")]
@@ -213,12 +209,32 @@ pub mod app {
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};
         pub use crate::{actions, workspace_menu};
-        pub use fret_core::{AppWindowId, Event, SemanticsRole};
+        pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, TextOverflow, TextWrap};
+        #[cfg(feature = "icons")]
+        pub use fret_icons::IconId;
         pub use fret_runtime::{ActionId, CommandId, TypedAction};
-        pub use fret_ui::ThemeSnapshot;
         pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps};
+        pub use fret_ui::{Theme, ThemeSnapshot};
+        pub use fret_ui_kit::UiBuilderHostBoundIntoElementExt as _;
+        pub use fret_ui_kit::command::ElementCommandGatingExt as _;
+        #[cfg(feature = "icons")]
+        pub use fret_ui_kit::declarative::icon;
+        pub use fret_ui_kit::declarative::prelude::*;
         pub use fret_ui_kit::ui;
+        pub use fret_ui_kit::ui::UiElementSinkExt as _;
+        pub use fret_ui_kit::{
+            ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
+            ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
+            OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+            WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+            resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+            resolve_override_slot_with, resolve_slot,
+        };
         pub use fret_ui_kit::{UiBuilder, UiPatchTarget};
+        pub use fret_ui_kit::{
+            on_activate, on_activate_notify, on_activate_request_redraw,
+            on_activate_request_redraw_notify,
+        };
 
         #[cfg(feature = "state-query")]
         pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
@@ -1024,6 +1040,16 @@ mod authoring_surface_policy_tests {
             .join("\n")
     }
 
+    fn app_prelude_source() -> &'static str {
+        let app_start = LIB_RS
+            .find("pub mod app {")
+            .expect("app module should exist in fret facade");
+        let component_start = LIB_RS
+            .find("/// Component-author imports for reusable, portable UI crates.")
+            .expect("component module marker should exist in fret facade");
+        &LIB_RS[app_start..component_start]
+    }
+
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(README.contains(
@@ -1042,5 +1068,14 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
         assert!(rustdoc.contains("AppUi<'_, '_, KernelApp>"));
         assert!(!rustdoc.contains(".window(...).ui(...)?"));
+    }
+
+    #[test]
+    fn app_prelude_stays_explicit_instead_of_reexporting_legacy_surface() {
+        let app_prelude = app_prelude_source();
+        assert!(!app_prelude.contains("pub use crate::prelude::*;"));
+        assert!(app_prelude.contains("pub use crate::{AppUi, KernelApp, Ui, UiChild, UiCx};"));
+        assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+        assert!(app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
     }
 }
