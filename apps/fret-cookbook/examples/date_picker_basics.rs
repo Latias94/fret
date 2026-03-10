@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use time::{Date, Month};
 
 const TEST_ID_ROOT: &str = "cookbook.date_picker_basics.root";
@@ -8,18 +8,19 @@ const TEST_ID_SELECTED: &str = "cookbook.date_picker_basics.selected";
 struct DatePickerBasicsView;
 
 impl View for DatePickerBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let open_state = cx.use_local_with(|| false);
-        let selected_state = cx.use_local_with(|| {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let open_state = cx.state().local_init(|| false);
+        let selected_state = cx.state().local_init(|| {
             Some(Date::from_calendar_date(2026, Month::January, 15).expect("valid date"))
         });
 
-        let selected = selected_state
-            .watch(cx)
+        let selected = cx
+            .state()
+            .watch(&selected_state)
             .layout()
             .value_or_default()
             .map(|d| d.to_string())

@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
     PlatformFilter, format_sequence,
@@ -21,7 +21,7 @@ const TEST_ID_UNDERLAY_SHORTCUT: &str = "cookbook.overlays.underlay.shortcut";
 const TEST_ID_UNDERLAY_BUMPS: &str = "cookbook.overlays.underlay.bumps";
 const TEST_ID_UNDERLAY_BUMP: &str = "cookbook.overlays.underlay.bump";
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let cmd: CommandId = act::BumpUnderlay.into();
     let meta = CommandMeta::new("Bump underlay")
         .with_description(
@@ -61,30 +61,32 @@ fn install_commands(app: &mut App) {
 struct OverlayBasicsView;
 
 impl View for OverlayBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
         let cmd_bump: CommandId = act::BumpUnderlay.into();
 
-        let dialog_open_state = cx.use_local::<bool>();
-        let underlay_bumps_state = cx.use_local::<u32>();
+        let dialog_open_state = cx.state().local::<bool>();
+        let underlay_bumps_state = cx.state().local::<u32>();
 
-        cx.on_action_notify_local_set::<act::OpenDialog, bool>(&dialog_open_state, true);
-        cx.on_action_notify_local_update::<act::BumpUnderlay, u32>(&underlay_bumps_state, |v| {
-            *v = v.saturating_add(1);
-        });
-        cx.on_action_availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available);
-        cx.on_action_availability::<act::BumpUnderlay>(|_host, _acx| {
-            CommandAvailability::Available
-        });
+        cx.actions()
+            .local_set::<act::OpenDialog, bool>(&dialog_open_state, true);
+        cx.actions()
+            .local_update::<act::BumpUnderlay, u32>(&underlay_bumps_state, |v| {
+                *v = v.saturating_add(1);
+            });
+        cx.actions()
+            .availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::BumpUnderlay>(|_host, _acx| CommandAvailability::Available);
 
         let dialog_open_for_dialog = dialog_open_state.clone_model();
         let dialog_open_for_footer = dialog_open_state.clone_model();
         let dialog_open_for_close = dialog_open_state.clone_model();
 
-        let bumps = underlay_bumps_state.watch(cx).layout().value_or(0);
+        let bumps = cx.state().watch(&underlay_bumps_state).layout().value_or(0);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"

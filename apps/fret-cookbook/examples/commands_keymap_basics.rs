@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
     PlatformFilter, format_sequence,
@@ -22,7 +22,7 @@ const TEST_ID_PANEL_STATE: &str = "cookbook.commands_keymap_basics.panel_state";
 const TEST_ID_PANEL_OPEN: &str = "cookbook.commands_keymap_basics.panel_open";
 const TEST_ID_PANEL: &str = "cookbook.commands_keymap_basics.panel";
 
-fn install_commands(app: &mut App) {
+fn install_commands(app: &mut KernelApp) {
     let cmd: CommandId = act::TogglePanel.into();
     let meta = CommandMeta::new("Toggle panel")
         .with_description("Toggles a panel via a registered action ID + default keybinding.")
@@ -63,18 +63,22 @@ fn install_commands(app: &mut App) {
 struct CommandsKeymapBasicsView;
 
 impl View for CommandsKeymapBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let panel_open_state = cx.use_local_with(|| false);
-        let allow_command_state = cx.use_local_with(|| true);
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let panel_open_state = cx.state().local_init(|| false);
+        let allow_command_state = cx.state().local_init(|| true);
 
         let cmd: CommandId = act::TogglePanel.into();
 
-        let panel_open = panel_open_state.watch(cx).layout().value_or(false);
-        let allow_command = allow_command_state.watch(cx).layout().value_or(true);
+        let panel_open = cx.state().watch(&panel_open_state).layout().value_or(false);
+        let allow_command = cx
+            .state()
+            .watch(&allow_command_state)
+            .layout()
+            .value_or(true);
 
         let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
@@ -222,9 +226,10 @@ impl View for CommandsKeymapBasicsView {
         .max_w(Px(860.0))
         .key_context("cookbook.commands_keymap_basics");
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
+        cx.actions()
+            .toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
 
-        cx.on_action_notify_locals::<act::TogglePanel>({
+        cx.actions().locals::<act::TogglePanel>({
             let panel_open_state = panel_open_state.clone();
             let allow_command_state = allow_command_state.clone();
             move |tx| {
@@ -237,7 +242,7 @@ impl View for CommandsKeymapBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::TogglePanel>({
+        cx.actions().availability::<act::TogglePanel>({
             let allow_command_state = allow_command_state.clone();
             move |host, _acx| {
                 let allowed = allow_command_state

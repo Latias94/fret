@@ -1,4 +1,4 @@
-use fret::prelude::*;
+use fret::app::prelude::*;
 use fret_ui::CommandAvailability;
 use fret_ui::element::SemanticsDecoration;
 
@@ -45,22 +45,30 @@ impl FormBasicsView {
 }
 
 impl View for FormBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let name_state = cx.use_local::<String>();
-        let email_state = cx.use_local::<String>();
-        let error_state = cx.use_local::<Option<String>>();
+    fn render(&mut self, cx: &mut AppUi<'_, '_, KernelApp>) -> Ui {
+        let name_state = cx.state().local::<String>();
+        let email_state = cx.state().local::<String>();
+        let error_state = cx.state().local::<Option<String>>();
 
-        let name = name_state.watch(cx).layout().value_or_else(String::new);
-        let email = email_state.watch(cx).layout().value_or_else(String::new);
-        let error = error_state.watch(cx).layout().value_or_default();
+        let name = cx
+            .state()
+            .watch(&name_state)
+            .layout()
+            .value_or_else(String::new);
+        let email = cx
+            .state()
+            .watch(&email_state)
+            .layout()
+            .value_or_else(String::new);
+        let error = cx.state().watch(&error_state).layout().value_or_default();
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.on_action_notify_locals::<act::Submit>({
+        cx.actions().locals::<act::Submit>({
             let name_state = name_state.clone();
             let email_state = email_state.clone();
             let error_state = error_state.clone();
@@ -72,7 +80,7 @@ impl View for FormBasicsView {
             }
         });
 
-        cx.on_action_notify_locals::<act::Reset>({
+        cx.actions().locals::<act::Reset>({
             let name_state = name_state.clone();
             let email_state = email_state.clone();
             let error_state = error_state.clone();
@@ -83,7 +91,7 @@ impl View for FormBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::Submit>({
+        cx.actions().availability::<act::Submit>({
             let name_state = name_state.clone();
             let email_state = email_state.clone();
             move |host, _acx| {
@@ -96,7 +104,8 @@ impl View for FormBasicsView {
                 }
             }
         });
-        cx.on_action_availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
 
         let name_input = ui::v_flex(|cx| {
             ui::children![cx;

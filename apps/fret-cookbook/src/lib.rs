@@ -20,9 +20,13 @@ pub fn install_cookbook_defaults(app: &mut KernelApp) {
 mod authoring_surface_policy_tests {
     const ROOT_README: &str = include_str!("../../../README.md");
     const GOLDEN_PATH_DOC: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
+    const COMMANDS_KEYMAP_EXAMPLE: &str = include_str!("../examples/commands_keymap_basics.rs");
+    const DATE_PICKER_EXAMPLE: &str = include_str!("../examples/date_picker_basics.rs");
+    const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
     const HELLO_COUNTER_EXAMPLE: &str = include_str!("../examples/hello_counter.rs");
+    const OVERLAY_EXAMPLE: &str = include_str!("../examples/overlay_basics.rs");
     const PAYLOAD_ACTIONS_EXAMPLE: &str = include_str!("../examples/payload_actions_basics.rs");
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
@@ -69,6 +73,10 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(TEXT_INPUT_EXAMPLE);
         assert_uses_app_surface(TOGGLE_EXAMPLE);
         assert_uses_app_surface(PAYLOAD_ACTIONS_EXAMPLE);
+        assert_uses_app_surface(FORM_EXAMPLE);
+        assert_uses_app_surface(DATE_PICKER_EXAMPLE);
+        assert_uses_app_surface(COMMANDS_KEYMAP_EXAMPLE);
+        assert_uses_app_surface(OVERLAY_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
@@ -82,6 +90,18 @@ mod authoring_surface_policy_tests {
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
+
+        assert!(FORM_EXAMPLE.contains("locals::<act::Submit>"));
+        assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
+
+        assert!(DATE_PICKER_EXAMPLE.contains("cx.state().local_init(|| false)"));
+        assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));
+
+        assert!(COMMANDS_KEYMAP_EXAMPLE.contains("locals::<act::TogglePanel>"));
+        assert!(COMMANDS_KEYMAP_EXAMPLE.contains("toggle_local_bool::<act::ToggleAllowCommand>"));
+
+        assert!(OVERLAY_EXAMPLE.contains("local_set::<act::OpenDialog, bool>"));
+        assert!(OVERLAY_EXAMPLE.contains("local_update::<act::BumpUnderlay, u32>"));
     }
 
     #[test]
