@@ -53,15 +53,6 @@ fn parse_step(step_text: &str) -> (i64, bool) {
     (step, true)
 }
 
-fn read_effective_step(models: &fret_runtime::ModelStore, step: &LocalState<String>) -> i64 {
-    let step_text = step
-        .read_in(models, Clone::clone)
-        .ok()
-        .unwrap_or_else(|| "1".to_string());
-    let (step, _) = parse_step(&step_text);
-    step
-}
-
 impl View for HelloCounterView {
     fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         Self
@@ -70,39 +61,44 @@ impl View for HelloCounterView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let count_state = cx.use_local_with(|| 0i64);
-        let step_state = cx.use_local_with(|| "1".to_string());
+        let count_state = cx.state().local_init(|| 0i64);
+        let step_state = cx.state().local_init(|| "1".to_string());
 
-        let count = count_state.layout(cx).value_or(0);
-        let step_text = step_state.layout(cx).value_or_else(|| "1".to_string());
+        let count = cx.state().watch(&count_state).layout().value_or(0);
+        let step_text = cx
+            .state()
+            .watch(&step_state)
+            .layout()
+            .value_or_else(String::new);
         let (effective_step, step_valid) = parse_step(&step_text);
 
-        cx.on_action_notify_models::<act::Inc>({
+        cx.actions().locals::<act::Inc>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
-            move |models| {
-                let step = read_effective_step(models, &step_state);
-                count_state.update_in(models, |value| {
-                    *value = value.saturating_add(step);
-                })
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_add(step))
             }
         });
 
-        cx.on_action_notify_models::<act::Dec>({
+        cx.actions().locals::<act::Dec>({
             let count_state = count_state.clone();
             let step_state = step_state.clone();
-            move |models| {
-                let step = read_effective_step(models, &step_state);
-                count_state.update_in(models, |value| {
-                    *value = value.saturating_sub(step);
-                })
+            move |tx| {
+                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let (step, _) = parse_step(&step_text);
+                tx.update(&count_state, |value| *value = value.saturating_sub(step))
             }
         });
 
-        cx.on_action_notify_local_set::<act::Reset, i64>(&count_state, 0);
-        cx.on_action_notify_local_set::<act::SetStep1, String>(&step_state, "1".to_string());
-        cx.on_action_notify_local_set::<act::SetStep5, String>(&step_state, "5".to_string());
-        cx.on_action_notify_local_set::<act::SetStep10, String>(&step_state, "10".to_string());
+        cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
+        cx.actions()
+            .local_set::<act::SetStep1, String>(&step_state, "1".to_string());
+        cx.actions()
+            .local_set::<act::SetStep5, String>(&step_state, "5".to_string());
+        cx.actions()
+            .local_set::<act::SetStep10, String>(&step_state, "10".to_string());
 
         let count_color = if count > 0 {
             theme.color_token("primary")

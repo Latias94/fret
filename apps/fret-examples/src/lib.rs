@@ -382,6 +382,25 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_selected_view_runtime_examples_prefer_grouped_helpers(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     #[test]
     fn migrated_examples_use_the_explicit_advanced_surface() {
         for src in [
@@ -483,7 +502,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn app_facing_state_examples_prefer_grouped_data_surface() {
-        for src in [QUERY_ASYNC_TOKIO_DEMO, QUERY_DEMO, TODO_DEMO] {
+        for src in [QUERY_ASYNC_TOKIO_DEMO, QUERY_DEMO] {
             assert_prefers_grouped_data_surface(src);
         }
     }
@@ -648,6 +667,188 @@ mod authoring_surface_policy_tests {
                 "fn active_mode(cx: &mut ElementContext<'_, KernelApp>, st: &AsyncPlaygroundState) -> FetchMode",
                 "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
                 "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+    }
+
+    #[test]
+    fn selected_view_runtime_examples_prefer_grouped_state_actions_and_effects() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            HELLO_COUNTER_DEMO,
+            &[
+                "let count_state = cx.state().local_init(|| 0i64);",
+                "let step_state = cx.state().local_init(|| \"1\".to_string());",
+                "cx.actions().locals::<act::Inc>({",
+                "cx.actions().locals::<act::Dec>({",
+                "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
+            ],
+            &[
+                "cx.use_local_with(|| 0i64)",
+                "cx.on_action_notify_models::<act::Inc>",
+                "cx.on_action_notify_local_set::<act::Reset, i64>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            QUERY_DEMO,
+            &[
+                "let fail_mode_state = cx.state().local_init(|| false);",
+                "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
+            ],
+            &[
+                "cx.use_local_with(|| false)",
+                "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
+                "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            QUERY_ASYNC_TOKIO_DEMO,
+            &[
+                "let fail_mode_state = cx.state().local_init(|| false);",
+                "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
+            ],
+            &[
+                "cx.use_local_with(|| false)",
+                "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
+                "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            TODO_DEMO,
+            &[
+                "let draft_state = cx.state().local::<String>();",
+                "let next_id_state = cx.state().local_init(|| 4u64);",
+                "cx.actions().locals::<act::Add>({",
+                "cx.actions().locals::<act::ClearDone>({",
+                "cx.actions().payload::<act::Toggle>().local_update_if::<Vec<TodoRow>>(",
+                "cx.actions().payload::<act::Remove>().local_update_if::<Vec<TodoRow>>(",
+            ],
+            &[
+                "cx.use_local::<String>()",
+                "cx.on_action_notify_models::<act::Add>",
+                "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            EMBEDDED_VIEWPORT_DEMO,
+            &[
+                "let size_preset_state = cx.state().local_init(|| 1usize);",
+                "let preset = cx.state().watch(&size_preset_state).layout().value_or_default();",
+                "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
+            ],
+            &[
+                "cx.use_local_with(|| 1usize)",
+                "cx.on_action_notify_local_set::<act::PickSize640, usize>",
+            ],
+        );
+    }
+
+    #[test]
+    fn selected_advanced_examples_prefer_grouped_state_actions_and_effects() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_HELLO_DEMO,
+            &[
+                "let count_state = cx.state().local_init(|| 0u32);",
+                "let enabled_state = cx.state().local_init(|| false);",
+                "let count = cx.state().watch(&count_state).layout().value_or_default();",
+                "let enabled = cx.state().watch(&enabled_state).paint().value_or_default();",
+            ],
+            &["cx.use_local_with(|| 0u32)", "cx.use_local_with(|| false)"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            &[
+                "let left_clicks = cx.state().local_init(|| 0u32);",
+                "let drag_offset = cx.state().local_init(Point::default);",
+                "let last_anchor_value = cx.state().watch(&last_context_menu_anchor).layout().value_or_default();",
+            ],
+            &[
+                "cx.use_local_with(|| 0u32)",
+                "cx.use_local_with(Point::default)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED)",
+                "cx.actions().models::<act::SelectTip>({",
+                "cx.actions().transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);",
+            ],
+            &[
+                "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED)",
+                "cx.on_action_notify_models::<act::SelectTip>",
+                "cx.on_action_notify_transient::<act::InvalidateSelected>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V1_DEMO,
+            &["cx.actions().models::<act::Reset>({"],
+            &["cx.on_action_notify_models::<act::Reset>"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_DEMO,
+            &["cx.actions().models::<act::Reset>({"],
+            &["cx.on_action_notify_models::<act::Reset>"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V3_DEMO,
+            &["cx.actions().models::<act::Reset>({"],
+            &["cx.on_action_notify_models::<act::Reset>"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            POSTPROCESS_THEME_DEMO,
+            &["cx.actions().models::<act::Reset>({"],
+            &["cx.on_action_notify_models::<act::Reset>"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LIQUID_GLASS_DEMO,
+            &[
+                "cx.actions().models::<act::Reset>({",
+                "cx.actions().models::<act::ToggleInspector>({",
+            ],
+            &[
+                "cx.on_action_notify_models::<act::Reset>",
+                "cx.on_action_notify_models::<act::ToggleInspector>",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            GENUI_DEMO,
+            &[
+                "cx.actions().transient::<act::ClearActions>(TRANSIENT_GENUI_CLEAR_ACTIONS);",
+                "if cx.effects().take_transient(TRANSIENT_GENUI_CLEAR_ACTIONS)",
+            ],
+            &[
+                "cx.on_action_notify_transient::<act::ClearActions>",
+                "cx.take_transient_on_action_root(TRANSIENT_GENUI_CLEAR_ACTIONS)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            MARKDOWN_DEMO,
+            &[
+                "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
+                "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
+                "cx.actions().payload::<act::ToggleCodeBlockExpand>().models({",
+            ],
+            &[
+                "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
+                "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
+                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>",
             ],
         );
     }

@@ -251,7 +251,7 @@ impl View for AsyncPlaygroundView {
             apply_theme(cx.app, dark_for_theme);
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED) {
             let selected = cx
                 .app
                 .models()
@@ -261,7 +261,7 @@ impl View for AsyncPlaygroundView {
             let _ = with_query_client(cx.app, |client, app| client.invalidate(app, key));
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_CANCEL_SELECTED) {
+        if cx.effects().take_transient(TRANSIENT_CANCEL_SELECTED) {
             let selected = cx
                 .app
                 .models()
@@ -271,7 +271,7 @@ impl View for AsyncPlaygroundView {
             let _ = with_query_client(cx.app, |client, app| client.cancel_inflight(app, key));
         }
 
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let ns = cx
                 .app
                 .models()
@@ -297,7 +297,7 @@ impl View for AsyncPlaygroundView {
         let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
         let body = body(cx, &mut self.st, theme, global_slow, selected);
 
-        cx.on_action_notify_models::<act::SelectTip>({
+        cx.actions().models::<act::SelectTip>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -309,7 +309,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectSearch>({
+        cx.actions().models::<act::SelectSearch>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -321,7 +321,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectStock>({
+        cx.actions().models::<act::SelectStock>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -333,7 +333,7 @@ impl View for AsyncPlaygroundView {
                 true
             }
         });
-        cx.on_action_notify_models::<act::SelectStatus>({
+        cx.actions().models::<act::SelectStatus>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |models| {
@@ -346,14 +346,17 @@ impl View for AsyncPlaygroundView {
             }
         });
 
-        cx.on_action_notify_models::<act::ToggleTheme>({
+        cx.actions().models::<act::ToggleTheme>({
             let dark = self.st.dark.clone();
             move |models| models.update(&dark, |v| *v = !*v).is_ok()
         });
 
-        cx.on_action_notify_transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
-        cx.on_action_notify_transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
-        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+        cx.actions()
+            .transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
+        cx.actions()
+            .transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
+        cx.actions()
+            .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
         ui::v_flex(|_cx| [header, body])
             .w_full()

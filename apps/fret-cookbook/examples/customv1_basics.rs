@@ -142,12 +142,15 @@ impl View for CustomV1BasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let enabled_state = cx.use_local_with(|| true);
-        let strength_state = cx.use_local_with(|| 0.35f32);
+        let enabled_state = cx.state().local_init(|| true);
+        let strength_state = cx.state().local_init(|| 0.35f32);
 
-        cx.on_action_notify_toggle_local_bool::<act::ToggleEnabled>(&enabled_state);
-        cx.on_action_notify_local_set::<act::SetStrengthLow, f32>(&strength_state, 0.20f32);
-        cx.on_action_notify_local_set::<act::SetStrengthHigh, f32>(&strength_state, 0.75f32);
+        cx.actions()
+            .toggle_local_bool::<act::ToggleEnabled>(&enabled_state);
+        cx.actions()
+            .local_set::<act::SetStrengthLow, f32>(&strength_state, 0.20f32);
+        cx.actions()
+            .local_set::<act::SetStrengthHigh, f32>(&strength_state, 0.75f32);
 
         let caps_supported = cx
             .app
@@ -156,8 +159,8 @@ impl View for CustomV1BasicsView {
             .unwrap_or(false);
         let supported_value = if caps_supported { 1.0 } else { 0.0 };
 
-        let enabled = enabled_state.paint(cx).value_or(true);
-        let strength = strength_state.paint(cx).value_or(0.35f32);
+        let enabled = cx.state().watch(&enabled_state).paint().value_or(true);
+        let strength = cx.state().watch(&strength_state).paint().value_or(0.35f32);
 
         let effect_id = cx
             .app

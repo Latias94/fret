@@ -136,15 +136,17 @@ Because we do not need compatibility, this workstream should make the names unam
 
 - `FretApp`: the canonical app builder entry point.
 - `App`: the default app-surface runtime handle under `fret::app`.
-- `KernelApp`: the app runtime type currently known as `fret_app::App`.
-- `AppUi`: the app-facing render/action/state context currently exposed as `ViewCx`.
+- `KernelApp`: the app runtime type currently known as `fret_app::App`, retained only on the
+  explicit advanced surface.
+- `AppUi`: the app-facing render/action/state context.
 - `Ui`: canonical app-facing return alias for rendered UI (`Elements` underneath).
 
 ### Names to stop teaching
 
 - `fret::App` as the default user-facing entry name.
-- `KernelApp` on the default app prelude when the app-facing alias `App` is enough.
-- `ViewElements` as a first-contact alias.
+- `KernelApp` on the default/root app surface when the app-facing alias `App` is enough.
+- `ViewCx` as the app-facing context name once `AppUi` exists.
+- `ViewElements` as a first-contact alias on the root/default path.
 - broad mechanism names in app-level docs when a narrower app-facing alias exists.
 
 ## App Authoring Surface (Target)
@@ -215,6 +217,16 @@ Suggested default operations:
 - `ui.data().query(...)`
 
 Advanced operations may still exist, but must not be the main surface.
+
+### Extracted helper rule
+
+The app-facing extracted-helper story must stay narrow and explicit:
+
+- use `UiCx` for default app-facing helper functions and first-party teaching snippets,
+- keep reusable/generic `H: UiHost` snippets on `ComponentCx<'_, H>` or explicit
+  `ElementContext<'_, H>`,
+- do not treat gallery page hosts, demo drivers, or manual-assembly examples as blockers for the
+  app-facing `UiCx` migration lane.
 
 ### Default action posture
 
@@ -338,7 +350,7 @@ must all teach the same default surface and avoid low-level leakage.
 
 ## Example: Current vs Target Authoring Feel
 
-### Current shape (representative)
+### Pre-refactor shape (captured during migration)
 
 ```rust
 fn render(&mut self, cx: &mut AppUi<'_, '_, App>) -> Ui {
@@ -369,12 +381,12 @@ fn render(&mut self, cx: &mut AppUi<'_, '_, App>) -> Ui {
 ### Target shape
 
 ```rust
-fn render(&mut self, ui: &mut AppUi<'_>) -> Ui {
-    let draft = ui.state().local::<String>();
-    let todos = ui.state().local_init(seed_todos);
+fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+    let draft = cx.state().local::<String>();
+    let todos = cx.state().local_init(seed_todos);
 
-    ui.actions().locals::<act::Add>(|tx| {
-        let text = tx.get(&draft).trim().to_string();
+    cx.actions().locals::<act::Add>(|tx| {
+        let text = tx.value_or_else(&draft, String::new).trim().to_string();
         if text.is_empty() {
             return false;
         }

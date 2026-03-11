@@ -47,11 +47,11 @@ impl View for DropShadowBasicsView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let enabled_state = cx.use_local_with(|| true);
-        let stress_state = cx.use_local_with(|| false);
+        let enabled_state = cx.state().local_init(|| true);
+        let stress_state = cx.state().local_init(|| false);
 
-        let enabled = enabled_state.watch(cx).layout().value_or(true);
-        let stress = stress_state.watch(cx).layout().value_or(false);
+        let enabled = cx.state().watch(&enabled_state).layout().value_or(true);
+        let stress = cx.state().watch(&stress_state).layout().value_or(false);
 
         let toolbar = ui::v_flex(|cx| {
             let row_shadow = ui::h_flex(|cx| {

@@ -16,11 +16,11 @@ impl View for ImUiHelloView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let count_state = cx.use_local_with(|| 0u32);
-        let enabled_state = cx.use_local_with(|| false);
+        let count_state = cx.state().local_init(|| 0u32);
+        let enabled_state = cx.state().local_init(|| false);
 
-        let count = count_state.layout(cx).value_or_default();
-        let enabled = enabled_state.paint(cx).value_or_default();
+        let count = cx.state().watch(&count_state).layout().value_or_default();
+        let enabled = cx.state().watch(&enabled_state).paint().value_or_default();
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;

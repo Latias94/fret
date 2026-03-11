@@ -554,28 +554,28 @@ impl View for LiquidGlassView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.on_action_notify_models::<act::Reset>({
+        cx.actions().models::<act::Reset>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::reset(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::ApplyCustomV3BevelPreset>({
+        cx.actions().models::<act::ApplyCustomV3BevelPreset>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::apply_custom_v3_bevel_preset(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::DisableCustomV3Bevel>({
+        cx.actions().models::<act::DisableCustomV3Bevel>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::disable_custom_v3_bevel(models, &st);
                 true
             }
         });
-        cx.on_action_notify_models::<act::ToggleInspector>({
+        cx.actions().models::<act::ToggleInspector>({
             let st = self.st.clone();
             move |models| {
                 LiquidGlassState::toggle_inspector(models, &st);

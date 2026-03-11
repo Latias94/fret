@@ -44,9 +44,9 @@ impl View for TodoDemoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
 
-        let draft_state = cx.use_local::<String>();
-        let next_id_state = cx.use_local_with(|| 4u64);
-        let todos_state = cx.use_local_with(|| {
+        let draft_state = cx.state().local::<String>();
+        let next_id_state = cx.state().local_init(|| 4u64);
+        let todos_state = cx.state().local_init(|| {
             vec![
                 TodoRow {
                     id: 1,
@@ -66,8 +66,8 @@ impl View for TodoDemoView {
             ]
         });
 
-        let todos = todos_state.layout(cx).value_or_default();
-        let draft_value = draft_state.layout(cx).value_or_default();
+        let todos = cx.state().watch(&todos_state).layout().value_or_default();
+        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -168,26 +168,23 @@ impl View for TodoDemoView {
         .w_full()
         .max_w(Px(720.0));
 
-        cx.on_action_notify_models::<act::Add>({
+        cx.actions().locals::<act::Add>({
             let draft_state = draft_state.clone();
             let next_id_state = next_id_state.clone();
             let todos_state = todos_state.clone();
-            move |models| {
-                let text = draft_state
-                    .value_in_or_else(models, String::new)
+            move |tx| {
+                let text = tx
+                    .value_or_else(&draft_state, String::new)
                     .trim()
                     .to_string();
                 if text.is_empty() {
                     return false;
                 }
 
-                let id = next_id_state
-                    .read_in(models, |value| *value)
-                    .ok()
-                    .unwrap_or(1);
-                let _ = next_id_state.update_in(models, |value| *value = value.saturating_add(1));
+                let id = tx.value_or(&next_id_state, 1);
+                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
 
-                if !todos_state.update_in(models, |rows| {
+                if !tx.update(&todos_state, |rows| {
                     rows.push(TodoRow {
                         id,
                         done: false,
@@ -197,14 +194,14 @@ impl View for TodoDemoView {
                     return false;
                 }
 
-                draft_state.set_in(models, String::new())
+                tx.set(&draft_state, String::new())
             }
         });
 
-        cx.on_action_notify_models::<act::ClearDone>({
+        cx.actions().locals::<act::ClearDone>({
             let todos_state = todos_state.clone();
-            move |models| {
-                todos_state.update_in_if(models, |rows| {
+            move |tx| {
+                tx.update_if(&todos_state, |rows| {
                     let before = rows.len();
                     rows.retain(|row| !row.done);
                     rows.len() != before
@@ -212,26 +209,24 @@ impl View for TodoDemoView {
             }
         });
 
-        cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>(
-            &todos_state,
-            |rows, id| {
+        cx.actions()
+            .payload::<act::Toggle>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
                 } else {
                     false
                 }
-            },
-        );
+            });
 
-        cx.on_payload_action_notify_local_update_if::<act::Remove, Vec<TodoRow>>(
-            &todos_state,
-            |rows, id| {
+        cx.actions()
+            .payload::<act::Remove>()
+            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before
-            },
-        );
+            });
 
         ui::container(|cx| {
             ui::children![

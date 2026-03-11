@@ -103,6 +103,8 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("use fret::prelude::*;"));
         assert!(!src.contains("use fret::app::prelude::*;"));
         assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
+        assert!(!src.contains("cx.use_local"));
+        assert!(!src.contains("cx.on_action_notify_"));
     }
 
     fn assert_advanced_view_runtime_example_uses_app_ui_aliases(src: &str) {
@@ -228,6 +230,8 @@ mod authoring_surface_policy_tests {
     #[test]
     fn shared_scaffold_uses_component_surface_instead_of_legacy_prelude() {
         assert!(SCAFFOLD.contains("use fret::component::prelude::*;"));
+        assert!(SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
+        assert!(!SCAFFOLD.contains("&mut ElementContext<'_, H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
     }
 
@@ -251,13 +255,20 @@ mod authoring_surface_policy_tests {
         assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
 
         assert!(EFFECTS_LAYER_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
-        assert!(EFFECTS_LAYER_EXAMPLE.contains("on_action_notify_model_set::<act::Pixelate"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("cx.actions().models::<act::Pixelate>"));
 
         assert!(DROP_SHADOW_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
         assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().local_init(|| true)"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("cx.state().local::<u64>()"));
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
+        );
 
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE
@@ -267,12 +278,18 @@ mod authoring_surface_policy_tests {
             ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
         );
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
+        assert!(
+            ASSETS_RELOAD_EPOCH_EXAMPLE
+                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
+        );
 
         assert!(
             CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
         );
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("PanZoomCanvasSurfacePanelProps"));
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasPainter"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("cx.actions().models::<act::ResetView>"));
 
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas"));
@@ -283,6 +300,11 @@ mod authoring_surface_policy_tests {
         assert!(CUSTOM_V1_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
         assert!(CUSTOM_V1_EXAMPLE.contains(".install_custom_effects(install_custom_effect)"));
+        assert!(CUSTOM_V1_EXAMPLE.contains("cx.state().local_init(|| true)"));
+        assert!(
+            CUSTOM_V1_EXAMPLE
+                .contains("cx.actions()\n            .toggle_local_bool::<act::ToggleEnabled>")
+        );
 
         assert!(DOCKING_EXAMPLE.contains("use fret::{"));
         assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));

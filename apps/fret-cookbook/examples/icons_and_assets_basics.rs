@@ -96,16 +96,18 @@ impl View for IconsAndAssetsBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let assets_reload_bumps_state = cx.use_local::<u64>();
+        let assets_reload_bumps_state = cx.state().local::<u64>();
 
-        cx.on_action_notify_local_update::<act::BumpReload, u64>(
-            &assets_reload_bumps_state,
-            |value| {
+        cx.actions()
+            .local_update::<act::BumpReload, u64>(&assets_reload_bumps_state, |value| {
                 *value = value.wrapping_add(1);
-            },
-        );
+            });
 
-        let bumps = assets_reload_bumps_state.watch(cx).layout().value_or(0);
+        let bumps = cx
+            .state()
+            .watch(&assets_reload_bumps_state)
+            .layout()
+            .value_or(0);
         if bumps != self.applied_assets_reload_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_assets_reload_bumps = bumps;

@@ -353,27 +353,30 @@ $$
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        if cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES) {
+        if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES) {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
             });
         }
 
-        cx.on_action_notify_transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
+        cx.actions()
+            .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
 
-        cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({
-            let expanded = self.st.expanded_code_blocks.clone();
-            move |host, _acx, id| {
-                let _ = host.models_mut().update(&expanded, |set| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                });
-                true
-            }
-        });
+        cx.actions()
+            .payload::<act::ToggleCodeBlockExpand>()
+            .models({
+                let expanded = self.st.expanded_code_blocks.clone();
+                move |models, id| {
+                    let _ = models.update(&expanded, |set| {
+                        if set.contains(&id) {
+                            set.remove(&id);
+                        } else {
+                            set.insert(id);
+                        }
+                    });
+                    true
+                }
+            });
 
         self.st.anchor_regions.borrow_mut().clear();
 

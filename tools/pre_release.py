@@ -68,6 +68,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_no_on_action_in_teaching_surfaces.py")],
     )
     _run_checked(
+        "Teaching surfaces policy (default snippets use UiCx)",
+        [py, str(repo_root / "tools/gate_no_raw_app_context_in_default_teaching_snippets.py")],
+    )
+    _run_checked(
         "Fret surface policy (builder-only crate root)",
         [py, str(repo_root / "tools/gate_fret_builder_only_surface.py")],
     )
@@ -190,4 +194,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

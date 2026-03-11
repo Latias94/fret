@@ -52,13 +52,14 @@ impl View for AssetsReloadEpochBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let bumps_state = cx.use_local::<u64>();
+        let bumps_state = cx.state().local::<u64>();
 
-        cx.on_action_notify_local_update::<act::BumpReload, u64>(&bumps_state, |value| {
-            *value = value.wrapping_add(1);
-        });
+        cx.actions()
+            .local_update::<act::BumpReload, u64>(&bumps_state, |value| {
+                *value = value.wrapping_add(1);
+            });
 
-        let bumps = bumps_state.watch(cx).layout().value_or(0);
+        let bumps = cx.state().watch(&bumps_state).layout().value_or(0);
         if bumps != self.applied_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
             self.applied_bumps = bumps;

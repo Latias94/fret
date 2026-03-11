@@ -266,7 +266,7 @@ impl View for ThemePostprocessView {
             retro_dither,
         );
 
-        cx.on_action_notify_models::<act::Reset>({
+        cx.actions().models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
                 ThemePostprocessState::reset(models, &st);

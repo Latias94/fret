@@ -19,31 +19,39 @@ impl View for ImUiResponseSignalsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let left_clicks = cx.use_local_with(|| 0u32);
-        let secondary_clicks = cx.use_local_with(|| 0u32);
-        let double_clicks = cx.use_local_with(|| 0u32);
-        let long_presses = cx.use_local_with(|| 0u32);
-        let press_holding = cx.use_local_with(|| false);
+        let left_clicks = cx.state().local_init(|| 0u32);
+        let secondary_clicks = cx.state().local_init(|| 0u32);
+        let double_clicks = cx.state().local_init(|| 0u32);
+        let long_presses = cx.state().local_init(|| 0u32);
+        let press_holding = cx.state().local_init(|| false);
 
-        let drag_offset = cx.use_local_with(Point::default);
-        let drag_starts = cx.use_local_with(|| 0u32);
-        let drag_stops = cx.use_local_with(|| 0u32);
+        let drag_offset = cx.state().local_init(Point::default);
+        let drag_starts = cx.state().local_init(|| 0u32);
+        let drag_stops = cx.state().local_init(|| 0u32);
 
-        let last_context_menu_anchor = cx.use_local_with(|| None::<Point>);
-        let menu_toggle = cx.use_local_with(|| false);
+        let last_context_menu_anchor = cx.state().local_init(|| None::<Point>);
+        let menu_toggle = cx.state().local_init(|| false);
 
-        let left_clicks_value = left_clicks.layout(cx).value_or_default();
-        let secondary_clicks_value = secondary_clicks.layout(cx).value_or_default();
-        let double_clicks_value = double_clicks.layout(cx).value_or_default();
-        let long_presses_value = long_presses.layout(cx).value_or_default();
-        let press_holding_value = press_holding.layout(cx).value_or_default();
+        let left_clicks_value = cx.state().watch(&left_clicks).layout().value_or_default();
+        let secondary_clicks_value = cx
+            .state()
+            .watch(&secondary_clicks)
+            .layout()
+            .value_or_default();
+        let double_clicks_value = cx.state().watch(&double_clicks).layout().value_or_default();
+        let long_presses_value = cx.state().watch(&long_presses).layout().value_or_default();
+        let press_holding_value = cx.state().watch(&press_holding).layout().value_or_default();
 
-        let drag_offset_value = drag_offset.layout(cx).value_or_default();
-        let drag_starts_value = drag_starts.layout(cx).value_or_default();
-        let drag_stops_value = drag_stops.layout(cx).value_or_default();
+        let drag_offset_value = cx.state().watch(&drag_offset).layout().value_or_default();
+        let drag_starts_value = cx.state().watch(&drag_starts).layout().value_or_default();
+        let drag_stops_value = cx.state().watch(&drag_stops).layout().value_or_default();
 
-        let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();
-        let menu_toggle_value = menu_toggle.layout(cx).value_or_default();
+        let last_anchor_value = cx
+            .state()
+            .watch(&last_context_menu_anchor)
+            .layout()
+            .value_or_default();
+        let menu_toggle_value = cx.state().watch(&menu_toggle).layout().value_or_default();
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;

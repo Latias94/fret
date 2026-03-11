@@ -54,8 +54,12 @@ impl View for EmbeddedViewportDemoView {
             .cloned()
             .unwrap_or_else(|| Arc::from("<no input yet>"));
 
-        let size_preset_state = cx.use_local_with(|| 1usize);
-        let preset = size_preset_state.layout(cx).value_or_default();
+        let size_preset_state = cx.state().local_init(|| 1usize);
+        let preset = cx
+            .state()
+            .watch(&size_preset_state)
+            .layout()
+            .value_or_default();
         let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
             0 => ((640, 360), "640×360"),
             2 => ((1280, 720), "1280×720"),
@@ -144,9 +148,12 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        cx.on_action_notify_local_set::<act::PickSize640, usize>(&size_preset_state, 0);
-        cx.on_action_notify_local_set::<act::PickSize960, usize>(&size_preset_state, 1);
-        cx.on_action_notify_local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
+        cx.actions()
+            .local_set::<act::PickSize640, usize>(&size_preset_state, 0);
+        cx.actions()
+            .local_set::<act::PickSize960, usize>(&size_preset_state, 1);
+        cx.actions()
+            .local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
 
         let page = ui::container(|cx| {
             ui::children![

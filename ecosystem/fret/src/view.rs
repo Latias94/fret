@@ -1,8 +1,8 @@
 //! View authoring runtime (ecosystem-level).
 //!
 //! This module provides a cohesive authoring loop aligned with ADR 0308:
-//! - a stateful `View` object renders into the existing declarative IR (`Ui`, backed by
-//!   `Elements`),
+//! - a stateful `View` object renders into the app-facing `Ui` alias (backed by the existing
+//!   declarative IR),
 //! - views can register typed action handlers (action-first),
 //! - hook-style helpers compose existing mechanism contracts (models + observation).
 //!
@@ -18,7 +18,6 @@ use std::hash::Hash;
 use fret_core::AppWindowId;
 use fret_runtime::{Model, ModelStore, ModelUpdateError};
 use fret_ui::action::{OnCommand, OnCommandAvailability};
-use fret_ui::element::Elements;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 #[cfg(feature = "state-query")]
 use std::future::Future;
@@ -110,7 +109,7 @@ impl<T> LocalState<T> {
     /// This is a store-only write helper: it does **not** request redraw or mark the current
     /// view-cache root dirty by itself. Use it inside `on_action_notify_models::<A>(...)` when the
     /// write participates in a broader model-store transaction, or use `update_action(...)` /
-    /// `ViewCx::on_action_notify_local_*` when the local write itself should drive rerender.
+    /// `AppUi::on_action_notify_local_*` when the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -195,7 +194,7 @@ impl<T> LocalState<T> {
 
     pub fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedLocal<'watch, 'watch, 'a, H, T>
     where
         T: Any,
@@ -208,7 +207,7 @@ impl<T> LocalState<T> {
 /// free of direct `ModelStore` plumbing.
 ///
 /// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
-/// across shared `Model<T>` graphs, use `ViewCx::on_action_notify_models` directly.
+/// across shared `Model<T>` graphs, use `AppUi::on_action_notify_models` directly.
 pub struct LocalTxn<'a> {
     models: &'a mut ModelStore,
 }
@@ -376,26 +375,26 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
 pub trait TrackedStateExt<T: Any> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T>;
 
     fn paint<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T> {
         self.watch(cx).paint()
     }
 
     fn layout<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T> {
         self.watch(cx).layout()
     }
 
     fn hit_test<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T> {
         self.watch(cx).hit_test()
     }
@@ -404,7 +403,7 @@ pub trait TrackedStateExt<T: Any> {
 impl<T: Any> TrackedStateExt<T> for LocalState<T> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T> {
         cx.watch_local(self)
     }
@@ -413,7 +412,7 @@ impl<T: Any> TrackedStateExt<T> for LocalState<T> {
 impl<T: Any> TrackedStateExt<T> for Model<T> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, T> {
         WatchedState::new(cx.cx, self)
     }
@@ -437,7 +436,7 @@ impl fret_ui_shadcn::IntoTextValueModel for &LocalState<String> {
 impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::QueryHandle<T> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
-        cx: &'watch mut ViewCx<'view_cx, 'a, H>,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, fret_query::QueryState<T>> {
         WatchedState::new(cx.cx, self.model())
     }
@@ -448,7 +447,7 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
 /// This is a thin wrapper over [`ElementContext`] that:
 /// - provides hook-style helpers (`use_state`, keyed),
 /// - collects action handlers for installation at a chosen root element.
-pub struct ViewCx<'cx, 'a, H: UiHost> {
+pub struct AppUi<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,
     action_root: fret_ui::GlobalElementId,
     action_handlers: crate::actions::ActionHandlerTable,
@@ -457,7 +456,7 @@ pub struct ViewCx<'cx, 'a, H: UiHost> {
 
 /// Grouped LocalState-first helpers for the default app authoring surface.
 pub struct AppUiState<'view, 'cx, 'a, H: UiHost> {
-    cx: &'view mut ViewCx<'cx, 'a, H>,
+    cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
@@ -495,12 +494,12 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
 
 /// Grouped action/effect registration helpers for the default app authoring surface.
 pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
-    cx: &'view mut ViewCx<'cx, 'a, H>,
+    cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
 /// Grouped payload-action helpers for the default app authoring surface.
 pub struct AppUiPayloadActions<'view, 'cx, 'a, H: UiHost, A> {
-    cx: &'view mut ViewCx<'cx, 'a, H>,
+    cx: &'view mut AppUi<'cx, 'a, H>,
     _marker: std::marker::PhantomData<A>,
 }
 
@@ -598,6 +597,13 @@ impl<'view, 'cx, 'a, H: UiHost, A> AppUiPayloadActions<'view, 'cx, 'a, H, A>
 where
     A: crate::actions::TypedPayloadAction,
 {
+    pub fn models(self, f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static) {
+        self.cx
+            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+                f(host.models_mut(), payload)
+            });
+    }
+
     pub fn local_update_if<T>(
         self,
         local: &LocalState<T>,
@@ -617,7 +623,7 @@ where
 /// Grouped selector/query helpers for the default app authoring surface.
 pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
     #[allow(dead_code)]
-    cx: &'view mut ViewCx<'cx, 'a, H>,
+    cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
@@ -693,7 +699,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
 
 /// Grouped render-time effect helpers for the default app authoring surface.
 pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
-    cx: &'view mut ViewCx<'cx, 'a, H>,
+    cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
@@ -702,7 +708,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
     }
 }
 
-impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self {
         Self {
             cx,
@@ -757,14 +763,14 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     pub fn keyed<K: Hash, R>(
         &mut self,
         key: K,
-        f: impl for<'b> FnOnce(&mut ViewCx<'b, 'a, H>) -> R,
+        f: impl for<'b> FnOnce(&mut AppUi<'b, 'a, H>) -> R,
     ) -> R {
         let action_root = self.action_root;
         let action_handlers = std::mem::take(&mut self.action_handlers);
         let action_handlers_used = self.action_handlers_used;
 
         let (out, action_handlers, action_handlers_used) = self.cx.keyed(key, |cx| {
-            let mut nested = ViewCx {
+            let mut nested = AppUi {
                 cx,
                 action_root,
                 action_handlers,
@@ -1218,7 +1224,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 }
 
-impl<'cx, 'a, H: UiHost> std::ops::Deref for ViewCx<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> std::ops::Deref for AppUi<'cx, 'a, H> {
     type Target = ElementContext<'a, H>;
 
     fn deref(&self) -> &Self::Target {
@@ -1226,7 +1232,7 @@ impl<'cx, 'a, H: UiHost> std::ops::Deref for ViewCx<'cx, 'a, H> {
     }
 }
 
-impl<'cx, 'a, H: UiHost> std::ops::DerefMut for ViewCx<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> std::ops::DerefMut for AppUi<'cx, 'a, H> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.cx
     }
@@ -1256,7 +1262,7 @@ pub fn view_init_window<V: View>(
 pub fn view_view<'a, V: View>(
     cx: &mut ElementContext<'a, fret_app::App>,
     st: &mut ViewWindowState<V>,
-) -> Elements {
+) -> crate::Ui {
     let action_root = cx.root_id();
 
     // Ensure handlers remain installed even when the view-cache root is reused (render skipped).
@@ -1272,11 +1278,11 @@ pub fn view_view<'a, V: View>(
             ..fret_ui::element::ViewCacheProps::default()
         },
         |cx| {
-            let mut vcx = ViewCx::new(cx, action_root);
+            let mut app_ui = AppUi::new(cx, action_root);
             st.cached_handlers = None;
-            let out = st.view.render(&mut vcx);
+            let out = st.view.render(&mut app_ui);
 
-            if let Some((on_command, on_command_availability)) = vcx.take_action_handlers() {
+            if let Some((on_command, on_command_availability)) = app_ui.take_action_handlers() {
                 st.cached_handlers = Some((on_command.clone(), on_command_availability.clone()));
                 cx.command_on_command_for(action_root, on_command);
                 cx.command_on_command_availability_for(action_root, on_command_availability);

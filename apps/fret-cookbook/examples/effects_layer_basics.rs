@@ -41,18 +41,30 @@ impl View for EffectsLayerBasicsView {
             .layout()
             .value_or(EffectKind::None);
 
-        cx.on_action_notify_model_set::<act::None, EffectKind>(
-            self.effect.clone(),
-            EffectKind::None,
-        );
-        cx.on_action_notify_model_set::<act::Pixelate, EffectKind>(
-            self.effect.clone(),
-            EffectKind::Pixelate,
-        );
-        cx.on_action_notify_model_set::<act::Blur, EffectKind>(
-            self.effect.clone(),
-            EffectKind::Blur,
-        );
+        cx.actions().models::<act::None>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::None)
+                    .is_ok()
+            }
+        });
+        cx.actions().models::<act::Pixelate>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::Pixelate)
+                    .is_ok()
+            }
+        });
+        cx.actions().models::<act::Blur>({
+            let effect = self.effect.clone();
+            move |models| {
+                models
+                    .update(&effect, |value| *value = EffectKind::Blur)
+                    .is_ok()
+            }
+        });
 
         let button = |_cx: &mut ElementContext<'_, KernelApp>,
                       label: &'static str,

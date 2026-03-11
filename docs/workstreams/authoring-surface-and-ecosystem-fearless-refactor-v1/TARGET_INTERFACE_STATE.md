@@ -26,11 +26,11 @@ It is intentionally concrete:
 | --- | --- | --- | --- |
 | app builder | `FretApp` | App | canonical user-facing entry point |
 | app runtime handle | `App` | App | default app-surface alias under `fret::app`; hides `KernelApp` on the common path |
-| kernel runtime app | `KernelApp` | Advanced / component as needed | explicit advanced/component name; not taught on the default app path |
+| kernel runtime app | `KernelApp` | Advanced / component as needed | explicit advanced/component name under `fret::advanced`; not taught on the default app path |
 | app window identity | `WindowId` | App | hides `AppWindowId` noise in default app code |
 | app-facing view context | `AppUi` | App | replaces `ViewCx` as the taught surface |
 | rendered UI return alias | `Ui` | App | canonical alias over `Elements` |
-| extracted app helper context | `UiCx` | App | hides `ElementContext<'_, KernelApp>` noise in default app code |
+| extracted app helper context | `UiCx` | App | hides `ElementContext<'_, KernelApp>` noise in default app-facing extracted helpers; reusable `H: UiHost` snippets stay generic |
 | extracted app helper child return | `UiChild` | App | hides `UiChildIntoElement<KernelApp>` noise in default app code |
 | reusable component context | `ComponentCx` or explicit component-surface alias | Component | wraps the mechanism context for reusable component work |
 
@@ -111,6 +111,10 @@ Target rule:
   `fret::app::prelude`.
 - `fret::app::prelude` must use curated exports; it does not blanket re-export
   `fret_ui_kit::declarative::prelude::*`.
+- `AppUi` is taught through grouped helper families:
+  `cx.state().local*`, `cx.actions().models/locals/transient`,
+  `cx.actions().payload::<A>().models/locals/local_update_if`, `cx.data().selector/query*`, and
+  `cx.effects().take_transient(...)`.
 
 App-level ecosystem integration seam:
 
@@ -213,6 +217,16 @@ Target rule:
 - app authors should discover behavior by going to the relevant namespace first, not by scanning a
   flat list of dozens of methods.
 
+## Helper Context Boundary
+
+- Use `UiCx` for extracted helper functions that still belong to the default app-facing teaching
+  surface.
+- Keep reusable/generic snippets on `ComponentCx<'_, H>` or explicit `ElementContext<'_, H>` when
+  the helper must stay portable across `H: UiHost`.
+- Gallery page hosts, drivers, and other app-shell composition code are not the same thing as the
+  default extracted-helper teaching surface; they can stay explicit until a narrower host/page
+  abstraction is intentionally introduced.
+
 ## Ecosystem Integration Targets
 
 | Crate category | Target integration model | Notes |
@@ -254,7 +268,7 @@ These names/surfaces should disappear entirely if the replacement exists:
 | grouped `AppUi` namespaces landed | in progress |
 | first-party ecosystems migrated | in progress |
 | templates/docs aligned | in progress |
-| old surface deleted | not started |
+| old surface deleted | in progress |
 | guards/gates added | in progress |
 
 ## Definition of Complete

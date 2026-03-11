@@ -257,7 +257,7 @@ impl View for CustomEffectV1View {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.on_action_notify_models::<act::Reset>({
+        cx.actions().models::<act::Reset>({
             let st = self.clone_for_reset();
             move |models| {
                 CustomEffectV1State::reset(models, &st);
