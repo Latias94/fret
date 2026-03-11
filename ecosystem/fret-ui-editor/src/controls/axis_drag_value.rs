@@ -25,9 +25,10 @@ use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericVal
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
-    editor_input_group_inset, editor_input_group_row, editor_text_segment,
+    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
+    editor_icon_button_segment, editor_input_group_divider, editor_input_group_frame,
+    editor_input_group_frame_with_overrides, editor_input_group_inset, editor_input_group_row,
+    editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
@@ -192,6 +193,27 @@ where
         let typing = mode == AxisDragValueMode::Typing;
         let prefix = self.options.prefix.clone();
         let suffix = self.options.suffix.clone();
+        let reset_action = self.options.reset.clone();
+        let scrub_test_id = self.options.test_id.clone();
+        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
+        let scrub_axis_test_id = derived_test_id(scrub_test_id.as_ref(), "axis");
+        let scrub_value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
+        let scrub_prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
+        let scrub_suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
+        let typing_axis_test_id = derived_test_id(typing_test_id.as_ref(), "axis");
+        let typing_input_test_id = derived_test_id(typing_test_id.as_ref(), "input");
+        let typing_prefix_test_id = derived_test_id(typing_test_id.as_ref(), "prefix");
+        let typing_suffix_test_id = derived_test_id(typing_test_id.as_ref(), "suffix");
+        let explicit_reset_test_id = reset_action
+            .as_ref()
+            .and_then(|reset| reset.test_id.clone());
+        let scrub_reset_test_id = explicit_reset_test_id
+            .clone()
+            .or_else(|| derived_test_id(scrub_test_id.as_ref(), "reset"));
+        let typing_reset_test_id = explicit_reset_test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{}.typing", id.as_ref())))
+            .or_else(|| derived_test_id(typing_test_id.as_ref(), "reset"));
 
         let (density, frame_chrome, (text_style, input_chrome)) = {
             let theme = Theme::global(&*cx.app);
@@ -225,7 +247,6 @@ where
         let axis_label = self.axis_label.clone();
         let axis_tint = self.axis_tint;
         let enabled_for_paint = self.options.enabled;
-        let reset_action = self.options.reset.clone();
         let state_for_scrub_record = state.clone();
         let prefix_for_scrub = prefix.clone();
         let suffix_for_scrub = suffix.clone();
@@ -260,7 +281,7 @@ where
 
                 let divider = frame_chrome.border;
 
-                vec![editor_input_group_frame(
+                let mut scrub_frame = editor_input_group_frame(
                     cx,
                     LayoutStyle {
                         size: SizeStyle {
@@ -288,13 +309,16 @@ where
                                 .or_else(|| theme.color_by_key("muted_foreground"))
                                 .unwrap_or_else(|| theme.color_token("foreground"))
                         };
-                        let axis = editor_axis_segment(
+                        let mut axis = editor_axis_segment(
                             cx,
                             density,
                             axis_label.clone(),
                             axis_tint,
                             visuals.bg,
                         );
+                        if let Some(test_id) = scrub_axis_test_id.as_ref() {
+                            axis = axis.test_id(test_id.clone()).a11y_label(axis_label.clone());
+                        }
                         let sep = editor_input_group_divider(cx, divider);
                         let value_text_el = cx.text_props(TextProps {
                             layout: LayoutStyle {
@@ -317,32 +341,45 @@ where
                             align: TextAlign::Start,
                             ink_overflow: Default::default(),
                         });
-                        let value =
+                        let mut value =
                             editor_input_group_inset(cx, frame_chrome.padding, value_text_el);
+                        if let Some(test_id) = scrub_value_test_id.as_ref() {
+                            value = value
+                                .test_id(test_id.clone())
+                                .a11y_label(value_text_for_scrub.clone());
+                        }
 
                         let mut segments = vec![axis, sep];
                         if let Some(prefix) = prefix_for_scrub.clone() {
-                            segments.push(editor_text_segment(
+                            let mut segment = editor_text_segment(
                                 cx,
                                 density,
                                 frame_chrome.text_px,
-                                prefix,
+                                prefix.clone(),
                                 affix_color,
                                 frame_chrome.padding,
-                            ));
+                            );
+                            if let Some(test_id) = scrub_prefix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                            }
+                            segments.push(segment);
                             segments.push(editor_input_group_divider(cx, divider));
                         }
                         segments.push(value);
                         if let Some(suffix) = suffix_for_scrub.clone() {
                             segments.push(editor_input_group_divider(cx, divider));
-                            segments.push(editor_text_segment(
+                            let mut segment = editor_text_segment(
                                 cx,
                                 density,
                                 frame_chrome.text_px,
-                                suffix,
+                                suffix.clone(),
                                 affix_color,
                                 frame_chrome.padding,
-                            ));
+                            );
+                            if let Some(test_id) = scrub_suffix_test_id.as_ref() {
+                                segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                            }
+                            segments.push(segment);
                         }
                         if let Some(reset) = reset_action.clone() {
                             segments.push(editor_input_group_divider(cx, divider));
@@ -353,14 +390,18 @@ where
                                 reset.a11y_label.clone(),
                                 reset.icon,
                                 Some(Px(12.0)),
-                                reset.test_id.clone(),
+                                scrub_reset_test_id.clone(),
                                 reset.on_activate.clone(),
                             ));
                         }
 
                         vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
-                )]
+                );
+                if let Some(test_id) = scrub_test_id.as_ref() {
+                    scrub_frame = scrub_frame.test_id(test_id.clone());
+                }
+                vec![scrub_frame]
             });
 
         let input_group_layout = if typing {
@@ -389,7 +430,7 @@ where
         };
         props.enabled = self.options.enabled && typing;
         props.focusable = self.options.focusable && typing;
-        props.test_id = self.options.test_id.clone();
+        props.test_id = typing_input_test_id.clone();
 
         // Joined field: the frame is drawn by the input group. Keep the inner text input transparent
         // and borderless to avoid double chrome.
@@ -518,8 +559,10 @@ where
             let enabled_for_paint = self.options.enabled;
             let prefix = prefix.clone();
             let suffix = suffix.clone();
+            let axis_label = self.axis_label.clone();
+            let axis_tint = self.axis_tint;
 
-            editor_input_group_frame_with_overrides(
+            let mut typing_frame = editor_input_group_frame_with_overrides(
                 cx,
                 input_group_layout,
                 density,
@@ -543,13 +586,11 @@ where
                             .or_else(|| theme.color_by_key("muted_foreground"))
                             .unwrap_or_else(|| theme.color_token("foreground"))
                     };
-                    let axis = editor_axis_segment(
-                        cx,
-                        density,
-                        self.axis_label.clone(),
-                        self.axis_tint,
-                        visuals.bg,
-                    );
+                    let mut axis =
+                        editor_axis_segment(cx, density, axis_label.clone(), axis_tint, visuals.bg);
+                    if let Some(test_id) = typing_axis_test_id.as_ref() {
+                        axis = axis.test_id(test_id.clone()).a11y_label(axis_label.clone());
+                    }
                     let sep = editor_input_group_divider(cx, divider);
 
                     // Wrap the text input so the group padding applies, without adding its own padding.
@@ -557,27 +598,35 @@ where
 
                     let mut segments = vec![axis, sep];
                     if let Some(prefix) = prefix.clone() {
-                        segments.push(editor_text_segment(
+                        let mut segment = editor_text_segment(
                             cx,
                             density,
                             frame_chrome.text_px,
-                            prefix,
+                            prefix.clone(),
                             affix_color,
                             frame_chrome.padding,
-                        ));
+                        );
+                        if let Some(test_id) = typing_prefix_test_id.as_ref() {
+                            segment = segment.test_id(test_id.clone()).a11y_label(prefix);
+                        }
+                        segments.push(segment);
                         segments.push(editor_input_group_divider(cx, divider));
                     }
                     segments.push(input_wrap);
                     if let Some(suffix) = suffix.clone() {
                         segments.push(editor_input_group_divider(cx, divider));
-                        segments.push(editor_text_segment(
+                        let mut segment = editor_text_segment(
                             cx,
                             density,
                             frame_chrome.text_px,
-                            suffix,
+                            suffix.clone(),
                             affix_color,
                             frame_chrome.padding,
-                        ));
+                        );
+                        if let Some(test_id) = typing_suffix_test_id.as_ref() {
+                            segment = segment.test_id(test_id.clone()).a11y_label(suffix);
+                        }
+                        segments.push(segment);
                     }
                     if let Some(reset) = reset_action {
                         segments.push(editor_input_group_divider(cx, divider));
@@ -588,14 +637,18 @@ where
                             reset.a11y_label,
                             reset.icon,
                             Some(Px(12.0)),
-                            reset.test_id,
+                            typing_reset_test_id.clone(),
                             reset.on_activate,
                         ));
                     }
 
                     vec![editor_input_group_row(cx, Px(0.0), segments)]
                 },
-            )
+            );
+            if let Some(test_id) = typing_test_id.as_ref() {
+                typing_frame = typing_frame.test_id(test_id.clone());
+            }
+            typing_frame
         };
 
         // Render both: scrub stays mounted so focus can restore, typing stays mounted so focus

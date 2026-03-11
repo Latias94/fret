@@ -1,0 +1,197 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-advanced-axis-composites",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "vec_edit", "transform_edit", "regression"],
+    "target_hints": [
+      "Uses the Advanced editor section in imui_editor_proof_demo.",
+      "Proves Vec3Edit axis typing selectors and TransformEdit link-scale synchronization."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.position.x" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.position.x.axis"
+        },
+        "text": "X"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.scale.z.axis"
+        },
+        "text": "Z"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.position.x" },
+      "click_count": 2
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.position.x.typing.input"
+      }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.position.x.typing.input"
+      },
+      "text": "1.250"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.position.x.value"
+        },
+        "text": "1.250"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.position.x.value"
+        },
+        "text": "1.250"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.link-scale"
+        },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.transform.link-scale"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.link-scale"
+        },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.transform.scale.x"
+      },
+      "click_count": 2
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.transform.scale.x.typing.input"
+      }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.advanced.transform.scale.x.typing.input"
+      },
+      "text": "2.500"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.scale.x.value"
+        },
+        "text": "2.500"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.scale.y.value"
+        },
+        "text": "2.500"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.scale.z.value"
+        },
+        "text": "2.500"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-advanced-axis-composites"
+    }
+  ]
+}

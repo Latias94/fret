@@ -22,7 +22,7 @@ use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
     EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericParseFn,
     NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
-    TransformEditOptions, Vec3Edit,
+    TransformEditOptions, Vec3Edit, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
@@ -1009,10 +1009,13 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     fmt_f64.clone(),
                                                                     parse_f64.clone(),
                                                                 )
+                                                                .options(VecEditOptions {
+                                                                    test_id: Some(Arc::from(
+                                                                        "imui-editor-proof.editor.advanced.position",
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
                                                                 .into_element(cx)
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.advanced.position",
-                                                                )
                                                             },
                                                             |_cx| None,
                                                         ));

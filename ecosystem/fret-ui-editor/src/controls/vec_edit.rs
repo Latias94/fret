@@ -22,10 +22,15 @@ use crate::controls::{
     AxisDragValue, AxisDragValueOptions, NumericFormatFn, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::style::EditorStyle;
 
 fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
     theme.color_by_key(key).unwrap_or(fallback)
+}
+
+fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
+    base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
 }
 
 pub type OnAxisReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
@@ -74,6 +79,8 @@ fn axis_group<H: UiHost, T>(
     axis_gap: Px,
     reset: Option<AxisReset>,
     grow: bool,
+    id_source: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     label: Arc<str>,
     color: Color,
     model: Model<T>,
@@ -137,6 +144,8 @@ where
                     .options(AxisDragValueOptions {
                         prefix: prefix.clone(),
                         suffix: suffix.clone(),
+                        id_source: id_source.clone(),
+                        test_id: test_id.clone(),
                         size: fret_ui_kit::Size::Small,
                         reset: reset.clone(),
                         ..Default::default()
@@ -322,6 +331,10 @@ where
             VecEditLayoutVariant::Column => Axis::Vertical,
             VecEditLayoutVariant::Auto => Axis::Horizontal,
         };
+        let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
+        let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
+        let x_test_id = derived_test_id(self.options.test_id.as_ref(), "x");
+        let y_test_id = derived_test_id(self.options.test_id.as_ref(), "y");
 
         let mut el = cx.flex(
             FlexProps {
@@ -344,6 +357,8 @@ where
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
+                        x_id_source.clone(),
+                        x_test_id.clone(),
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -358,6 +373,8 @@ where
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
+                        y_id_source.clone(),
+                        y_test_id.clone(),
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -519,6 +536,12 @@ where
             VecEditLayoutVariant::Column => Axis::Vertical,
             VecEditLayoutVariant::Auto => Axis::Horizontal,
         };
+        let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
+        let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
+        let z_id_source = derived_id_source(self.options.id_source.as_ref(), "z");
+        let x_test_id = derived_test_id(self.options.test_id.as_ref(), "x");
+        let y_test_id = derived_test_id(self.options.test_id.as_ref(), "y");
+        let z_test_id = derived_test_id(self.options.test_id.as_ref(), "z");
 
         let mut el = cx.flex(
             FlexProps {
@@ -541,6 +564,8 @@ where
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
+                        x_id_source.clone(),
+                        x_test_id.clone(),
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -555,6 +580,8 @@ where
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
+                        y_id_source.clone(),
+                        y_test_id.clone(),
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -569,6 +596,8 @@ where
                         self.options.axis_gap,
                         self.reset_z.clone(),
                         grow,
+                        z_id_source.clone(),
+                        z_test_id.clone(),
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
@@ -747,6 +776,14 @@ where
             VecEditLayoutVariant::Column => Axis::Vertical,
             VecEditLayoutVariant::Auto => Axis::Horizontal,
         };
+        let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
+        let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
+        let z_id_source = derived_id_source(self.options.id_source.as_ref(), "z");
+        let w_id_source = derived_id_source(self.options.id_source.as_ref(), "w");
+        let x_test_id = derived_test_id(self.options.test_id.as_ref(), "x");
+        let y_test_id = derived_test_id(self.options.test_id.as_ref(), "y");
+        let z_test_id = derived_test_id(self.options.test_id.as_ref(), "z");
+        let w_test_id = derived_test_id(self.options.test_id.as_ref(), "w");
 
         let mut el = cx.flex(
             FlexProps {
@@ -769,6 +806,8 @@ where
                         self.options.axis_gap,
                         self.reset_x.clone(),
                         grow,
+                        x_id_source.clone(),
+                        x_test_id.clone(),
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
@@ -783,6 +822,8 @@ where
                         self.options.axis_gap,
                         self.reset_y.clone(),
                         grow,
+                        y_id_source.clone(),
+                        y_test_id.clone(),
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
@@ -797,6 +838,8 @@ where
                         self.options.axis_gap,
                         self.reset_z.clone(),
                         grow,
+                        z_id_source.clone(),
+                        z_test_id.clone(),
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
@@ -811,6 +854,8 @@ where
                         self.options.axis_gap,
                         self.reset_w.clone(),
                         grow,
+                        w_id_source.clone(),
+                        w_test_id.clone(),
                         Arc::from("W"),
                         w_color,
                         self.w.clone(),
