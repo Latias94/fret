@@ -13,6 +13,24 @@ If you are a component author, start with:
 - If you intentionally consume the `fret` facade for reusable in-repo component/scaffold code,
   prefer `use fret::component::prelude::*;` over `fret::app::prelude::*;`.
 
+## Ecosystem author checklist
+
+If you are publishing a reusable Fret ecosystem crate or introducing a new first-party ecosystem
+surface, lock these decisions before adding public API:
+
+- pick one tier first: app integration, component/policy surface, or advanced/manual assembly
+- prefer a free function, registry, factory, or codec before adding a trait
+- use `fret::integration::InstallIntoApp` only for reusable app-install bundles; keep ordinary app
+  docs/examples on plain installer functions
+- keep typed routes on `RouteCodec`, dockable panel contributions on `DockPanelFactory`, and host
+  command catalog ownership in `fret-ui-kit::command`
+- keep selector/query integration optional for reusable kits; do not add a universal `Component`
+  trait or widen `fret-app::Plugin` into the default ecosystem model
+- for the full trait budget, target state, and migration posture, see
+  `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
+  `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
+  `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`
+
 ## Quick rules of thumb
 
 ### The 5 crate names to remember

@@ -16,10 +16,10 @@ It answers four concrete questions:
 
 | Contract | Target owner | Surface kind | Default audience | Target status |
 | --- | --- | --- | --- | --- |
-| `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
-| `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | In progress |
+| `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | Landed / adoption in progress |
+| `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | Landed as data contract |
 | `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Migrated |
-| `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | In progress |
+| `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | Migrated |
 | `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
 
 ## 2. Default Teaching Rule

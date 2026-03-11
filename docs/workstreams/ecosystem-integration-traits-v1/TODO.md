@@ -37,8 +37,11 @@ surface.
     path.
 - [ ] Decide whether `QueryAdapter` is needed in v1 or should stay "design locked, implementation
   deferred" until a second real consumer appears.
-- [ ] Record an explicit "do not add" policy for universal `Component` / giant ecosystem `Plugin`
+- [x] Record an explicit "do not add" policy for universal `Component` / giant ecosystem `Plugin`
   traits in the relevant docs.
+  - Landed on 2026-03-11:
+    `DESIGN.md`, `TARGET_INTERFACE_STATE.md`, and `docs/crate-usage-guide.md` now all repeat the
+    same anti-goal so the rule is visible outside the workstream folder too.
 
 ## 2. First-Party Surface Normalization
 
@@ -157,12 +160,16 @@ surface.
 
 ## 8. Documentation and Guardrails
 
-- [ ] Add the workstream to the canonical docs index and roadmap tracker.
-- [ ] Add a short ecosystem author checklist that points to this trait budget.
-- [ ] Add a docs/gate check that first-party guidance does not regress toward:
+- [x] Add the workstream to the canonical docs index and roadmap tracker.
+  - Landed on 2026-03-11: both `docs/README.md` and `docs/roadmap.md` link to the full
+    ecosystem-integration-traits-v1 workstream set.
+- [x] Add a short ecosystem author checklist that points to this trait budget.
+  - Landed on 2026-03-11 in `docs/crate-usage-guide.md`.
+- [x] Add a docs/gate check that first-party guidance does not regress toward:
   - direct raw crate-root teaching,
   - giant plugin abstractions,
   - universal component traits.
+  - Landed on 2026-03-11 in `ecosystem/fret/src/lib.rs` authoring-surface policy tests.
 - [ ] Add evidence anchors for the first in-tree implementation of each accepted trait.
 
 ## 9. Hard Deletion Work

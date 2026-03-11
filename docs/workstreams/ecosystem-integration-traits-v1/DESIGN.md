@@ -1,6 +1,6 @@
 # Ecosystem Integration Traits v1
 
-Status: Draft (workstream note; pre-release fearless refactor)
+Status: Active working plan (pre-release fearless refactor)
 Last updated: 2026-03-11
 
 Related:
@@ -157,6 +157,22 @@ Trying to force all of that into one `Plugin` contract will either:
 
 - make the trait huge, or
 - make it so abstract that it stops being useful.
+
+### 4.6 Short checklist for ecosystem authors
+
+Before adding a new ecosystem contract, answer these questions in order:
+
+1. Which tier is this crate actually targeting?
+   - app integration,
+   - component/policy surface,
+   - or advanced/manual assembly.
+2. Can this stay a free `install(...)` / `install_app(...)` function, registry, factory, or codec?
+3. If a trait is still needed, does it answer exactly one question?
+4. Does the trait live in the owning ecosystem layer rather than `crates/fret-ui`?
+5. Are ordinary app docs still teaching the boring path first?
+6. Are we accidentally widening `fret-app::Plugin` or inventing a universal `Component` trait?
+
+If any answer is unclear, stop and resolve the ownership model before expanding the API surface.
 
 ## 5. Trait Budget (v1)
 

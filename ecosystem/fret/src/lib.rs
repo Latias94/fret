@@ -1686,6 +1686,18 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn usage_docs_link_ecosystem_trait_budget_and_anti_plugin_posture() {
+        assert!(CRATE_USAGE_GUIDE.contains("## Ecosystem author checklist"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::integration::InstallIntoApp`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`RouteCodec`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`DockPanelFactory`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret-app::Plugin`"));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`"
+        ));
+    }
+
+    #[test]
     fn usage_docs_expose_docking_as_explicit_extension_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("| Add docking integration | `[\"docking\"]` |"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::{core::*, ...}`"));
