@@ -80,7 +80,7 @@ call site closer to the upstream docs structure.
 ## Example (docs-shaped, Rust-shaped)
 
 ```rust
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

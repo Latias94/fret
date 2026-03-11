@@ -1280,6 +1280,10 @@ mod authoring_surface_policy_tests {
     const INTEGRATING_SQLITE_AND_SQLX: &str =
         include_str!("../../../docs/integrating-sqlite-and-sqlx.md");
     const FEARLESS_REFACTORING: &str = include_str!("../../../docs/fearless-refactoring.md");
+    const ACTION_FIRST_MIGRATION_GUIDE: &str =
+        include_str!("../../../docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md");
+    const SHADCN_SELECT_V4_USAGE: &str =
+        include_str!("../../../docs/workstreams/shadcn-part-surface-alignment-v1/SELECT_V4_USAGE.md");
     const LIB_RS: &str = include_str!("lib.rs");
 
     fn crate_rustdoc() -> String {
@@ -1545,6 +1549,16 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::shadcn_themes::"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::shadcn::shadcn_themes::"));
+    }
+
+    #[test]
+    fn workstream_docs_teach_curated_direct_shadcn_imports() {
+        assert!(ACTION_FIRST_MIGRATION_GUIDE
+            .contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
+        assert!(SHADCN_SELECT_V4_USAGE
+            .contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
+        assert!(!ACTION_FIRST_MIGRATION_GUIDE.contains("use fret_ui_shadcn as shadcn;"));
+        assert!(!SHADCN_SELECT_V4_USAGE.contains("use fret_ui_shadcn::{self as shadcn"));
     }
 
     #[test]

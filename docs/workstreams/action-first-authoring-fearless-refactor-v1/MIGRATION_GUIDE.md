@@ -249,7 +249,7 @@ its `open` model from the active overlay scope.
 Example:
 
 ```rust,ignore
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 shadcn::Dialog::new(open.clone())
     .compose()
