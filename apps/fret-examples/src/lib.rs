@@ -209,14 +209,23 @@ pub mod workspace_shell_demo;
 mod authoring_surface_policy_tests {
     const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
     const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
+    const CJK_CONFORMANCE_DEMO: &str = include_str!("cjk_conformance_demo.rs");
     const CHART_DECLARATIVE_DEMO: &str = include_str!("chart_declarative_demo.rs");
+    const COMPONENTS_GALLERY_DEMO: &str = include_str!("components_gallery.rs");
     const CUSTOM_EFFECT_V1_DEMO: &str = include_str!("custom_effect_v1_demo.rs");
     const CUSTOM_EFFECT_V2_DEMO: &str = include_str!("custom_effect_v2_demo.rs");
+    const CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO: &str =
+        include_str!("custom_effect_v2_glass_chrome_web_demo.rs");
+    const CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO: &str =
+        include_str!("custom_effect_v2_identity_web_demo.rs");
+    const CUSTOM_EFFECT_V2_LUT_WEB_DEMO: &str = include_str!("custom_effect_v2_lut_web_demo.rs");
+    const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
+    const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_AVF_DEMO: &str =
         include_str!("external_video_imports_avf_demo.rs");
@@ -241,6 +250,7 @@ mod authoring_surface_policy_tests {
     const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
     const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
+    const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
@@ -302,6 +312,13 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.use_query("));
         assert!(!src.contains("cx.use_query_async("));
         assert!(!src.contains("cx.use_query_async_local("));
+    }
+
+    fn assert_shadcn_surface_is_curated(src: &str) {
+        assert!(!src.contains("use fret_ui_shadcn as shadcn;"));
+        assert!(!src.contains("use fret_ui_shadcn::{self as shadcn"));
+        assert!(!src.contains("shadcn::shadcn_themes::"));
+        assert!(!src.contains("shadcn::typography::"));
     }
 
     fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
@@ -579,5 +596,35 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains(".drive_embedded_viewport()"));
         assert!(!EMBEDDED_VIEWPORT_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
         assert!(!IMUI_EDITOR_PROOF_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
+    }
+
+    #[test]
+    fn first_party_examples_use_curated_shadcn_surface() {
+        for src in [
+            ASSETS_DEMO,
+            ASYNC_PLAYGROUND_DEMO,
+            CJK_CONFORMANCE_DEMO,
+            COMPONENTS_GALLERY_DEMO,
+            CUSTOM_EFFECT_V1_DEMO,
+            CUSTOM_EFFECT_V2_DEMO,
+            CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
+            CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
+            CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
+            CUSTOM_EFFECT_V2_WEB_DEMO,
+            CUSTOM_EFFECT_V3_DEMO,
+            DROP_SHADOW_DEMO,
+            EMBEDDED_VIEWPORT_DEMO,
+            EMOJI_CONFORMANCE_DEMO,
+            GENUI_DEMO,
+            HELLO_COUNTER_DEMO,
+            IMUI_EDITOR_PROOF_DEMO,
+            IMUI_SHADCN_ADAPTER_DEMO,
+            LIQUID_GLASS_DEMO,
+            POSTPROCESS_THEME_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            SIMPLE_TODO_DEMO,
+        ] {
+            assert_shadcn_surface_is_curated(src);
+        }
     }
 }

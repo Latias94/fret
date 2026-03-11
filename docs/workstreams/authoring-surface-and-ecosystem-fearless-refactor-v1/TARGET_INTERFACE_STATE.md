@@ -225,6 +225,14 @@ Target rule:
 | third-party workflow/app addons | app surface | acceptable when the crate is intentionally app-level |
 | third-party interop crates | advanced surface | explicit power-user posture |
 
+Direct crate usage rule for first-party recipe crates:
+
+- official examples/docs should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+- common component names stay on `shadcn::*`
+- app-level setup stays on `shadcn::app::*`
+- theme presets stay on `shadcn::themes::*`
+- full crate-root escape hatches must be explicit via `shadcn::raw::*`
+
 ## Symbols to Remove
 
 These names/surfaces should disappear entirely if the replacement exists:

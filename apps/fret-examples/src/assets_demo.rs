@@ -32,10 +32,10 @@ pub fn run() -> anyhow::Result<()> {
         .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .setup_with(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Light,
             );
         })
         .on_gpu_ready(|app, _context, renderer| {

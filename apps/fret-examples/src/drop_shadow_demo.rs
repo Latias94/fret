@@ -15,7 +15,7 @@ use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
 use fret_ui_kit::{LayoutRefinement, Space, ui};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
@@ -65,8 +65,8 @@ fn card<H: UiHost>(
             },
             move |cx| {
                 vec![
-                    shadcn::typography::large(cx, title.clone()),
-                    shadcn::typography::muted(cx, subtitle.clone()),
+                    shadcn::raw::typography::large(cx, title.clone()),
+                    shadcn::raw::typography::muted(cx, subtitle.clone()),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Badge::new("DropShadowV1")
                         .variant(shadcn::BadgeVariant::Secondary)
@@ -234,8 +234,8 @@ impl View for DropShadowDemoView {
                 vec![
                     ui::v_flex(|cx| {
                         vec![
-                            shadcn::typography::h4(cx, "Drop shadow demo"),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::h4(cx, "Drop shadow demo"),
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Toggle DropShadowV1 and a small stress grid.",
                             ),
@@ -265,7 +265,7 @@ impl View for DropShadowDemoView {
                             .items_center()
                             .into_element(cx),
                             shadcn::Separator::new().into_element(cx),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Perf baseline suite: drop-shadow-v1-steady",
                             ),
@@ -293,10 +293,10 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("drop-shadow-demo")
         .window("drop-shadow-demo", (1280.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<DropShadowDemoView>()?

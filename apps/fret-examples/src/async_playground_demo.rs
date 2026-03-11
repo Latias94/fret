@@ -101,13 +101,13 @@ fn install_tokio_spawner(app: &mut KernelApp) {
 }
 
 fn apply_theme(app: &mut KernelApp, dark: bool) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnBaseColor::Zinc,
         if dark {
-            shadcn::shadcn_themes::ShadcnColorScheme::Dark
+            shadcn::themes::ShadcnColorScheme::Dark
         } else {
-            shadcn::shadcn_themes::ShadcnColorScheme::Light
+            shadcn::themes::ShadcnColorScheme::Light
         },
     );
 }

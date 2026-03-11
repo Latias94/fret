@@ -255,10 +255,10 @@ pub fn run() -> anyhow::Result<()> {
         .config_files(false)
         .setup(|app| {
             install_tokio_spawner(app);
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Zinc,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<QueryAsyncTokioDemoView>()?

@@ -26,7 +26,7 @@ use fret_ui::element::{
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
 use fret_ui_kit::ui;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
 
@@ -111,10 +111,10 @@ pub fn run() -> anyhow::Result<()> {
     let builder = FretApp::new("custom-effect-v3-demo")
         .window("custom-effect-v3-demo", (1100.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<CustomEffectV3View>()?;
@@ -366,7 +366,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         } else {
             "CustomV3 is unsupported on this backend"
         };
-        return vec![shadcn::typography::h3(cx, msg)].into();
+        return vec![shadcn::raw::typography::h3(cx, msg)].into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -457,8 +457,8 @@ fn stage(
         user1_image,
     );
 
-    let title = shadcn::typography::h3(cx, "Custom Effect V3 (CustomV3)");
-    let subtitle = shadcn::typography::muted(
+    let title = shadcn::raw::typography::h3(cx, "Custom Effect V3 (CustomV3)");
+    let subtitle = shadcn::raw::typography::muted(
         cx,
         "V3 can request renderer sources: src_raw + an optional bounded pyramid (for liquid glass ceilings).",
     );

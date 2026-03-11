@@ -29,10 +29,10 @@ pub fn run() -> anyhow::Result<()> {
         .window("hello-counter-demo", (520.0, 420.0))
         .config_files(false)
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Light,
             );
         })
         .view::<HelloCounterView>()?

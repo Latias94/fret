@@ -13,7 +13,7 @@ use fret_ui::declarative;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, Radius, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const TEST_ID_INPUT: &str = "simple-todo.input";
 const TEST_ID_ADD: &str = "simple-todo.add";
@@ -392,10 +392,10 @@ fn window_create_spec(
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
     app
 }

@@ -98,10 +98,10 @@ pub fn run() -> anyhow::Result<()> {
         })?
         .setup_with(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
             fret_ui_editor::theme::apply_editor_theme_preset_v1(app, editor_preset);
             fret_icons_lucide::install_app(app);

@@ -147,10 +147,10 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("postprocess-theme-demo")
         .window("postprocess-theme-demo", (1200.0, 760.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<ThemePostprocessView>()?
@@ -209,7 +209,11 @@ impl View for ThemePostprocessView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-            return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+            return vec![shadcn::raw::typography::h3(
+                cx,
+                "Custom effects unavailable",
+            )]
+            .into();
         };
 
         let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);
@@ -729,7 +733,7 @@ fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyE
                             .items_center()
                             .into_element(cx),
                         subtitle,
-                        shadcn::typography::muted(cx, label).into_element(cx),
+                        shadcn::raw::typography::muted(cx, label).into_element(cx),
                     ]
                 },
             );
@@ -761,8 +765,8 @@ fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement {
             },
             move |cx| {
                 vec![
-                    shadcn::typography::large(cx, title).into_element(cx),
-                    shadcn::typography::muted(cx, subtitle).into_element(cx),
+                    shadcn::raw::typography::large(cx, title).into_element(cx),
+                    shadcn::raw::typography::muted(cx, subtitle).into_element(cx),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Button::new("Primary")
                         .variant(shadcn::ButtonVariant::Default)

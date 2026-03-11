@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 struct ImUiShadcnAdapterView {
     count: Model<u32>,
@@ -21,10 +21,10 @@ pub fn run() -> anyhow::Result<()> {
 
 impl View for ImUiShadcnAdapterView {
     fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        shadcn::shadcn_themes::apply_shadcn_new_york(
+        shadcn::themes::apply_shadcn_new_york(
             app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            shadcn::themes::ShadcnBaseColor::Slate,
+            shadcn::themes::ShadcnColorScheme::Light,
         );
 
         Self {

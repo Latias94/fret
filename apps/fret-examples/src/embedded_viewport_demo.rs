@@ -215,10 +215,10 @@ pub fn run() -> anyhow::Result<()> {
         .window("embedded_viewport_demo", (1120.0, 720.0))
         .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?
         .setup_with(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Light,
             );
             fret_icons_lucide::install_app(app);
         })

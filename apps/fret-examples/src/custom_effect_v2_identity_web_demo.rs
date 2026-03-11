@@ -38,7 +38,7 @@ use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Space, UiExt};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 const WGSL: &str = r#"
 // Params packing (EffectParamsV1 is 64 bytes):
@@ -1051,10 +1051,10 @@ fn configure_fn_driver_hooks(
 
 pub fn build_app() -> App {
     let mut app = App::new();
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Dark,
     );
     // Install the demo pack early so consumers can treat it like a “one line install” library.
     app.set_global(DemoEffectPack::new());

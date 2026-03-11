@@ -28,7 +28,7 @@ use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
 use fret_ui_kit::ui;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
 
@@ -406,10 +406,10 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("liquid-glass-demo")
         .window("liquid-glass-demo", (1280.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<LiquidGlassView>()?
@@ -1159,8 +1159,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 move |cx| {
                                     vec![ui::v_flex(|cx| {
                                             vec![
-                                                shadcn::typography::h4(cx, "Liquid glass"),
-                                                shadcn::typography::muted(
+                                                shadcn::raw::typography::h4(cx, "Liquid glass"),
+                                                shadcn::raw::typography::muted(
                                                     cx,
                                                     "BackdropWarpV2 (bounded), WebGPU-safe.",
                                                 ),

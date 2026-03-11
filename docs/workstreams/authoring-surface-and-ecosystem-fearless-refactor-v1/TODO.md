@@ -108,6 +108,11 @@ Companion docs:
   - [x] Move first-party advanced cookbook examples to `shadcn::app::install`.
   - [x] Replace the broad `fret::shadcn` whole-crate re-export with a curated facade
     (`shadcn::{..., app, themes, raw}`).
+  - [x] Migrate first-party direct-crate examples to `fret_ui_shadcn::{facade as shadcn, prelude::*}`
+    and require raw-only helpers to flow through `shadcn::raw::*`.
+  - [x] Add a source gate that forbids first-party curated examples from drifting back to
+    `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
+    `shadcn::typography::*`.
   - [ ] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.

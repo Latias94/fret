@@ -25,7 +25,7 @@ use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_reta
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -206,21 +206,21 @@ impl ComponentsGalleryDriver {
         };
 
         let base = match base {
-            "neutral" => shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            "zinc" => shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-            "slate" => shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            "stone" => shadcn::shadcn_themes::ShadcnBaseColor::Stone,
-            "gray" => shadcn::shadcn_themes::ShadcnBaseColor::Gray,
+            "neutral" => shadcn::themes::ShadcnBaseColor::Neutral,
+            "zinc" => shadcn::themes::ShadcnBaseColor::Zinc,
+            "slate" => shadcn::themes::ShadcnBaseColor::Slate,
+            "stone" => shadcn::themes::ShadcnBaseColor::Stone,
+            "gray" => shadcn::themes::ShadcnBaseColor::Gray,
             _ => return,
         };
 
         let scheme = match scheme {
-            "light" => shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            "dark" => shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            "light" => shadcn::themes::ShadcnColorScheme::Light,
+            "dark" => shadcn::themes::ShadcnColorScheme::Dark,
             _ => return,
         };
 
-        shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
+        shadcn::themes::apply_shadcn_new_york(app, base, scheme);
         state.applied_theme_preset = Some(preset);
     }
 
@@ -2118,10 +2118,10 @@ fn configure_fn_driver_hooks(
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-        shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        shadcn::themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnColorScheme::Dark,
     );
 
     // Demo: register a minimal command surface for the command palette to discover.

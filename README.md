@@ -152,10 +152,10 @@ mod act {
 struct TodoView;
 
 fn install_app(app: &mut App) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 }
 

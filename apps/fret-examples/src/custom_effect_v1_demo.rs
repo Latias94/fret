@@ -203,10 +203,10 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("custom-effect-v1-demo")
         .window("custom-effect-v1-demo", (1100.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<CustomEffectV1View>()?
@@ -304,7 +304,11 @@ fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> 
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> ViewElements {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+        return vec![shadcn::raw::typography::h3(
+            cx,
+            "Custom effects unavailable",
+        )]
+        .into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -384,8 +388,8 @@ fn stage(
         grain_scale,
     );
 
-    let title = shadcn::typography::h3(cx, "Custom Effect V1 (CustomV1)");
-    let subtitle = shadcn::typography::muted(
+    let title = shadcn::raw::typography::h3(cx, "Custom Effect V1 (CustomV1)");
+    let subtitle = shadcn::raw::typography::muted(
         cx,
         "The lens on the right runs a custom WGSL function and is clipped/scissored.",
     );

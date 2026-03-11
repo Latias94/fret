@@ -33,10 +33,10 @@ pub fn run() -> anyhow::Result<()> {
     FretApp::new("genui-demo")
         .window("genui-demo", (980.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Light,
             );
         })
         .view::<GenUiView>()?

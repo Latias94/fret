@@ -1533,11 +1533,17 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn usage_docs_expose_shadcn_app_surface_as_explicit_submodule() {
-        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::app::install(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`use fret_ui_shadcn::{facade as shadcn, prelude::*};`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::shadcn_themes::"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::shadcn::shadcn_themes::"));
     }
 

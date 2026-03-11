@@ -98,10 +98,10 @@ pub fn run() -> anyhow::Result<()> {
     let builder = FretApp::new("custom-effect-v2-demo")
         .window("custom-effect-v2-demo", (1100.0, 720.0))
         .setup(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
+            shadcn::themes::apply_shadcn_new_york(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+                shadcn::themes::ShadcnBaseColor::Slate,
+                shadcn::themes::ShadcnColorScheme::Dark,
             );
         })
         .view::<CustomEffectV2View>()?;
@@ -310,7 +310,11 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
         )
     };
     let Some(effect) = effect else {
-        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+        return vec![shadcn::raw::typography::h3(
+            cx,
+            "Custom effects unavailable",
+        )]
+        .into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
@@ -392,8 +396,8 @@ fn stage(
         debug_input,
     );
 
-    let title = shadcn::typography::h3(cx, "Custom Effect V2 (CustomV2)");
-    let subtitle = shadcn::typography::muted(
+    let title = shadcn::raw::typography::h3(cx, "Custom Effect V2 (CustomV2)");
+    let subtitle = shadcn::raw::typography::muted(
         cx,
         "CustomV2 can sample one user-provided ImageId (e.g. noise/LUT/normal map).",
     );
