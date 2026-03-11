@@ -1519,6 +1519,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/edge_execution/delete.rs`, and
     `ui/canvas/widget/context_menu/edge_execution/custom_action.rs` seams, so
     `context_menu/edge_execution.rs` now mainly keeps the edge action dispatch explicit.
+  - Progress: split-edge reroute execution now also routes reroute planning, rejection-toast
+    mapping, commit/apply tails, and outcome execution through the private
+    `ui/canvas/widget/split_edge_execution/plan.rs`,
+    `ui/canvas/widget/split_edge_execution/toast.rs`,
+    `ui/canvas/widget/split_edge_execution/apply.rs`, and
+    `ui/canvas/widget/split_edge_execution/execute.rs` seams, so
+    `split_edge_execution.rs` now mainly keeps the public execution façade explicit.
 
 ## M5 - Compatibility retained convergence
 

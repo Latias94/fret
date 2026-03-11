@@ -1058,6 +1058,13 @@ real editors.
   `ui/canvas/widget/context_menu/edge_execution/delete.rs`, and
   `ui/canvas/widget/context_menu/edge_execution/custom_action.rs` seams, so
   `context_menu/edge_execution.rs` now mainly keeps the edge action dispatch explicit.
+- split-edge reroute execution now also routes reroute planning, rejection-toast mapping,
+  commit/apply tails, and outcome execution through the private
+  `ui/canvas/widget/split_edge_execution/plan.rs`,
+  `ui/canvas/widget/split_edge_execution/toast.rs`,
+  `ui/canvas/widget/split_edge_execution/apply.rs`, and
+  `ui/canvas/widget/split_edge_execution/execute.rs` seams, so
+  `split_edge_execution.rs` now mainly keeps the public execution façade explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
