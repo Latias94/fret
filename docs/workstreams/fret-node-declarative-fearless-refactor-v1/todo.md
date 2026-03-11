@@ -1504,6 +1504,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     `context_menu/connection_execution_insert.rs` and
     `context_menu/connection_execution_conversion.rs` now mainly keep the execution façades
     explicit.
+  - Progress: context target hit/selection now also routes group-vs-edge hit tests plus
+    group-vs-edge selection reducers through the private
+    `ui/canvas/widget/context_menu/target_hit/group.rs`,
+    `ui/canvas/widget/context_menu/target_hit/edge.rs`,
+    `ui/canvas/widget/context_menu/target_selection/group.rs`, and
+    `ui/canvas/widget/context_menu/target_selection/edge.rs` seams, so
+    `context_menu/target_hit.rs` and `context_menu/target_selection.rs` now mainly keep the
+    façade surfaces explicit.
 
 ## M5 - Compatibility retained convergence
 
