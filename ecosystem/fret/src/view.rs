@@ -7,9 +7,9 @@
 //! - hook-style helpers compose existing mechanism contracts (models + observation).
 //!
 //! v1 notes:
-//! - `use_state<T>()` currently returns a `Model<T>` allocated in the app-owned model store.
-//!   This keeps event handlers object-safe (they only receive `UiActionHost`) while still
-//!   providing view-local state ergonomics.
+//! - the explicit raw-model hook seam (`AppUiRawStateExt::use_state<T>()`) currently returns a
+//!   `Model<T>` allocated in the app-owned model store. This keeps event handlers object-safe
+//!   (they only receive `UiActionHost`) while still providing view-local state ergonomics.
 //! - The view runtime is intentionally additive and lives in `ecosystem/fret` (not kernel).
 
 use std::any::Any;
@@ -445,13 +445,47 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
 /// Per-frame view construction context passed to [`View::render`].
 ///
 /// This is a thin wrapper over [`ElementContext`] that:
-/// - provides hook-style helpers (`use_state`, keyed),
+/// - provides grouped default-path helpers (`state`, `actions`, `data`, `effects`),
 /// - collects action handlers for installation at a chosen root element.
 pub struct AppUi<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,
     action_root: fret_ui::GlobalElementId,
     action_handlers: crate::actions::ActionHandlerTable,
     action_handlers_used: bool,
+}
+
+/// Explicit raw-model state hooks that intentionally stay off the default app authoring surface.
+///
+/// Import this trait explicitly when advanced code still wants stable callsite-keyed `Model<T>`
+/// allocation rather than the grouped `cx.state().local*` surface.
+pub trait AppUiRawStateExt {
+    #[track_caller]
+    fn use_state<T>(&mut self) -> Model<T>
+    where
+        T: Any + Default;
+
+    #[track_caller]
+    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
+    where
+        T: Any + Default;
+}
+
+impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
+    #[track_caller]
+    fn use_state<T>(&mut self) -> Model<T>
+    where
+        T: Any + Default,
+    {
+        self.use_state_with(T::default)
+    }
+
+    #[track_caller]
+    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
+    where
+        T: Any + Default,
+    {
+        self.keyed(key, |cx| AppUiRawStateExt::use_state::<T>(cx))
+    }
 }
 
 /// Grouped LocalState-first helpers for the default app authoring surface.
@@ -883,26 +917,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         })
     }
 
-    /// View-local state hook backed by an app-owned model.
-    ///
-    /// v1: returns a `Model<T>` so action handlers can update state via `UiActionHost::models_mut`.
-    #[track_caller]
-    pub fn use_state<T>(&mut self) -> Model<T>
-    where
-        T: Any + Default,
-    {
-        self.use_state_with(T::default)
-    }
-
-    /// Keyed variant of [`use_state`], intended for loops.
-    #[track_caller]
-    pub fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
-    where
-        T: Any + Default,
-    {
-        self.keyed(key, |cx| cx.use_state::<T>())
-    }
-
     fn local_with<T>(&mut self, init: impl FnOnce() -> T) -> LocalState<T>
     where
         T: Any,
@@ -1317,6 +1331,8 @@ mod tests {
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
+        assert!(!api_source.contains("pub fn use_state<"));
+        assert!(!api_source.contains("pub fn use_state_keyed<"));
         assert!(!api_source.contains("pub fn use_local<"));
         assert!(!api_source.contains("pub fn use_local_keyed<"));
         assert!(!api_source.contains("pub fn use_local_with<"));
@@ -1334,6 +1350,7 @@ mod tests {
         assert!(!api_source.contains("pub fn use_query_async<"));
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
+        assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));

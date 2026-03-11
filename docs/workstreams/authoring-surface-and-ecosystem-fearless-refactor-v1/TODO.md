@@ -155,6 +155,8 @@ Companion docs:
   `cx.effects()` surface.
 - [x] Remove public flat `AppUi::use_local*` helpers that duplicate the grouped `cx.state()`
   surface while keeping raw `use_state*` as an explicit advanced seam for now.
+- [x] Move raw `use_state*` off the default `AppUi` inherent surface and keep it only as an
+  explicit advanced trait seam.
 - [x] Remove flat `AppUi` action mutation helpers that duplicate the grouped `cx.actions()` surface
   while keeping raw handler registration as an explicit advanced seam.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.
