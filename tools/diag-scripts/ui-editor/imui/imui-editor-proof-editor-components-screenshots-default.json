@@ -135,6 +135,7 @@
     {
       "type": "capture_screenshot",
       "label": "imui-editor-proof-editor-components-default-validation-error"
-    }
+    },
+    { "type": "wait_frames", "n": 2 }
   ]
 }

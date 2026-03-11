@@ -216,9 +216,9 @@ Recent baseline work clarified the next bottleneck:
 - the default screenshot proof uses that mode so overview / typing / validation captures focus on
   the editor inspector instead of mixing in parity and docking surfaces,
 - and the remaining proof/gate gap is no longer composition but reliability:
-  the capture artifacts can succeed while `fretboard diag run` still times out waiting for final
-  script completion after typed-mode interactions, with repeated `global access while leased`
-  warnings that should be cleaned up before calling the gate fully boring.
+  `fretboard diag run` now completes for the default baseline proof, but repeated
+  `global access while leased` warnings still show up during typed-mode interactions and should be
+  cleaned up before calling the gate fully quiet.
 
 ### Foundation-first rule
 
