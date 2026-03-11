@@ -52,12 +52,13 @@ Interaction contract:
       default screenshot proof script uses that mode to capture inspector-only baseline states.
       Remaining work: keep this composition stable while token/layout cleanup continues and extend
       the same review discipline to adjacent proof surfaces.
-- [~] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
+- [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
       and the latest review-only capture covers overview / typing / validation states on the editor
-      inspector surface. The script is now rerun-safe inside one session; remaining closure is
-      making the `fretboard diag run --session-auto --launch` process exit cleanly after success.
+      inspector surface. The script is rerun-safe inside one session, and the launched
+      `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
+      workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
 - [ ] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       app-owned shadcn sync, environment color-scheme changes, and proof/demo startup should all
       converge on the same intended editor preset instead of silently falling back to host-only
@@ -120,10 +121,9 @@ Interaction contract:
 - [~] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do
       not strand the next session in a filtered state, and the latest session root result reaches
-      `passed`. Remaining follow-up: make the `fretboard diag run --session-auto --launch` command
-      exit promptly after success, and understand or remove the repeated
-      `global access while leased` noise emitted during typed-mode interactions so the gate is
-      quiet as well as green.
+      `passed`, with the launched `diag run` command now exiting promptly after success. Remaining
+      follow-up: understand or remove the repeated `global access while leased` noise emitted
+      during typed-mode interactions so the gate is quiet as well as green.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
       ecosystem crates.
 - [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after
