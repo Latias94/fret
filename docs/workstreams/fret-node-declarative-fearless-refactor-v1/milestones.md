@@ -1109,6 +1109,10 @@ real editors.
   through the private `ui/canvas/widget/timer_motion_viewport/animation.rs` and
   `ui/canvas/widget/timer_motion_viewport/debounce.rs` seams, so `timer_motion_viewport.rs` now
   mainly keeps the viewport timer-motion façades explicit.
+- pan-inertia timer motion now also routes stop guards and per-frame advancement through the
+  private `ui/canvas/widget/timer_motion_pan_inertia/guards.rs` and
+  `ui/canvas/widget/timer_motion_pan_inertia/advance.rs` seams, so
+  `timer_motion_pan_inertia.rs` now mainly keeps the inertia tick orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

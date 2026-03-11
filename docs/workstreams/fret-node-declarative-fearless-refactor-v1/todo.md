@@ -1571,6 +1571,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/timer_motion_viewport/animation.rs` and
     `ui/canvas/widget/timer_motion_viewport/debounce.rs` seams, so
     `timer_motion_viewport.rs` now mainly keeps the viewport timer-motion façades explicit.
+  - Progress: pan-inertia timer motion now also routes stop guards and per-frame advancement
+    through the private `ui/canvas/widget/timer_motion_pan_inertia/guards.rs` and
+    `ui/canvas/widget/timer_motion_pan_inertia/advance.rs` seams, so
+    `timer_motion_pan_inertia.rs` now mainly keeps the inertia tick orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
