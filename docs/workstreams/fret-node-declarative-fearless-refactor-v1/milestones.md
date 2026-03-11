@@ -1095,6 +1095,10 @@ real editors.
   through the private `ui/canvas/widget/paint_overlays/close_button.rs` and
   `ui/canvas/widget/paint_overlays/layers.rs` seams, so `paint_overlays.rs` now mainly keeps the
   overlay paint orchestration explicit.
+- multi-node extent clamping now also routes dragged-bounds collection and extent-delta clamping
+  through the private `ui/canvas/widget/node_drag_constraints_extent/bounds.rs` and
+  `ui/canvas/widget/node_drag_constraints_extent/clamp_delta.rs` seams, so
+  `node_drag_constraints_extent.rs` now mainly keeps the extent-clamp entrypoint explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

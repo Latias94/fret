@@ -1556,6 +1556,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     dispatch through the private `ui/canvas/widget/paint_overlays/close_button.rs` and
     `ui/canvas/widget/paint_overlays/layers.rs` seams, so `paint_overlays.rs` now mainly keeps the
     overlay paint orchestration explicit.
+  - Progress: multi-node extent clamping now also routes dragged-bounds collection and extent-delta
+    clamping through the private `ui/canvas/widget/node_drag_constraints_extent/bounds.rs` and
+    `ui/canvas/widget/node_drag_constraints_extent/clamp_delta.rs` seams, so
+    `node_drag_constraints_extent.rs` now mainly keeps the extent-clamp entrypoint explicit.
 
 ## M5 - Compatibility retained convergence
 
