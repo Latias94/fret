@@ -887,6 +887,11 @@ real editors.
   `ui/canvas/widget/delete_ops_builder/edge.rs` seams, so `delete_ops_builder.rs` now mainly keeps
   top-level delete orchestration explicit while edge de-duplication across node removal retains
   focused unit coverage.
+- delete command helpers now also route remove-op collection and selection/view cleanup through the
+  private `ui/canvas/widget/command_edit_remove/collect.rs` and
+  `ui/canvas/widget/command_edit_remove/apply.rs` seams, so `command_edit_remove.rs` now mainly
+  keeps cut/delete command orchestration explicit while remove-op collection and commit/view-state
+  cleanup stop sharing one inline tail.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

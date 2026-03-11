@@ -1343,6 +1343,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/delete_ops_builder/edge.rs` seams, so `delete_ops_builder.rs` now mainly
     keeps top-level delete orchestration explicit while edge de-duplication across node removal
     retains focused unit coverage.
+  - Progress: delete command helpers now also route remove-op collection and selection/view cleanup
+    through the private `ui/canvas/widget/command_edit_remove/collect.rs` and
+    `ui/canvas/widget/command_edit_remove/apply.rs` seams, so `command_edit_remove.rs` now mainly
+    keeps cut/delete command orchestration explicit while remove-op collection and commit/view-state
+    cleanup stop sharing one inline tail.
 
 ## M5 - Compatibility retained convergence
 
