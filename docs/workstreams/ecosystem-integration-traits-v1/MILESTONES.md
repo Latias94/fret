@@ -49,6 +49,9 @@ Current status on 2026-03-11:
   app wiring under explicit `crate::app::install(...)` seams instead of root-level
   `install_app(...)` exports; their UI-services-boundary wrappers are now spelled as explicit
   advanced helpers.
+- `fret-ui-magic` now exposes its renderer/material helper on an explicit
+  `fret_ui_magic::advanced::ensure_materials(...)` seam instead of the ambiguous
+  `app_integration` module.
 - First-party callers and docs that used those root-level helpers (`fret-bootstrap`,
   `fret-examples`, scaffold templates, crate usage docs, and the todo golden-path doc) have been
   migrated to the explicit `crate::app::*` posture.
@@ -63,7 +66,7 @@ Milestone readout on 2026-03-11:
 | Milestone | State | Notes |
 | --- | --- | --- |
 | M0 | Done | budget, owners, rejected shapes, and docs index/roadmap links are all recorded |
-| M1 | In progress | `InstallIntoApp` is landed, and the first app-helper crates now use explicit `crate::app::*` seams, but broader first-party naming cleanup and bundle adoption are still incomplete |
+| M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, and one advanced material helper has moved to `advanced::*`, but broader first-party naming cleanup and bundle adoption are still incomplete |
 | M2 | Mostly done | `CommandCatalog`, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
 | M3 | Not started | `QueryAdapter` still needs a real-consumer decision; selector remains intentionally trait-free |
 | M4 | In progress | checklist/gate work has started, but hard deletions and full docs/template cleanup remain |

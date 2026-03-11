@@ -1,21 +1,21 @@
-//! Optional `fret-app` integration helpers for `fret-ui-magic`.
+//! Explicit advanced renderer/material helpers for `fret-ui-magic`.
 //!
-//! This module exists to keep `fret-ui-magic` components ecosystem-only while still providing an
-//! ergonomic way for `fret-app`-based binaries to:
-//! - register the required renderer-controlled materials (Tier B),
-//! - cache the resulting `MaterialId`s in an app-owned catalog (ADR 0245),
-//! - and keep component authoring surfaces free of backend handles.
+//! This module exists to keep `fret-ui-magic` recipes on the component surface while still
+//! providing an explicit escape hatch for app/driver code that has access to renderer-backed
+//! services.
+//!
+//! These helpers are not part of the default app-author path: they belong in runner or driver
+//! hooks that can reach `MaterialService`.
 
 use fret_app::App;
 use fret_core::{MaterialDescriptor, MaterialKind, MaterialService};
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 
-/// Register the baseline materials used by `fret-ui-magic` Phase 0 and cache them in the app-owned
-/// `VisualCatalog`.
+/// Ensure the baseline `fret-ui-magic` materials exist in the app-owned `VisualCatalog`.
 ///
-/// This should be called from a runner/driver hook that has access to the renderer (e.g.
-/// `WinitAppDriver::gpu_ready`).
-pub fn ensure_magic_materials(app: &mut App, material_service: &mut dyn MaterialService) {
+/// Call this from an explicit runner/driver hook that has access to the renderer-backed
+/// `MaterialService` (for example `WinitAppDriver::gpu_ready`).
+pub fn ensure_materials(app: &mut App, material_service: &mut dyn MaterialService) {
     app.with_global_mut_untracked(VisualCatalog::default, |cat, _app| {
         // Patterns (Phase 0).
         let _ = cat.materials.get_or_register(

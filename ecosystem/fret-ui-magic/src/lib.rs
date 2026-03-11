@@ -28,4 +28,26 @@ pub use patterns::{
 pub use sparkles_text::{SparklesTextProps, sparkles_text};
 
 #[cfg(feature = "app-integration")]
-pub mod app_integration;
+pub mod advanced;
+
+#[cfg(all(test, feature = "app-integration"))]
+mod surface_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+    const ADVANCED_RS: &str = include_str!("advanced.rs");
+
+    fn public_surface() -> &'static str {
+        LIB_RS
+            .split("#[cfg(all(test, feature = \"app-integration\"))]")
+            .next()
+            .unwrap_or(LIB_RS)
+    }
+
+    #[test]
+    fn material_service_helper_stays_on_explicit_advanced_surface() {
+        let public_surface = public_surface();
+        assert!(public_surface.contains("pub mod advanced;"));
+        assert!(!public_surface.contains("pub mod app_integration;"));
+        assert!(ADVANCED_RS.contains("pub fn ensure_materials("));
+        assert!(ADVANCED_RS.contains("MaterialService"));
+    }
+}

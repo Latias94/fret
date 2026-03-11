@@ -1047,7 +1047,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
         #[cfg(feature = "gallery-dev")]
-        fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
+        fret_ui_magic::advanced::ensure_materials(app, renderer);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {

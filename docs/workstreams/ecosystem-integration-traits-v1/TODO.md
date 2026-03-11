@@ -62,6 +62,12 @@ surface.
   - Landed first-pass migration on 2026-03-11 for
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node`; keep auditing the
     remaining ecosystem crates rather than treating this checklist item as globally done yet.
+- [ ] Normalize advanced service/material helpers so they live on explicit advanced seams instead
+  of ambiguous integration modules.
+  - Landed first-pass migration on 2026-03-11:
+    `fret-ui-magic` now exposes its renderer/material helper as
+    `fret_ui_magic::advanced::ensure_materials(...)` rather than the old ambiguous
+    `app_integration`-named path.
 - [ ] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
   one of the target seams.
 
