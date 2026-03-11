@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
 use fret_core::{Corners, ImageId, Px};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -41,7 +41,7 @@ pub fn render<H: UiHost>(
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Log out")
-                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                        .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
                         .test_id("ui-gallery-avatar-dropdown-item-logout"),
                 ),
             ]

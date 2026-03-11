@@ -2,11 +2,11 @@ pub const SOURCE: &str = include_str!("bluetooth.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
-    let style = shadcn::switch::SwitchStyle::default().track_background(
+    let style = fret_ui_shadcn::switch::SwitchStyle::default().track_background(
         fret_ui_kit::WidgetStateProperty::new(None)
             .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
     );

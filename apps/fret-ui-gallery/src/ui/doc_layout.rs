@@ -408,7 +408,7 @@ pub(in crate::ui) fn rtl(
 }
 
 pub(in crate::ui) fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 #[allow(dead_code)]

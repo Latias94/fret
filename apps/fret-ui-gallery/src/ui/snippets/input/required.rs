@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("required.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -29,7 +29,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let label = ui::h_row(|cx| {
         vec![
             shadcn::FieldLabel::new("Required Field").into_element(cx),
-            shadcn::typography::muted(cx, "*")
+            shadcn::raw::typography::muted(cx, "*")
                 .attach_semantics(SemanticsDecoration::default().label("required-star")),
         ]
     })

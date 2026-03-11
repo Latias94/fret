@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret_app::App;
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -16,7 +16,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         "preview",
                         "Preview",
                         vec![
-                            shadcn::typography::muted(cx, "Preview panel (RTL keynav gate).")
+                            shadcn::raw::typography::muted(cx, "Preview panel (RTL keynav gate).")
                                 .test_id("ui-gallery-tabs-rtl-panel-preview"),
                         ],
                     )
@@ -25,7 +25,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         "code",
                         "Code",
                         vec![
-                            shadcn::typography::muted(cx, "Code panel (RTL keynav gate).")
+                            shadcn::raw::typography::muted(cx, "Code panel (RTL keynav gate).")
                                 .test_id("ui-gallery-tabs-rtl-panel-code"),
                         ],
                     )

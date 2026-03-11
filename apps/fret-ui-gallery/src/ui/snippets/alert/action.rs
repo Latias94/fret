@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("action.rs");
 
 // region: example
 use fret_ui_kit::ui::UiElementSinkExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![
             shadcn::Alert::build(|cx, out| {
-                out.push(shadcn::icon::icon(
+                out.push(fret_ui_shadcn::icon::icon(
                     cx,
                     fret_icons::IconId::new_static("lucide.circle-alert"),
                 ));
@@ -36,7 +36,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-alert-action"),
             shadcn::Alert::build(|cx, out| {
-                out.push(shadcn::icon::icon(
+                out.push(fret_ui_shadcn::icon::icon(
                     cx,
                     fret_icons::IconId::new_static("lucide.circle-alert"),
                 ));

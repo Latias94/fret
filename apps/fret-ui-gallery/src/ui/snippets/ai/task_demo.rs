@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("task_demo.rs");
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -116,7 +116,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         ui_ai::TaskItem::new([
                             cx.text(text),
                             ui_ai::TaskItemFile::new([
-                                shadcn::icon::icon_with(
+                                fret_ui_shadcn::icon::icon_with(
                                     cx,
                                     fret_icons::IconId::new_static(icon),
                                     Some(Px(16.0)),
@@ -163,7 +163,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .min_w_0()
         .max_w(Px(896.0))
         .h_px(Px(600.0));
-    let mut props = shadcn::decl_style::container_props(theme, chrome, layout);
+    let mut props = fret_ui_shadcn::decl_style::container_props(theme, chrome, layout);
     props.border_color = Some(theme.color_token("border"));
     props.background = Some(theme.color_token("background"));
 

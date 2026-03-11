@@ -122,7 +122,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let request = ui::h_row(|cx| {
                 vec![
                     cx.text("This tool wants to delete the file"),
-                    shadcn::typography::inline_code(cx, "/tmp/example.txt"),
+                    shadcn::raw::typography::inline_code(cx, "/tmp/example.txt"),
                     cx.text(". Do you approve this action?"),
                 ]
             })

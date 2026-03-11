@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -62,7 +62,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx);
 
             let theme = cx.theme().snapshot();
-            let props = shadcn::decl_style::container_props(
+            let props = fret_ui_shadcn::decl_style::container_props(
                 &theme,
                 ChromeRefinement::default().p(Space::N4),
                 LayoutRefinement::default().w_full().h_full(),

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("sizes.rs");
 
 // region: example
 use fret_core::ImageId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

@@ -2,14 +2,14 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let header = ui::v_stack(|cx| {
             vec![
-                shadcn::typography::small(cx, "shadcn/ui"),
-                shadcn::typography::muted(cx, "الأساس لنظام التصميم الخاص بك"),
+                shadcn::raw::typography::small(cx, "shadcn/ui"),
+                shadcn::raw::typography::muted(cx, "الأساس لنظام التصميم الخاص بك"),
             ]
         })
         .gap(Space::N1p5)
@@ -20,7 +20,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 
-        let description = shadcn::typography::small(
+        let description = shadcn::raw::typography::small(
             cx,
             "مجموعة من المكونات المصممة بشكل جميل يمكنك تخصيصها وتوسيعها والبناء عليها.",
         );

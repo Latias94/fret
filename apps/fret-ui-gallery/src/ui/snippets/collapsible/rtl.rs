@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -50,7 +50,7 @@ fn details_collapsible<H: UiHost>(
                     vec![
                         ui::h_flex(|cx| {
                             vec![
-                                shadcn::typography::muted(cx, "Shipping address"),
+                                shadcn::raw::typography::muted(cx, "Shipping address"),
                                 cx.text("100 Market St, San Francisco"),
                             ]
                         })
@@ -74,7 +74,7 @@ fn details_collapsible<H: UiHost>(
                     vec![
                         ui::h_flex(|cx| {
                             vec![
-                                shadcn::typography::muted(cx, "Items"),
+                                shadcn::raw::typography::muted(cx, "Items"),
                                 cx.text("2x Studio Headphones"),
                             ]
                         })

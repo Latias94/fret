@@ -1,7 +1,7 @@
 use fret_app::Model;
 use fret_core::ImageId;
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::Date;
 

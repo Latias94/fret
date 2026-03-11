@@ -6,7 +6,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {

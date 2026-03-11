@@ -5,7 +5,7 @@ use fret_app::App;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let content = shadcn::SidebarProvider::new()
@@ -38,10 +38,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx);
 
             let sidebar = shadcn::Sidebar::new([
-                shadcn::SidebarHeader::new([shadcn::typography::small(cx, "Workspace")])
+                shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Workspace")])
                     .into_element(cx),
                 shadcn::SidebarContent::new([primary]).into_element(cx),
-                shadcn::SidebarFooter::new([shadcn::typography::muted(
+                shadcn::SidebarFooter::new([shadcn::raw::typography::muted(
                     cx,
                     "Sidebar width is owned by SidebarProvider.",
                 )])

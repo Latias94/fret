@@ -15,7 +15,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, title), body])
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()).into_element(cx)
@@ -39,7 +39,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
 
         let content = ui::v_flex(|cx| {
                 let mut rows: Vec<AnyElement> = Vec::with_capacity(versions.len() * 2 + 1);
-                rows.push(shadcn::typography::small(cx, "Tags"));
+                rows.push(shadcn::raw::typography::small(cx, "Tags"));
                 for tag in versions {
                     rows.push(cx.text(tag));
                     rows.push(
@@ -96,7 +96,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
                                     });
                                     cx.container(photo_props, |_cx| Vec::new())
                                 },
-                                shadcn::typography::muted(cx, format!("Photo by {artist}")),
+                                shadcn::raw::typography::muted(cx, format!("Photo by {artist}")),
                             ])
                             .into_element(cx),
                         ])
@@ -131,7 +131,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
             |cx| {
                 let content = ui::v_flex(|cx| {
                         let mut rows: Vec<AnyElement> =
-                            vec![shadcn::typography::small(cx, "العلامات")];
+                            vec![shadcn::raw::typography::small(cx, "العلامات")];
                         for idx in 1..=40 {
                             rows.push(cx.text(format!("v1.2.0-beta.{:02}", 41 - idx)));
                             rows.push(

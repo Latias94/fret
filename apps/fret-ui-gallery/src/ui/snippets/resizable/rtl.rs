@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Axis;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -33,7 +33,7 @@ fn panel<H: UiHost>(
         None => LayoutRefinement::default().w_full().h_full(),
     };
 
-    let body = ui::v_flex(move |cx| vec![shadcn::typography::small(cx, label)])
+    let body = ui::v_flex(move |cx| vec![shadcn::raw::typography::small(cx, label)])
         .layout(LayoutRefinement::default().w_full().h_full())
         .items_center()
         .justify_center()

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("diag_surface.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -82,7 +82,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .get_model_cloned(&selected_value, Invalidation::Paint)
             .unwrap_or_default()
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
-        shadcn::typography::muted(cx, Arc::<str>::from(format!("Selected: {selected}")))
+        shadcn::raw::typography::muted(cx, Arc::<str>::from(format!("Selected: {selected}")))
             .test_id("ui-gallery-select-selected-label")
     });
 

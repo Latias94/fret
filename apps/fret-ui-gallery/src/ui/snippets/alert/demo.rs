@@ -9,7 +9,7 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn is_diag_mode() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
@@ -116,7 +116,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     ui::v_flex(|cx| {
         vec![
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertTitle::new_children([interactive_link_text(
                     cx,
                     "Let's try one with icon, title and a link.",
@@ -131,7 +131,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-title-link"),
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertDescription::new_children([
                     interactive_link_text(
                         cx,
@@ -155,7 +155,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-description-link"),
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertTitle::new("Success! Your changes have been saved")
                     .into_element(cx),
                 shadcn::AlertDescription::new("This is an alert with icon, title and description.")
@@ -166,7 +166,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-success"),
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertTitle::new(
                     "This is a very long alert title that demonstrates how the component handles extended text content and potentially wraps across multiple lines",
                 )
@@ -177,7 +177,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-long-title"),
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertDescription::new(
                     "This is a very long alert description that demonstrates how the component handles extended text content and potentially wraps across multiple lines.",
                 )
@@ -188,7 +188,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-long-description"),
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertTitle::new(
                     "This is an extremely long alert title that spans multiple lines to demonstrate how the component handles very lengthy headings while maintaining readability and proper text wrapping behavior",
                 )

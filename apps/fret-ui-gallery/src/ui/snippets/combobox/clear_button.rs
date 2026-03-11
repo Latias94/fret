@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("clear_button.rs");
 // region: example
 use fret_app::App;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -45,7 +45,7 @@ fn state_row(cx: &mut ElementContext<'_, App>, text: Arc<str>, test_id: Arc<str>
             LayoutRefinement::default().w_full().min_w_0(),
         )
     });
-    cx.container(props, move |cx| [shadcn::typography::muted(cx, text)])
+    cx.container(props, move |cx| [shadcn::raw::typography::muted(cx, text)])
         .test_id(test_id)
 }
 

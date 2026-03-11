@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("with_icon.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -21,7 +21,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Outline)
                 .children([
-                    shadcn::icon::icon_with(
+                    fret_ui_shadcn::icon::icon_with(
                         cx,
                         IconId::new_static("lucide.git-branch"),
                         None,
@@ -40,7 +40,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .variant(shadcn::ButtonVariant::Outline)
                 .children([
                     ui::text("Fork").font_medium().nowrap().into_element(cx),
-                    shadcn::icon::icon_with(cx, IconId::new_static("lucide.git-fork"), None, None),
+                    fret_ui_shadcn::icon::icon_with(cx, IconId::new_static("lucide.git-fork"), None, None),
                 ])
                 .test_id("ui-gallery-button-with-trailing-icon")
                 .into_element(cx),

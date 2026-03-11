@@ -9,7 +9,7 @@ use fret_core::{
 };
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{PressableKeyActivation, PressableProps, StyledTextProps};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct DemoModels {
@@ -135,7 +135,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     ui::v_flex(|cx| {
         vec![
             shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                 shadcn::AlertTitle::new("Need help resolving the billing issue?").into_element(cx),
                 shadcn::AlertDescription::new_children([
                     ui::text(

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("natural_language.rs");
 
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
@@ -217,7 +217,7 @@ pub fn render<H: UiHost>(
         let date_label = selected_now
             .map(format_date_month_dd_yyyy_en)
             .unwrap_or_else(|| String::from("—"));
-        shadcn::typography::muted(
+        shadcn::raw::typography::muted(
             cx,
             Arc::from(format!("Your post will be published on {date_label}.")),
         )

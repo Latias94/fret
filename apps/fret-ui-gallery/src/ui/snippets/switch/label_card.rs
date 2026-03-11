@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("label_card.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -24,7 +24,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let checked = cx.watch_model(&description).copied().unwrap_or(false);
 
     let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
-    let style = shadcn::switch::SwitchStyle::default().track_background(
+    let style = fret_ui_shadcn::switch::SwitchStyle::default().track_background(
         fret_ui_kit::WidgetStateProperty::new(None)
             .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue.clone())),
     );

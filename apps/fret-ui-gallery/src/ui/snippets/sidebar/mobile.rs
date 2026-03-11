@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -97,12 +97,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .on_activate(on_toggle_open_mobile)
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
-                        shadcn::typography::muted(
+                        shadcn::raw::typography::muted(
                             cx,
                             "Forced mobile mode via SidebarProvider.is_mobile(true).",
                         ),
-                        shadcn::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
-                        shadcn::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
+                        shadcn::raw::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
+                        shadcn::raw::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
                     ]
                 })
                     .gap(Space::N2)

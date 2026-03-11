@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("position.rs");
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
@@ -130,7 +130,7 @@ pub fn render<H: UiHost>(
         vec![
             top_row,
             bottom_row,
-            shadcn::typography::muted(
+            shadcn::raw::typography::muted(
                 cx,
                 format!("Current toaster position: {}", toast_position_key(current)),
             ),

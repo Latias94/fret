@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -81,7 +81,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .test_id("ui-gallery-sidebar-demo-focus")
                     .into_element(cx),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     if collapsed {
                         "Collapsed to icon rail"
@@ -89,7 +89,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Expanded"
                     },
                 ),
-                shadcn::typography::muted(cx, format!("active={}", selected_value.as_ref())),
+                shadcn::raw::typography::muted(cx, format!("active={}", selected_value.as_ref())),
             ]
         })
         .gap(Space::N2)
@@ -183,10 +183,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([shadcn::typography::small(cx, "Acme Inc.")])
+            shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Acme Inc.")])
                 .into_element(cx),
             shadcn::SidebarContent::new([platform, projects]).into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::typography::small(cx, "shadcn")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "shadcn")]).into_element(cx),
         ])
         .collapsible(shadcn::SidebarCollapsible::Icon)
         .refine_layout(LayoutRefinement::default().h_full())

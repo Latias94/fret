@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("time_picker.rs");
 
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 pub fn render<H: UiHost>(

@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]

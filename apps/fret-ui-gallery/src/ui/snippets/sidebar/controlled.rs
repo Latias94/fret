@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("controlled.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -97,7 +97,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .on_activate(on_toggle_open.clone())
                     .test_id("ui-gallery-sidebar-controlled-toggle")
                     .into_element(cx),
-                    shadcn::typography::muted(
+                    shadcn::raw::typography::muted(
                         cx,
                         "Controlled via SidebarProvider.open(Some(model)).",
                     ),

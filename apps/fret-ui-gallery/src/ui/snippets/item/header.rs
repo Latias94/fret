@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("header.rs");
 use fret_app::App;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_xl = LayoutRefinement::default()
@@ -34,7 +34,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .overflow_hidden(),
             );
             let image = cx
-                .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+                .container(props, move |cx| vec![shadcn::raw::typography::muted(cx, "IMG")])
                 .test_id(format!("ui-gallery-item-header-image-{idx}"));
             shadcn::ItemHeader::new([image]).into_element(cx)
         };

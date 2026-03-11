@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("media.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -36,7 +36,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
         },
         move |cx| {
-            let icon = shadcn::icon::icon_with(
+            let icon = fret_ui_shadcn::icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static("lucide.circle-plus"),
                 Some(Px(32.0)),

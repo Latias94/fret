@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("fluid_tabs_demo.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(
     cx: &mut ElementContext<'_, App>,
@@ -10,7 +10,7 @@ fn panel(
     description: &'static str,
 ) -> AnyElement {
     shadcn::Alert::new([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
         shadcn::AlertTitle::new(title).into_element(cx),
         shadcn::AlertDescription::new(description).into_element(cx),
     ])

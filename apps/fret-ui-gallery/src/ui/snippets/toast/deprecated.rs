@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("deprecated.rs");
 // region: example
 use fret_app::App;
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
 
@@ -24,7 +24,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![shadcn::typography::muted(
+        shadcn::CardContent::new(vec![shadcn::raw::typography::muted(
             cx,
             "This page intentionally keeps only the deprecation guidance to match upstream docs.",
         )])

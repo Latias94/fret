@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -114,7 +114,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let invalid_section = {
         let destructive = cx.theme().color_token("destructive");
-        let invalid_style = shadcn::switch::SwitchStyle::default().border_color(
+        let invalid_style = fret_ui_shadcn::switch::SwitchStyle::default().border_color(
             fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(destructive))),
         );
 
@@ -143,7 +143,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     ui::v_flex(|cx| {
             vec![
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Extras are Fret-specific demos and regression gates (not part of upstream shadcn SwitchDemo).",
                 ),

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("upstream_demo.rs");
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::form::{FormRegistry, FormRegistryOptions, FormRevalidateMode};
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
@@ -519,7 +519,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .for_control(control_id)
                             .into_element(cx),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "You can manage your mobile notifications in the mobile settings page.",
                             ),
@@ -550,8 +550,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         [ui::v_flex(|cx| {
             let header = ui::v_stack(|cx| {
                 vec![
-                    shadcn::typography::large(cx, "Sidebar"),
-                    shadcn::typography::muted(
+                    shadcn::raw::typography::large(cx, "Sidebar"),
+                    shadcn::raw::typography::muted(
                         cx,
                         "Select the items you want to display in the sidebar.",
                     ),
@@ -687,7 +687,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     let text = ui::v_stack(|cx| {
                         vec![
                             shadcn::Label::new("Marketing emails").into_element(cx),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Receive emails about new products, features, and more.",
                             ),
@@ -720,7 +720,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     let text = ui::v_stack(|cx| {
                         vec![
                             shadcn::Label::new("Security emails").into_element(cx),
-                            shadcn::typography::muted(
+                            shadcn::raw::typography::muted(
                                 cx,
                                 "Receive emails about your account security.",
                             ),
@@ -750,7 +750,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         ui::v_flex(|cx| {
             vec![
-                shadcn::typography::h3(cx, "Email Notifications"),
+                shadcn::raw::typography::h3(cx, "Email Notifications"),
                 ui::v_flex(|_cx| vec![marketing, security])
                     .gap(Space::N4)
                     .layout(LayoutRefinement::default().w_full().min_w_0())

@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -47,7 +47,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ])
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
             .into_element(cx),
-            shadcn::typography::muted(cx, format!("Pressed: {pressed_now}"))
+            shadcn::raw::typography::muted(cx, format!("Pressed: {pressed_now}"))
                 .test_id("ui-gallery-toggle-label-state"),
         ]
     })

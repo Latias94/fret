@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("shortcuts.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(

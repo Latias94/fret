@@ -73,7 +73,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Usage", usage)
                 .description("Copyable minimal imports plus a representative fieldset composition.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 let full_name = cx.app.models_mut().insert(String::new());
 let newsletter = cx.app.models_mut().insert(false);

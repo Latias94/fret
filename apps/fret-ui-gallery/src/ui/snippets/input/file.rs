@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("file.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_INPUT_PICTURE_BROWSE: &str = "ui_gallery.input.picture.browse";
 
@@ -52,7 +52,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     );
     if !selected.is_empty() {
         children.push(
-            shadcn::typography::muted(cx, format!("Selected file: {selected}"))
+            shadcn::raw::typography::muted(cx, format!("Selected file: {selected}"))
                 .test_id("ui-gallery-input-file-selected"),
         );
     }

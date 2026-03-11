@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::Theme;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -24,9 +24,9 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 }
 
 fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
+    fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
         .kind(
-            shadcn::breadcrumb::primitives::BreadcrumbSeparatorKind::Icon {
+            fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparatorKind::Icon {
                 icon: fret_icons::IconId::new_static("lucide.dot"),
                 size: Px(14.0),
             },
@@ -37,12 +37,12 @@ fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
 
-    let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
-        let list = shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
+    let crumb = fret_ui_shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
+        let list = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
             let home =
-                shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+                fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![
-                        shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
+                        fret_ui_shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
                             .href("/home")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx)
@@ -50,7 +50,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     ]
                 });
 
-            let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+            let components_dropdown = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new()
                 .into_element(cx, |cx| {
                     let menu = shadcn::DropdownMenu::new(open.clone())
                         .align(shadcn::DropdownMenuAlign::Start)
@@ -72,7 +72,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                         .text_color(fret_ui_kit::ColorRef::Color(color))
                                         .nowrap()
                                         .into_element(cx);
-                                    let chevron = shadcn::icon::icon_with(
+                                    let chevron = fret_ui_shadcn::icon::icon_with(
                                         cx,
                                         fret_icons::IconId::new_static("lucide.chevron-down"),
                                         Some(Px(14.0)),
@@ -109,9 +109,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 });
 
             let page =
-                shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+                fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![
-                        shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
+                        fret_ui_shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
                             .into_element(cx),
                     ]
                 });

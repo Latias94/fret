@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("large.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon_item(value: &'static str, label: &'static str) -> shadcn::ToggleGroupItem {
     shadcn::ToggleGroupItem::icon(

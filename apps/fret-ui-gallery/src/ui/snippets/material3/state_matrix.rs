@@ -10,7 +10,7 @@ use fret_ui::element::{ContainerProps, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct ChipModels {

@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("with_icons.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
@@ -56,7 +56,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .action(CommandId::new("ui_gallery.menubar.with_icons.delete"))
                     .leading_icon(icon_id("lucide.trash"))
                     .test_id("ui-gallery-menubar-with-icons-delete")
-                    .variant(shadcn::menubar::MenubarItemVariant::Destructive),
+                    .variant(fret_ui_shadcn::menubar::MenubarItemVariant::Destructive),
             ),
         ]))]);
 

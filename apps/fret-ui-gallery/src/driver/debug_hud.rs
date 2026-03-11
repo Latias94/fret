@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme};
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub(super) fn maybe_push_debug_hud(

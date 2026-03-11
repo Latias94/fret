@@ -20,7 +20,7 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
         };
 
         let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-            ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
+            ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, title), body])
                     .gap(Space::N2)
                     .items_start()
                     .layout(LayoutRefinement::default().w_full()).into_element(cx)
@@ -77,7 +77,7 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
             } else {
                 format!("{last_commit_values:?}")
             };
-            let meta = shadcn::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
+            let meta = shadcn::raw::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
 
             let body = ui::v_flex(|_cx| vec![slider, meta])
                     .gap(Space::N3)
@@ -152,7 +152,7 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
             let header = ui::h_flex(|cx| {
                     vec![
                         shadcn::Label::new("Temperature").into_element(cx),
-                        shadcn::typography::muted(cx, values_text),
+                        shadcn::raw::typography::muted(cx, values_text),
                     ]
                 })
                     .layout(LayoutRefinement::default().w_full())
@@ -226,7 +226,7 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
                     .layout(LayoutRefinement::default().w_full())
                     .gap(Space::N6)
                     .items_start().into_element(cx),
-            shadcn::typography::muted(
+            shadcn::raw::typography::muted(
                 cx,
                 "Note: demo/range/multiple/vertical/disabled/RTL are uncontrolled (element state). Controlled uses a shared model."
                     .to_string(),

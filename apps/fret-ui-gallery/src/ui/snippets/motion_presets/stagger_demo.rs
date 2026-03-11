@@ -5,7 +5,7 @@ use fret_app::App;
 use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
 #[derive(Default, Clone)]

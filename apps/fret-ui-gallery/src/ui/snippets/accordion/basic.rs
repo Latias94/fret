@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Accordion::single_uncontrolled(Some("item-1"))
@@ -17,7 +17,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Is it accessible?")]),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Yes. It adheres to the WAI-ARIA design pattern.",
                 )]),
@@ -25,7 +25,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::AccordionItem::new(
                 "item-2",
                 shadcn::AccordionTrigger::new(vec![cx.text("Is it styled?")]),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Yes. It ships with shadcn-style trigger, chevron, spacing, and motion defaults.",
                 )]),

@@ -7,7 +7,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 

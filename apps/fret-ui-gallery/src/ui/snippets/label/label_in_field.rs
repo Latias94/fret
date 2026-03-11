@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("label_in_field.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -28,7 +28,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     ui::v_stack(|cx| {
         vec![
-            shadcn::typography::muted(
+            shadcn::raw::typography::muted(
                 cx,
                 "For forms, prefer Field + FieldLabel for built-in description/error structure.",
             ),

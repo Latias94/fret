@@ -6,7 +6,7 @@ use fret_core::{Color as CoreColor, ImageId};
 use fret_ui::Theme;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::{ModelWatchExt as _, style as decl_style};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
 
 pub fn render(

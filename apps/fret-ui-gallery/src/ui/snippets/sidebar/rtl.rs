@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 use fret_app::App;
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -110,12 +110,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([shadcn::typography::small(cx, "مؤسسة مثال")])
+            shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "مؤسسة مثال")])
                 .into_element(cx),
             shadcn::SidebarContent::new([platform])
                 .collapsed(false)
                 .into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::typography::small(cx, "الدعم")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "الدعم")]).into_element(cx),
         ])
         .collapsed(false)
         .refine_layout(LayoutRefinement::default().h_full())

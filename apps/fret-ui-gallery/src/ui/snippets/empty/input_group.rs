@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -31,17 +31,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
     shadcn::Empty::new([
-        shadcn::empty::EmptyHeader::new([
-            shadcn::empty::EmptyTitle::new("404 - Not Found").into_element(cx),
-            shadcn::empty::EmptyDescription::new(
+        fret_ui_shadcn::empty::EmptyHeader::new([
+            fret_ui_shadcn::empty::EmptyTitle::new("404 - Not Found").into_element(cx),
+            fret_ui_shadcn::empty::EmptyDescription::new(
                 "The page you are looking for doesn't exist. Try searching below.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::empty::EmptyContent::new([
+        fret_ui_shadcn::empty::EmptyContent::new([
             search,
-            shadcn::empty::EmptyDescription::new("Need help? Contact support.").into_element(cx),
+            fret_ui_shadcn::empty::EmptyDescription::new("Need help? Contact support.").into_element(cx),
         ])
         .into_element(cx),
     ])

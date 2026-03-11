@@ -8,7 +8,7 @@ use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -161,7 +161,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .into_element(cx)
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
 
-                let instructions = shadcn::typography::muted(
+                let instructions = shadcn::raw::typography::muted(
                     cx,
                     "Drag the thumb, then click “Arm content growth”. Content will grow after ~120ms; the thumb should remain stable.",
                 )

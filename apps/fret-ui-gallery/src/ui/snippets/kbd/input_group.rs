@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("input_group.rs");
 // region: example
 use fret_core::Px;
 use fret_ui::Theme;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -27,7 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let muted_fg = theme.color_token("muted-foreground");
 
-    let search_icon = shadcn::icon::icon_with(
+    let search_icon = fret_ui_shadcn::icon::icon_with(
         cx,
         fret_icons::IconId::new_static("lucide.search"),
         Some(Px(16.0)),
@@ -38,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .a11y_label("Search")
         .leading([search_icon])
         .trailing([
-            shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+            shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
                 cx,
                 fret_icons::IconId::new_static("lucide.command"),
             )])

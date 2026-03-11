@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("top_app_bar.rs");
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui_material3::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let bar = |cx: &mut ElementContext<'_, H>,

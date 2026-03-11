@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("date_and_time_picker.rs");
 use fret_core::Px;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 const FIELD_W_PX: Px = Px(128.0);

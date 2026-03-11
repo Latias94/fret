@@ -7,7 +7,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let Some(assets) = cx.app.global::<UiGalleryImageSourceDemoAssets>().cloned() else {

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 use fret_app::App;
 use fret_core::Edges;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -12,7 +12,7 @@ struct Models {
 }
 
 fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {

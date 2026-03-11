@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("label.rs");
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
 #[derive(Default)]

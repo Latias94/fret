@@ -3,7 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
 use fret_ui_kit::ui::UiElementSinkExt as _;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(super) fn preview_ai_shimmer_demo(
     cx: &mut ElementContext<'_, App>,

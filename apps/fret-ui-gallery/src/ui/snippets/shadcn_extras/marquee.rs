@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("marquee.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+    fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
         .pause_on_hover(true)
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)

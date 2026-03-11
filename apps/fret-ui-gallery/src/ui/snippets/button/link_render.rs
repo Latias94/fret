@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("link_render.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn wrap_row<H: UiHost>(

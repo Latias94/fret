@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.previous";
 const CMD_PAGE_1: &str = "ui_gallery.pagination.page_1";

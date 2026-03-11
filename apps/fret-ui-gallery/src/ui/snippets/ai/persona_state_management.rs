@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{ButtonSize, ButtonVariant, facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]

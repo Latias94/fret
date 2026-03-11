@@ -5,7 +5,7 @@ use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -61,7 +61,7 @@ fn rotated_lucide<H: UiHost>(
             transform,
         },
         move |cx| {
-            vec![shadcn::icon::icon_with(
+            vec![fret_ui_shadcn::icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static(id),
                 Some(size),
@@ -78,7 +78,7 @@ fn file_leaf<H: UiHost>(
 ) -> AnyElement {
     let row = ui::h_flex(|cx| {
         vec![
-            shadcn::icon::icon_with(
+            fret_ui_shadcn::icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static("lucide.file"),
                 Some(Px(16.0)),
@@ -125,7 +125,7 @@ fn folder<H: UiHost>(
                 let row = ui::h_flex(|cx| {
                     vec![
                         chevron,
-                        shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
+                        fret_ui_shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
                         cx.text(label),
                     ]
                 })

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -39,7 +39,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let validating = ui::h_row(|cx| {
         vec![
             shadcn::Spinner::new().into_element(cx),
-            shadcn::typography::muted(cx, "Validating..."),
+            shadcn::raw::typography::muted(cx, "Validating..."),
         ]
     })
     .gap(Space::N2)

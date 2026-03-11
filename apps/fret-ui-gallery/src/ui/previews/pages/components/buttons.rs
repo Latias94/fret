@@ -16,7 +16,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     let muted_fg = ColorRef::Color(theme.color_token("muted-foreground"));
 
     let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
-        shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
+        fret_ui_shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
     };
 
     let content_text = |cx: &mut ElementContext<'_, App>, text: &'static str, fg: ColorRef| {
@@ -28,7 +28,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        ui::v_stack(move |cx| vec![shadcn::typography::h4(cx, title), body]).gap(Space::N2).items_start().into_element(cx)
+        ui::v_stack(move |cx| vec![shadcn::raw::typography::h4(cx, title), body]).gap(Space::N2).items_start().into_element(cx)
     };
 
     let size = {

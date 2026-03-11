@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("preset_selector.rs");
 // region: example
 use fret_app::App;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(

@@ -5,7 +5,7 @@ use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Pain
 use fret_ui::Invalidation;
 use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let region_layout = cx.with_theme(|theme| {
@@ -53,27 +53,27 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .unwrap_or_else(|| Paint::Solid(muted));
 
             let refresh_icon =
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.refresh-cw"));
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.refresh-cw"));
             let refresh_text = cx.text("Refresh");
             let refresh_button = shadcn::Button::new("Refresh")
                 .variant(shadcn::ButtonVariant::Outline)
                 .children([refresh_icon, refresh_text])
                 .into_element(cx);
 
-            let header_icon = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
+            let header_icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
             let empty = shadcn::Empty::new([
-                shadcn::empty::EmptyHeader::new([
-                    shadcn::empty::EmptyMedia::new([header_icon])
-                        .variant(shadcn::empty::EmptyMediaVariant::Icon)
+                fret_ui_shadcn::empty::EmptyHeader::new([
+                    fret_ui_shadcn::empty::EmptyMedia::new([header_icon])
+                        .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon)
                         .into_element(cx),
-                    shadcn::empty::EmptyTitle::new("No Notifications").into_element(cx),
-                    shadcn::empty::EmptyDescription::new(
+                    fret_ui_shadcn::empty::EmptyTitle::new("No Notifications").into_element(cx),
+                    fret_ui_shadcn::empty::EmptyDescription::new(
                         "You're all caught up. New notifications will appear here.",
                     )
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
+                fret_ui_shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
             ])
             .refine_style(ChromeRefinement::default().background_paint(paint))
             .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))

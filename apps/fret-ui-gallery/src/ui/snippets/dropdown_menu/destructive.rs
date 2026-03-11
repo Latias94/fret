@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::DropdownMenu::new_controllable(cx, None, false).build_parts(
@@ -29,7 +29,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::DropdownMenuSeparator::new().into(),
                 shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Delete")
                     .leading_icon(IconId::new_static("lucide.trash"))
-                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
                     .into()])
                 .into(),
             ]

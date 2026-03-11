@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("parts.rs");
 // region: example
 use fret_core::Px;
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();

@@ -7,7 +7,7 @@ use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -168,7 +168,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
                 let name = ui_ai::ModelSelectorName::new(model.name).into_element(cx);
 
-                let check = shadcn::icon::icon_with(
+                let check = fret_ui_shadcn::icon::icon_with(
                     cx,
                     fret_icons::ids::ui::CHECK,
                     Some(fret_core::Px(16.0)),

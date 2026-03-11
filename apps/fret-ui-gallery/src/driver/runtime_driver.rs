@@ -22,7 +22,7 @@ use fret_runtime::{
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
@@ -870,10 +870,10 @@ pub fn build_app() -> App {
     caps.shell.incoming_open = true;
     app.set_global(caps);
     app.set_global(UiGalleryRecentItemsService::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         &mut app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Zinc,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 
     app.with_global_mut(IconRegistry::default, |icons, app| {

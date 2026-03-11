@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("contracts.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let chart_1 = cx.theme().color_token("chart-1");
@@ -50,7 +50,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     ui::v_flex(|cx| {
         vec![
-            shadcn::typography::muted(cx, "Chart UI contracts: Tooltip + Legend content recipes."),
+            shadcn::raw::typography::muted(cx, "Chart UI contracts: Tooltip + Legend content recipes."),
             tooltip(
                 cx,
                 "January",

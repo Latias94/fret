@@ -42,7 +42,7 @@ pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 #[cfg(feature = "gallery-material3")]
 use fret_ui_material3 as material3;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};

@@ -483,7 +483,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
 
         ui::v_flex(move |cx| {
                 let mut out = vec![
-                    shadcn::typography::muted(
+                    shadcn::raw::typography::muted(
                         cx,
                         "Interactive span gate: click the link to exercise SelectableText span activation.",
                     ),
@@ -491,7 +491,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                 ];
                 if let Some(href) = link_gate_last.as_ref() {
                     out.push(
-                        shadcn::typography::muted(cx, format!("Activated: {href}"))
+                        shadcn::raw::typography::muted(cx, format!("Activated: {href}"))
                             .test_id("ui-gallery-markdown-span-link-activated"),
                     );
                 }

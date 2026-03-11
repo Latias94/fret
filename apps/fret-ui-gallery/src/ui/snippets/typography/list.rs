@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("list.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::typography::list(
+    shadcn::raw::typography::list(
         cx,
         [
             Arc::<str>::from("Jokes are free speech."),

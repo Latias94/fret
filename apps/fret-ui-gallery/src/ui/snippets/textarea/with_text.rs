@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("with_text.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -35,7 +35,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
             ui::text("Your message will be copied to the support team.")
                 .text_sm()
-                .text_color(shadcn::ColorRef::Token {
+                .text_color(fret_ui_shadcn::ColorRef::Token {
                     key: "muted-foreground",
                     fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
                 })

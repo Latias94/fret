@@ -5,7 +5,7 @@ use fret_app::App;
 use fret_core::Px;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -288,7 +288,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         };
 
     let trending_footer = |cx: &mut ElementContext<'_, App>, secondary: &'static str| {
-        let icon = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
+        let icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
         ui::v_flex(|cx| {
             vec![
                 ui::h_row(|cx| {
@@ -302,7 +302,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                shadcn::typography::muted(cx, secondary),
+                shadcn::raw::typography::muted(cx, secondary),
             ]
         })
         .gap(Space::N2)

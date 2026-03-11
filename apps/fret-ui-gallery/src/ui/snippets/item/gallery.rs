@@ -5,7 +5,7 @@ use fret_app::App;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
@@ -16,7 +16,7 @@ struct Models {
 }
 
 fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn icon_button(
@@ -454,7 +454,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 LayoutRefinement::default().size_full(),
             );
             let image = cx
-                .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+                .container(props, move |cx| vec![shadcn::raw::typography::muted(cx, "IMG")])
                 .test_id(format!("ui-gallery-item-music-image-{idx}"));
             let media = shadcn::ItemMedia::new([image])
                 .variant(shadcn::ItemMediaVariant::Image)

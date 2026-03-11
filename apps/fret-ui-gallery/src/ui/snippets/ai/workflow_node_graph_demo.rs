@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("workflow_node_graph_demo.rs");
 // region: example
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w_xl = LayoutRefinement::default()
@@ -27,7 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "notifications",
                 shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-notifications"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Configure email, push, and in-app notifications.",
                 )])
@@ -37,7 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "security",
                 shadcn::AccordionTrigger::new(vec![cx.text("Security")])
                     .test_id("ui-gallery-accordion-extras-multiple-trigger-security"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Manage passwords, 2FA, and active sessions.",
                 )]),
@@ -52,7 +52,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .items([shadcn::AccordionItem::new(
             "item-1",
             shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]).disabled(true),
-            shadcn::AccordionContent::new(vec![shadcn::typography::p(
+            shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                 cx,
                 "This item is disabled and should not be interactive.",
             )]),
@@ -66,7 +66,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items([shadcn::AccordionItem::new(
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Use an outer chrome wrapper when you want a bordered surface.",
                 )]),
@@ -96,7 +96,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::AccordionTrigger::new(vec![cx.text(
                         "What subscription plans do you offer?",
                     )]),
-                    shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                    shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                         cx,
                         "We offer multiple tiers with increasing storage limits, API access, and priority support.",
                     )]),
@@ -104,7 +104,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::AccordionItem::new(
                     "billing",
                     shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
-                    shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                    shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                         cx,
                         "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
                     )]),
@@ -137,7 +137,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-extras-rtl-trigger"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Ensure icons and spacing mirror correctly under RTL.",
                 )]),
@@ -146,33 +146,33 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     });
 
     let multiple_section =
-        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Multiple"), multiple])
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Multiple"), multiple])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
     let disabled_section =
-        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Disabled"), disabled])
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Disabled"), disabled])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
     let borders_section =
-        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Borders"), borders])
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Borders"), borders])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
-    let card_section = ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "Card"), card])
+    let card_section = ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "Card"), card])
         .gap(Space::N3)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
 
-    let rtl_section = ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, "RTL"), rtl])
+    let rtl_section = ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, "RTL"), rtl])
         .gap(Space::N3)
         .items_start()
         .layout(LayoutRefinement::default().w_full().min_w_0())

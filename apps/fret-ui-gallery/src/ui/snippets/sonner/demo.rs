@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -98,16 +98,16 @@ pub fn render<H: UiHost>(
             .test_id(test_id);
 
         if active {
-            let bg = shadcn::ColorRef::Token {
+            let bg = fret_ui_shadcn::ColorRef::Token {
                 key: "accent",
                 fallback: fret_ui_kit::ColorFallback::ThemeHoverBackground,
             };
-            let fg = shadcn::ColorRef::Token {
+            let fg = fret_ui_shadcn::ColorRef::Token {
                 key: "accent-foreground",
                 fallback: fret_ui_kit::ColorFallback::ThemeTextPrimary,
             };
             button = button.style(
-                shadcn::button::ButtonStyle::default()
+                fret_ui_shadcn::button::ButtonStyle::default()
                     .background(fret_ui_kit::WidgetStateProperty::new(Some(bg)))
                     .foreground(fret_ui_kit::WidgetStateProperty::new(Some(fg))),
             );
@@ -441,7 +441,7 @@ pub fn render<H: UiHost>(
     ui::v_flex(move |cx| {
         vec![
             buttons,
-            shadcn::typography::muted(
+            shadcn::raw::typography::muted(
                 cx,
                 if pending {
                     "Promise toast pending: click Promise again to resolve."

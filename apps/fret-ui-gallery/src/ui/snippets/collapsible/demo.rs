@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui_shadcn::collapsible_primitives as shadcn_col;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with
@@ -14,7 +14,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().w_px(Px(350.0)))
             .into_element(cx, move |cx| {
                 let header = {
-                    let title = shadcn::typography::small(cx, "@peduarte starred 3 repositories");
+                    let title = shadcn::raw::typography::small(cx, "@peduarte starred 3 repositories");
                     let button = shadcn::Button::new("")
                         .a11y_label("Toggle")
                         .variant(shadcn::ButtonVariant::Ghost)
@@ -34,7 +34,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx);
                     let theme = Theme::global(&*cx.app).snapshot();
-                    let props = shadcn::decl_style::container_props(
+                    let props = fret_ui_shadcn::decl_style::container_props(
                         &theme,
                         ChromeRefinement::default().px(Space::N4),
                         LayoutRefinement::default().w_full().min_w_0(),
@@ -44,7 +44,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
                 let item = |cx: &mut ElementContext<'_, H>, text: &'static str| {
                     let theme = Theme::global(&*cx.app).snapshot();
-                    let props = shadcn::decl_style::container_props(
+                    let props = fret_ui_shadcn::decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .border_1()

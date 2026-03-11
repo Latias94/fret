@@ -11,7 +11,7 @@ use fret::advanced::prelude::*;
 use fret::view::ViewCx;
 use fret_ui::CommandAvailability;
 use fret_ui::element::Elements;
-use fret_ui_shadcn::{self as shadcn};
+use fret_ui_shadcn::facade as shadcn;
 
 mod act {
     fret::actions!([Ping = "ui-gallery.command.action_first.ping.v1"]);

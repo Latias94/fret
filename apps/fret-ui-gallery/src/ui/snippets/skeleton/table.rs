@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
 use fret_ui::element::SemanticsDecoration;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::h_flex(|cx| {

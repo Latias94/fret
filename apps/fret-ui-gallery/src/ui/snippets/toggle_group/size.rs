@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn text_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -30,7 +30,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     ui::v_stack(move |cx| {
         vec![
-            shadcn::typography::muted(cx, "Sm / Default / Lg"),
+            shadcn::raw::typography::muted(cx, "Sm / Default / Lg"),
             ui::h_row(move |_cx| vec![sm, default, lg])
                 .gap(Space::N2)
                 .items_center()

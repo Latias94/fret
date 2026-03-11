@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
@@ -18,7 +18,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 "item-1",
                 shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
                     .test_id("ui-gallery-accordion-rtl-trigger"),
-                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                shadcn::AccordionContent::new(vec![shadcn::raw::typography::p(
                     cx,
                     "Ensure icons and spacing mirror correctly under RTL.",
                 )]),

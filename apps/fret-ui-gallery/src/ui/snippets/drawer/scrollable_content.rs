@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("scrollable_content.rs");
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {

@@ -17,7 +17,7 @@ pub(in crate::ui) fn preview_data_grid(
             .get_model_copied(&selected_row, Invalidation::Layout)
             .flatten();
 
-        let grid = shadcn::experimental::DataGridElement::new(
+        let grid = fret_ui_shadcn::experimental::DataGridElement::new(
             ["PID", "Name", "State", "CPU%"],
             DATA_GRID_ROWS,
         )
@@ -33,7 +33,7 @@ pub(in crate::ui) fn preview_data_grid(
                     // Fallback for out-of-range row IDs.
                     CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"))
                 });
-                shadcn::experimental::DataGridRowState {
+                fret_ui_shadcn::experimental::DataGridRowState {
                     selected: is_selected,
                     enabled: row % 17 != 0,
                     on_click: Some(cmd),

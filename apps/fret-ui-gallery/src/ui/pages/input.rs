@@ -46,7 +46,7 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Usage", usage)
                 .description("Copyable minimal usage for `Input` before the example matrix.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 let value = cx.app.models_mut().insert(String::new());
 

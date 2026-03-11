@@ -13,7 +13,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
+        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4(cx, title), body])
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()).into_element(cx)

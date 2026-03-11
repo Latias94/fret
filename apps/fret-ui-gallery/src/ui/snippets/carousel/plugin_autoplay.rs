@@ -7,7 +7,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, HoverRegionProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
 #[derive(Default, Clone)]

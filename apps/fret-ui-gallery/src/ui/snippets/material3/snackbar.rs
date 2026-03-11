@@ -7,7 +7,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::ToastStore;
 use fret_ui_material3 as material3;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 

@@ -39,7 +39,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             DocSection::new("Usage", usage)
                 .description("Copyable minimal usage for `Kbd` and `KbdGroup`.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 shadcn::KbdGroup::new([
     shadcn::Kbd::new("Ctrl").into_element(cx),

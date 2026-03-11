@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("rich_content.rs");
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {
@@ -84,7 +84,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let cancel_visual = ui::h_row(|cx| {
                 vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
                     ui::text("Back to safety").into_element(cx),
                 ]
             })
@@ -94,7 +94,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let action_visual = ui::h_row(|cx| {
                 vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
                     ui::text("Delete project").into_element(cx),
                 ]
             })

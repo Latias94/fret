@@ -6,7 +6,7 @@ use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;

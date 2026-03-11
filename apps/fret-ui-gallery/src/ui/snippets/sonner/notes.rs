@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("notes.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(
@@ -16,16 +16,16 @@ pub fn render<H: UiHost>(
 
     ui::v_flex(move |cx| {
             vec![
-                shadcn::typography::muted(cx, Arc::<str>::from(format!("Last action: {last}"))),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(cx, Arc::<str>::from(format!("Last action: {last}"))),
+                shadcn::raw::typography::muted(
                     cx,
                     "Preview follows `sonner-demo.tsx` (new-york-v4): buttons that trigger different toast types.",
                 ),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "Fret exposes extra knobs (position, pinned + swipe dismiss) for testing overlay behavior.",
                 ),
-                shadcn::typography::muted(
+                shadcn::raw::typography::muted(
                     cx,
                     "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
                 ),

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("locale.rs");
 
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 #[derive(Default)]
@@ -57,7 +57,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     shadcn::Calendar::new(month, selected)
-        .locale(shadcn::calendar::CalendarLocale::Es)
+        .locale(fret_ui_shadcn::calendar::CalendarLocale::Es)
         .week_start(time::Weekday::Monday)
         .test_id_prefix("ui-gallery.calendar.locale")
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))

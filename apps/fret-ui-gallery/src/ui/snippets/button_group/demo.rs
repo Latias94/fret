@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_core::{Corners, Px};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -110,7 +110,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::DropdownMenuEntry::Item(
                             shadcn::DropdownMenuItem::new("Trash")
                                 .variant(
-                                    shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                 )
                                 .leading_icon(icon_id("lucide.trash")),
                         ),

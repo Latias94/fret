@@ -9,7 +9,7 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]

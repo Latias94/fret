@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("controlled.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -55,7 +55,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             otp.test_id("ui-gallery-input-otp-controlled"),
             ui::label(message)
                 .text_size_px(Px(14.0))
-                .text_color(shadcn::ColorRef::Color(
+                .text_color(fret_ui_shadcn::ColorRef::Color(
                     theme.color_token("muted-foreground"),
                 ))
                 .into_element(cx),

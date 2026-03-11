@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("group.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()

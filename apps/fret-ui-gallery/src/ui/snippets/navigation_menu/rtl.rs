@@ -7,7 +7,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
@@ -112,7 +112,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     label: &'static str,
                     test_id: &'static str,
                     command: &'static str| {
-        let icon_el = shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+        let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
         let label_el = cx.text(label);
         let row = ui::h_row(move |_cx| [icon_el, label_el])
             .gap(Space::N2)

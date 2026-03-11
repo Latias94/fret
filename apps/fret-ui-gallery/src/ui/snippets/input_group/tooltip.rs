@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("tooltip.rs");
 // region: example
 use fret_core::Px;
 use fret_icons::IconId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
 #[derive(Default)]
@@ -40,7 +40,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
             let info_icon = |cx: &mut ElementContext<'_, H>| {
-                shadcn::icon::icon(cx, IconId::new_static("lucide.info"))
+                fret_ui_shadcn::icon::icon(cx, IconId::new_static("lucide.info"))
             };
 
             let password_tooltip = {
@@ -70,7 +70,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([shadcn::icon::icon(
+                    .children([fret_ui_shadcn::icon::icon(
                         cx,
                         IconId::new_static("lucide.circle-help"),
                     )])
@@ -95,7 +95,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([shadcn::icon::icon(
+                    .children([fret_ui_shadcn::icon::icon(
                         cx,
                         IconId::new_static("lucide.circle-help"),
                     )])

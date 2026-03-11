@@ -2,10 +2,10 @@ pub const SOURCE: &str = include_str!("icon.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn icon_button(

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("complex.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -259,7 +259,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Sign Out")
                     .leading_icon(IconId::new_static("lucide.log-out"))
                     .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘Q").into_element(cx))
-                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
                     .into()])
                 .into(),
             ]

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("grid.rs");
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use fret_icons::ids;
@@ -15,7 +15,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
      -> AnyElement {
         let row = ui::h_flex(|cx| {
             vec![
-                shadcn::icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
+                fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
                 cx.text(label),
             ]
         })

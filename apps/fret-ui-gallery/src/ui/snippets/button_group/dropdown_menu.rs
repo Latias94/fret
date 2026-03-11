@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("dropdown_menu.rs");
 
 // region: example
 use fret_core::{Corners, Px};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -34,7 +34,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .a11y_label("More")
         .variant(shadcn::ButtonVariant::Outline)
         .refine_style(ChromeRefinement::default().pl(Space::N2))
-        .children([shadcn::icon::icon(cx, icon_id("lucide.chevron-down"))])
+        .children([fret_ui_shadcn::icon::icon(cx, icon_id("lucide.chevron-down"))])
         .toggle_model(open.clone())
         .border_left_width_override(Px(0.0))
         .corner_radii_override(corners_last)
@@ -78,7 +78,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::DropdownMenuEntry::Item(
                             shadcn::DropdownMenuItem::new("Delete Conversation")
                                 .variant(
-                                    shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                 )
                                 .leading_icon(icon_id("lucide.trash")),
                         ),

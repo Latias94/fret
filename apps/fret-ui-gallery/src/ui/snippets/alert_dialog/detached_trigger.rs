@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("detached_trigger.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
 struct Models {

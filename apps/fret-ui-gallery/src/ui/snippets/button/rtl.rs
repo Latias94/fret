@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -32,7 +32,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .variant(shadcn::ButtonVariant::Outline)
                         .children([
                             ui::text("إرسال").font_medium().nowrap().into_element(cx),
-                            shadcn::icon::icon_with(
+                            fret_ui_shadcn::icon::icon_with(
                                 cx,
                                 IconId::new_static("lucide.arrow-right"),
                                 None,
