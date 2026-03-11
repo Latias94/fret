@@ -178,6 +178,13 @@ fn script_v2_roundtrip_imui_editor_proof_numeric_input_validation() {
 }
 
 #[test]
+fn script_v2_roundtrip_imui_editor_proof_editor_components_screenshots_default() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/imui-editor-proof-editor-components-screenshots-default.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json"

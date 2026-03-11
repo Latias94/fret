@@ -67,12 +67,18 @@ Interaction contract:
 
 ## Gates and migration evidence
 
-- [ ] `EER-GATE-130` Add focused edit-session commit/cancel coverage for numeric editing.
+- [~] `EER-GATE-130` Add focused edit-session commit/cancel coverage for numeric editing.
+      Numeric-input validation/commit coverage now exists via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json`;
+      Escape/cancel-specific proof is still missing.
 - [ ] `EER-GATE-131` Add state-identity regression coverage for loop-built or repeated controls.
 - [~] `EER-GATE-132` Keep `imui_editor_proof_demo` and the promoted workspace-shell proof surfaces
       as the primary evidence anchors for this workstream.
-- [ ] `EER-GATE-133` Decide whether the neutral default editor baseline and `imgui_like_dense`
+- [~] `EER-GATE-133` Decide whether the neutral default editor baseline and `imgui_like_dense`
       should both receive screenshot/diag coverage.
+      The neutral default baseline now has a screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
+      a matching `imgui_like_dense` screenshot surface is still pending.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
       ecosystem crates.
 - [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after
