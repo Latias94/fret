@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::docking::core::{Axis, DockNode, DockNodeId, DockOp, PanelKey};
+use fret::shadcn::raw::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 use fret::{
     advanced::prelude::*,
     docking::{
@@ -8,6 +9,7 @@ use fret::{
         DockingPolicyService, create_dock_space_node_with_test_id, render_and_bind_dock_panels,
         render_cached_panel_root,
     },
+    integration::InstallIntoApp,
     shadcn,
 };
 use fret_app::{CommandMeta, CommandScope};
@@ -77,6 +79,17 @@ fn install_commands(app: &mut KernelApp) {
             .with_category("Docking")
             .with_scope(scope),
     );
+}
+
+struct DockingBasicsBundle;
+
+impl InstallIntoApp for DockingBasicsBundle {
+    fn install_into_app(self, app: &mut fret::app::App) {
+        install_commands(app);
+        install_docking_services(app);
+        shadcn::app::install(app);
+        fret_cookbook::install_cookbook_defaults(app);
+    }
 }
 
 fn panel_hierarchy() -> PanelKey {
@@ -504,10 +517,7 @@ fn main() -> anyhow::Result<()> {
     let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-docking-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
-        .setup(install_commands)
-        .setup(install_docking_services)
-        .setup(shadcn::app::install)
-        .setup(fret_cookbook::install_cookbook_defaults)
+        .setup(DockingBasicsBundle)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons();
 

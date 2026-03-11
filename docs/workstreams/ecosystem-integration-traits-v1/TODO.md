@@ -57,6 +57,8 @@ surface.
 - [ ] Decide whether tuple/slice/vec bundle composition should be supported directly or left to
   small app-owned wrapper types.
 - [ ] Migrate first-party "app integration pack" examples to use one consistent bundle story.
+  - First landed example on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now uses
+    `DockingBasicsBundle` via `.setup(DockingBasicsBundle)`.
 - [ ] Keep advanced builder-only install paths explicit; do not let them leak onto the default app
   path.
 
