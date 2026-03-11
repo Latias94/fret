@@ -1159,6 +1159,10 @@ real editors.
   through the private `ui/canvas/widget/threshold/normalize.rs` and
   `ui/canvas/widget/threshold/distance.rs` seams, so `threshold.rs` now mainly keeps the drag
   threshold façade explicit.
+- pending node-drag startup now also routes threshold/draggable gating and selection/start-node
+  activation through the private `ui/canvas/widget/pending_drag/checks.rs` and
+  `ui/canvas/widget/pending_drag/activate.rs` seams, so `pending_drag.rs` now mainly keeps the
+  pending node-drag orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

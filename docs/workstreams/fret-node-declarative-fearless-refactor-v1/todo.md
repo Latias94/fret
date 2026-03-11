@@ -1620,6 +1620,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     comparison through the private `ui/canvas/widget/threshold/normalize.rs` and
     `ui/canvas/widget/threshold/distance.rs` seams, so `threshold.rs` now mainly keeps the drag
     threshold façade explicit.
+  - Progress: pending node-drag startup now also routes threshold/draggable gating and
+    selection/start-node activation through the private `ui/canvas/widget/pending_drag/checks.rs`
+    and `ui/canvas/widget/pending_drag/activate.rs` seams, so `pending_drag.rs` now mainly keeps
+    the pending node-drag orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
