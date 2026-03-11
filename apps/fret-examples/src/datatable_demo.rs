@@ -284,11 +284,9 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                 },
             )
             .into_element(cx);
-            let pagination = shadcn::DataTablePagination::new(
-                table_state.clone(),
-                table_output.clone(),
-            )
-                .into_element(cx);
+            let pagination =
+                shadcn::DataTablePagination::new(table_state.clone(), table_output.clone())
+                    .into_element(cx);
 
             let data_table = shadcn::DataTable::new()
                 .output_model(table_output.clone())

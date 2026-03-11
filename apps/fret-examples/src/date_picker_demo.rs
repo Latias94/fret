@@ -11,10 +11,10 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::{Invalidation, UiTree};
-use fret_ui_kit::{OverlayController, Space};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
+use fret_ui_kit::{OverlayController, Space};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::{OffsetDateTime, Weekday};

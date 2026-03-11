@@ -277,7 +277,10 @@ mod authoring_surface_policy_tests {
 
     fn examples_rust_sources() -> Vec<PathBuf> {
         let mut paths = Vec::new();
-        collect_rust_sources(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut paths);
+        collect_rust_sources(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut paths,
+        );
         paths.sort();
         paths
     }
