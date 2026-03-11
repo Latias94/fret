@@ -954,6 +954,13 @@ real editors.
   `ui/canvas/widget/searcher_activation/pointer_up.rs` seams, so `searcher_activation.rs` now
   mainly keeps shared hit shape plus activation-state façade methods explicit while event tails
   stop sharing the same root helper body.
+- searcher picker and row-activation helpers now also route picker-request assembly, overlay-open
+  tails, and activation-item mapping through the private
+  `ui/canvas/widget/searcher_picker/catalog.rs`,
+  `ui/canvas/widget/searcher_picker/overlay.rs`, and
+  `ui/canvas/widget/searcher_row_activation/item.rs` seams, so `searcher_picker.rs` and
+  `searcher_row_activation.rs` now mainly keep canvas-level orchestration explicit while picker
+  request shaping and activation-item validation gain their own helper boundaries.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

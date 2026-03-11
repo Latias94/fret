@@ -1,3 +1,6 @@
+mod catalog;
+mod overlay;
+
 use super::*;
 
 pub(super) fn open_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -5,14 +8,8 @@ pub(super) fn open_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
     host: &mut H,
     at: CanvasPoint,
 ) {
-    let menu_candidates = canvas.list_background_insert_candidates(host);
-    open_searcher_picker(
-        canvas,
-        host,
-        Point::new(Px(at.x), Px(at.y)),
-        ContextMenuTarget::BackgroundInsertNodePicker { at },
-        menu_candidates,
-    );
+    let request = catalog::background_searcher_picker_request(canvas, host, at);
+    overlay::open_searcher_picker(canvas, host, request);
 }
 
 pub(super) fn open_connection_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -21,14 +18,8 @@ pub(super) fn open_connection_insert_node_picker<H: UiHost, M: NodeGraphCanvasMi
     from: PortId,
     at: CanvasPoint,
 ) {
-    let menu_candidates = canvas.list_connection_insert_candidates(host, from);
-    open_searcher_picker(
-        canvas,
-        host,
-        Point::new(Px(at.x), Px(at.y)),
-        ContextMenuTarget::ConnectionInsertNodePicker { from, at },
-        menu_candidates,
-    );
+    let request = catalog::connection_searcher_picker_request(canvas, host, from, at);
+    overlay::open_searcher_picker(canvas, host, request);
 }
 
 pub(super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -39,23 +30,4 @@ pub(super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanvasMiddlewa
     invoked_at: Point,
 ) {
     super::edge_insert::open_edge_insert_node_picker(canvas, host, window, edge, invoked_at);
-}
-
-fn open_searcher_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    host: &mut H,
-    invoked_at: Point,
-    target: ContextMenuTarget,
-    candidates: Vec<InsertNodeCandidate>,
-) {
-    let snapshot = canvas.sync_view_state(host);
-    let bounds = canvas.interaction.last_bounds.unwrap_or_default();
-    canvas.open_searcher_overlay(
-        invoked_at,
-        bounds,
-        &snapshot,
-        target,
-        candidates,
-        SearcherRowsMode::Catalog,
-    );
 }

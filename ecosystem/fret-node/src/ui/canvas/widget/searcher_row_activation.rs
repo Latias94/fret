@@ -1,3 +1,5 @@
+mod item;
+
 use super::*;
 
 pub(super) fn try_activate_searcher_row<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -9,23 +11,9 @@ pub(super) fn try_activate_searcher_row<H: UiHost, M: NodeGraphCanvasMiddleware>
         return false;
     };
 
-    let Some(row) = searcher.rows.get(row_ix).cloned() else {
+    let Some(item) = item::searcher_row_activation_item(&searcher, row_ix) else {
         canvas.interaction.searcher = Some(searcher);
         return false;
-    };
-    let SearcherRowKind::Candidate { candidate_ix } = row.kind else {
-        canvas.interaction.searcher = Some(searcher);
-        return false;
-    };
-    if !row.enabled {
-        canvas.interaction.searcher = Some(searcher);
-        return false;
-    }
-
-    let item = NodeGraphContextMenuItem {
-        label: row.label,
-        enabled: true,
-        action: NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
     };
     canvas.activate_context_menu_item(
         cx,
