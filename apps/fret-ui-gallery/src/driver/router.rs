@@ -1,11 +1,12 @@
+use fret::router::{
+    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
+    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+    Router, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchValidationMode,
+    collect_invalidated_namespaces, prefetch_intent_query_key,
+};
 use fret_app::{App, CommandId};
 use fret_core::AppWindowId;
 use fret_query::{QueryPolicy, with_query_client};
-use fret_router::{
-    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
-    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
-    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
-};
 use fret_runtime::WindowCommandEnabledService;
 use std::sync::Arc;
 
@@ -15,10 +16,10 @@ const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
 const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
 
 #[cfg(target_arch = "wasm32")]
-pub(super) type UiGalleryHistory = fret_router::WebHistoryAdapter;
+pub(super) type UiGalleryHistory = fret::router::WebHistoryAdapter;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) type UiGalleryHistory = fret_router::MemoryHistory;
+pub(super) type UiGalleryHistory = fret::router::MemoryHistory;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub(super) enum UiGalleryRouteId {
@@ -71,7 +72,7 @@ pub(super) fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalle
         RouteHooks {
             before_load: None,
             loader: Some(Arc::new(|ctx| {
-                vec![fret_router::RoutePrefetchIntent {
+                vec![RoutePrefetchIntent {
                     route: ctx.matched.route,
                     namespace: UI_GALLERY_PAGE_CONTENT_NS,
                     location: ctx.to.clone(),
@@ -143,10 +144,7 @@ pub(super) fn apply_page_router_update_side_effects(
     window: AppWindowId,
     current_page: Arc<str>,
     router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-    update: Result<
-        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
-        fret_router::RouteSearchValidationFailure,
-    >,
+    update: Result<RouterUpdateWithPrefetchIntents<UiGalleryRouteId>, RouteSearchValidationFailure>,
 ) {
     sync_gallery_page_history_command_enabled(app, window, router.history());
 

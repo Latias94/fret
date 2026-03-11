@@ -670,7 +670,7 @@ mod tests {
             &mut state,
             window,
             Arc::<str>::from(page),
-            fret_router::NavigationAction::Replace,
+            fret::router::NavigationAction::Replace,
         );
 
         let services = FakeServices;

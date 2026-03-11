@@ -50,12 +50,11 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view", optional = true }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
-fret = { path = "../../ecosystem/fret" }
+fret = { path = "../../ecosystem/fret", features = ["router"] }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "icons-ui-semantic-lucide", "diagnostics", "ui-app-driver", "ui-assets"] }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
-fret-router = { path = "../../ecosystem/fret-router", features = ["query-integration"] }
 delinea = { path = "../../ecosystem/delinea", optional = true }
 fret-chart = { path = "../../ecosystem/fret-chart", optional = true }
 fret-canvas = { path = "../../ecosystem/fret-canvas", optional = true, features = ["ui"] }
@@ -78,7 +77,6 @@ wgpu.workspace = true
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, optional = true }
 fret-code-view = { path = "../../ecosystem/fret-code-view", optional = true }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor", optional = true }
-fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing", "query-integration"] }
 web-sys = { version = "0.3", features = ["Window", "Location", "UrlSearchParams"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"

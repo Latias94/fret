@@ -42,12 +42,18 @@ app = [
     "shadcn",
 ]
 
-# Derived + async state helpers used by `ViewCx`.
+# Derived + async state helpers used by `AppUi`.
 state = ["state-selector", "state-query"]
 state-selector = ["dep:fret-selector", "fret-selector/ui"]
 state-query = ["dep:fret-query", "fret-query/ui", "fret-ui-kit/state-query"]
 docking = ["dep:fret-docking"]
-router = ["dep:fret-router", "dep:fret-router-ui"]
+router = [
+    "dep:fret-router",
+    "dep:fret-router-ui",
+    "fret-router/query-integration",
+    "fret-router/web-history",
+    "fret-router/hash-routing",
+]
 
 # Load layered config files by default (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`).
 # Disable for embedding/minimal builds that must not touch the filesystem.

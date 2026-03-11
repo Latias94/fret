@@ -75,15 +75,15 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
 
 #[cfg(target_arch = "wasm32")]
 fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    let location = fret_router::web::current_location()?;
+    let location = fret::router::core::web::current_location()?;
 
-    let id = fret_router::first_query_value_from_search_or_hash(
+    let id = fret::router::core::first_query_value_from_search_or_hash(
         &location.search,
         &location.hash,
         "page",
     )
     .or_else(|| {
-        fret_router::first_query_value_from_search_or_hash(
+        fret::router::core::first_query_value_from_search_or_hash(
             &location.search,
             &location.hash,
             "start_page",

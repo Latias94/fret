@@ -1,5 +1,6 @@
 // Included from `apps/fret-ui-gallery/src/driver.rs` to keep the module entrypoint small.
 
+use fret::router::{NavigationAction, Router};
 use fret_app::{
     ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
     LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
@@ -14,7 +15,6 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_router::{NavigationAction, Router};
 use fret_runtime::{
     ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
     WindowCommandAvailabilityService, WindowCommandEnabledService,

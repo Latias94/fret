@@ -329,11 +329,15 @@ pub mod router {
         pub use fret_router_ui::*;
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub use fret_router::{HashHistoryAdapter, WebHistoryAdapter};
     pub use fret_router::{
-        HistoryAdapter, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
-        RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
-        Router, RouterBuildLocationError, RouterEvent, RouterTransition, SearchMap,
-        SearchValidationMode,
+        HistoryAdapter, MemoryHistory, NamespaceInvalidationRule, NavigationAction, PathParam,
+        RouteChangePolicy, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
+        RouteSearchTable, RouteSearchValidationFailure, RouteTree, Router,
+        RouterBuildLocationError, RouterEvent, RouterTransition, RouterUpdate,
+        RouterUpdateWithPrefetchIntents, SearchMap, SearchValidationMode,
+        collect_invalidated_namespaces, prefetch_intent_query_key,
     };
     pub use fret_router_ui::{
         RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
