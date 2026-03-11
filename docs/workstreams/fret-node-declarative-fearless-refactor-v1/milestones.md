@@ -1086,6 +1086,11 @@ real editors.
   `ui/canvas/widget/pointer_up_node_drag_ops/group_rect.rs`, and
   `ui/canvas/widget/pointer_up_node_drag_ops/commit_label.rs` seams, so
   `pointer_up_node_drag_ops.rs` now mainly keeps the public release-op façade explicit.
+- node-drag preview now also routes preview-position computation and preview-state revision updates
+  through the private `ui/canvas/widget/node_drag_preview/compute.rs` and
+  `ui/canvas/widget/node_drag_preview/state.rs` seams, so `node_drag_preview.rs` now mainly keeps
+  the node-drag preview façade explicit while the heavy preview calculation stops living in one
+  monolithic root function.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
