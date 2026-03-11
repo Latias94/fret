@@ -48,6 +48,10 @@ Interaction contract:
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       review + follow-up token/layout fixes are still pending.
+- [ ] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
+      app-owned shadcn sync, environment color-scheme changes, and proof/demo startup should all
+      converge on the same intended editor preset instead of silently falling back to host-only
+      chrome.
 - [ ] `EER-BASE-116` Decide whether `imgui_like_dense` should get matching screenshot proof coverage
       now or only after the default baseline is acceptable.
 - [ ] `EER-BASE-117` Close baseline editor text/numeric policy where visuals and interaction are

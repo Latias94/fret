@@ -2799,6 +2799,7 @@ dependencies = [
  "fret-selector",
  "fret-ui",
  "fret-ui-kit",
+ "fret-ui-shadcn",
  "fret-undo",
 ]
 

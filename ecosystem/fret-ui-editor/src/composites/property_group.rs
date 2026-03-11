@@ -109,24 +109,29 @@ impl PropertyGroup {
                     .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT))
                     .unwrap_or(density.row_height);
                 let header_bg = theme
-                    .color_by_key("muted")
+                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG)
+                    .or_else(|| theme.color_by_key("muted"))
                     .or_else(|| theme.color_by_key("component.card.bg"))
                     .unwrap_or_else(|| theme.color_token("background"));
                 let header_border = theme
-                    .color_by_key("border")
+                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER)
+                    .or_else(|| theme.color_by_key("border"))
                     .or_else(|| theme.color_by_key("component.card.border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
                 let panel_bg = theme
-                    .color_by_key("card")
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG)
+                    .or_else(|| theme.color_by_key("card"))
                     .or_else(|| theme.color_by_key("component.card.bg"))
                     .unwrap_or_else(|| theme.color_token("background"));
                 let panel_border = theme
-                    .color_by_key("border")
+                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER)
+                    .or_else(|| theme.color_by_key("border"))
                     .or_else(|| theme.color_by_key("component.card.border"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
                 let radius = theme.metric_token("metric.radius.sm");
                 let header_fg = theme
-                    .color_by_key("foreground")
+                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_FG)
+                    .or_else(|| theme.color_by_key("foreground"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
                 (
                     density,
@@ -255,6 +260,7 @@ impl PropertyGroup {
                                         let header_text_style =
                                             typography::as_control_text(TextStyle {
                                                 size: Px(12.0),
+                                                weight: fret_core::FontWeight::SEMIBOLD,
                                                 line_height: Some(header_height),
                                                 ..Default::default()
                                             });

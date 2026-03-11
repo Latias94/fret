@@ -157,7 +157,7 @@ impl PropertyRow {
     ) -> AnyElement {
         let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
 
-        let (density, gap, reset_fg, auto_below) = {
+        let (density, gap, reset_fg, auto_below, label_w) = {
             let theme = Theme::global(&*cx.app);
             let style = EditorStyle::resolve(theme);
             let density = style.density;
@@ -174,8 +174,13 @@ impl PropertyRow {
                 .options
                 .auto_stack_below
                 .unwrap_or(style.property_auto_stack_below);
+            let label_w = self
+                .options
+                .label_width
+                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_LABEL_WIDTH))
+                .unwrap_or(Px(160.0));
 
-            (density, gap, reset_fg, auto_below)
+            (density, gap, reset_fg, auto_below, label_w)
         };
 
         let variant = match self.options.variant {
@@ -187,7 +192,6 @@ impl PropertyRow {
                 .unwrap_or(PropertyRowLayoutVariant::Row),
         };
 
-        let label_w = self.options.label_width.unwrap_or(Px(160.0));
         let mut layout = self.options.layout;
         if layout.size.min_height.is_none() {
             layout.size.min_height = Some(Length::Px(density.row_height));

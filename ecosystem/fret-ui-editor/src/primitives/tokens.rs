@@ -22,8 +22,15 @@ impl EditorTokenKeys {
     pub const NUMERIC_ERROR_BG: &'static str = "editor.numeric.error_bg";
 
     pub const PROPERTY_COLUMN_GAP: &'static str = "editor.property.column_gap";
+    pub const PROPERTY_ROW_GAP: &'static str = "editor.property.row_gap";
+    pub const PROPERTY_LABEL_WIDTH: &'static str = "editor.property.label_width";
     pub const PROPERTY_GROUP_HEADER_HEIGHT: &'static str = "editor.property.group_header_height";
     pub const PROPERTY_AUTO_STACK_BELOW: &'static str = "editor.property.auto_stack_below";
+    pub const PROPERTY_PANEL_BG: &'static str = "editor.property.panel_bg";
+    pub const PROPERTY_PANEL_BORDER: &'static str = "editor.property.panel_border";
+    pub const PROPERTY_HEADER_BG: &'static str = "editor.property.header_bg";
+    pub const PROPERTY_HEADER_BORDER: &'static str = "editor.property.header_border";
+    pub const PROPERTY_HEADER_FG: &'static str = "editor.property.header_fg";
 
     pub const CHECKBOX_SIZE: &'static str = "editor.checkbox.size";
     pub const CHECKBOX_RADIUS: &'static str = "editor.checkbox.radius";

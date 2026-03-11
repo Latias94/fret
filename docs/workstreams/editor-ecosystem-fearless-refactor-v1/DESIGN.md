@@ -213,6 +213,7 @@ For promoted editor work, baseline infrastructure now comes first:
 
 - `EditorWidgetVisuals` convergence,
 - editor-owned token hierarchy and default-preset cleanup,
+- editor preset replay after host-owned theme resets,
 - layout grammar for rows/groups/status/reset slots,
 - typed-edit / focus / invalid state clarity,
 - proof/gate quality for overview, typing, and error states.

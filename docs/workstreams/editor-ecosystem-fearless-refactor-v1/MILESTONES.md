@@ -56,6 +56,7 @@ Goal:
 Deliverables:
 
 - clearer default editor visual hierarchy and token ownership,
+- editor-owned baseline replay that survives host theme resets and environment-driven theme sync,
 - broader `EditorWidgetVisuals` coverage across reusable editor controls,
 - explicit property-grid / inspector layout grammar,
 - stronger typed-edit, focus, active, and invalid state clarity,
@@ -66,6 +67,7 @@ Deliverables:
 Exit gates:
 
 - the default editor baseline is visually legible enough to review without "squinting through gray",
+- proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.

@@ -75,7 +75,11 @@ impl PropertyGrid {
                 .column_gap
                 .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_COLUMN_GAP))
                 .unwrap_or(Px(8.0));
-            let row_gap = self.options.row_gap.unwrap_or(Px(4.0));
+            let row_gap = self
+                .options
+                .row_gap
+                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_ROW_GAP))
+                .unwrap_or(Px(4.0));
 
             let row_opts = PropertyRowOptions {
                 label_width: self.options.label_width,

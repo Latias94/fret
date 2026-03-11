@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::advanced::interop::embedded_viewport as embedded;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::interop::embedded_viewport as embedded;
+use fret::prelude::*;
+use fret::view::ViewWindowState;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, PanelKind, Px};
+use fret_core::{Color, Px, WindowMetricsService};
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
@@ -48,6 +49,32 @@ fn selected_editor_theme_preset() -> EditorThemePresetV1 {
     }
 }
 
+fn replay_editor_theme_preset_on_global_changes(
+    app: &mut App,
+    _window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut ViewWindowState<ImUiEditorProofView>,
+    changed: &[std::any::TypeId],
+) {
+    if !changed.contains(&std::any::TypeId::of::<WindowMetricsService>()) {
+        return;
+    }
+
+    let _ = fret_ui_editor::theme::reapply_installed_editor_theme_preset_v1(app);
+}
+
+fn configure_imui_editor_proof_driver(
+    driver: fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>>,
+) -> fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>> {
+    driver
+        .drive_embedded_viewport()
+        .dock_op(on_dock_op)
+        .window_create_spec(window_create_spec)
+        .window_created(window_created)
+        .before_close_window(before_close_window)
+        .on_global_changes(replay_editor_theme_preset_on_global_changes)
+}
+
 struct ImUiEditorProofView {
     embedded: embedded::EmbeddedViewportSurface,
 }
@@ -89,22 +116,16 @@ pub fn run() -> anyhow::Result<()> {
 
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
-        .view_with_hooks::<ImUiEditorProofView>(|d| {
-            d.drive_embedded_viewport()
-                .dock_op(on_dock_op)
-                .window_create_spec(window_create_spec)
-                .window_created(window_created)
-                .before_close_window(before_close_window)
-        })?
-        .setup_with(move |app| {
+        .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
+        .init_app(move |app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::themes::apply_shadcn_new_york(
+            shadcn::install_app_with_theme(
                 app,
                 shadcn::themes::ShadcnBaseColor::Slate,
                 shadcn::themes::ShadcnColorScheme::Dark,
             );
-            fret_ui_editor::theme::apply_editor_theme_preset_v1(app, editor_preset);
-            fret_icons_lucide::app::install(app);
+            fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
+            fret_icons_lucide::install_app(app);
             install_dock_panel_registry(app);
         })
         .run()?;

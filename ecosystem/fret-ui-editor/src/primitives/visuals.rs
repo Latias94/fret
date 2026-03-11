@@ -142,6 +142,7 @@ impl<'a> EditorWidgetVisuals<'a> {
             border = mix(border, accent, 0.16);
         }
         if (state.focused || state.open) && state.enabled {
+            bg = mix(bg, accent, 0.08);
             border = chrome.border_focus;
         }
 
@@ -193,6 +194,7 @@ impl<'a> EditorWidgetVisuals<'a> {
             border = mix(border, accent, if selected { 0.12 } else { 0.16 });
         }
         if (state.focused || state.open) && state.enabled {
+            bg = mix(bg, accent, if selected { 0.04 } else { 0.08 });
             border = chrome.border_focus;
         }
 

@@ -7,6 +7,21 @@ use fret_ui::{Theme, ThemeConfig, UiHost};
 
 use crate::primitives::EditorTokenKeys;
 
+/// Installed editor preset configuration stored in app globals so apps can reapply editor-owned
+/// token patches after a host-level theme reset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EditorThemeInstallConfigV1 {
+    pub preset: EditorThemePresetV1,
+}
+
+impl Default for EditorThemeInstallConfigV1 {
+    fn default() -> Self {
+        Self {
+            preset: EditorThemePresetV1::Default,
+        }
+    }
+}
+
 /// Named editor presets layered on top of an app-selected base theme.
 ///
 /// These presets intentionally stay in the policy layer: they patch existing theme tokens instead
@@ -43,6 +58,28 @@ pub fn apply_editor_theme_preset_v1<H: UiHost>(app: &mut H, preset: EditorThemeP
     });
 }
 
+/// Install an editor-oriented preset and remember it for later reapplication.
+///
+/// This is the preferred app-facing entry point when the host may reapply a base theme in response
+/// to environment changes (for example, shadcn auto-sync on `WindowMetricsService` updates).
+pub fn install_editor_theme_preset_v1<H: UiHost>(app: &mut H, preset: EditorThemePresetV1) {
+    apply_editor_theme_preset_v1(app, preset);
+    app.with_global_mut_untracked(EditorThemeInstallConfigV1::default, |stored, _app| {
+        stored.preset = preset;
+    });
+}
+
+/// Reapply the last installed editor preset after a host-level theme reset.
+///
+/// Returns the preset that was replayed, or `None` if no installed preset config exists.
+pub fn reapply_installed_editor_theme_preset_v1<H: UiHost>(
+    app: &mut H,
+) -> Option<EditorThemePresetV1> {
+    let preset = app.global::<EditorThemeInstallConfigV1>().copied()?.preset;
+    apply_editor_theme_preset_v1(app, preset);
+    Some(preset)
+}
+
 /// Apply the default editor density patch.
 ///
 /// This remains as the compatibility wrapper for older callsites.
@@ -69,6 +106,9 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::VEC_AXIS_MIN_WIDTH, 140.0);
 
     // Property grid responsiveness (stack label/value vertically in narrow inspectors).
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 124.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 10.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 5.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 520.0);
 
     // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
@@ -78,6 +118,32 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, "component.text_field.radius", 4.0);
     metric(&mut cfg, "component.text_field.border_width", 1.0);
     metric(&mut cfg, "component.text_field.text_px", 12.0);
+
+    // Default editor baseline colors. These stay more technical and contrast-forward than the
+    // underlying app theme without turning the default preset into an imgui clone.
+    color(&mut cfg, "component.text_field.bg", "#141b24");
+    color(&mut cfg, "component.text_field.border", "#3b4758");
+    color(&mut cfg, "component.text_field.border_focus", "#7faee8");
+    color(&mut cfg, "component.text_field.fg", "#edf3fa");
+    color(&mut cfg, "component.text_field.selection", "#284d75");
+
+    color(&mut cfg, "card", "#10161e");
+    color(&mut cfg, "muted", "#171d26");
+    color(&mut cfg, "border", "#2f3a48");
+    color(&mut cfg, "foreground", "#edf3fa");
+    color(&mut cfg, "muted-foreground", "#9eabbc");
+    color(&mut cfg, "accent", "#355a86");
+    color(&mut cfg, "ring", "#7faee8");
+
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#10161e");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#313d4b");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#1a212b");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#313d4b");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#edf3fa");
+
+    color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffd3d6");
+    color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#c76f77");
+    color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#2a171c");
 
     // Slider metrics (normalized floats like roughness/metallic).
     metric(&mut cfg, EditorTokenKeys::SLIDER_TRACK_HEIGHT, 4.0);
@@ -105,7 +171,9 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
 
     metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_SPEED, 0.035);
     metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD, 2.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 120.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 6.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 4.0);
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
@@ -140,6 +208,12 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, "accent", "#4c88c7");
     color(&mut cfg, "ring", "#6ea8e0");
 
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BG, "#202328");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_BORDER, "#454d59");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#2a2d33");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#454d59");
+    color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_FG, "#e6e8eb");
+
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_FG, "#ffcbc7");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#d06a6a");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#362225");
@@ -160,8 +234,14 @@ mod tests {
     use fret_app::App;
     use fret_core::{Color, Px};
     use fret_ui::Theme;
+    use fret_ui_shadcn::shadcn_themes::{
+        ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
+    };
 
-    use super::{EditorThemePresetV1, apply_editor_theme_preset_v1};
+    use super::{
+        EditorThemePresetV1, apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
+        reapply_installed_editor_theme_preset_v1,
+    };
     use crate::primitives::EditorTokenKeys;
 
     #[test]
@@ -179,8 +259,20 @@ mod tests {
             Some(Px(24.0))
         );
         assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_LABEL_WIDTH),
+            Some(Px(124.0))
+        );
+        assert_eq!(
             theme.metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER),
             Some(Px(12.0))
+        );
+        assert_eq!(
+            theme.color_by_key("component.text_field.bg"),
+            Some(Color::from_srgb_hex_rgb(0x14_1b_24))
+        );
+        assert_eq!(
+            theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
+            Some(Color::from_srgb_hex_rgb(0x10_16_1e))
         );
     }
 
@@ -209,6 +301,43 @@ mod tests {
         assert_eq!(
             theme.color_by_key("border"),
             Some(Color::from_srgb_hex_rgb(0x45_4d_59))
+        );
+    }
+
+    #[test]
+    fn installed_preset_can_be_reapplied_after_base_theme_reset() {
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
+        install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+
+        let expected_field_bg = Some(Color::from_srgb_hex_rgb(0x14_1b_24));
+        let expected_panel_bg = Some(Color::from_srgb_hex_rgb(0x10_16_1e));
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+        assert_eq!(
+            Theme::global(&app).color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
+            expected_panel_bg
+        );
+
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Light);
+        assert_ne!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+
+        assert_eq!(
+            reapply_installed_editor_theme_preset_v1(&mut app),
+            Some(EditorThemePresetV1::Default)
+        );
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            expected_field_bg
+        );
+        assert_eq!(
+            Theme::global(&app).color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
+            expected_panel_bg
         );
     }
 }
