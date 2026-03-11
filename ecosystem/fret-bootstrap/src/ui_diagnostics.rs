@@ -1143,6 +1143,7 @@ mod tests {
             known_windows.len().min(u32::MAX as usize) as u32,
             None,
             None,
+            None,
             docking,
             None,
             None,

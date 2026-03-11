@@ -118,12 +118,11 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       its next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
       new shared inspector lane grammar.
-- [~] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
+- [x] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
       The default baseline script now resets the proof search field up front so repeated runs do
-      not strand the next session in a filtered state, and the latest session root result reaches
-      `passed`, with the launched `diag run` command now exiting promptly after success. Remaining
-      follow-up: understand or remove the repeated `global access while leased` noise emitted
-      during typed-mode interactions so the gate is quiet as well as green.
+      not strand the next session in a filtered state, the launched `diag run` command exits
+      promptly after `stage=passed`, and the typed-edit screenshot proof no longer emits repeated
+      `global access while leased` / nested lease noise on the promoted `test_id`-driven path.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into
       ecosystem crates.
 - [ ] `EER-CLEANUP-135` Delete or quarantine any duplicated editor widget implementations left after
