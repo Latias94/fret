@@ -1125,6 +1125,11 @@ real editors.
   through the private `ui/canvas/widget/viewport_timer_animation/animation.rs` and
   `ui/canvas/widget/viewport_timer_animation/debounce.rs` seams, so
   `viewport_timer_animation.rs` now mainly keeps the viewport timer façades explicit.
+- sticky-wire connect handling now also routes target filtering / outcome planning and
+  pointer-down finish cleanup through the private
+  `ui/canvas/widget/sticky_wire_connect/plan.rs` and
+  `ui/canvas/widget/sticky_wire_connect/finish.rs` seams, so
+  `sticky_wire_connect.rs` now mainly keeps the sticky-wire connect orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

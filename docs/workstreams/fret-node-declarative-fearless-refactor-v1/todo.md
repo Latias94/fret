@@ -1587,6 +1587,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     handling through the private `ui/canvas/widget/viewport_timer_animation/animation.rs` and
     `ui/canvas/widget/viewport_timer_animation/debounce.rs` seams, so
     `viewport_timer_animation.rs` now mainly keeps the viewport timer façades explicit.
+  - Progress: sticky-wire connect handling now also routes target filtering / outcome planning and
+    pointer-down finish cleanup through the private `ui/canvas/widget/sticky_wire_connect/plan.rs`
+    and `ui/canvas/widget/sticky_wire_connect/finish.rs` seams, so
+    `sticky_wire_connect.rs` now mainly keeps the sticky-wire connect orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
