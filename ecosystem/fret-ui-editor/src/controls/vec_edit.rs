@@ -77,6 +77,8 @@ fn axis_group<H: UiHost, T>(
     label: Arc<str>,
     color: Color,
     model: Model<T>,
+    prefix: Option<Arc<str>>,
+    suffix: Option<Arc<str>>,
     format: NumericFormatFn<T>,
     parse: NumericParseFn<T>,
     validate: Option<NumericValidateFn<T>>,
@@ -133,6 +135,8 @@ where
                 AxisDragValue::new(label, color, model, format, parse)
                     .validate(validate)
                     .options(AxisDragValueOptions {
+                        prefix: prefix.clone(),
+                        suffix: suffix.clone(),
                         size: fret_ui_kit::Size::Small,
                         reset: reset.clone(),
                         ..Default::default()
@@ -146,6 +150,8 @@ where
 #[derive(Debug, Clone)]
 pub struct VecEditOptions {
     pub layout: LayoutStyle,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
     /// Explicit identity source for internal element keys.
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -168,6 +174,8 @@ impl Default for VecEditOptions {
                 },
                 ..Default::default()
             },
+            prefix: None,
+            suffix: None,
             id_source: None,
             variant: VecEditLayoutVariant::Auto,
             gap: Px(6.0),
@@ -339,6 +347,8 @@ where
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -351,6 +361,8 @@ where
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -532,6 +544,8 @@ where
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -544,6 +558,8 @@ where
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -556,6 +572,8 @@ where
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -754,6 +772,8 @@ where
                         Arc::from("X"),
                         x_color,
                         self.x.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -766,6 +786,8 @@ where
                         Arc::from("Y"),
                         y_color,
                         self.y.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -778,6 +800,8 @@ where
                         Arc::from("Z"),
                         z_color,
                         self.z.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),
@@ -790,6 +814,8 @@ where
                         Arc::from("W"),
                         w_color,
                         self.w.clone(),
+                        self.options.prefix.clone(),
+                        self.options.suffix.clone(),
                         self.format.clone(),
                         self.parse.clone(),
                         self.validate.clone(),

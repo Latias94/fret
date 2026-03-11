@@ -18,7 +18,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
-use crate::controls::{Checkbox, CheckboxOptions, Vec3Edit};
+use crate::controls::{Checkbox, CheckboxOptions, Vec3Edit, VecEditOptions};
 use crate::controls::{NumericFormatFn, NumericParseFn, NumericValidateFn};
 use crate::primitives::EditorDensity;
 
@@ -40,6 +40,12 @@ pub struct TransformEditOptions {
     pub variant: TransformEditLayoutVariant,
     pub section_gap: Px,
     pub show_link_scale_toggle: bool,
+    pub position_prefix: Option<Arc<str>>,
+    pub position_suffix: Option<Arc<str>>,
+    pub rotation_prefix: Option<Arc<str>>,
+    pub rotation_suffix: Option<Arc<str>>,
+    pub scale_prefix: Option<Arc<str>>,
+    pub scale_suffix: Option<Arc<str>>,
     /// If `None`, an internal per-element model is used.
     pub linked_scale: Option<Model<bool>>,
     pub default_linked_scale: bool,
@@ -67,6 +73,12 @@ impl Default for TransformEditOptions {
             variant: TransformEditLayoutVariant::default(),
             section_gap: Px(6.0),
             show_link_scale_toggle: true,
+            position_prefix: None,
+            position_suffix: None,
+            rotation_prefix: None,
+            rotation_suffix: None,
+            scale_prefix: None,
+            scale_suffix: None,
             linked_scale: None,
             default_linked_scale: false,
             id_source: None,
@@ -199,12 +211,27 @@ impl TransformEdit {
         let fmt_pos = fmt.clone();
         let parse_pos = parse.clone();
         let validate_pos = validate.clone();
+        let pos_options = VecEditOptions {
+            prefix: self.options.position_prefix.clone(),
+            suffix: self.options.position_suffix.clone(),
+            ..Default::default()
+        };
         let fmt_rot = fmt.clone();
         let parse_rot = parse.clone();
         let validate_rot = validate.clone();
+        let rot_options = VecEditOptions {
+            prefix: self.options.rotation_prefix.clone(),
+            suffix: self.options.rotation_suffix.clone(),
+            ..Default::default()
+        };
         let fmt_scl = fmt.clone();
         let parse_scl = parse.clone();
         let validate_scl = validate.clone();
+        let scl_options = VecEditOptions {
+            prefix: self.options.scale_prefix.clone(),
+            suffix: self.options.scale_suffix.clone(),
+            ..Default::default()
+        };
 
         let mut el = match self.options.variant {
             TransformEditLayoutVariant::Column => cx.flex(
@@ -228,6 +255,7 @@ impl TransformEdit {
                                 parse_pos.clone(),
                             )
                             .validate(validate_pos.clone())
+                            .options(pos_options.clone())
                             .into_element(cx)
                         }),
                         section_row(cx, density, "R", "Rotation", false, None, move |cx| {
@@ -239,6 +267,7 @@ impl TransformEdit {
                                 parse_rot.clone(),
                             )
                             .validate(validate_rot.clone())
+                            .options(rot_options.clone())
                             .into_element(cx)
                         }),
                         section_row(
@@ -257,6 +286,7 @@ impl TransformEdit {
                                     parse_scl.clone(),
                                 )
                                 .validate(validate_scl.clone())
+                                .options(scl_options.clone())
                                 .into_element(cx)
                             },
                         ),
@@ -284,6 +314,7 @@ impl TransformEdit {
                                 parse_pos.clone(),
                             )
                             .validate(validate_pos.clone())
+                            .options(pos_options.clone())
                             .into_element(cx)
                         }),
                         section_col(cx, "Rotation", move |cx| {
@@ -295,6 +326,7 @@ impl TransformEdit {
                                 parse_rot.clone(),
                             )
                             .validate(validate_rot.clone())
+                            .options(rot_options.clone())
                             .into_element(cx)
                         }),
                         section_col_with_link(
@@ -312,6 +344,7 @@ impl TransformEdit {
                                     parse_scl.clone(),
                                 )
                                 .validate(validate_scl.clone())
+                                .options(scl_options.clone())
                                 .into_element(cx)
                             },
                         ),

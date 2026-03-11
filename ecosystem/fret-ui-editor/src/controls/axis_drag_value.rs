@@ -27,7 +27,7 @@ use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
     editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
-    editor_input_group_inset, editor_input_group_row,
+    editor_input_group_inset, editor_input_group_row, editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::EditorFrameState;
@@ -69,6 +69,8 @@ impl Default for AxisDragValueState {
 #[derive(Clone)]
 pub struct AxisDragValueOptions {
     pub layout: LayoutStyle,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
     /// Explicit identity source for internal state (scrub/typing focus restore, draft string).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -96,6 +98,8 @@ impl Default for AxisDragValueOptions {
                 },
                 ..Default::default()
             },
+            prefix: None,
+            suffix: None,
             id_source: None,
             test_id: None,
             reset: None,
@@ -186,6 +190,8 @@ where
 
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
         let typing = mode == AxisDragValueMode::Typing;
+        let prefix = self.options.prefix.clone();
+        let suffix = self.options.suffix.clone();
 
         let (density, frame_chrome, (text_style, input_chrome)) = {
             let theme = Theme::global(&*cx.app);
@@ -221,6 +227,8 @@ where
         let enabled_for_paint = self.options.enabled;
         let reset_action = self.options.reset.clone();
         let state_for_scrub_record = state.clone();
+        let prefix_for_scrub = prefix.clone();
+        let suffix_for_scrub = suffix.clone();
         let scrub = DragValueCore::new(value, on_change_live)
             .a11y_label(value_text.clone())
             .options(scrub_opts)
@@ -273,6 +281,13 @@ where
                         open: false,
                     },
                     move |cx, visuals| {
+                        let affix_color = {
+                            let theme = Theme::global(&*cx.app);
+                            theme
+                                .color_by_key("muted-foreground")
+                                .or_else(|| theme.color_by_key("muted_foreground"))
+                                .unwrap_or_else(|| theme.color_token("foreground"))
+                        };
                         let axis = editor_axis_segment(
                             cx,
                             density,
@@ -305,7 +320,30 @@ where
                         let value =
                             editor_input_group_inset(cx, frame_chrome.padding, value_text_el);
 
-                        let mut segments = vec![axis, sep, value];
+                        let mut segments = vec![axis, sep];
+                        if let Some(prefix) = prefix_for_scrub.clone() {
+                            segments.push(editor_text_segment(
+                                cx,
+                                density,
+                                frame_chrome.text_px,
+                                prefix,
+                                affix_color,
+                                frame_chrome.padding,
+                            ));
+                            segments.push(editor_input_group_divider(cx, divider));
+                        }
+                        segments.push(value);
+                        if let Some(suffix) = suffix_for_scrub.clone() {
+                            segments.push(editor_input_group_divider(cx, divider));
+                            segments.push(editor_text_segment(
+                                cx,
+                                density,
+                                frame_chrome.text_px,
+                                suffix,
+                                affix_color,
+                                frame_chrome.padding,
+                            ));
+                        }
                         if let Some(reset) = reset_action.clone() {
                             segments.push(editor_input_group_divider(cx, divider));
                             segments.push(editor_icon_button_segment(
@@ -478,6 +516,8 @@ where
             let error_border = theme.color_token("destructive");
             let reset_action = self.options.reset.clone();
             let enabled_for_paint = self.options.enabled;
+            let prefix = prefix.clone();
+            let suffix = suffix.clone();
 
             editor_input_group_frame_with_overrides(
                 cx,
@@ -496,6 +536,13 @@ where
                     border: has_error.then_some(error_border),
                 },
                 move |cx, visuals| {
+                    let affix_color = {
+                        let theme = Theme::global(&*cx.app);
+                        theme
+                            .color_by_key("muted-foreground")
+                            .or_else(|| theme.color_by_key("muted_foreground"))
+                            .unwrap_or_else(|| theme.color_token("foreground"))
+                    };
                     let axis = editor_axis_segment(
                         cx,
                         density,
@@ -508,7 +555,30 @@ where
                     // Wrap the text input so the group padding applies, without adding its own padding.
                     let input_wrap = editor_input_group_inset(cx, frame_chrome.padding, input);
 
-                    let mut segments = vec![axis, sep, input_wrap];
+                    let mut segments = vec![axis, sep];
+                    if let Some(prefix) = prefix.clone() {
+                        segments.push(editor_text_segment(
+                            cx,
+                            density,
+                            frame_chrome.text_px,
+                            prefix,
+                            affix_color,
+                            frame_chrome.padding,
+                        ));
+                        segments.push(editor_input_group_divider(cx, divider));
+                    }
+                    segments.push(input_wrap);
+                    if let Some(suffix) = suffix.clone() {
+                        segments.push(editor_input_group_divider(cx, divider));
+                        segments.push(editor_text_segment(
+                            cx,
+                            density,
+                            frame_chrome.text_px,
+                            suffix,
+                            affix_color,
+                            frame_chrome.padding,
+                        ));
+                    }
                     if let Some(reset) = reset_action {
                         segments.push(editor_input_group_divider(cx, divider));
                         segments.push(editor_icon_button_segment(
