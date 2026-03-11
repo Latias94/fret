@@ -17,7 +17,7 @@ It answers four concrete questions:
 | Contract | Target owner | Surface kind | Default audience | Target status |
 | --- | --- | --- | --- | --- |
 | `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
-| `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | small trait + data types | command palette / menu surfaces | Planned |
+| `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | In progress |
 | `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Planned |
 | `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | Planned |
 | `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
@@ -28,6 +28,8 @@ The default docs posture remains:
 
 - app authors learn free functions and curated facades first,
 - traits exist so ecosystems compose cleanly,
+- some seams may intentionally start as data contracts plus collector helpers before a trait is
+  justified,
 - traits are not the first-contact mental model for ordinary app code.
 
 Canonical app-path example:
@@ -77,6 +79,8 @@ Target export posture:
 Target rule:
 
 - no shared component trait is required for design-system crates.
+- when a shared catalog/data contract already exists in a policy layer, recipe crates should map it
+  into recipe-local UI entry types instead of re-owning the collector.
 
 ### 3.2 Docking ecosystems
 
@@ -143,6 +147,15 @@ Reason:
 
 - `crates/fret-ui` is a mechanism/contract layer,
 - these are policy/integration concerns.
+
+`CommandCatalog` specific rule:
+
+- host command registry collection, gating interpretation, and shortcut derivation belong in
+  `fret-ui-kit::command`,
+- recipe crates such as `fret-ui-shadcn` may provide thin `Into<RecipeEntry>` mappings and
+  recipe-local convenience wrappers,
+- an actual `CommandCatalog` trait should only be added once a second non-shadcn consumer needs a
+  shared source interface.
 
 ### 4.2 `fret-app::Plugin` target posture
 

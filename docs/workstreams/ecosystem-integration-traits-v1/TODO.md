@@ -22,8 +22,9 @@ surface.
   later, or introduced directly under a stable `fret::integration` module.
   - Current decision: define it directly on the stable `fret::integration` module and keep the
     default app prelude free of integration-trait leakage.
-- [ ] Lock the canonical owner for `CommandCatalog`.
-  - Preferred outcome: `fret-ui-kit::command`, with recipe crates consuming it.
+- [x] Lock the canonical owner for `CommandCatalog`.
+  - Landed on 2026-03-11: host-command catalog ownership now lives in
+    `fret-ui-kit::command`, with recipe crates consuming and mapping the data-only entries.
 - [ ] Audit existing router code and decide whether `RouteCodec` should be implemented directly by
   route-table builders or by app-defined codec types.
 - [ ] Audit docking registry usage and decide the precise relationship between the current
@@ -68,12 +69,21 @@ surface.
 
 ## 4. `CommandCatalog` Adoption
 
-- [ ] Audit current command palette code in `fret-ui-shadcn` and split reusable catalog logic from
+- [x] Audit current command palette code in `fret-ui-shadcn` and split reusable catalog logic from
   shadcn-specific recipe/UI glue.
-- [ ] Define `CommandCatalogEntry` and `CommandCatalogCx` as data-oriented types.
-- [ ] Keep catalog entries execution-free; route activation back through typed actions or
+  - Landed on 2026-03-11: host command registry collection, gating, and shortcut derivation moved
+    to `fret-ui-kit::command`; `fret-ui-shadcn::command` now maps catalog data into recipe
+    `CommandEntry` values.
+- [x] Define data-oriented `CommandCatalogEntry` / `CommandCatalogItem` / `CommandCatalogGroup`
+  types and collector helpers.
+  - Landed on 2026-03-11 in `ecosystem/fret-ui-kit/src/command.rs`.
+- [x] Keep catalog entries execution-free; route activation back through typed actions or
   registered `CommandId`s.
+  - Current shape stores `CommandId` on data-only catalog items and lets recipe crates decide how
+    to surface activation UI.
 - [ ] Document when a plain `CommandMeta` is sufficient and when a catalog source is warranted.
+  - Follow-up: this should be written once command palette, menu, and any future non-shadcn
+    command surfaces share the same guidance.
 
 ## 5. `RouteCodec` Adoption
 

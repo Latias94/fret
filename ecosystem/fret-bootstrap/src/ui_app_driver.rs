@@ -408,7 +408,7 @@ fn command_palette_toggle(app: &mut App, window: AppWindowId) -> bool {
     }
 
     if next_open {
-        let fallback_input_ctx = fret_ui_shadcn::command::command_palette_input_context(app);
+        let fallback_input_ctx = fret_ui_kit::command::command_palette_input_context(app);
         let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
             app,
             window,
@@ -2055,11 +2055,14 @@ fn ui_app_render<S>(
                     {
                         let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries = if open_now {
-                            fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
+                        let entries: Vec<fret_ui_shadcn::CommandEntry> = if open_now {
+                            fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
                                 cx,
-                                fret_ui_shadcn::command::CommandCatalogOptions::default(),
+                                fret_ui_kit::command::CommandCatalogOptions::default(),
                             )
+                            .into_iter()
+                            .map(Into::into)
+                            .collect()
                         } else {
                             Vec::new()
                         };
@@ -2111,11 +2114,14 @@ fn ui_app_render<S>(
                     {
                         let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries = if open_now {
-                            fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
+                        let entries: Vec<fret_ui_shadcn::CommandEntry> = if open_now {
+                            fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
                                 cx,
-                                fret_ui_shadcn::command::CommandCatalogOptions::default(),
+                                fret_ui_kit::command::CommandCatalogOptions::default(),
                             )
+                            .into_iter()
+                            .map(Into::into)
+                            .collect()
                         } else {
                             Vec::new()
                         };

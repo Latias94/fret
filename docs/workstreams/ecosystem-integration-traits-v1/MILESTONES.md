@@ -18,6 +18,10 @@ Current status on 2026-03-11:
   composition remains deferred.
 - The first in-tree bundle example is landed in
   `apps/fret-cookbook/examples/docking_basics.rs`.
+- `CommandCatalog` ownership is now locked to `fret-ui-kit::command`.
+- Host command registry collection/gating/shortcut derivation now lives in
+  `ecosystem/fret-ui-kit/src/command.rs`, while `fret-ui-shadcn::command` only maps catalog data
+  into shadcn recipe entries and `fret-bootstrap` consumes the shared collector directly.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 
