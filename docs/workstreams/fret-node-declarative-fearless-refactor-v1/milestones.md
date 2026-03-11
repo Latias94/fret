@@ -1134,6 +1134,10 @@ real editors.
   invalidation through the private `ui/canvas/widget/node_drag/delta.rs` and
   `ui/canvas/widget/node_drag/tail.rs` seams, so `node_drag.rs` now mainly keeps the node-drag
   move orchestration explicit.
+- marquee selection queries now also route node hit collection and connected-edge selection
+  through the private `ui/canvas/widget/marquee_selection_query/nodes.rs` and
+  `ui/canvas/widget/marquee_selection_query/edges.rs` seams, so
+  `marquee_selection_query.rs` now mainly keeps the marquee query orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

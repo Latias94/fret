@@ -1595,6 +1595,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     callback / invalidation through the private `ui/canvas/widget/node_drag/delta.rs` and
     `ui/canvas/widget/node_drag/tail.rs` seams, so `node_drag.rs` now mainly keeps the node-drag
     move orchestration explicit.
+  - Progress: marquee selection queries now also route node hit collection and connected-edge
+    selection through the private `ui/canvas/widget/marquee_selection_query/nodes.rs` and
+    `ui/canvas/widget/marquee_selection_query/edges.rs` seams, so
+    `marquee_selection_query.rs` now mainly keeps the marquee query orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
