@@ -1002,6 +1002,13 @@ real editors.
   branches through the private `ui/canvas/widget/context_menu/activate/command.rs` and
   `ui/canvas/widget/context_menu/activate/target.rs` seams, so `context_menu/activate.rs` now
   mainly keeps the top-level dispatch surface explicit.
+- context-menu item builders now also route shared command-item construction plus
+  background/group/edge item families through the private
+  `ui/canvas/widget/context_menu/item_builders/command_item.rs`,
+  `ui/canvas/widget/context_menu/item_builders/background.rs`,
+  `ui/canvas/widget/context_menu/item_builders/group.rs`, and
+  `ui/canvas/widget/context_menu/item_builders/edge.rs` seams, so
+  `context_menu/item_builders.rs` now mainly keeps the public builder surface explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

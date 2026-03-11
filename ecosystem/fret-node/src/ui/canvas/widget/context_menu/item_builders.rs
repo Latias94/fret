@@ -1,76 +1,32 @@
-use std::sync::Arc;
+mod background;
+mod command_item;
+mod edge;
+mod group;
 
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_DELETE_SELECTION,
-    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_SELECT_ALL,
-};
-use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
-
-fn command_item(
-    label: &'static str,
-    enabled: bool,
-    command: &'static str,
-) -> NodeGraphContextMenuItem {
-    NodeGraphContextMenuItem {
-        label: Arc::<str>::from(label),
-        enabled,
-        action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(command)),
-    }
-}
+use crate::ui::presenter::NodeGraphContextMenuItem;
 
 pub(in crate::ui::canvas::widget) fn build_group_context_menu_items()
 -> Vec<NodeGraphContextMenuItem> {
-    vec![
-        command_item("Bring to Front", true, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT),
-        command_item("Send to Back", true, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK),
-        command_item("Rename...", true, CMD_NODE_GRAPH_GROUP_RENAME),
-        command_item("Delete", true, CMD_NODE_GRAPH_DELETE_SELECTION),
-    ]
+    group::build_group_context_menu_items()
 }
 
 pub(in crate::ui::canvas::widget) fn build_background_context_menu_items(
     paste_enabled: bool,
     has_selection: bool,
 ) -> Vec<NodeGraphContextMenuItem> {
-    vec![
-        command_item("Insert Node...", true, CMD_NODE_GRAPH_OPEN_INSERT_NODE),
-        command_item("Create Group", true, CMD_NODE_GRAPH_CREATE_GROUP),
-        command_item("Paste", paste_enabled, CMD_NODE_GRAPH_PASTE),
-        command_item("Select All", true, CMD_NODE_GRAPH_SELECT_ALL),
-        command_item(
-            "Delete Selection",
-            has_selection,
-            CMD_NODE_GRAPH_DELETE_SELECTION,
-        ),
-    ]
+    background::build_background_context_menu_items(paste_enabled, has_selection)
 }
 
 pub(in crate::ui::canvas::widget) fn append_builtin_edge_context_menu_items(
     items: &mut Vec<NodeGraphContextMenuItem>,
 ) {
-    items.push(command_item(
-        "Insert Node...",
-        true,
-        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-    ));
-    items.push(command_item(
-        "Insert Reroute",
-        true,
-        CMD_NODE_GRAPH_INSERT_REROUTE,
-    ));
-    items.push(command_item(
-        "Delete",
-        true,
-        CMD_NODE_GRAPH_DELETE_SELECTION,
-    ));
+    edge::append_builtin_edge_context_menu_items(items)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui::commands::CMD_NODE_GRAPH_SELECT_ALL;
 
     #[test]
     fn background_items_reflect_paste_and_selection_enablement() {
@@ -97,7 +53,11 @@ mod tests {
 
     #[test]
     fn edge_builtins_append_expected_suffix_items() {
-        let mut items = vec![command_item("Custom", true, CMD_NODE_GRAPH_SELECT_ALL)];
+        let mut items = vec![command_item::command_item(
+            "Custom",
+            true,
+            CMD_NODE_GRAPH_SELECT_ALL,
+        )];
 
         append_builtin_edge_context_menu_items(&mut items);
 

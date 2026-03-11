@@ -1460,6 +1460,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     activation branches through the private `ui/canvas/widget/context_menu/activate/command.rs`
     and `ui/canvas/widget/context_menu/activate/target.rs` seams, so
     `context_menu/activate.rs` now mainly keeps the top-level dispatch surface explicit.
+  - Progress: context-menu item builders now also route shared command-item construction plus
+    background/group/edge item families through the private
+    `ui/canvas/widget/context_menu/item_builders/command_item.rs`,
+    `ui/canvas/widget/context_menu/item_builders/background.rs`,
+    `ui/canvas/widget/context_menu/item_builders/group.rs`, and
+    `ui/canvas/widget/context_menu/item_builders/edge.rs` seams, so
+    `context_menu/item_builders.rs` now mainly keeps the public builder surface explicit.
 
 ## M5 - Compatibility retained convergence
 
