@@ -1052,6 +1052,12 @@ real editors.
   `ui/canvas/widget/context_menu/target_selection/edge.rs` seams, so
   `context_menu/target_hit.rs` and `context_menu/target_selection.rs` now mainly keep the façade
   surfaces explicit.
+- edge context-menu execution now also routes open-picker, reroute, delete, and custom action
+  branches through the private `ui/canvas/widget/context_menu/edge_execution/open_insert.rs`,
+  `ui/canvas/widget/context_menu/edge_execution/reroute.rs`,
+  `ui/canvas/widget/context_menu/edge_execution/delete.rs`, and
+  `ui/canvas/widget/context_menu/edge_execution/custom_action.rs` seams, so
+  `context_menu/edge_execution.rs` now mainly keeps the edge action dispatch explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

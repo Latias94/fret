@@ -1,3 +1,8 @@
+mod custom_action;
+mod delete;
+mod open_insert;
+mod reroute;
+
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -10,53 +15,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         match action {
             NodeGraphContextMenuAction::OpenInsertNodePicker => {
-                edge_insert::open_edge_insert_context_menu(self, cx, edge_id, invoked_at);
+                open_insert::open_edge_insert_context_menu(self, cx, edge_id, invoked_at);
                 true
             }
             NodeGraphContextMenuAction::InsertReroute => {
-                let outcome = self.plan_canvas_split_edge_reroute(cx.app, edge_id, invoked_at);
-                self.execute_split_edge_reroute_outcome(cx.app, cx.window, None, outcome);
+                reroute::insert_edge_reroute(self, cx, edge_id, invoked_at);
                 true
             }
             NodeGraphContextMenuAction::DeleteEdge => {
-                let remove_ops = {
-                    let this = &*self;
-                    this.graph
-                        .read_ref(cx.app, |graph| {
-                            graph
-                                .edges
-                                .get(&edge_id)
-                                .map(|edge| {
-                                    vec![GraphOp::RemoveEdge {
-                                        id: edge_id,
-                                        edge: edge.clone(),
-                                    }]
-                                })
-                                .unwrap_or_default()
-                        })
-                        .ok()
-                        .unwrap_or_default()
-                };
-                self.apply_ops(cx.app, cx.window, remove_ops);
-                self.update_view_state(cx.app, |view_state| {
-                    view_state.selected_edges.retain(|id| *id != edge_id);
-                });
+                delete::delete_edge(self, cx, edge_id);
                 true
             }
             NodeGraphContextMenuAction::Custom(action_id) => {
-                let ops = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            presenter.on_edge_context_menu_action(graph, edge_id, action_id)
-                        })
-                        .ok()
-                        .flatten()
-                        .unwrap_or_default()
-                };
-                if !ops.is_empty() {
-                    self.apply_ops(cx.app, cx.window, ops);
-                }
+                custom_action::apply_custom_edge_context_action(self, cx, edge_id, action_id);
                 true
             }
             _ => false,

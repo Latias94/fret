@@ -1512,6 +1512,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/target_selection/edge.rs` seams, so
     `context_menu/target_hit.rs` and `context_menu/target_selection.rs` now mainly keep the
     façade surfaces explicit.
+  - Progress: edge context-menu execution now also routes open-picker, reroute, delete, and custom
+    action branches through the private
+    `ui/canvas/widget/context_menu/edge_execution/open_insert.rs`,
+    `ui/canvas/widget/context_menu/edge_execution/reroute.rs`,
+    `ui/canvas/widget/context_menu/edge_execution/delete.rs`, and
+    `ui/canvas/widget/context_menu/edge_execution/custom_action.rs` seams, so
+    `context_menu/edge_execution.rs` now mainly keeps the edge action dispatch explicit.
 
 ## M5 - Compatibility retained convergence
 
