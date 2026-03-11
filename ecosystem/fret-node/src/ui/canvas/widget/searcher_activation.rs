@@ -1,7 +1,9 @@
+mod pointer_down;
+mod pointer_up;
+
 use fret_core::MouseButton;
 use fret_ui::UiHost;
 
-use super::searcher_ui::{dismiss_searcher_event, finish_searcher_event};
 use super::*;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -17,22 +19,7 @@ pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMi
     button: MouseButton,
     zoom: f32,
 ) -> bool {
-    if canvas.interaction.searcher.is_none() {
-        return false;
-    }
-
-    let hit = super::searcher_activation_hit::searcher_pointer_hit(canvas, position, zoom);
-    match button {
-        MouseButton::Left => {
-            if let Some(row_ix) = hit.row_ix {
-                let _ = canvas.arm_searcher_row_drag(cx, row_ix, position);
-            } else if !hit.inside {
-                canvas.dismiss_searcher_overlay(cx);
-            }
-            finish_searcher_event(cx)
-        }
-        _ => dismiss_searcher_event(canvas, cx),
-    }
+    pointer_down::handle_searcher_pointer_down_event(canvas, cx, position, button, zoom)
 }
 
 pub(super) fn handle_searcher_pointer_up_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -42,16 +29,7 @@ pub(super) fn handle_searcher_pointer_up_event<H: UiHost, M: NodeGraphCanvasMidd
     button: MouseButton,
     zoom: f32,
 ) -> bool {
-    if button != MouseButton::Left {
-        return false;
-    }
-    if canvas.interaction.searcher.is_none() {
-        super::searcher_activation_state::clear_pending_searcher_row_drag(&mut canvas.interaction);
-        return false;
-    }
-
-    let hit = super::searcher_activation_hit::searcher_pointer_hit(canvas, position, zoom);
-    super::searcher_activation_state::finish_searcher_row_drag_release(canvas, cx, hit)
+    pointer_up::handle_searcher_pointer_up_event(canvas, cx, position, button, zoom)
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {

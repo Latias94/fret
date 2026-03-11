@@ -1406,6 +1406,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/searcher_rows/active.rs` seams, so `searcher_input_query.rs` and
     `searcher_rows.rs` now mainly keep canvas-level orchestration explicit while query mutation and
     row-state tails stop accumulating in the root helpers.
+  - Progress: searcher pointer activation now also routes pointer-down and pointer-up event tails
+    through the private `ui/canvas/widget/searcher_activation/pointer_down.rs` and
+    `ui/canvas/widget/searcher_activation/pointer_up.rs` seams, so `searcher_activation.rs` now
+    mainly keeps shared hit shape plus activation-state façade methods explicit while event tails
+    stop sharing the same root helper body.
 
 ## M5 - Compatibility retained convergence
 
