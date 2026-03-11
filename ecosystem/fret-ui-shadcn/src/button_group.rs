@@ -12,8 +12,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, SemanticsDecoration,
-    SizeStyle,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -494,7 +493,7 @@ impl ButtonGroup {
             outer_layout.flex.align_self = Some(CrossAlign::Start);
         }
         let props = FlexProps {
-            layout: LayoutStyle::default(),
+            layout: outer_layout,
             direction,
             gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
@@ -727,11 +726,23 @@ impl ButtonGroup {
                     }
                     ButtonGroupItem::Group(group) => {
                         let group = *group;
+                        let flex_grows = group
+                            .layout
+                            .flex_item
+                            .as_ref()
+                            .and_then(|flex| flex.grow)
+                            .is_some_and(|grow| grow > 0.0);
                         let group = if let Some(radius) = radius_override {
                             group.radius_override(radius)
                         } else {
                             group
                         };
+                        let group =
+                            if orientation == ButtonGroupOrientation::Horizontal && flex_grows {
+                                group.refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            } else {
+                                group
+                            };
                         group.into_element(cx)
                     }
                     ButtonGroupItem::GroupSeparator(separator) => separator.into_element(cx),
@@ -747,14 +758,7 @@ impl ButtonGroup {
         if let Some(a11y_label) = a11y_label {
             decoration = decoration.label(a11y_label);
         }
-        cx.container(
-            ContainerProps {
-                layout: outer_layout,
-                ..Default::default()
-            },
-            move |_cx| vec![group],
-        )
-        .attach_semantics(decoration)
+        group.attach_semantics(decoration)
     }
 }
 
@@ -832,23 +836,47 @@ mod tests {
         apply_theme(&mut app);
 
         let element = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
-        let ElementKind::Container(outer) = &element.kind else {
-            panic!("expected ButtonGroup to render as a container wrapper");
+        let ElementKind::Flex(props) = &element.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
         };
-        assert_eq!(outer.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.size.width, Length::Auto);
         assert_eq!(
-            outer.layout.flex.align_self,
+            props.layout.flex.align_self,
             Some(fret_ui::element::CrossAlign::Start)
         );
-
-        assert_eq!(element.children.len(), 1);
-        let ElementKind::Flex(props) = &element.children[0].kind else {
-            panic!("expected ButtonGroup inner to render as a flex element");
-        };
-
         assert_eq!(props.direction, fret_core::Axis::Horizontal);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
         assert_eq!(props.gap, Px(0.0).into());
+    }
+
+    #[test]
+    fn button_group_nested_flex_growing_group_fills_available_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let nested = ButtonGroup::new(basic_text_items())
+            .refine_layout(LayoutRefinement::default().flex_1());
+        let outer = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([ButtonGroupItem::from(nested)]),
+        );
+
+        let ElementKind::Flex(inner) = &outer.kind else {
+            panic!("expected outer ButtonGroup to render as a flex element");
+        };
+        assert_eq!(outer.children.len(), 1);
+
+        let ElementKind::Flex(nested_outer) = &outer.children[0].kind else {
+            panic!("expected nested ButtonGroup to render as a flex element");
+        };
+        assert_eq!(inner.direction, fret_core::Axis::Horizontal);
+        assert_eq!(nested_outer.layout.size.width, Length::Fill);
+        assert_eq!(
+            nested_outer.layout.size.min_width,
+            Some(Length::Px(Px(0.0)))
+        );
     }
 
     #[test]
@@ -858,12 +886,10 @@ mod tests {
         apply_theme(&mut app);
 
         let outer = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
-        assert_eq!(outer.children.len(), 1);
-        let element = &outer.children[0];
-        assert_eq!(element.children.len(), 2);
+        assert_eq!(outer.children.len(), 2);
 
-        let left = &element.children[0];
-        let right = &element.children[1];
+        let left = &outer.children[0];
+        let right = &outer.children[1];
 
         let ElementKind::Container(left_props) = &left.kind else {
             panic!("expected left child to be a container (ButtonGroupText)");
@@ -893,17 +919,15 @@ mod tests {
             window,
             ButtonGroup::new(basic_text_items()).orientation(ButtonGroupOrientation::Vertical),
         );
-        assert_eq!(outer.children.len(), 1);
-        let element = &outer.children[0];
-        let ElementKind::Flex(props) = &element.kind else {
-            panic!("expected ButtonGroup inner to render as a flex element");
+        let ElementKind::Flex(props) = &outer.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
         };
         assert_eq!(props.direction, fret_core::Axis::Vertical);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
 
-        assert_eq!(element.children.len(), 2);
-        let top = &element.children[0];
-        let bottom = &element.children[1];
+        assert_eq!(outer.children.len(), 2);
+        let top = &outer.children[0];
+        let bottom = &outer.children[1];
 
         let ElementKind::Container(top_props) = &top.kind else {
             panic!("expected top child to be a container (ButtonGroupText)");
@@ -934,10 +958,8 @@ mod tests {
                 ButtonGroupText::new("A").into(),
             ]),
         );
-        assert_eq!(outer.children.len(), 1);
-        let element = &outer.children[0];
-        let ElementKind::Flex(props) = &element.kind else {
-            panic!("expected ButtonGroup inner to render as a flex element");
+        let ElementKind::Flex(props) = &outer.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
         };
         assert_eq!(props.gap, Px(8.0).into());
     }

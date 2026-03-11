@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("text.rs");
 
 // region: example
-use fret_core::Px;
+use fret_core::{FontWeight, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
@@ -20,11 +20,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
+    let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
+
     shadcn::ButtonGroup::new([
-        shadcn::ButtonGroupText::new("https://").into(),
+        shadcn::ButtonGroupText::new("")
+            .children([
+                fret_ui_shadcn::icon::icon(cx, icon_id("lucide.globe")),
+                ui::text("https://")
+                    .text_sm()
+                    .font_weight(FontWeight::MEDIUM)
+                    .into_element(cx),
+            ])
+            .into(),
         shadcn::Input::new(url_value)
             .a11y_label("URL")
-            .placeholder("example")
+            .placeholder("my-app")
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
             .into(),
         shadcn::ButtonGroupText::new(".com").into(),

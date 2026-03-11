@@ -105,12 +105,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into(),
         shadcn::ButtonGroup::new([send.into()]).into(),
     ])
-    .refine_layout(
-        LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .max_w(Px(760.0)),
-    )
+    .refine_layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0())
     .into_element(cx)
     .test_id("ui-gallery-button-group-select")
 }
