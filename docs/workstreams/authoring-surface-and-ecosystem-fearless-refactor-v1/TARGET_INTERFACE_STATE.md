@@ -221,6 +221,9 @@ Target rule:
 
 - Use `UiCx` for extracted helper functions that still belong to the default app-facing teaching
   surface.
+- First-party teaching snippets in `apps/fret-cookbook`, `apps/fret-examples`, and curated gallery
+  surfaces should be source-gated so raw `ElementContext<'_, KernelApp>` only remains on
+  intentional advanced/manual-assembly seams.
 - Keep reusable/generic snippets on `ComponentCx<'_, H>` or explicit `ElementContext<'_, H>` when
   the helper must stay portable across `H: UiHost`.
 - Gallery page hosts, drivers, and other app-shell composition code are not the same thing as the

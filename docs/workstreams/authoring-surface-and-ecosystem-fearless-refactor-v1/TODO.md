@@ -142,6 +142,8 @@ Companion docs:
 - [x] Update scaffold templates in `apps/fretboard`.
 - [x] Update official cookbook examples to use the new app surface.
 - [x] Move advanced examples to explicit advanced imports when needed.
+- [x] Migrate first-party extracted helper teaching snippets to `UiCx` unless they intentionally
+  stay generic over `H: UiHost` or define an explicit advanced entry seam.
 - [ ] Remove or rewrite examples that still teach superseded patterns.
 
 ## M5 — Delete the old surface
@@ -162,6 +164,8 @@ Companion docs:
 - [x] Add source gates that keep default docs/examples/templates on `view::<V>()?.run()`.
 - [x] Add a gate that README/docs/first-hour agree on the default action model.
 - [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
+- [x] Add a source gate that keeps default extracted helper teaching on `UiCx` instead of raw
+  `ElementContext`.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
   - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
