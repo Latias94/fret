@@ -1467,6 +1467,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/item_builders/group.rs`, and
     `ui/canvas/widget/context_menu/item_builders/edge.rs` seams, so
     `context_menu/item_builders.rs` now mainly keeps the public builder surface explicit.
+  - Progress: context-menu selection activation now also routes activation-payload assembly and
+    pointer-down activation tails through the private
+    `ui/canvas/widget/context_menu/selection_activation/payload.rs` and
+    `ui/canvas/widget/context_menu/selection_activation/pointer_down.rs` seams, so
+    `context_menu/selection_activation.rs` now mainly keeps the selection façade explicit.
 
 ## M5 - Compatibility retained convergence
 
