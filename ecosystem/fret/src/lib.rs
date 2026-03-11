@@ -55,8 +55,9 @@
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface plus explicit escape hatches
-//! - use `fret::integration::InstallIntoApp` for reusable app-install bundles while ordinary app
-//!   code keeps passing plain installer functions to `.setup(...)`
+//! - use `fret::integration::InstallIntoApp` for reusable app-install bundles; small app-local
+//!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
+//!   passing plain installer functions to `.setup(...)`
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -1095,6 +1096,14 @@ mod builder_surface_tests {
         }
     }
 
+    fn install_bundle_step_a(_app: &mut App) {
+        INSTALL_INTO_APP_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn install_bundle_step_b(_app: &mut App) {
+        INSTALL_INTO_APP_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
     fn install(_app: &mut App, _services: &mut dyn UiServices) {}
 
     fn register_icon_pack(_registry: &mut IconRegistry) {}
@@ -1268,6 +1277,18 @@ mod builder_surface_tests {
 
         let _builder = builder.setup(BundleInstaller);
         assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn fret_app_setup_accepts_small_tuple_composition() {
+        INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
+
+        let app = FretApp::new("builder-view-tuple-setup")
+            .setup((install_bundle_step_a, install_bundle_step_b));
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 0);
+
+        let _builder = app.view::<SmokeView>().expect("view should build");
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 2);
     }
 
     #[test]
@@ -1515,10 +1536,12 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_and_rustdoc_expose_install_into_app_as_explicit_bundle_seam() {
         assert!(CRATE_README.contains("`fret::integration::InstallIntoApp`"));
+        assert!(CRATE_README.contains("`.setup((install_a, install_b))`"));
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains("`fret::integration::InstallIntoApp`"));
+        assert!(rustdoc.contains("`.setup((install_a, install_b))`"));
         assert!(public_surface.contains("pub mod integration;"));
         assert!(!app_prelude_exports_symbol("InstallIntoApp"));
     }

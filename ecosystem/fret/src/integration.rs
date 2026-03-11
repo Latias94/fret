@@ -2,7 +2,8 @@
 //!
 //! Ordinary app code should keep using free installer functions with `FretApp::setup(...)`.
 //! Implement [`InstallIntoApp`] when a crate wants to compose multiple installers into one
-//! reusable app-facing bundle without widening the default app-author surface.
+//! reusable app-facing bundle without widening the default app-author surface. For small app-local
+//! composition, tuples are also supported directly.
 
 use crate::app::App;
 
@@ -26,6 +27,26 @@ where
     }
 }
 
+macro_rules! impl_install_into_app_tuple {
+    ($($ty:ident => $value:ident),+ $(,)?) => {
+        impl<$($ty),+> InstallIntoApp for ($($ty,)+)
+        where
+            $($ty: InstallIntoApp,)+
+        {
+            fn install_into_app(self, app: &mut App) {
+                let ($($value,)+) = self;
+                $(
+                    $value.install_into_app(app);
+                )+
+            }
+        }
+    };
+}
+
+impl_install_into_app_tuple!(A => a, B => b);
+impl_install_into_app_tuple!(A => a, B => b, C => c);
+impl_install_into_app_tuple!(A => a, B => b, C => c, D => d);
+
 #[cfg(test)]
 mod tests {
     use super::InstallIntoApp;
@@ -33,6 +54,12 @@ mod tests {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     struct Marker(u32);
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct MarkerB(u32);
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct MarkerC(u32);
 
     struct BundleInstaller;
 
@@ -59,5 +86,19 @@ mod tests {
         BundleInstaller.install_into_app(&mut app);
 
         assert_eq!(app.global::<Marker>().copied(), Some(Marker(7)));
+    }
+
+    #[test]
+    fn tuples_compose_small_app_local_installers() {
+        let mut app = App::new();
+        let install_a = |app: &mut App| app.set_global(Marker(1));
+        let install_b = |app: &mut App| app.set_global(MarkerB(2));
+        let install_c = |app: &mut App| app.set_global(MarkerC(3));
+
+        (install_a, install_b, install_c).install_into_app(&mut app);
+
+        assert_eq!(app.global::<Marker>().copied(), Some(Marker(1)));
+        assert_eq!(app.global::<MarkerB>().copied(), Some(MarkerB(2)));
+        assert_eq!(app.global::<MarkerC>().copied(), Some(MarkerC(3)));
     }
 }

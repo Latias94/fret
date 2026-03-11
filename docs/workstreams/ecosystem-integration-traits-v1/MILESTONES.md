@@ -14,6 +14,8 @@ Current status on 2026-03-11:
 
 - `InstallIntoApp` is now landed on the explicit `fret::integration` surface.
 - `FretApp::setup(...)` and `UiAppBuilder::setup(...)` both accept `InstallIntoApp`.
+- Small tuple composition is now intentionally supported for app-local setup bundles; slice/vec
+  composition remains deferred.
 - The first in-tree bundle example is landed in
   `apps/fret-cookbook/examples/docking_basics.rs`.
 - Free installer functions remain the default story; first-party bundle examples and the remaining

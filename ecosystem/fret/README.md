@@ -181,7 +181,9 @@ part of the default app prelude. The default design-system surface is similarly 
 explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
 surface. Reusable ecosystem bundles can share the same `.setup(...)` seam by implementing
 `fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
-functions first.
+functions first. For small app-local composition, it is also acceptable to write
+`.setup((install_a, install_b))`; prefer a named bundle type once that composition becomes
+reusable or crate-facing API.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

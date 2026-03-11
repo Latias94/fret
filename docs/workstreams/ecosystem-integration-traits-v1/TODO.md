@@ -54,8 +54,12 @@ surface.
   `fn(&mut App)` installers without forcing app authors onto traits.
   - Landed on 2026-03-11: `InstallIntoApp` has a blanket implementation for installer functions
     and is accepted by both `FretApp::setup(...)` and `UiAppBuilder::setup(...)`.
-- [ ] Decide whether tuple/slice/vec bundle composition should be supported directly or left to
+- [x] Decide whether tuple/slice/vec bundle composition should be supported directly or left to
   small app-owned wrapper types.
+  - Decision on 2026-03-11:
+    support small tuple composition directly for app-local wiring (`(a, b)`, `(a, b, c)`,
+    `(a, b, c, d)`), keep reusable/published packs on named `InstallIntoApp` bundle types, and
+    defer slice/vec-style dynamic composition until a concrete need appears.
 - [ ] Migrate first-party "app integration pack" examples to use one consistent bundle story.
   - First landed example on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now uses
     `DockingBasicsBundle` via `.setup(DockingBasicsBundle)`.

@@ -49,6 +49,13 @@ fn main() -> fret::Result<()> {
 }
 ```
 
+Composition rule:
+
+- keep a single installer function as the first documented path,
+- allow small tuple composition directly for app-local wiring,
+- require named `InstallIntoApp` bundle types for reusable/published ecosystem packs,
+- keep slice/vec-style dynamic composition out of v1 until a concrete use case appears.
+
 ## 3. Per-Ecosystem Target Shape
 
 ### 3.1 Design-system / recipe crates
