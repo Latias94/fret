@@ -1,14 +1,15 @@
 use anyhow::Context as _;
 use fret::docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportLayout,
-    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingRuntime, ViewportPanel,
-    create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, DockViewportLayout, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, DockingRuntime, ViewportPanel,
+    create_dock_space_node_with_test_id, render_and_bind_dock_panels,
 };
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
-    geometry::Px,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, PanelKind, Rect, Scene, SceneOp,
+    UiServices, geometry::Px,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, FnDriver, WindowCreateSpec, WinitCommandContext,
@@ -102,118 +103,119 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingDemoHarnessRoot {
         }
     }
 }
-struct DemoDockPanelRegistry;
+struct DemoDockPanelFactory {
+    kind: PanelKind,
+}
 
-impl DockPanelRegistry<App> for DemoDockPanelRegistry {
-    fn render_panel(
+impl DemoDockPanelFactory {
+    fn new(kind: &'static str) -> Self {
+        Self {
+            kind: PanelKind::new(kind),
+        }
+    }
+}
+
+impl DockPanelFactory<App> for DemoDockPanelFactory {
+    fn panel_kind(&self) -> PanelKind {
+        self.kind.clone()
+    }
+
+    fn build_panel(
         &self,
-        ui: &mut UiTree<App>,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        bounds: Rect,
         panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, App>,
     ) -> Option<fret_core::NodeId> {
-        let theme = Theme::global(&*app).clone();
-        let padding = theme.metric_token("metric.padding.md");
-        let background = theme.color_token("background");
+        let kind = panel.kind.0.clone();
+        let root_name = format!("dock_demo.panel.{kind}");
+        Some(cx.render_cached_panel_root(&root_name, |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let padding = theme.metric_token("metric.padding.md");
+            let background = theme.color_token("background");
 
-        let label: &str = match panel.kind.0.as_str() {
-            "core.hierarchy" => "Hierarchy panel (declarative root)",
-            "core.inspector" => "Inspector panel (declarative root)",
-            _ => "Panel (unregistered kind)",
-        };
+            let label: &str = match kind.as_str() {
+                "core.hierarchy" => "Hierarchy panel (declarative root)",
+                "core.inspector" => "Inspector panel (declarative root)",
+                _ => "Panel (unregistered kind)",
+            };
 
-        let root_name = format!("dock_demo.panel.{}", panel.kind.0);
-        Some(render_cached_panel_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            &root_name,
-            |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(padding).into(),
-                        background: Some(background),
-                        ..Default::default()
+            vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
                     },
-                    |cx| {
-                        let body = match panel.kind.0.as_str() {
-                            "core.hierarchy" => shadcn::Card::new(vec![
-                                shadcn::CardHeader::new(vec![
-                                    shadcn::CardTitle::new("Hierarchy").into_element(cx),
-                                    shadcn::CardDescription::new(
-                                        "Placeholder content for docking + tab drag smoke tests.",
-                                    )
-                                    .into_element(cx),
-                                ])
+                    padding: fret_core::Edges::all(padding).into(),
+                    background: Some(background),
+                    ..Default::default()
+                },
+                |cx| {
+                    let body = match kind.as_str() {
+                        "core.hierarchy" => shadcn::Card::new(vec![
+                            shadcn::CardHeader::new(vec![
+                                shadcn::CardTitle::new("Hierarchy").into_element(cx),
+                                shadcn::CardDescription::new(
+                                    "Placeholder content for docking + tab drag smoke tests.",
+                                )
                                 .into_element(cx),
-                                shadcn::CardContent::new([ui::v_flex(|cx| {
-                                    [
-                                        shadcn::Button::new(
-                                            "Toggle collapse (layout.expand motion)",
-                                        )
+                            ])
+                            .into_element(cx),
+                            shadcn::CardContent::new([ui::v_flex(|cx| {
+                                [
+                                    shadcn::Button::new("Toggle collapse (layout.expand motion)")
                                         .variant(shadcn::ButtonVariant::Outline)
                                         .size(shadcn::ButtonSize::Sm)
                                         .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
                                         .test_id("dock-demo-split-toggle")
                                         .into_element(cx),
-                                        cx.text("Scene"),
-                                        cx.text("  • Camera"),
-                                        cx.text("  • Directional Light"),
-                                        cx.text("  • Player"),
-                                    ]
-                                })
-                                .gap(Space::N1)
-                                .layout(LayoutRefinement::default().w_full())
-                                .into_element(cx)])
-                                .into_element(cx),
-                            ])
-                            .size(shadcn::CardSize::Sm)
+                                    cx.text("Scene"),
+                                    cx.text("  • Camera"),
+                                    cx.text("  • Directional Light"),
+                                    cx.text("  • Player"),
+                                ]
+                            })
+                            .gap(Space::N1)
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx)])
                             .into_element(cx),
-                            "core.inspector" => shadcn::Card::new(vec![
-                                shadcn::CardHeader::new(vec![
-                                    shadcn::CardTitle::new("Inspector").into_element(cx),
-                                    shadcn::CardDescription::new(label).into_element(cx),
-                                ])
-                                .into_element(cx),
-                                shadcn::CardContent::new([ui::v_flex(|cx| {
-                                    [
-                                        cx.text("Name: Player"),
-                                        cx.text("Position: (12.0, 3.0, -8.0)"),
-                                        cx.text("Rotation: (0.0, 90.0, 0.0)"),
-                                    ]
-                                })
-                                .gap(Space::N1)
-                                .layout(LayoutRefinement::default().w_full())
-                                .into_element(cx)])
-                                .into_element(cx),
+                        ])
+                        .size(shadcn::CardSize::Sm)
+                        .into_element(cx),
+                        "core.inspector" => shadcn::Card::new(vec![
+                            shadcn::CardHeader::new(vec![
+                                shadcn::CardTitle::new("Inspector").into_element(cx),
+                                shadcn::CardDescription::new(label).into_element(cx),
                             ])
-                            .size(shadcn::CardSize::Sm)
                             .into_element(cx),
-                            _ => shadcn::Card::new(vec![
-                                shadcn::CardHeader::new(vec![
-                                    shadcn::CardTitle::new(label).into_element(cx),
-                                ])
-                                .into_element(cx),
+                            shadcn::CardContent::new([ui::v_flex(|cx| {
+                                [
+                                    cx.text("Name: Player"),
+                                    cx.text("Position: (12.0, 3.0, -8.0)"),
+                                    cx.text("Rotation: (0.0, 90.0, 0.0)"),
+                                ]
+                            })
+                            .gap(Space::N1)
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx)])
+                            .into_element(cx),
+                        ])
+                        .size(shadcn::CardSize::Sm)
+                        .into_element(cx),
+                        _ => shadcn::Card::new(vec![
+                            shadcn::CardHeader::new(vec![
+                                shadcn::CardTitle::new(label).into_element(cx),
                             ])
-                            .size(shadcn::CardSize::Sm)
                             .into_element(cx),
-                        };
+                        ])
+                        .size(shadcn::CardSize::Sm)
+                        .into_element(cx),
+                    };
 
-                        vec![body]
-                    },
-                )]
-            },
-        ))
+                    vec![body]
+                },
+            )]
+        }))
     }
 }
 
@@ -802,8 +804,12 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    let mut registry = DockPanelRegistryBuilder::new();
+    registry
+        .register(DemoDockPanelFactory::new("core.hierarchy"))
+        .register(DemoDockPanelFactory::new("core.inspector"));
     app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(Arc::new(DemoDockPanelRegistry));
+        svc.set(registry.build_arc());
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks));

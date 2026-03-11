@@ -4,10 +4,10 @@ use std::sync::Arc;
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, Px};
+use fret_core::{Color, PanelKind, Px};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
-    runtime as dock_runtime,
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -1881,45 +1881,37 @@ fn authoring_parity_shading_model<H: UiHost>(
 }
 
 fn install_dock_panel_registry(app: &mut KernelApp) {
-    let registry: Arc<dyn DockPanelRegistry<KernelApp>> = Arc::new(ImUiEditorProofPanelRegistry);
+    let mut registry = DockPanelRegistryBuilder::new();
+    registry.register(ImUiEditorProofControlsPanelFactory);
     app.with_global_mut(
         DockPanelRegistryService::<KernelApp>::default,
         |svc, _app| {
-            svc.set(registry);
+            svc.set(registry.build_arc());
         },
     );
 }
 
-struct ImUiEditorProofPanelRegistry;
+struct ImUiEditorProofControlsPanelFactory;
 
-impl DockPanelRegistry<KernelApp> for ImUiEditorProofPanelRegistry {
-    fn render_panel(
+impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
+    fn panel_kind(&self) -> PanelKind {
+        PanelKind::new("demo.controls")
+    }
+
+    fn build_panel(
         &self,
-        ui: &mut UiTree<KernelApp>,
-        app: &mut KernelApp,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        bounds: fret_core::Rect,
         panel: &fret_core::PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, KernelApp>,
     ) -> Option<fret_core::NodeId> {
-        if panel.kind.0 != "demo.controls" {
-            return None;
-        }
-
         let root_name = match panel.instance.as_deref() {
             Some(instance) => format!("imui_editor_proof.panel.{}:{}", panel.kind.0, instance),
             None => format!("imui_editor_proof.panel.{}", panel.kind.0),
         };
         let panel_key = panel.clone();
-        Some(fret_docking::render_cached_panel_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
+        Some(cx.render_cached_panel_root(
             &root_name,
             move |cx| {
-                let target = embedded::models(&*cx.app, window)
+                let target = embedded::models(&*cx.app, cx.window)
                     .and_then(|m| cx.watch_model(&m.target).paint().copied())
                     .unwrap_or_default();
 

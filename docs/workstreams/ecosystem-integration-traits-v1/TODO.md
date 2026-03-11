@@ -119,6 +119,15 @@ surface.
   bespoke wiring guidance.
   - Landed on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now registers its panel
     set through `DockPanelFactory` contributions rather than a monolithic bespoke registry.
+- [x] Migrate the baseline first-party docking demos that already use stable panel kinds to the
+  registry-builder path.
+  - Landed on 2026-03-11: `apps/fret-examples/src/docking_demo.rs`,
+    `apps/fret-examples/src/container_queries_docking_demo.rs`, and
+    `apps/fret-examples/src/imui_editor_proof_demo.rs` now install panel factories through
+    `DockPanelRegistryBuilder`.
+- [ ] Rework the remaining dynamic-kind or extra-viewport demos onto stable `PanelKind + instance`
+  semantics before deleting bespoke registration helpers.
+  - Likely first target: `apps/fret-examples/src/docking_arbitration_demo.rs`.
 
 ## 7. `QueryAdapter` and Selector Boundaries
 

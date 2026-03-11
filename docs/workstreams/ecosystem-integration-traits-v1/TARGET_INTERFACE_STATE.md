@@ -99,6 +99,8 @@ Target rule:
 - docking stays out of `crates/fret-ui`.
 - registration belongs to `DockPanelRegistryBuilder`, while the app still owns the final registry
   service installation.
+- first-party examples should teach the builder/factory path whenever panel identity is already
+  stable; only genuinely dynamic cases should need additional refactor work.
 
 ### 3.3 Router ecosystems
 

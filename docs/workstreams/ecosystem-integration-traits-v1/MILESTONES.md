@@ -26,6 +26,11 @@ Current status on 2026-03-11:
 - `DockPanelRegistryBuilder` now aggregates `PanelKind`-keyed factories into the existing
   app-owned `DockPanelRegistry` story, and the cookbook docking example has migrated to the new
   contribution model.
+- The baseline first-party docking demos that already use stable panel identities now also install
+  their panels through `DockPanelRegistryBuilder`:
+  `docking_demo`, `container_queries_docking_demo`, and `imui_editor_proof_demo`.
+- The remaining docking migration pressure is now concentrated in demos that still synthesize
+  dynamic panel kinds instead of using stable `PanelKind + instance` identity.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 
