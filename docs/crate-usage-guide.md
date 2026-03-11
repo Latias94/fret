@@ -10,6 +10,8 @@ If you are a component author, start with:
 
 - `docs/component-author-guide.md`
 - `docs/component-authoring-contracts.md`
+- If you intentionally consume the `fret` facade for reusable in-repo component/scaffold code,
+  prefer `use fret::component::prelude::*;` over `fret::app::prelude::*;`.
 
 ## Quick rules of thumb
 
@@ -82,6 +84,11 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, and local `on_activate*`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` as cookbook/reference-only host-side glue.
+
+**Reusable component surface:** if you intentionally use the `fret` facade for reusable
+component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
+provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`UiIntoElement`, layout/style refinements, and
+semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 
