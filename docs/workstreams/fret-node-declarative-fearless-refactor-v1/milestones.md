@@ -1138,6 +1138,10 @@ real editors.
   through the private `ui/canvas/widget/marquee_selection_query/nodes.rs` and
   `ui/canvas/widget/marquee_selection_query/edges.rs` seams, so
   `marquee_selection_query.rs` now mainly keeps the marquee query orchestration explicit.
+- group draw-order reducers now also route selected-group ordering and front/back application
+  through the private `ui/canvas/widget/group_draw_order/selection.rs` and
+  `ui/canvas/widget/group_draw_order/apply.rs` seams, so `group_draw_order.rs` now mainly keeps
+  the group draw-order orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

@@ -1,34 +1,20 @@
+mod apply;
+mod selection;
+
 use crate::core::GroupId;
 use crate::io::NodeGraphViewState;
-
-fn selected_groups_in_draw_order(
-    group_draw_order: &[GroupId],
-    selected_groups: &[GroupId],
-) -> Vec<GroupId> {
-    let mut selected_in_order = Vec::new();
-    for group_id in group_draw_order {
-        if selected_groups.contains(group_id) {
-            selected_in_order.push(*group_id);
-        }
-    }
-    for group_id in selected_groups {
-        if !selected_in_order.contains(group_id) {
-            selected_in_order.push(*group_id);
-        }
-    }
-    selected_in_order
-}
 
 pub(super) fn bring_selected_groups_to_front_in_view_state(
     view_state: &mut NodeGraphViewState,
     selected_groups: &[GroupId],
 ) {
     let selected_in_order =
-        selected_groups_in_draw_order(&view_state.group_draw_order, selected_groups);
-    view_state
-        .group_draw_order
-        .retain(|group_id| !selected_groups.contains(group_id));
-    view_state.group_draw_order.extend(selected_in_order);
+        selection::selected_groups_in_draw_order(&view_state.group_draw_order, selected_groups);
+    apply::bring_selected_groups_to_front_in_view_state(
+        view_state,
+        selected_groups,
+        selected_in_order,
+    );
 }
 
 pub(super) fn send_selected_groups_to_back_in_view_state(
@@ -36,13 +22,12 @@ pub(super) fn send_selected_groups_to_back_in_view_state(
     selected_groups: &[GroupId],
 ) {
     let selected_in_order =
-        selected_groups_in_draw_order(&view_state.group_draw_order, selected_groups);
-    view_state
-        .group_draw_order
-        .retain(|group_id| !selected_groups.contains(group_id));
-    let mut next = selected_in_order;
-    next.extend_from_slice(&view_state.group_draw_order);
-    view_state.group_draw_order = next;
+        selection::selected_groups_in_draw_order(&view_state.group_draw_order, selected_groups);
+    apply::send_selected_groups_to_back_in_view_state(
+        view_state,
+        selected_groups,
+        selected_in_order,
+    );
 }
 
 #[cfg(test)]

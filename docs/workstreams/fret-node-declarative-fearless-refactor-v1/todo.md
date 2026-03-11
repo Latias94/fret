@@ -1599,6 +1599,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     selection through the private `ui/canvas/widget/marquee_selection_query/nodes.rs` and
     `ui/canvas/widget/marquee_selection_query/edges.rs` seams, so
     `marquee_selection_query.rs` now mainly keeps the marquee query orchestration explicit.
+  - Progress: group draw-order reducers now also route selected-group ordering and front/back
+    application through the private `ui/canvas/widget/group_draw_order/selection.rs` and
+    `ui/canvas/widget/group_draw_order/apply.rs` seams, so `group_draw_order.rs` now mainly keeps
+    the group draw-order orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
