@@ -16,7 +16,7 @@ It answers four concrete questions:
 
 | Contract | Target owner | Surface kind | Default audience | Target status |
 | --- | --- | --- | --- | --- |
-| `InstallIntoApp` | ecosystem-level integration module (`fret` or equivalent) | small trait | app integration bundles, first-party and third-party app packs | Planned |
+| `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
 | `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | small trait + data types | command palette / menu surfaces | Planned |
 | `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Planned |
 | `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | Planned |

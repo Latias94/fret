@@ -55,6 +55,8 @@
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface plus explicit escape hatches
+//! - use `fret::integration::InstallIntoApp` for reusable app-install bundles while ordinary app
+//!   code keeps passing plain installer functions to `.setup(...)`
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -76,6 +78,9 @@ pub mod workspace_menu;
 pub mod workspace_shell;
 
 pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
+
+/// Explicit app-integration contracts for reusable ecosystem bundles.
+pub mod integration;
 
 mod pending_shortcut_overlay;
 
@@ -804,9 +809,12 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn setup(self, setup: fn(&mut crate::app::App)) -> Self {
+    pub fn setup<T>(self, setup: T) -> Self
+    where
+        T: crate::integration::InstallIntoApp + 'static,
+    {
         Self {
-            inner: self.inner.install_app(setup),
+            inner: self.inner.init_app(move |app| setup.install_into_app(app)),
         }
     }
 
@@ -1060,6 +1068,8 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod builder_surface_tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use super::{FretApp, IconRegistry};
     use crate::advanced::{
         FretAppAdvancedExt as _, KernelApp, UiAppBuilderAdvancedExt as _, ViewElements,
@@ -1073,6 +1083,17 @@ mod builder_surface_tests {
     use fret_runtime::{CommandId, FrameId, TickId};
 
     fn install_app(_app: &mut App) {}
+
+    static INSTALL_INTO_APP_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    struct BundleInstaller;
+
+    impl crate::integration::InstallIntoApp for BundleInstaller {
+        fn install_into_app(self, app: &mut App) {
+            INSTALL_INTO_APP_CALLS.fetch_add(1, Ordering::SeqCst);
+            app.commands_mut();
+        }
+    }
 
     fn install(_app: &mut App, _services: &mut dyn UiServices) {}
 
@@ -1223,6 +1244,30 @@ mod builder_surface_tests {
                 assert_eq!(config.main_window_size.width, 960.0);
                 assert_eq!(config.main_window_size.height, 720.0);
             });
+    }
+
+    #[test]
+    fn fret_app_setup_accepts_install_into_app_bundles() {
+        INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
+
+        let app = FretApp::new("builder-view-bundle-setup").setup(BundleInstaller);
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 0);
+
+        let _builder = app.view::<SmokeView>().expect("view should build");
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn ui_app_builder_setup_accepts_install_into_app_bundles() {
+        INSTALL_INTO_APP_CALLS.store(0, Ordering::SeqCst);
+
+        let builder = FretApp::new("builder-view-bundle-setup-ui-builder")
+            .view::<SmokeView>()
+            .expect("view should build");
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 0);
+
+        let _builder = builder.setup(BundleInstaller);
+        assert_eq!(INSTALL_INTO_APP_CALLS.load(Ordering::SeqCst), 1);
     }
 
     #[test]
@@ -1465,6 +1510,17 @@ mod authoring_surface_policy_tests {
         ));
         assert!(!CRATE_README.contains("`UiAppBuilder::on_gpu_ready(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::install_custom_effects(...)`"));
+    }
+
+    #[test]
+    fn readme_and_rustdoc_expose_install_into_app_as_explicit_bundle_seam() {
+        assert!(CRATE_README.contains("`fret::integration::InstallIntoApp`"));
+
+        let rustdoc = crate_rustdoc();
+        let public_surface = crate_public_surface_source();
+        assert!(rustdoc.contains("`fret::integration::InstallIntoApp`"));
+        assert!(public_surface.contains("pub mod integration;"));
+        assert!(!app_prelude_exports_symbol("InstallIntoApp"));
     }
 
     #[test]
@@ -1846,7 +1902,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn app_builder_uses_setup_language_on_default_surface() {
-        assert!(APP_ENTRY_RS.contains("pub fn setup("));
+        assert!(APP_ENTRY_RS.contains("pub fn setup<") || APP_ENTRY_RS.contains("pub fn setup("));
         assert!(APP_ENTRY_RS.contains("pub fn view<") || APP_ENTRY_RS.contains("pub fn view("));
         assert!(
             APP_ENTRY_RS.contains("pub fn view_with_hooks<")
@@ -1859,7 +1915,9 @@ mod authoring_surface_policy_tests {
 
         let ui_app_builder = ui_app_builder_impl_source();
         assert!(ui_app_builder.contains("pub fn setup_with("));
-        assert!(ui_app_builder.contains("pub fn setup("));
+        assert!(
+            ui_app_builder.contains("pub fn setup<") || ui_app_builder.contains("pub fn setup(")
+        );
         assert!(!ui_app_builder.contains("pub fn init_app("));
         assert!(!ui_app_builder.contains("pub fn install("));
         assert!(!ui_app_builder.contains("pub fn install_custom_effects("));

@@ -179,7 +179,9 @@ part of the default app prelude. The default design-system surface is similarly 
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
 `shadcn::app::install(...)` for app wiring, `shadcn::themes::apply_shadcn_new_york(...)` for
 explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
-surface.
+surface. Reusable ecosystem bundles can share the same `.setup(...)` seam by implementing
+`fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
+functions first.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

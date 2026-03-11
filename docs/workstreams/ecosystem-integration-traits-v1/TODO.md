@@ -15,10 +15,13 @@ surface.
 
 ## 1. Contract Lock
 
-- [ ] Decide the canonical home for `InstallIntoApp`.
-  - Preferred outcome: ecosystem-level integration module, not `crates/fret-ui`.
-- [ ] Decide whether `InstallIntoApp` should be defined in `ecosystem/fret` first and re-exported
+- [x] Decide the canonical home for `InstallIntoApp`.
+  - Landed on 2026-03-11 under `ecosystem/fret/src/integration.rs` and exposed as the explicit
+    `fret::integration::InstallIntoApp` surface, not in `crates/fret-ui`.
+- [x] Decide whether `InstallIntoApp` should be defined in `ecosystem/fret` first and re-exported
   later, or introduced directly under a stable `fret::integration` module.
+  - Current decision: define it directly on the stable `fret::integration` module and keep the
+    default app prelude free of integration-trait leakage.
 - [ ] Lock the canonical owner for `CommandCatalog`.
   - Preferred outcome: `fret-ui-kit::command`, with recipe crates consuming it.
 - [ ] Audit existing router code and decide whether `RouteCodec` should be implemented directly by
@@ -47,8 +50,10 @@ surface.
 
 ## 3. `InstallIntoApp` Adoption
 
-- [ ] Introduce a thin adapter story for installer functions so bundles can compose existing
+- [x] Introduce a thin adapter story for installer functions so bundles can compose existing
   `fn(&mut App)` installers without forcing app authors onto traits.
+  - Landed on 2026-03-11: `InstallIntoApp` has a blanket implementation for installer functions
+    and is accepted by both `FretApp::setup(...)` and `UiAppBuilder::setup(...)`.
 - [ ] Decide whether tuple/slice/vec bundle composition should be supported directly or left to
   small app-owned wrapper types.
 - [ ] Migrate first-party "app integration pack" examples to use one consistent bundle story.

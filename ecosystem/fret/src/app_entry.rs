@@ -3,7 +3,9 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
-use crate::{Defaults, Result, UiAppBuilder, UiAppDriver};
+use crate::{Defaults, Result, UiAppBuilder, UiAppDriver, integration::InstallIntoApp};
+
+type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
@@ -17,7 +19,7 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
-    setup_hooks: Vec<fn(&mut crate::app::App)>,
+    setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
 }
@@ -86,9 +88,14 @@ impl FretApp {
     /// Run app-level setup during bootstrap.
     ///
     /// This is the canonical ecosystem integration seam for app-level add-ons such as command
-    /// registration, theme/bootstrap setup, or optional recipe-crate globals.
-    pub fn setup(mut self, setup: fn(&mut crate::app::App)) -> Self {
-        self.setup_hooks.push(setup);
+    /// registration, theme/bootstrap setup, optional recipe-crate globals, or reusable app
+    /// integration bundles that implement [`InstallIntoApp`].
+    pub fn setup<T>(mut self, setup: T) -> Self
+    where
+        T: InstallIntoApp + 'static,
+    {
+        self.setup_hooks
+            .push(Box::new(move |app| setup.install_into_app(app)));
         self
     }
 
@@ -185,7 +192,7 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
-    setup_hooks: Vec<fn(&mut crate::app::App)>,
+    setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
     driver: UiAppDriver<S>,
@@ -196,7 +203,7 @@ fn finish_builder<S: 'static>(
     );
 
     for f in setup_hooks {
-        builder = builder.install_app(f);
+        builder = builder.init_app(f);
     }
     for f in install_hooks {
         builder = builder.install(f);

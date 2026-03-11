@@ -10,6 +10,13 @@ Related:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 
+Current status on 2026-03-11:
+
+- `InstallIntoApp` is now landed on the explicit `fret::integration` surface.
+- `FretApp::setup(...)` and `UiAppBuilder::setup(...)` both accept `InstallIntoApp`.
+- Free installer functions remain the default story; first-party bundle examples and the remaining
+  trait-budget decisions are still open.
+
 ## M0 — Trait Budget Lock
 
 Goal:
