@@ -140,7 +140,10 @@ Companion docs:
   - [x] Move the cookbook router example to the `fret::router::*` extension seam.
   - [x] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
   - [x] Audit remaining direct imports of `fret-router` / `fret-router-ui` in first-party app-facing examples and docs.
-- [ ] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
+- [x] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
+  - [x] Explicit app/advanced split crates (`fret-ui-assets`, `fret-icons-lucide`,
+    `fret-icons-radix`, `fret-node`, `fret-router-ui`) now gate against root-level shortcut
+    re-exports or install helpers that would bypass their documented seams.
 
 ## M4 — Migrate docs, templates, and examples
 
@@ -214,6 +217,8 @@ Companion docs:
   - [x] Selector/query docs, templates, and helper-heavy examples now gate grouped
     `cx.data().selector/query*` teaching while keeping raw hook entry explicit to advanced or
     component surfaces.
+  - [x] Optional split ecosystem crates (`fret-ui-assets`, icon packs, `fret-node`) now gate
+    against root-level app/advanced shortcut re-exports that would bypass their explicit seams.
 - [ ] Keep layering checks green.
 
 ## Exit Criteria
