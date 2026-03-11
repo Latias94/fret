@@ -973,6 +973,11 @@ real editors.
   `ui/canvas/widget/searcher_pointer/wheel_event.rs` seams, so `searcher_pointer.rs` now mainly
   keeps façade forwarding explicit while pointer invalidation tails stop sharing the same root
   helper body.
+- menu/searcher session builders now also route context-menu state assembly and searcher state/row
+  builders through the private `ui/canvas/widget/menu_session/context_menu.rs` and
+  `ui/canvas/widget/menu_session/searcher.rs` seams, so `menu_session.rs` now mainly keeps the
+  shared session-builder surface explicit while context-menu and searcher state assembly stop
+  sharing one root helper body.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

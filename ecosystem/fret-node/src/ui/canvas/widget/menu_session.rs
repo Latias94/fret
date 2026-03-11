@@ -1,7 +1,11 @@
+mod context_menu;
+mod searcher;
+
 use super::*;
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn first_enabled_context_menu_item(items: &[NodeGraphContextMenuItem]) -> usize {
-    items.iter().position(|item| item.enabled).unwrap_or(0)
+    context_menu::first_enabled_context_menu_item(items)
 }
 
 pub(super) fn build_searcher_rows(
@@ -27,18 +31,15 @@ pub(super) fn build_context_menu_state<M: NodeGraphCanvasMiddleware>(
     items: Vec<NodeGraphContextMenuItem>,
     candidates: Vec<InsertNodeCandidate>,
 ) -> ContextMenuState {
-    let origin = canvas.clamp_context_menu_origin(desired_origin, items.len(), bounds, snapshot);
-    let active_item = first_enabled_context_menu_item(&items);
-    ContextMenuState {
-        origin,
-        invoked_at: desired_origin,
+    context_menu::build_context_menu_state(
+        canvas,
+        desired_origin,
+        bounds,
+        snapshot,
         target,
         items,
         candidates,
-        hovered_item: None,
-        active_item,
-        typeahead: String::new(),
-    }
+    )
 }
 
 pub(super) fn build_searcher_state<M: NodeGraphCanvasMiddleware>(
@@ -51,23 +52,14 @@ pub(super) fn build_searcher_state<M: NodeGraphCanvasMiddleware>(
     recent_kinds: Vec<NodeKindKey>,
     rows_mode: SearcherRowsMode,
 ) -> SearcherState {
-    let rows = build_searcher_rows(&candidates, "", &recent_kinds, rows_mode);
-    let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
-    let origin = canvas.clamp_searcher_origin(desired_origin, visible, bounds, snapshot);
-    let active_row = NodeGraphCanvasWith::<M>::searcher_first_selectable_row(&rows)
-        .min(rows.len().saturating_sub(1));
-
-    SearcherState {
-        origin,
-        invoked_at: desired_origin,
+    searcher::build_searcher_state(
+        canvas,
+        desired_origin,
+        bounds,
+        snapshot,
         target,
-        rows_mode,
-        query: String::new(),
         candidates,
         recent_kinds,
-        rows,
-        hovered_row: None,
-        active_row,
-        scroll: 0,
-    }
+        rows_mode,
+    )
 }
