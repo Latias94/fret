@@ -16,6 +16,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         cx,
         [
             "`Drawer::direction(...)` is the upstream-aligned placement setter and accepts the documented `top`, `right`, `bottom`, and `left` directions.",
+            "`Drawer::new_controllable(cx, None, false).compose()` is the preferred Fret equivalent of upstream nested children composition, with `DrawerTrigger::build(...)` covering `asChild`-style trigger ownership.",
             "`DrawerClose::from_scope().build(cx, child)` is the closest Fret equivalent to upstream `DrawerClose asChild` for caller-owned close buttons.",
             "`snap_points(...)` and `default_snap_point(...)` are Vaul-oriented extensions that stay outside the core shadcn docs path even though they are first-class Drawer policy in Fret.",
         ],
@@ -27,7 +28,8 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` and Vaul docs.",
             "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
             "`Snap Points` stays after `API Reference` as an explicit Vaul/Fret follow-up instead of being mixed into the docs path.",
-            "`Drawer::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
+            "`Drawer::compose()` is the recipe-level composable children bridge for shadcn-style part authoring without pushing children API concerns into the mechanism layer.",
+            "`Demo` and `Responsive Dialog` keep the official inner content structure (centered max-width body, profile form layout) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
             "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
             "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
         ],
@@ -40,7 +42,9 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Basic drawer with header copy and footer actions.")
+                .description(
+                    "Official shadcn drawer demo with a centered max-width body, goal controls, and footer actions.",
+                )
                 .test_id_prefix("ui-gallery-drawer")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
@@ -56,7 +60,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Responsive Dialog", responsive_dialog)
                 .descriptions([
                     "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
-                    "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
+                    "Both branches preserve the official profile-form structure, while gallery renders them side by side for deterministic testing.",
                 ])
                 .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example"),
             DocSection::new("RTL", rtl)

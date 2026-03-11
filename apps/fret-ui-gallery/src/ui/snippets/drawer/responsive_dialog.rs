@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("responsive_dialog.rs");
 
 // region: example
+use fret_core::{Px, TextAlign};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -8,6 +9,8 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 struct Models {
     desktop_open: Option<Model<bool>>,
     mobile_open: Option<Model<bool>>,
+    email: Option<Model<String>>,
+    username: Option<Model<String>>,
 }
 
 fn models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Models {
@@ -29,20 +32,102 @@ fn ensure_open<H: UiHost>(
     }
 }
 
+fn ensure_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Option<Model<String>>,
+    value: &'static str,
+    set: impl FnOnce(&mut Models, Model<String>),
+) -> Model<String> {
+    match model {
+        Some(model) => model,
+        None => {
+            let inserted = cx.app.models_mut().insert(value.to_string());
+            cx.with_state(Models::default, |st| set(st, inserted.clone()));
+            inserted
+        }
+    }
+}
+
+fn profile_field<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: &'static str,
+    model: Model<String>,
+    input_test_id: Option<&'static str>,
+) -> AnyElement {
+    let input =
+        shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full().min_w_0());
+    let input = match input_test_id {
+        Some(test_id) => input.test_id(test_id),
+        None => input,
+    };
+
+    shadcn::Field::new([
+        shadcn::FieldLabel::new(label).into_element(cx),
+        input.into_element(cx),
+    ])
+    .into_element(cx)
+}
+
+#[derive(Clone, Copy)]
+struct ProfileFormTestIds {
+    form: &'static str,
+    email: &'static str,
+    username: &'static str,
+    save: &'static str,
+}
+
+fn profile_form<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    email: Model<String>,
+    username: Model<String>,
+    test_ids: Option<ProfileFormTestIds>,
+) -> AnyElement {
+    let form = ui::v_stack(|cx| {
+        vec![
+            profile_field(cx, "Email", email, test_ids.map(|ids| ids.email)),
+            profile_field(cx, "Username", username, test_ids.map(|ids| ids.username)),
+            match test_ids {
+                Some(ids) => shadcn::Button::new("Save changes")
+                    .test_id(ids.save)
+                    .into_element(cx),
+                None => shadcn::Button::new("Save changes").into_element(cx),
+            },
+        ]
+    })
+    .gap(Space::N6)
+    .items_stretch()
+    .layout(LayoutRefinement::default().w_full().min_w_0());
+
+    match test_ids {
+        Some(ids) => form.into_element(cx).test_id(ids.form),
+        None => form.into_element(cx),
+    }
+}
+
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let st = models(cx);
     let desktop_open = ensure_open(cx, st.desktop_open, |st, model| {
         st.desktop_open = Some(model)
     });
     let mobile_open = ensure_open(cx, st.mobile_open, |st, model| st.mobile_open = Some(model));
+    let email = ensure_text(cx, st.email, "shadcn@example.com", |st, model| {
+        st.email = Some(model)
+    });
+    let username = ensure_text(cx, st.username, "@shadcn", |st, model| {
+        st.username = Some(model)
+    });
 
     let desktop_open_trigger = desktop_open.clone();
     let mobile_open_trigger = mobile_open.clone();
+    let desktop_email = email.clone();
+    let desktop_username = username.clone();
+    let mobile_email = email.clone();
+    let mobile_username = username.clone();
 
     let desktop_dialog = shadcn::Dialog::new(desktop_open).into_element(
         cx,
         move |cx| {
-            shadcn::Button::new("Desktop Dialog")
+            shadcn::Button::new("Edit Profile (Desktop)")
                 .variant(shadcn::ButtonVariant::Outline)
                 .toggle_model(desktop_open_trigger.clone())
                 .test_id("ui-gallery-drawer-responsive-desktop-trigger")
@@ -51,19 +136,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         move |cx| {
             shadcn::DialogContent::new([
                 shadcn::DialogHeader::new([
-                    shadcn::DialogTitle::new("Responsive Dialog").into_element(cx),
+                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
                     shadcn::DialogDescription::new(
-                        "Desktop branch uses Dialog in the responsive pattern.",
+                        "Make changes to your profile here. Click save when you're done.",
                     )
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DialogFooter::new([shadcn::DialogClose::from_scope().build(
-                    cx,
-                    shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
-                )])
-                .into_element(cx),
+                profile_form(cx, desktop_email.clone(), desktop_username.clone(), None),
             ])
+            .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
             .into_element(cx)
             .test_id("ui-gallery-drawer-responsive-desktop-content")
         },
@@ -72,26 +154,47 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let mobile_drawer = shadcn::Drawer::new(mobile_open).into_element(
         cx,
         move |cx| {
-            shadcn::Button::new("Mobile Drawer")
+            shadcn::Button::new("Edit Profile (Mobile)")
                 .variant(shadcn::ButtonVariant::Outline)
                 .toggle_model(mobile_open_trigger.clone())
                 .test_id("ui-gallery-drawer-responsive-mobile-trigger")
                 .into_element(cx)
         },
         move |cx| {
+            let form = profile_form(
+                cx,
+                mobile_email.clone(),
+                mobile_username.clone(),
+                Some(ProfileFormTestIds {
+                    form: "ui-gallery-drawer-responsive-mobile-form",
+                    email: "ui-gallery-drawer-responsive-mobile-email",
+                    username: "ui-gallery-drawer-responsive-mobile-username",
+                    save: "ui-gallery-drawer-responsive-mobile-save",
+                }),
+            );
+            let form = ui::v_stack(move |_cx| vec![form])
+                .px_4()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
             shadcn::DrawerContent::new([
                 shadcn::DrawerHeader::new([
-                    shadcn::DrawerTitle::new("Responsive Drawer").into_element(cx),
+                    shadcn::DrawerTitle::new("Edit profile").into_element(cx),
                     shadcn::DrawerDescription::new(
-                        "Mobile branch uses Drawer in the responsive pattern.",
+                        "Make changes to your profile here. Click save when you're done.",
                     )
                     .into_element(cx),
                 ])
+                .text_align(TextAlign::Start)
                 .into_element(cx),
+                form,
                 shadcn::DrawerFooter::new([shadcn::DrawerClose::from_scope().build(
                     cx,
-                    shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
+                    shadcn::Button::new("Cancel")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
                 )])
+                .refine_style(ChromeRefinement::default().pt(Space::N2))
                 .into_element(cx),
             ])
             .into_element(cx)

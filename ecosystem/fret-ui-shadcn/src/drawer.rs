@@ -500,12 +500,20 @@ where
 #[derive(Debug)]
 pub struct DrawerHeader {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    text_align: Option<TextAlign>,
 }
 
 impl DrawerHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            text_align: None,
+        }
     }
 
     pub fn build<H: UiHost, B>(build: B) -> DrawerHeaderBuild<H, B>
@@ -514,8 +522,26 @@ impl DrawerHeader {
     {
         DrawerHeaderBuild {
             build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            text_align: None,
             _phantom: PhantomData,
         }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = Some(align);
+        self
     }
 
     #[track_caller]
@@ -526,15 +552,20 @@ impl DrawerHeader {
             .0
             >= fret_ui_kit::declarative::viewport_tailwind::MD.0;
         let centered = matches!(side, DrawerSide::Top | DrawerSide::Bottom) && !md_breakpoint;
-        let text_align = if centered {
-            TextAlign::Center
-        } else {
-            TextAlign::Start
-        };
+        let text_align = self.text_align.unwrap_or_else(|| {
+            if centered {
+                TextAlign::Center
+            } else {
+                TextAlign::Start
+            }
+        });
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default().w_full().min_w_0(),
+            ChromeRefinement::default().p(Space::N4).merge(self.chrome),
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .merge(self.layout),
         );
         let gap = if md_breakpoint {
             Space::N1p5
@@ -560,6 +591,9 @@ impl DrawerHeader {
 
 pub struct DrawerHeaderBuild<H, B> {
     build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    text_align: Option<TextAlign>,
     _phantom: PhantomData<fn() -> H>,
 }
 
@@ -567,13 +601,33 @@ impl<H: UiHost, B> DrawerHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = Some(align);
+        self
+    }
+
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        DrawerHeader::new(collect_built_drawer_children(
+        let mut header = DrawerHeader::new(collect_built_drawer_children(
             cx,
             self.build.expect("expected drawer header build closure"),
         ))
-        .into_element(cx)
+        .refine_style(self.chrome)
+        .refine_layout(self.layout);
+        if let Some(align) = self.text_align {
+            header = header.text_align(align);
+        }
+        header.into_element(cx)
     }
 }
 
@@ -581,9 +635,19 @@ impl<H: UiHost, B> UiPatchTarget for DrawerHeaderBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
-    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
-        self
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
     }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DrawerHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DrawerHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
 }
 
 impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerHeaderBuild<H, B>
@@ -610,12 +674,18 @@ where
 #[derive(Debug)]
 pub struct DrawerFooter {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl DrawerFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
     }
 
     pub fn build<H: UiHost, B>(build: B) -> DrawerFooterBuild<H, B>
@@ -624,16 +694,32 @@ impl DrawerFooter {
     {
         DrawerFooterBuild {
             build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
             _phantom: PhantomData,
         }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default().w_full().min_w_0().mt_auto(),
+            ChromeRefinement::default().p(Space::N4).merge(self.chrome),
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .mt_auto()
+                .merge(self.layout),
         );
         let children = self.children;
         shadcn_layout::container_vstack(
@@ -650,6 +736,8 @@ impl DrawerFooter {
 
 pub struct DrawerFooterBuild<H, B> {
     build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
     _phantom: PhantomData<fn() -> H>,
 }
 
@@ -657,12 +745,24 @@ impl<H: UiHost, B> DrawerFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         DrawerFooter::new(collect_built_drawer_children(
             cx,
             self.build.expect("expected drawer footer build closure"),
         ))
+        .refine_style(self.chrome)
+        .refine_layout(self.layout)
         .into_element(cx)
     }
 }
@@ -671,9 +771,19 @@ impl<H: UiHost, B> UiPatchTarget for DrawerFooterBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
-    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
-        self
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
     }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for DrawerFooterBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for DrawerFooterBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
 }
 
 impl<H: UiHost, B> UiHostBoundIntoElement<H> for DrawerFooterBuild<H, B>
@@ -1834,6 +1944,56 @@ mod tests {
             assert_eq!(text.layout.size.width, Length::Fill);
             assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
         }
+    }
+
+    #[test]
+    fn drawer_header_text_align_override_applies_to_bottom_drawer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            with_drawer_side_provider(cx, DrawerSide::Bottom, |cx| {
+                DrawerHeader::new([
+                    DrawerTitle::new("Title").into_element(cx),
+                    DrawerDescription::new("Description").into_element(cx),
+                ])
+                .text_align(TextAlign::Start)
+                .into_element(cx)
+            })
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected drawer header text node");
+            assert_eq!(text.align, TextAlign::Start);
+        }
+    }
+
+    #[test]
+    fn drawer_footer_layout_refinement_applies_to_root_container() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DrawerFooter::new([crate::Button::new("Close").into_element(cx)])
+                .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!(
+                "expected DrawerFooter root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(320.0))));
     }
 
     #[test]
