@@ -1376,6 +1376,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     private `ui/canvas/widget/searcher_input_nav/step.rs` seam, so
     `searcher_input_nav.rs` now mainly keeps canvas-level active-row update orchestration explicit
     while selectable-row step planning retains focused unit coverage.
+  - Progress: view/gesture callback helpers now also route viewport lifecycle, node-drag gesture,
+    and view-change fanout through the private `ui/canvas/widget/callbacks_view/viewport.rs`,
+    `ui/canvas/widget/callbacks_view/node_drag.rs`, and
+    `ui/canvas/widget/callbacks_view/view_change.rs` seams, so `callbacks_view.rs` now mainly
+    keeps the re-export surface explicit while retained callback emission stops accumulating
+    unrelated gesture/view tails inline.
 
 ## M5 - Compatibility retained convergence
 

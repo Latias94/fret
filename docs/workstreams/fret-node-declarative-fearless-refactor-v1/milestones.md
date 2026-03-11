@@ -920,6 +920,12 @@ real editors.
   `ui/canvas/widget/searcher_input_nav/step.rs` seam, so
   `searcher_input_nav.rs` now mainly keeps canvas-level active-row update orchestration explicit
   while selectable-row step planning retains focused unit coverage.
+- view/gesture callback helpers now also route viewport lifecycle, node-drag gesture, and
+  view-change fanout through the private `ui/canvas/widget/callbacks_view/viewport.rs`,
+  `ui/canvas/widget/callbacks_view/node_drag.rs`, and
+  `ui/canvas/widget/callbacks_view/view_change.rs` seams, so `callbacks_view.rs` now mainly keeps
+  the re-export surface explicit while retained callback emission stops accumulating unrelated
+  gesture/view tails inline.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
