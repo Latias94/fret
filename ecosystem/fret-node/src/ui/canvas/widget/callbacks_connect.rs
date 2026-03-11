@@ -1,3 +1,5 @@
+mod kind;
+
 use super::*;
 
 pub(super) fn emit_connect_start<M: NodeGraphCanvasMiddleware>(
@@ -9,7 +11,7 @@ pub(super) fn emit_connect_start<M: NodeGraphCanvasMiddleware>(
         return;
     };
     let event = ConnectStart {
-        kind: drag_kind_from_wire_drag_kind(kind),
+        kind: kind::drag_kind_from_wire_drag_kind(kind),
         mode: snapshot.interaction.connection_mode,
     };
     callbacks.on_connect_start(event.clone());
@@ -33,7 +35,7 @@ pub(super) fn emit_connect_end<M: NodeGraphCanvasMiddleware>(
         return;
     };
     let event = ConnectEnd {
-        kind: drag_kind_from_wire_drag_kind(kind),
+        kind: kind::drag_kind_from_wire_drag_kind(kind),
         mode,
         target,
         outcome,
@@ -45,26 +47,5 @@ pub(super) fn emit_connect_end<M: NodeGraphCanvasMiddleware>(
     ) {
         callbacks.on_reconnect_end(event.clone());
         callbacks.on_edge_update_end(event);
-    }
-}
-
-fn drag_kind_from_wire_drag_kind(kind: &WireDragKind) -> ConnectDragKind {
-    match kind {
-        WireDragKind::New { from, bundle } => ConnectDragKind::New {
-            from: *from,
-            bundle: bundle.clone(),
-        },
-        WireDragKind::Reconnect {
-            edge,
-            endpoint,
-            fixed,
-        } => ConnectDragKind::Reconnect {
-            edge: *edge,
-            endpoint: *endpoint,
-            fixed: *fixed,
-        },
-        WireDragKind::ReconnectMany { edges } => ConnectDragKind::ReconnectMany {
-            edges: edges.clone(),
-        },
     }
 }

@@ -930,6 +930,12 @@ real editors.
   private `ui/canvas/widget/auto_measure_apply/measure.rs` seam, so `auto_measure_apply.rs` now
   mainly keeps size-apply synchronization explicit while measured width planning stops sharing the
   same inline helper body.
+- retained callback connect/graph helpers now also route wire-drag kind mapping and committed
+  connection/delete fanout through the private `ui/canvas/widget/callbacks_connect/kind.rs`,
+  `ui/canvas/widget/callbacks_graph/connection.rs`, and
+  `ui/canvas/widget/callbacks_graph/delete.rs` seams, so `callbacks_connect.rs` and
+  `callbacks_graph.rs` now mainly keep lifecycle orchestration explicit while callback payload
+  mapping stops accumulating inline in the root helpers.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
