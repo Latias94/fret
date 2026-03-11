@@ -2032,6 +2032,7 @@ mod tests {
             "ui-gallery-button-group-select-currency-trigger",
             "ui-gallery-button-group-select-amount",
             "ui-gallery-button-group-rtl-content",
+            "ui-gallery-button-group-text-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);

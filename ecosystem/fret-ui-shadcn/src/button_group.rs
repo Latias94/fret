@@ -57,6 +57,17 @@ impl ButtonGroupText {
         }
     }
 
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: ButtonGroupTextContent::Children(children.into_iter().collect()),
+            layout: LayoutRefinement::default(),
+            chrome: ChromeRefinement::default(),
+            border_width_override: BorderWidthOverride::default(),
+            corner_radii_override: None,
+            test_id: None,
+        }
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -962,6 +973,34 @@ mod tests {
             panic!("expected ButtonGroup to render as a flex element");
         };
         assert_eq!(props.gap, Px(8.0).into());
+    }
+
+    #[test]
+    fn button_group_text_new_children_preserves_inline_custom_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds_320x240(),
+            "test",
+            |cx| {
+                ButtonGroupText::new_children([cx.text("prefix"), cx.text("suffix")])
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Container(_) = &text.kind else {
+            panic!("expected ButtonGroupText to render a container");
+        };
+        assert_eq!(text.children.len(), 1);
+
+        let ElementKind::Flex(_) = &text.children[0].kind else {
+            panic!("expected ButtonGroupText content row to render as a flex element");
+        };
+        assert_eq!(text.children[0].children.len(), 2);
     }
 
     #[test]

@@ -23,14 +23,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 
     shadcn::ButtonGroup::new([
-        shadcn::ButtonGroupText::new("")
-            .children([
-                fret_ui_shadcn::icon::icon(cx, icon_id("lucide.globe")),
-                ui::text("https://")
-                    .text_sm()
-                    .font_weight(FontWeight::MEDIUM)
-                    .into_element(cx),
-            ])
+        shadcn::ButtonGroupText::new_children([
+            fret_ui_shadcn::icon::icon(cx, icon_id("lucide.globe")),
+            ui::text("https://")
+                .text_sm()
+                .font_weight(FontWeight::MEDIUM)
+                .into_element(cx),
+        ])
             .into(),
         shadcn::Input::new(url_value)
             .a11y_label("URL")
