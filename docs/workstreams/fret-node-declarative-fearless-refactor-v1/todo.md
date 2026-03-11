@@ -1243,6 +1243,36 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/cancel_gesture_state/sessions.rs` seams, so
     `cancel_gesture_state.rs` now mainly keeps top-level orchestration explicit while the bulk
     session reset logic gains focused state-only coverage.
+  - Progress: interaction gating now also routes cursor-detail, edge-hover, cache, and
+    pan-inertia predicates through the private `ui/canvas/widget/interaction_gate/detail.rs`,
+    `ui/canvas/widget/interaction_gate/hover.rs`, `ui/canvas/widget/interaction_gate/cache.rs`,
+    and `ui/canvas/widget/interaction_gate/motion.rs` seams, so `interaction_gate.rs` now mainly
+    keeps the gate surface explicit while each predicate family gains focused unit coverage.
+  - Progress: reconnect helpers now also route port-edge yank logic and reconnectable flag
+    predicates through the private `ui/canvas/widget/reconnect/edges.rs` and
+    `ui/canvas/widget/reconnect/flags.rs` seams, so `reconnect.rs` now mainly keeps the module
+    split explicit while reconnect eligibility and endpoint derivation gain focused unit coverage.
+  - Progress: selection helpers now also route marquee edge-derivation and selectable predicates
+    through the private `ui/canvas/widget/selection/box_edges.rs` and
+    `ui/canvas/widget/selection/selectable.rs` seams, so `selection.rs` now mainly keeps the
+    module split explicit while box-select edge modes and selectable overrides gain focused unit
+    coverage.
+  - Progress: interaction policy helpers now also route node drag/connectable predicates plus
+    port connectable/bundle checks through the private
+    `ui/canvas/widget/interaction_policy/node.rs` and
+    `ui/canvas/widget/interaction_policy/port.rs` seams, so `interaction_policy.rs` now mainly
+    keeps the module split explicit while per-node and per-port policy overrides gain focused unit
+    coverage.
+  - Progress: view commands now also route frame-all selection collection plus reset/zoom viewport
+    helpers through the private `ui/canvas/widget/command_view/frame.rs` and
+    `ui/canvas/widget/command_view/zoom.rs` seams, so `command_view.rs` now mainly keeps the
+    module split explicit while frame-node collection and reset/zoom helper behavior gain focused
+    unit coverage.
+  - Progress: hover-edge updates now also route target-edge resolution, hover hit queries, and
+    hover-state sync through the private `ui/canvas/widget/hover/target.rs`,
+    `ui/canvas/widget/hover/hit.rs`, and `ui/canvas/widget/hover/state.rs` seams, so `hover.rs`
+    now mainly keeps the orchestration explicit while edge-target precedence and hover-state diff
+    behavior gain focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
