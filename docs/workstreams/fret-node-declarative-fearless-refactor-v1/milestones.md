@@ -817,6 +817,20 @@ real editors.
   `ui/canvas/widget/hover/hit.rs`, and `ui/canvas/widget/hover/state.rs` seams, so `hover.rs`
   now mainly keeps the orchestration explicit while edge-target precedence and hover-state diff
   behavior gain focused unit coverage.
+- command routing now also routes string-to-command dispatch through the private
+  `ui/canvas/widget/command_router/dispatch.rs` seam, so `command_router.rs` now mainly keeps
+  execution dispatch explicit while direct command aliases and canonical route mapping gain focused
+  unit coverage.
+- graph construction helpers now also route reroute-node op assembly and group-create
+  selection/update helpers through the private `ui/canvas/widget/graph_construction/node.rs` and
+  `ui/canvas/widget/graph_construction/group.rs` seams, so `graph_construction.rs` now mainly
+  keeps the module split explicit while reroute/group construction helpers gain focused unit
+  coverage.
+- pending drag session helpers now also route group/node activation and node-abort behavior
+  through the private `ui/canvas/widget/pending_drag_session/group.rs` and
+  `ui/canvas/widget/pending_drag_session/node.rs` seams, so `pending_drag_session.rs` now mainly
+  keeps the re-export surface explicit while pending drag activation helpers gain focused unit
+  coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
