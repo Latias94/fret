@@ -836,6 +836,16 @@ real editors.
   `ui/canvas/widget/paint_groups/overlay.rs` seams, so `paint_groups.rs` now mainly keeps the
   module split explicit while zoom-scaled group chrome and selected-overlay filtering gain focused
   unit coverage.
+- press-session prepare helpers now also route target-hit and surface/pan preparation through the
+  private `ui/canvas/widget/press_session/prepare/target.rs` and
+  `ui/canvas/widget/press_session/prepare/surface.rs` seams, so `press_session/prepare.rs` now
+  mainly keeps the re-export surface explicit while pointer-session clearing variants gain focused
+  unit coverage.
+- wire-drag hint paint helpers now also route hint message and border-color semantics through the
+  private `ui/canvas/widget/paint_overlay_wire_hint/message.rs` and
+  `ui/canvas/widget/paint_overlay_wire_hint/style.rs` seams, so `paint_overlay_wire_hint.rs` now
+  mainly keeps the paint orchestration explicit while invalid-hover diagnostics and bundle/yank
+  hint semantics gain focused unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

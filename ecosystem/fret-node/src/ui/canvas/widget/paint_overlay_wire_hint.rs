@@ -1,3 +1,6 @@
+mod message;
+mod style;
+
 use super::*;
 
 pub(super) fn paint_wire_drag_hint<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -8,7 +11,7 @@ pub(super) fn paint_wire_drag_hint<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) {
     let invalid_hover =
         canvas.interaction.hover_port.is_some() && !canvas.interaction.hover_port_valid;
-    let Some(text) = hint_text(canvas, wire_drag, invalid_hover) else {
+    let Some(text) = message::hint_text(canvas, wire_drag, invalid_hover) else {
         return;
     };
 
@@ -45,7 +48,7 @@ pub(super) fn paint_wire_drag_hint<H: UiHost, M: NodeGraphCanvasMiddleware>(
         Size::new(Px(box_w), Px(box_h)),
     );
 
-    let border_color = hint_border_color(canvas, invalid_hover);
+    let border_color = style::hint_border_color(canvas, invalid_hover);
 
     cx.scene.push(SceneOp::Quad {
         order: DrawOrder(69),
@@ -66,56 +69,4 @@ pub(super) fn paint_wire_drag_hint<H: UiHost, M: NodeGraphCanvasMiddleware>(
         outline: None,
         shadow: None,
     });
-}
-
-fn hint_text<M: NodeGraphCanvasMiddleware>(
-    canvas: &NodeGraphCanvasWith<M>,
-    wire_drag: &WireDrag,
-    invalid_hover: bool,
-) -> Option<Arc<str>> {
-    if invalid_hover {
-        return Some(
-            canvas
-                .interaction
-                .hover_port_diagnostic
-                .as_ref()
-                .map(|(_sev, msg)| msg.clone())
-                .unwrap_or_else(|| Arc::<str>::from("Invalid connection")),
-        );
-    }
-
-    match &wire_drag.kind {
-        WireDragKind::New { bundle, .. } if bundle.len() > 1 => {
-            Some(Arc::<str>::from(format!("Bundle: {}", bundle.len())))
-        }
-        WireDragKind::ReconnectMany { edges } if edges.len() > 1 => {
-            Some(Arc::<str>::from(format!("Yank: {}", edges.len())))
-        }
-        _ => None,
-    }
-}
-
-fn hint_border_color<M: NodeGraphCanvasMiddleware>(
-    canvas: &NodeGraphCanvasWith<M>,
-    invalid_hover: bool,
-) -> Color {
-    if invalid_hover {
-        if canvas.interaction.hover_port_convertible {
-            Color::from_srgb_hex_rgb(0xf2_bf_33)
-        } else {
-            match canvas
-                .interaction
-                .hover_port_diagnostic
-                .as_ref()
-                .map(|(sev, _)| *sev)
-                .unwrap_or(DiagnosticSeverity::Error)
-            {
-                DiagnosticSeverity::Info => Color::from_srgb_hex_rgb(0x33_8c_f2),
-                DiagnosticSeverity::Warning => Color::from_srgb_hex_rgb(0xf2_bf_33),
-                DiagnosticSeverity::Error => Color::from_srgb_hex_rgb(0xe6_59_59),
-            }
-        }
-    } else {
-        canvas.style.paint.context_menu_border
-    }
 }

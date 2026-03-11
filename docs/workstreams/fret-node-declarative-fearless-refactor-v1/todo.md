@@ -1292,6 +1292,16 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/paint_groups/overlay.rs` seams, so `paint_groups.rs` now mainly keeps the
     module split explicit while zoom-scaled group chrome and selected-overlay filtering gain
     focused unit coverage.
+  - Progress: press-session prepare helpers now also route target-hit and surface/pan preparation
+    through the private `ui/canvas/widget/press_session/prepare/target.rs` and
+    `ui/canvas/widget/press_session/prepare/surface.rs` seams, so `press_session/prepare.rs` now
+    mainly keeps the re-export surface explicit while pointer-session clearing variants gain
+    focused unit coverage.
+  - Progress: wire-drag hint paint helpers now also route hint message and border-color semantics
+    through the private `ui/canvas/widget/paint_overlay_wire_hint/message.rs` and
+    `ui/canvas/widget/paint_overlay_wire_hint/style.rs` seams, so `paint_overlay_wire_hint.rs`
+    now mainly keeps the paint orchestration explicit while invalid-hover diagnostics and bundle/yank
+    hint semantics gain focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
