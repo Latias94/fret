@@ -1492,6 +1492,18 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/background_execution/activate.rs` seams, so
     `context_menu/background_execution.rs` now mainly keeps the plan enum plus execution façade
     explicit.
+  - Progress: connection insert/conversion menu execution now also routes activation, planning,
+    plan application, and wire-drag recovery through the private
+    `ui/canvas/widget/context_menu/connection_execution_insert/activate.rs`,
+    `ui/canvas/widget/context_menu/connection_execution_insert/plan.rs`,
+    `ui/canvas/widget/context_menu/connection_execution_insert/apply.rs`,
+    `ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs`,
+    `ui/canvas/widget/context_menu/connection_execution_conversion/activate.rs`,
+    `ui/canvas/widget/context_menu/connection_execution_conversion/plan.rs`, and
+    `ui/canvas/widget/context_menu/connection_execution_conversion/apply.rs` seams, so
+    `context_menu/connection_execution_insert.rs` and
+    `context_menu/connection_execution_conversion.rs` now mainly keep the execution façades
+    explicit.
 
 ## M5 - Compatibility retained convergence
 

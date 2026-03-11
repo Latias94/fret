@@ -1033,6 +1033,18 @@ real editors.
   `ui/canvas/widget/context_menu/background_execution/activate.rs` seams, so
   `context_menu/background_execution.rs` now mainly keeps the plan enum plus execution façade
   explicit.
+- connection insert/conversion menu execution now also routes activation, planning, plan
+  application, and wire-drag recovery through the private
+  `ui/canvas/widget/context_menu/connection_execution_insert/activate.rs`,
+  `ui/canvas/widget/context_menu/connection_execution_insert/plan.rs`,
+  `ui/canvas/widget/context_menu/connection_execution_insert/apply.rs`,
+  `ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs`,
+  `ui/canvas/widget/context_menu/connection_execution_conversion/activate.rs`,
+  `ui/canvas/widget/context_menu/connection_execution_conversion/plan.rs`, and
+  `ui/canvas/widget/context_menu/connection_execution_conversion/apply.rs` seams, so
+  `context_menu/connection_execution_insert.rs` and
+  `context_menu/connection_execution_conversion.rs` now mainly keep the execution façades
+  explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
