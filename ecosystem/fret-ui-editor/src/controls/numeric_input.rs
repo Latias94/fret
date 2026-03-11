@@ -8,7 +8,7 @@
 //! - renders an inline error message when commit is rejected.
 
 use std::panic::Location;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Axis, Color, Edges, KeyCode, Px, TextAlign, TextStyle};
@@ -177,6 +177,8 @@ where
 
         let draft = draft_model(cx);
         let error = error_model(cx);
+        let last_draft_text =
+            cx.with_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
         let current_value = cx
             .get_model_copied(&model, Invalidation::Paint)
             .unwrap_or_default();
@@ -206,6 +208,7 @@ where
         let prefix_test_id = derived_test_id(options.test_id.as_ref(), "prefix");
         let suffix_test_id = derived_test_id(options.test_id.as_ref(), "suffix");
         let error_icon_test_id = derived_test_id(options.test_id.as_ref(), "error");
+        let error_text_test_id = derived_test_id(options.test_id.as_ref(), "error-text");
 
         let frame_bg = frame_chrome.bg;
         let field = editor_joined_input_frame_segments_with_overrides(
@@ -309,17 +312,14 @@ where
                         .models_mut()
                         .update(&draft, |s| *s = current_text.as_ref().to_string());
                     let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
-                    cx.with_state(
-                        || String::new(),
-                        |last| {
-                            *last = current_text.as_ref().to_string();
-                        },
-                    );
+                    let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
+                    *last = current_text.as_ref().to_string();
                 }
 
                 let model_for_key = model.clone();
                 let draft_for_key = draft.clone();
                 let error_for_key = error_for_field.clone();
+                let last_draft_for_key = last_draft_text.clone();
                 let parse_for_key = parse.clone();
                 let format_for_key = format.clone();
                 let validate_for_key = validate.clone();
@@ -338,6 +338,10 @@ where
                                         let _ = host
                                             .models_mut()
                                             .update(&error_for_key, |e| *e = Some(msg));
+                                        let mut last = last_draft_for_key
+                                            .lock()
+                                            .unwrap_or_else(|e| e.into_inner());
+                                        *last = text;
                                         host.request_redraw(action_cx.window);
                                         return true;
                                     }
@@ -349,6 +353,9 @@ where
                                     *s = formatted.as_ref().to_string()
                                 });
                                 let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                                let mut last =
+                                    last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
+                                *last = formatted.as_ref().to_string();
                                 if let Some(cb) = on_outcome_for_key.as_ref() {
                                     cb(host, action_cx, NumericInputOutcome::Committed);
                                 }
@@ -356,6 +363,9 @@ where
                                 let _ = host.models_mut().update(&error_for_key, |e| {
                                     *e = Some(Arc::from("Invalid number"))
                                 });
+                                let mut last =
+                                    last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
+                                *last = text;
                             }
                             host.request_redraw(action_cx.window);
                             true
@@ -370,6 +380,9 @@ where
                                 .models_mut()
                                 .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
                             let _ = host.models_mut().update(&error_for_key, |e| *e = None);
+                            let mut last =
+                                last_draft_for_key.lock().unwrap_or_else(|e| e.into_inner());
+                            *last = formatted.as_ref().to_string();
                             if let Some(cb) = on_outcome_for_key.as_ref() {
                                 cb(host, action_cx, NumericInputOutcome::Canceled);
                             }
@@ -384,17 +397,15 @@ where
                     let draft_text = cx
                         .get_model_cloned(&draft, Invalidation::Paint)
                         .unwrap_or_default();
-                    let changed = cx.with_state(
-                        || String::new(),
-                        |last| {
-                            if *last == draft_text {
-                                false
-                            } else {
-                                *last = draft_text;
-                                true
-                            }
-                        },
-                    );
+                    let changed = {
+                        let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
+                        if *last == draft_text {
+                            false
+                        } else {
+                            *last = draft_text;
+                            true
+                        }
+                    };
                     if changed {
                         let _ = cx.app.models_mut().update(&error_for_field, |e| *e = None);
                     }
@@ -483,7 +494,7 @@ where
 
         let error_el = (show_inline_error).then_some(()).and_then(|_| {
             error_msg.map(|msg| {
-                cx.text_props(TextProps {
+                let mut error = cx.text_props(TextProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
                             width: Length::Fill,
@@ -492,7 +503,7 @@ where
                         },
                         ..Default::default()
                     },
-                    text: msg,
+                    text: msg.clone(),
                     style: Some(typography::as_content_text(TextStyle {
                         size: text_style.size,
                         line_height: text_style.line_height,
@@ -503,7 +514,11 @@ where
                     overflow: TextOverflow::Clip,
                     align: TextAlign::Start,
                     ink_overflow: Default::default(),
-                })
+                });
+                if let Some(test_id) = error_text_test_id.as_ref() {
+                    error = error.test_id(test_id.clone()).a11y_label(msg.clone());
+                }
+                error
             })
         });
 

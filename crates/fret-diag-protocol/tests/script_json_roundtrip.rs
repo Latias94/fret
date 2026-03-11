@@ -171,6 +171,13 @@ fn script_v2_roundtrip_imui_editor_proof_gradient_stop_lifecycle() {
 }
 
 #[test]
+fn script_v2_roundtrip_imui_editor_proof_numeric_input_validation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/imui-editor-proof-numeric-input-validation.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json"

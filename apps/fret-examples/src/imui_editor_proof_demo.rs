@@ -20,9 +20,9 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
-    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericParseFn,
-    NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
-    TransformEditOptions, Vec3Edit, VecEditOptions,
+    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericInput,
+    NumericInputOptions, NumericParseFn, NumericValidateFn, Slider, SliderOptions, TextField,
+    TextFieldOptions, TransformEdit, TransformEditOptions, Vec3Edit, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
@@ -198,6 +198,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let (editor_rot_x, editor_rot_y, editor_rot_z) = editor_demo_rotation_models(cx);
     let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
+    let editor_exposure_model = editor_demo_exposure_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
@@ -392,6 +393,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     material_show_all || matches("shadow") || matches("shadows");
 
                                 let advanced_show_all = matches("advanced");
+                                let show_exposure =
+                                    advanced_show_all || matches("exposure") || matches("validate");
                                 let show_iterations = advanced_show_all || matches("iterations");
                                 let show_position =
                                     advanced_show_all || matches("position") || matches("pos");
@@ -409,6 +412,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     || show_shading_model
                                     || show_alpha_clip
                                     || show_cast_shadows
+                                    || show_exposure
                                     || show_iterations
                                     || show_position
                                     || show_transform;
@@ -500,6 +504,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     ),
                             );
 
+                            let material_validate = validate.clone();
                             out.push(
                                 PropertyGroup::new("Material")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -520,7 +525,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         move |cx| {
                                             let fmt = fmt.clone();
                                             let parse = parse.clone();
-                                            let validate = validate.clone();
+                                            let validate = material_validate.clone();
                                             vec![PropertyGrid::new().into_element(
                                                 cx,
                                                 move |cx, row_cx| {
@@ -937,6 +942,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                     ),
                             );
 
+                            let advanced_validate = validate.clone();
                             out.push(
                                 PropertyGroup::new("Advanced")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -955,6 +961,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         cx,
                                         |_cx| None,
                                         move |cx| {
+                                            let validate = advanced_validate.clone();
                                             let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
                                                 Arc::new(|v| Arc::from(format!("{v:.3}")));
                                             let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
@@ -1156,6 +1163,54 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                             .into_element(cx),
                                                                         )
                                                                     },
+                                                                ),
+                                                        );
+                                                    }
+
+                                                    if show_exposure {
+                                                        let model_for_reset =
+                                                            editor_exposure_model.clone();
+                                                        let on_reset = Arc::new(
+                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                                  action_cx: fret_ui::action::ActionCx| {
+                                                                let _ = host.models_mut().update(
+                                                                    &model_for_reset,
+                                                                    |v| *v = 0.75,
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            },
+                                                        );
+
+                                                        rows.push(
+                                                            PropertyRow::new()
+                                                                .options(row_cx.row_options.clone())
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(on_reset).options(
+                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
+                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.exposure.reset")),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ),
+                                                                ))
+                                                                .into_element(
+                                                                    cx,
+                                                                    |cx| cx.text("Exposure"),
+                                                                    |cx| {
+                                                                        NumericInput::new(
+                                                                            editor_exposure_model.clone(),
+                                                                            fmt_f64.clone(),
+                                                                            parse_f64.clone(),
+                                                                        )
+                                                                        .validate(Some(validate.clone()))
+                                                                        .options(NumericInputOptions {
+                                                                            test_id: Some(Arc::from(
+                                                                                "imui-editor-proof.editor.advanced.exposure",
+                                                                            )),
+                                                                            ..Default::default()
+                                                                        })
+                                                                        .into_element(cx)
+                                                                    },
+                                                                    |_cx| None,
                                                                 ),
                                                         );
                                                     }
@@ -1820,6 +1875,12 @@ fn editor_demo_shading_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model
 fn editor_demo_iterations_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<i32> {
     named_demo_state(cx, "imui_editor_proof_demo.model.iterations", |cx| {
         cx.app.models_mut().insert(16_i32)
+    })
+}
+
+fn editor_demo_exposure_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.exposure", |cx| {
+        cx.app.models_mut().insert(0.75_f64)
     })
 }
 
