@@ -1541,6 +1541,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/pointer_down_gesture_start/pan_start.rs` seams, so
     `pointer_down_gesture_start.rs` now mainly keeps the gesture-start façade explicit while
     preserving the existing context-menu and sticky-wire delegation.
+  - Progress: node-drag release op building now also routes release-op assembly, group-rect
+    mapping, and commit-label selection through the private
+    `ui/canvas/widget/pointer_up_node_drag_ops/build.rs`,
+    `ui/canvas/widget/pointer_up_node_drag_ops/group_rect.rs`, and
+    `ui/canvas/widget/pointer_up_node_drag_ops/commit_label.rs` seams, so
+    `pointer_up_node_drag_ops.rs` now mainly keeps the public release-op façade explicit.
 
 ## M5 - Compatibility retained convergence
 

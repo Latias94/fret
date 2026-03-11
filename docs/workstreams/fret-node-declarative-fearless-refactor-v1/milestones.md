@@ -1080,6 +1080,12 @@ real editors.
   `ui/canvas/widget/pointer_down_gesture_start/pan_start.rs` seams, so
   `pointer_down_gesture_start.rs` now mainly keeps the gesture-start façade explicit while
   preserving the existing context-menu and sticky-wire delegation.
+- node-drag release op building now also routes release-op assembly, group-rect mapping, and
+  commit-label selection through the private
+  `ui/canvas/widget/pointer_up_node_drag_ops/build.rs`,
+  `ui/canvas/widget/pointer_up_node_drag_ops/group_rect.rs`, and
+  `ui/canvas/widget/pointer_up_node_drag_ops/commit_label.rs` seams, so
+  `pointer_up_node_drag_ops.rs` now mainly keeps the public release-op façade explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
