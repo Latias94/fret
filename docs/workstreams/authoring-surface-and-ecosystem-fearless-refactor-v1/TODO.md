@@ -153,8 +153,9 @@ Companion docs:
 - [ ] Remove old default-path names that are no longer canonical.
 - [x] Remove flat `AppUi` data/effects helpers that duplicate the grouped `cx.data()` /
   `cx.effects()` surface.
+- [x] Remove flat `AppUi` action mutation helpers that duplicate the grouped `cx.actions()` surface
+  while keeping raw handler registration as an explicit advanced seam.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.
-- [ ] Remove redundant action helpers from the default app surface.
 - [ ] Remove compatibility-only aliases that survive only for internal inertia.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
 

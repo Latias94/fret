@@ -75,7 +75,7 @@ impl<T> LocalState<T> {
     /// Clone the current local value through an explicit `ModelStore` read.
     ///
     /// This mirrors the render-time `watch(...).value_*` helpers for multi-state transactions that
-    /// still need to read from `ModelStore` inside `on_action_notify_models::<A>(...)`.
+    /// still need to read from `ModelStore` inside `cx.actions().models::<A>(...)`.
     pub fn value_in(&self, models: &ModelStore) -> Option<T>
     where
         T: Any + Clone,
@@ -107,9 +107,9 @@ impl<T> LocalState<T> {
     /// Update this local slot through an explicit `ModelStore` transaction.
     ///
     /// This is a store-only write helper: it does **not** request redraw or mark the current
-    /// view-cache root dirty by itself. Use it inside `on_action_notify_models::<A>(...)` when the
-    /// write participates in a broader model-store transaction, or use `update_action(...)` /
-    /// `AppUi::on_action_notify_local_*` when the local write itself should drive rerender.
+    /// view-cache root dirty by itself. Use it inside `cx.actions().models::<A>(...)` when the
+    /// write participates in a broader model-store transaction, or use `update_action(...)` when
+    /// the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -207,7 +207,7 @@ impl<T> LocalState<T> {
 /// free of direct `ModelStore` plumbing.
 ///
 /// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
-/// across shared `Model<T>` graphs, use `AppUi::on_action_notify_models` directly.
+/// across shared `Model<T>` graphs, use `cx.actions().models::<A>(...)` directly.
 pub struct LocalTxn<'a> {
     models: &'a mut ModelStore,
 }
@@ -509,7 +509,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::TypedAction,
         T: Any,
     {
-        self.cx.on_action_notify_local_update::<A, T>(local, update);
+        let local = LocalState::clone(local);
+        self.cx.on_action::<A>(move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
     }
 
     pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
@@ -517,35 +520,50 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::TypedAction,
         T: Any + Clone,
     {
-        self.cx.on_action_notify_local_set::<A, T>(local, value);
+        let local = LocalState::clone(local);
+        self.cx.on_action::<A>(move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
     }
 
     pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
     where
         A: crate::TypedAction,
     {
-        self.cx.on_action_notify_toggle_local_bool::<A>(local);
+        let local = LocalState::clone(local);
+        self.cx.on_action::<A>(move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
+        });
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
     where
         A: crate::TypedAction,
     {
-        self.cx.on_action_notify_models::<A>(f);
+        self.cx
+            .on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()));
     }
 
     pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
     {
-        self.cx.on_action_notify_locals::<A>(f);
+        self.cx.on_action_notify::<A>(move |host, _action_cx| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx)
+        });
     }
 
     pub fn transient<A>(self, transient_key: u64)
     where
         A: crate::TypedAction,
     {
-        self.cx.on_action_notify_transient::<A>(transient_key);
+        self.cx.on_action_notify::<A>(move |host, action_cx| {
+            host.record_transient_event(action_cx, transient_key);
+            true
+        });
     }
 
     pub fn payload<A>(self) -> AppUiPayloadActions<'view, 'cx, 'a, H, A>
@@ -566,8 +584,11 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::actions::TypedPayloadAction,
         T: Any,
     {
+        let local = LocalState::clone(local);
         self.cx
-            .on_payload_action_notify_local_update_if::<A, T>(local, update);
+            .on_payload_action::<A>(move |host, action_cx, payload| {
+                local.update_action_if(host, action_cx, |value| update(value, payload))
+            });
     }
 
     pub fn payload_locals<A>(
@@ -576,7 +597,13 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     ) where
         A: crate::actions::TypedPayloadAction,
     {
-        self.cx.on_payload_action_notify_locals::<A>(f);
+        self.cx
+            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+                let mut tx = LocalTxn {
+                    models: host.models_mut(),
+                };
+                f(&mut tx, payload)
+            });
     }
 
     pub fn availability<A>(
@@ -611,12 +638,21 @@ where
     ) where
         T: Any,
     {
+        let local = LocalState::clone(local);
         self.cx
-            .on_payload_action_notify_local_update_if::<A, T>(local, update);
+            .on_payload_action::<A>(move |host, action_cx, payload| {
+                local.update_action_if(host, action_cx, |value| update(value, payload))
+            });
     }
 
     pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static) {
-        self.cx.on_payload_action_notify_locals::<A>(f);
+        self.cx
+            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+                let mut tx = LocalTxn {
+                    models: host.models_mut(),
+                };
+                f(&mut tx, payload)
+            });
     }
 }
 
@@ -654,10 +690,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx.cx,
-            key,
-            deps,
-            compute,
+            self.cx.cx, key, deps, compute,
         )
     }
 
@@ -699,10 +732,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
     {
         fret_query::ui::QueryElementContextExt::use_query_async_local(
-            self.cx.cx,
-            key,
-            policy,
-            fetch,
+            self.cx.cx, key, policy, fetch,
         )
     }
 }
@@ -973,85 +1003,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
     }
 
-    /// Register a typed unit action handler that updates a `LocalState<T>` and participates in the
-    /// view-cache closure (`request_redraw` + `notify`) when the update succeeds.
-    pub fn on_action_notify_local_update<A, T>(
-        &mut self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T) + 'static,
-    ) where
-        A: crate::TypedAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.on_action::<A>(move |host, action_cx| {
-            local.update_action(host, action_cx, |value| update(value))
-        });
-    }
-
-    /// Register a typed unit action handler that sets a `LocalState<T>` to a fixed value and
-    /// participates in the view-cache closure (`request_redraw` + `notify`) when the write succeeds.
-    pub fn on_action_notify_local_set<A, T>(&mut self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        self.on_action::<A>(move |host, action_cx| {
-            local.set_action(host, action_cx, value.clone())
-        });
-    }
-
-    /// Convenience helper: register a typed unit action handler that toggles a `LocalState<bool>`.
-    pub fn on_action_notify_toggle_local_bool<A: crate::TypedAction>(
-        &mut self,
-        local: &LocalState<bool>,
-    ) {
-        let local = LocalState::clone(local);
-        self.on_action::<A>(move |host, action_cx| {
-            local.update_action(host, action_cx, |value| *value = !*value)
-        });
-    }
-
-    /// Register a typed unit action handler that runs a model-store transaction and participates
-    /// in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
-    ///
-    /// This helper is intended for common cases that touch multiple models (e.g. read a draft
-    /// string, push to a list, clear the draft, bump an id counter).
-    pub fn on_action_notify_models<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static,
-    ) {
-        self.on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()))
-    }
-
-    /// Register a typed unit action handler that runs a LocalState-focused transaction and
-    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
-    ///
-    /// This keeps the default authoring surface free of direct `ModelStore` references for the
-    /// common case where the transaction only touches view-owned `LocalState<T>` slots.
-    pub fn on_action_notify_locals<A: crate::TypedAction>(
-        &mut self,
-        f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static,
-    ) {
-        self.on_action_notify_models::<A>(move |models| {
-            let mut tx = LocalTxn { models };
-            f(&mut tx)
-        })
-    }
-
-    /// Register a typed action handler that records a transient event for this dispatch cycle.
-    ///
-    /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
-    /// to schedule “app effects” that must be applied in `render()` (because the handler only
-    /// receives a restricted `UiActionHost`).
-    pub fn on_action_notify_transient<A: crate::TypedAction>(&mut self, transient_key: u64) {
-        self.on_action_notify::<A>(move |host, action_cx| {
-            host.record_transient_event(action_cx, transient_key);
-            true
-        });
-    }
-
     /// Register a typed payload action handler (v2 prototype; ADR 0312).
     ///
     /// Notes:
@@ -1089,43 +1040,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
             }
             handled
         });
-    }
-
-    /// Register a typed payload action handler that mutates `LocalState<T>` and participates in
-    /// the tracked-write rerender rule when the closure returns `handled=true`.
-    ///
-    /// This is intentionally narrow: it exists for keyed-list / payload-row style mutations where
-    /// the remaining visible boilerplate is mostly `host.models_mut()` + `LocalState` cloning at
-    /// the root action table.
-    pub fn on_payload_action_notify_local_update_if<A, T>(
-        &mut self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.on_payload_action::<A>(move |host, action_cx, payload| {
-            local.update_action_if(host, action_cx, |value| update(value, payload))
-        });
-    }
-
-    /// Register a typed payload action handler that runs a LocalState-focused transaction and
-    /// participates in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
-    ///
-    /// This keeps the default authoring surface free of direct `ModelStore` references for the
-    /// common case where the handler only coordinates view-owned `LocalState<T>` slots.
-    pub fn on_payload_action_notify_locals<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
-    ) {
-        self.on_payload_action_notify::<A>(move |host, _action_cx, payload| {
-            let mut tx = LocalTxn {
-                models: host.models_mut(),
-            };
-            f(&mut tx, payload)
-        })
     }
 
     /// Register a typed unit action availability handler.
@@ -1418,17 +1332,26 @@ mod tests {
     }
 
     #[test]
-    fn grouped_data_and_effect_surfaces_replace_flat_app_ui_helpers() {
+    fn grouped_authoring_surfaces_replace_flat_app_ui_helpers() {
         let api_source = VIEW_RS_SOURCE
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
+        assert!(!api_source.contains("pub fn on_action_notify_local_update<"));
+        assert!(!api_source.contains("pub fn on_action_notify_local_set<"));
+        assert!(!api_source.contains("pub fn on_action_notify_toggle_local_bool<"));
+        assert!(!api_source.contains("pub fn on_action_notify_models<"));
+        assert!(!api_source.contains("pub fn on_action_notify_locals<"));
+        assert!(!api_source.contains("pub fn on_action_notify_transient<"));
+        assert!(!api_source.contains("pub fn on_payload_action_notify_local_update_if<"));
+        assert!(!api_source.contains("pub fn on_payload_action_notify_locals<"));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
         assert!(!api_source.contains("pub fn use_query_async<"));
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
+        assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
     }

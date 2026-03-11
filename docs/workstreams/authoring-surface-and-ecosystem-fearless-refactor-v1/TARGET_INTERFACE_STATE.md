@@ -190,10 +190,26 @@ Target operations:
 
 Target operations:
 
+- `local_update::<A>(&state, ...)`
+- `local_set::<A, T>(&state, value)`
+- `toggle_local_bool::<A>(&state)`
+- `models::<A>(|models| ...)`
 - `locals::<A>(|tx| ...)`
-- `payload::<A>().local(&state, |value, payload| ...)`
+- `payload::<A>().models(|models, payload| ...)`
+- `payload::<A>().locals(|tx, payload| ...)`
+- `payload::<A>().local_update_if(&state, |value, payload| ...)`
 - `transient::<A>(...)`
-- explicit advanced escape hatch for shared model graphs
+- `availability::<A>(...)`
+
+Target rule:
+
+- the default app surface does not expose flat specialized mutation helpers such as
+  `on_action_notify_local_*`, `on_action_notify_models/locals/transient`, or
+  `on_payload_action_notify_local_update_if` / `on_payload_action_notify_locals`; those stories
+  live under `cx.actions()`.
+- raw `on_action(...)`, `on_action_notify(...)`, `on_payload_action(...)`,
+  `on_payload_action_notify(...)`, and `on_action_availability(...)` remain explicit advanced
+  seams for manual handler registration.
 
 ### `ui.data()`
 
