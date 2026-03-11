@@ -104,7 +104,7 @@ Companion docs:
 
 ## M3 — Migrate first-party ecosystems to the new surface
 
-- [ ] Migrate `fret-ui-shadcn` to the component surface + explicit optional app integration seams.
+- [x] Migrate `fret-ui-shadcn` to the component surface + explicit optional app integration seams.
   - [x] Move app integration helpers under `shadcn::app::*` instead of the recipe root.
   - [x] Move environment / `UiServices` hooks off the default app lane and keep them explicit via
     `fret_ui_shadcn::advanced::*` (or `fret::shadcn::raw::advanced::*` from the `fret` facade).
@@ -120,7 +120,7 @@ Companion docs:
     `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
     `shadcn::typography::*`.
   - [x] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
-- [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
+- [x] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
   - [x] Move app-facing `fret-examples` docking demos (`docking_demo`, `container_queries_docking_demo`) to the `fret::docking::*` seam.
