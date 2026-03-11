@@ -350,8 +350,10 @@ computations.
 `cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
-grouped `AppUi` data helpers. Enable `fret-query/ui` only when you are working directly with
-`ElementContext` helpers like `cx.use_query_async(...)`.
+grouped app data helpers (`cx.data().query*`). Extracted `UiCx` helpers keep that same grouped
+surface through `fret::app::prelude::*` / `fret::advanced::prelude::*`. Enable `fret-query/ui`
+only when you are working directly with low-level `ElementContext` or generic writer extensions
+outside the app-facing `fret` preludes.
 
 ### `fret-router` + `fret-router-ui`
 
