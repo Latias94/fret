@@ -53,15 +53,17 @@
 //! - enable `state` for grouped selector/query helpers on `AppUi`
 //! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
+//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
+//!   curated default design-system surface plus explicit escape hatches
 
 pub use fret_app::App as KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
 pub type WindowId = fret_core::AppWindowId;
 
-/// Re-export the default shadcn/ui surface as `shadcn`.
+/// Re-export the curated default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
-pub use fret_ui_shadcn as shadcn;
+pub use fret_ui_shadcn::facade as shadcn;
 
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
@@ -1308,6 +1310,11 @@ mod authoring_surface_policy_tests {
         &LIB_RS[start..end]
     }
 
+    fn crate_public_surface_source() -> &'static str {
+        let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
+        &LIB_RS[..tests_start]
+    }
+
     fn advanced_prelude_source() -> &'static str {
         let advanced_start = LIB_RS
             .find("/// Explicit advanced/manual-assembly imports for power users and integration code.")
@@ -1422,6 +1429,22 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn readme_and_rustdoc_expose_curated_shadcn_surface() {
+        assert!(CRATE_README.contains("`fret::shadcn`"));
+        assert!(CRATE_README.contains("`shadcn::app::install(...)`"));
+        assert!(CRATE_README.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_README.contains("`shadcn::raw::*`"));
+
+        let rustdoc = crate_rustdoc();
+        let public_surface = crate_public_surface_source();
+        assert!(rustdoc.contains(
+            "//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}`"
+        ));
+        assert!(public_surface.contains("pub use fret_ui_shadcn::facade as shadcn;"));
+        assert!(!public_surface.contains("pub use fret_ui_shadcn as shadcn;"));
+    }
+
+    #[test]
     fn crate_docs_only_teach_view_entry() {
         let rustdoc = crate_rustdoc();
         assert!(rustdoc.contains(
@@ -1511,7 +1534,11 @@ mod authoring_surface_policy_tests {
     #[test]
     fn usage_docs_expose_shadcn_app_surface_as_explicit_submodule() {
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::app::install(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret::shadcn::shadcn_themes::"));
     }
 
     #[test]

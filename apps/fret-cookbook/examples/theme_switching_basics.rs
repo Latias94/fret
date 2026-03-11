@@ -14,12 +14,12 @@ const SCHEME_LIGHT: &str = "light";
 const SCHEME_DARK: &str = "dark";
 
 fn apply_scheme(app: &mut App, scheme: &str) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnBaseColor::Slate,
         match scheme {
-            SCHEME_DARK => shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            _ => shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            SCHEME_DARK => shadcn::themes::ShadcnColorScheme::Dark,
+            _ => shadcn::themes::ShadcnColorScheme::Light,
         },
     );
 }

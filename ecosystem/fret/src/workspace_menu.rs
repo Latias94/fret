@@ -1742,12 +1742,10 @@ mod tests {
     #[cfg(feature = "shadcn")]
     #[test]
     fn escape_unwinds_submenu_then_menu_and_restores_focus() {
+        use crate::shadcn::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
         use fret_app::App;
         use fret_runtime::Effect;
         use fret_ui_kit::OverlayController;
-        use fret_ui_shadcn::shadcn_themes::{
-            ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
-        };
 
         #[derive(Default)]
         struct FakeServices;

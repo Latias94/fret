@@ -106,6 +106,8 @@ Companion docs:
 - [ ] Migrate `fret-ui-shadcn` to the component surface + explicit optional app integration seams.
   - [x] Move app integration helpers under `shadcn::app::*` instead of the recipe root.
   - [x] Move first-party advanced cookbook examples to `shadcn::app::install`.
+  - [x] Replace the broad `fret::shadcn` whole-crate re-export with a curated facade
+    (`shadcn::{..., app, themes, raw}`).
   - [ ] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.

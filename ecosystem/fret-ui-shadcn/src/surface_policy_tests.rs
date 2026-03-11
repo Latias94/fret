@@ -9,3 +9,13 @@ fn app_integration_stays_under_explicit_app_module() {
     assert!(!LIB_RS.contains("pub use app_integration::{"));
     assert!(!README.contains("`fret_ui_shadcn::install_app(...)`"));
 }
+
+#[test]
+fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
+    assert!(LIB_RS.contains("pub mod facade {"));
+    assert!(LIB_RS.contains("pub mod themes {"));
+    assert!(LIB_RS.contains("pub mod raw {"));
+    assert!(LIB_RS.contains("pub use crate::app::{"));
+    assert!(LIB_RS.contains("pub use crate::shadcn_themes::{"));
+    assert!(LIB_RS.contains("pub use crate::*;"));
+}

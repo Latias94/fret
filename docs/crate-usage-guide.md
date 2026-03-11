@@ -247,8 +247,12 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Theme integration:**
 
-- Call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(...)` for an explicit preset, or
-- Enable `fret-ui-shadcn/app-integration` and call `fret_ui_shadcn::app::install(...)` for the golden-path default.
+- Direct crate usage: call `fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(...)` for an
+  explicit preset, or enable `fret-ui-shadcn/app-integration` and call
+  `fret_ui_shadcn::app::install(...)` for the golden-path default.
+- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
+  `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
+  full uncurated `fret_ui_shadcn` surface.
 
 **Tables vs grids (naming and intent):**
 

@@ -9,10 +9,10 @@ use fret::app::prelude::*;
 pub mod scaffold;
 
 pub fn install_cookbook_defaults(app: &mut App) {
-    shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Slate,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 }
 
@@ -326,6 +326,14 @@ mod authoring_surface_policy_tests {
         );
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("status: Model<Arc<str>>"));
+    }
+
+    #[test]
+    fn theme_examples_use_curated_shadcn_theme_surface() {
+        assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::themes::apply_shadcn_new_york("));
+        assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::themes::ShadcnBaseColor::Slate"));
+        assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::themes::ShadcnColorScheme::Dark"));
+        assert!(!THEME_SWITCHING_EXAMPLE.contains("shadcn::shadcn_themes::"));
     }
 
     #[test]

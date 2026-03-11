@@ -175,7 +175,11 @@ Optional ecosystems also stay explicit. For example, the router integration live
 `fret::router`; wire it with `FretApp::setup(fret::router::install_app)` instead of expecting it
 to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docking` so advanced
 apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
-part of the default app prelude.
+part of the default app prelude. The default design-system surface is similarly curated under
+`fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
+`shadcn::app::install(...)` for app wiring, `shadcn::themes::apply_shadcn_new_york(...)` for
+explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
+surface.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
