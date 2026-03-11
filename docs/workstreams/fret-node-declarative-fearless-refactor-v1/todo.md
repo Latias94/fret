@@ -1449,6 +1449,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/command_open_group/rename.rs` seams, so `command_open_group.rs` now mainly
     keeps the command façade surface explicit while group command tails stop sharing one root
     helper body.
+  - Progress: insert/edge/conversion open-command helpers now also route insert fallback math,
+    edge picker/reroute command tails, and conversion overlay open tails through the private
+    `ui/canvas/widget/command_open_insert/fallback.rs`,
+    `ui/canvas/widget/command_open_edge/picker.rs`,
+    `ui/canvas/widget/command_open_edge/reroute.rs`, and
+    `ui/canvas/widget/command_open_conversion/overlay.rs` seams, so the remaining
+    `command_open_*` roots now mainly keep façade forwarding explicit.
 
 ## M5 - Compatibility retained convergence
 

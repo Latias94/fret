@@ -991,6 +991,13 @@ real editors.
   `ui/canvas/widget/command_open_group/rename.rs` seams, so `command_open_group.rs` now mainly
   keeps the command façade surface explicit while group command tails stop sharing one root helper
   body.
+- insert/edge/conversion open-command helpers now also route insert fallback math, edge
+  picker/reroute command tails, and conversion overlay open tails through the private
+  `ui/canvas/widget/command_open_insert/fallback.rs`,
+  `ui/canvas/widget/command_open_edge/picker.rs`,
+  `ui/canvas/widget/command_open_edge/reroute.rs`, and
+  `ui/canvas/widget/command_open_conversion/overlay.rs` seams, so the remaining `command_open_*`
+  roots now mainly keep façade forwarding explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
