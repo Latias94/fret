@@ -144,7 +144,7 @@ use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
     write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
 };
-use util::{now_unix_ms, read_json_value, touch, write_json_value};
+use util::{advance_target_run_id, now_unix_ms, read_json_value, touch, write_json_value};
 
 pub use diag_dashboard::{
     DashboardCountEntry, DashboardFailingSummaryEntry, DashboardReasonCodeEntry,
@@ -4856,6 +4856,46 @@ fn artifact_stats_from_bundle_json_path(bundle_path: &Path) -> UiArtifactStatsV1
     }
 }
 
+fn try_resolve_existing_filesystem_bundle_artifact(
+    out_dir: &Path,
+    connected: &ConnectedToolingTransport,
+    result: &UiScriptResultV1,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    if connected.capability_source.transport_name() != "filesystem" {
+        return None;
+    }
+
+    let runtime_reported_bundle = result
+        .last_bundle_dir
+        .as_deref()
+        .is_some_and(|dir| !dir.trim().is_empty())
+        || result.last_bundle_artifact.is_some();
+    if !runtime_reported_bundle {
+        return None;
+    }
+
+    let summary = crate::stats::ScriptResultSummary {
+        run_id: result.run_id,
+        stage: Some(
+            match result.stage {
+                UiScriptStageV1::Queued => "queued",
+                UiScriptStageV1::Running => "running",
+                UiScriptStageV1::Passed => "passed",
+                UiScriptStageV1::Failed => "failed",
+            }
+            .to_string(),
+        ),
+        step_index: result.step_index.map(u64::from),
+        reason_code: result.reason_code.clone(),
+        reason: result.reason.clone(),
+        last_bundle_dir: result.last_bundle_dir.clone(),
+    };
+
+    wait_for_bundle_artifact_from_script_result(out_dir, &summary, timeout_ms, poll_ms)
+}
+
 fn devtools_select_session_id(
     list: &DevtoolsSessionListV1,
     want: Option<&str>,
@@ -5117,9 +5157,7 @@ fn run_script_over_transport(
                 continue;
             };
 
-            if target_run_id.is_none() && parsed.run_id > prev_run_id {
-                target_run_id = Some(parsed.run_id);
-            }
+            advance_target_run_id(prev_run_id, &mut target_run_id, parsed.run_id);
             if Some(parsed.run_id) != target_run_id {
                 continue;
             }
@@ -5196,83 +5234,114 @@ fn run_script_over_transport(
     };
 
     let bundle_path = if dump_bundle {
-        let expected_request_id = seam.bundle_dump_request_id(
-            &connected.devtools,
-            None,
-            bundle_label,
-            dump_max_snapshots,
-        );
-        let dumped = seam
-            .wait_for_bundle_dumped_with_baseline_mitigation(
+        if let Some(bundle_path) = try_resolve_existing_filesystem_bundle_artifact(
+            out_dir, connected, &result, timeout_ms, poll_ms,
+        ) {
+            let run_artifacts = RunArtifactStore::new(out_dir, result.run_id);
+            run_artifacts.write_bundle_artifact(&bundle_path);
+            if result
+                .last_bundle_dir
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
+                result.last_bundle_dir = bundle_path
+                    .parent()
+                    .and_then(|path| path.file_name())
+                    .and_then(|name| name.to_str())
+                    .map(|name| name.to_string());
+            }
+            if result.last_bundle_artifact.is_none() {
+                result.last_bundle_artifact =
+                    Some(artifact_stats_from_bundle_json_path(&bundle_path));
+            }
+            Some(bundle_path)
+        } else {
+            let expected_request_id = seam.bundle_dump_request_id(
                 &connected.devtools,
-                &connected.selected_session_id,
-                expected_request_id,
+                None,
                 bundle_label,
-                timeout_ms,
-                poll_ms,
-            )
-            .inspect_err(|err| {
-                let reason_code = if err.contains("timed out waiting") {
-                    "timeout.tooling.bundle_dump"
-                } else {
-                    "tooling.bundle_dump.failed"
-                };
-                push_tooling_event_log_entry(
-                    &mut result,
-                    "tooling_bundle_dump_failed",
-                    Some(err.clone()),
-                );
-                if matches!(result.stage, UiScriptStageV1::Passed) {
-                    result.stage = UiScriptStageV1::Failed;
-                    result.reason_code = Some(reason_code.to_string());
-                    result.reason = Some(err.clone());
-                }
-                let _ = write_json_value(
-                    script_result_path,
-                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                );
-            })?;
+                dump_max_snapshots,
+            );
+            let dumped = seam
+                .wait_for_bundle_dumped_with_baseline_mitigation(
+                    &connected.devtools,
+                    &connected.selected_session_id,
+                    expected_request_id,
+                    bundle_label,
+                    timeout_ms,
+                    poll_ms,
+                )
+                .inspect_err(|err| {
+                    let reason_code = if err.contains("timed out waiting") {
+                        "timeout.tooling.bundle_dump"
+                    } else {
+                        "tooling.bundle_dump.failed"
+                    };
+                    push_tooling_event_log_entry(
+                        &mut result,
+                        "tooling_bundle_dump_failed",
+                        Some(err.clone()),
+                    );
+                    if matches!(result.stage, UiScriptStageV1::Passed) {
+                        result.stage = UiScriptStageV1::Failed;
+                        result.reason_code = Some(reason_code.to_string());
+                        result.reason = Some(err.clone());
+                    }
+                    let _ = write_json_value(
+                        script_result_path,
+                        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+                    );
+                })?;
 
-        let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
-            Ok(v) => v,
-            Err(err) => {
-                push_tooling_event_log_entry(
-                    &mut result,
-                    "tooling_bundle_materialize_failed",
-                    Some(err.clone()),
-                );
-                if matches!(result.stage, UiScriptStageV1::Passed) {
-                    result.stage = UiScriptStageV1::Failed;
-                    result.reason_code = Some("tooling.bundle_materialize.failed".to_string());
-                    result.reason = Some(err.clone());
+            let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
+                Ok(v) => v,
+                Err(err) => {
+                    push_tooling_event_log_entry(
+                        &mut result,
+                        "tooling_bundle_materialize_failed",
+                        Some(err.clone()),
+                    );
+                    if matches!(result.stage, UiScriptStageV1::Passed) {
+                        result.stage = UiScriptStageV1::Failed;
+                        result.reason_code = Some("tooling.bundle_materialize.failed".to_string());
+                        result.reason = Some(err.clone());
+                    }
+                    let _ = write_json_value(
+                        script_result_path,
+                        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+                    );
+                    return Err(err);
                 }
-                let _ = write_json_value(
-                    script_result_path,
-                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                );
-                return Err(err);
-            }
-        };
-        let run_artifacts = RunArtifactStore::new(out_dir, result.run_id);
-        run_artifacts.write_bundle_artifact(&bundle_path);
-        if trace_chrome {
-            let run_dir = run_artifacts.run_dir();
-            let stable_bundle_path = crate::resolve_bundle_artifact_path(&run_dir);
-            let src = if stable_bundle_path.is_file() {
-                stable_bundle_path
-            } else {
-                bundle_path.clone()
             };
-            let trace_path = run_dir.join("trace.chrome.json");
-            if let Err(err) = crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path) {
-                push_tooling_event_log_entry(&mut result, "tooling_trace_chrome_failed", Some(err));
-            } else {
-                run_artifacts.refresh_manifest_file_index();
+            let run_artifacts = RunArtifactStore::new(out_dir, result.run_id);
+            run_artifacts.write_bundle_artifact(&bundle_path);
+            if trace_chrome {
+                let run_dir = run_artifacts.run_dir();
+                let stable_bundle_path = crate::resolve_bundle_artifact_path(&run_dir);
+                let src = if stable_bundle_path.is_file() {
+                    stable_bundle_path
+                } else {
+                    bundle_path.clone()
+                };
+                let trace_path = run_dir.join("trace.chrome.json");
+                if let Err(err) =
+                    crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path)
+                {
+                    push_tooling_event_log_entry(
+                        &mut result,
+                        "tooling_trace_chrome_failed",
+                        Some(err),
+                    );
+                } else {
+                    run_artifacts.refresh_manifest_file_index();
+                }
             }
+            result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
+            result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
+            Some(bundle_path)
         }
-        result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
-        result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
-        Some(bundle_path)
     } else {
         None
     };

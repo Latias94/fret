@@ -455,6 +455,9 @@ Script shrinking (automated minimal repro):
 Deterministic termination note (especially for multi-window docking scripts):
 
 - Prefer ending a script with `capture_bundle` as the final step.
+- Tool-launched filesystem runs (`fretboard diag run --launch`) now reuse the bundle referenced by the
+  final `script.result.json` when `--pack` / `--ai-packet` needs a post-run artifact, instead of
+  forcing a second dump after `stage=passed`.
 - Avoid ending a script with `wait_frames` / `wait_ms` (these are stabilization yields, not meaningful terminal steps).
 - Avoid trailing `wait_frames` / `wait_ms` after the final `capture_bundle` (this can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
 - Smoke/gate suites (e.g. `diag-hardening-smoke-*`) run a strict preflight and will fail early if a script ends with `wait_frames` / `wait_ms` or contains `wait_frames` / `wait_ms` after the final `capture_bundle` (see `check.script_termination.json` under the suite `--dir`).

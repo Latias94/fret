@@ -157,6 +157,22 @@ pub(crate) fn read_pick_result_run_id(path: &Path) -> Option<u64> {
     read_pick_result(path)?.get("run_id")?.as_u64()
 }
 
+pub(crate) fn advance_target_run_id(
+    prev_run_id: u64,
+    target_run_id: &mut Option<u64>,
+    observed_run_id: u64,
+) {
+    if observed_run_id <= prev_run_id {
+        return;
+    }
+
+    match target_run_id {
+        None => *target_run_id = Some(observed_run_id),
+        Some(current) if observed_run_id > *current => *target_run_id = Some(observed_run_id),
+        _ => {}
+    }
+}
+
 pub(crate) fn json_pointer_set(
     root: &mut serde_json::Value,
     pointer: &str,
