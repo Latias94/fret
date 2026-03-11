@@ -187,7 +187,7 @@ impl View for IconsAndAssetsBasicsView {
                 shadcn::CardContent::build(|cx, out| {
                     out.push_ui(
                         cx,
-                        ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {
+                        ui::v_flex(|cx: &mut UiCx<'_>| {
                             let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                             let preload = cx
                                 .app
@@ -259,7 +259,7 @@ impl View for IconsAndAssetsBasicsView {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
         };
 
-        let render_image = |cx: &mut ElementContext<'_, KernelApp>,
+        let render_image = |cx: &mut UiCx<'_>,
                             title: &str,
                             st: &fret_ui_assets::ImageSourceState|
          -> AnyElement {

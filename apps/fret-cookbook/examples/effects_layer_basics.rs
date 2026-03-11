@@ -66,7 +66,7 @@ impl View for EffectsLayerBasicsView {
             }
         });
 
-        let button = |_cx: &mut ElementContext<'_, KernelApp>,
+        let button = |_cx: &mut UiCx<'_>,
                       label: &'static str,
                       effect: EffectKind,
                       action: fret_runtime::ActionId,
@@ -97,7 +97,7 @@ impl View for EffectsLayerBasicsView {
                 cx;
                 shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
-                    let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef| {
+                    let tile = |_cx: &mut UiCx<'_>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))

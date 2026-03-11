@@ -152,7 +152,7 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
 ) -> AnyElement {
@@ -240,7 +240,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::SvgFileState,
 ) -> AnyElement {

@@ -62,7 +62,7 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
 }
 
 fn panel_shell<I: UiChildIntoElement<KernelApp>>(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     title: &str,
     body: I,
 ) -> AnyElement {
@@ -97,10 +97,10 @@ fn panel_shell<I: UiChildIntoElement<KernelApp>>(
     .into_element(cx)
 }
 
-fn preview_content(cx: &mut ElementContext<'_, KernelApp>, label: &str) -> AnyElement {
+fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let swatch = |_cx: &mut ElementContext<'_, KernelApp>, rgb: u32| {
+    let swatch = |_cx: &mut UiCx<'_>, rgb: u32| {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .bg(ColorRef::Color(Color::from_srgb_hex_rgb(rgb)))
             .rounded(Radius::Sm)

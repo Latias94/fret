@@ -271,7 +271,7 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsW
 }
 
 fn chart_canvas(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     st: &ChartInteractionsWindowState,
 ) -> AnyElement {
     let engine = st.engine.clone();

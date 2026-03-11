@@ -121,6 +121,26 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".run_view::<"));
     }
 
+    fn assert_advanced_helpers_prefer_uicx(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains("UiCx<'_>"));
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     #[test]
     fn onboarding_examples_use_the_new_app_surface() {
         assert_uses_app_surface(HELLO_EXAMPLE);
@@ -254,10 +274,10 @@ mod authoring_surface_policy_tests {
         assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
 
-        assert!(EFFECTS_LAYER_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("UiCx<'_>"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("cx.actions().models::<act::Pixelate>"));
 
-        assert!(DROP_SHADOW_EXAMPLE.contains("ElementContext<'_, KernelApp>"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("UiCx<'_>"));
         assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().local_init(|| true)"));
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
@@ -371,6 +391,71 @@ mod authoring_surface_policy_tests {
         ] {
             assert_advanced_view_runtime_example_uses_app_ui_aliases(src);
         }
+    }
+
+    #[test]
+    fn advanced_helper_contexts_prefer_uicx_aliases() {
+        assert_advanced_helpers_prefer_uicx(
+            EFFECTS_LAYER_EXAMPLE,
+            &[
+                "let button = |_cx: &mut UiCx<'_>,",
+                "let tile = |_cx: &mut UiCx<'_>, color: ColorRef|",
+            ],
+            &[
+                "let button = |_cx: &mut ElementContext<'_, KernelApp>,",
+                "let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef|",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            DROP_SHADOW_EXAMPLE,
+            &["let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement"],
+            &["let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            ICONS_AND_ASSETS_EXAMPLE,
+            &[
+                "ui::v_flex(|cx: &mut UiCx<'_>| {",
+                "let render_image = |cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {",
+                "let render_image = |cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+            &[
+                "fn render_image_panel(cx: &mut UiCx<'_>,",
+                "fn render_svg_panel(cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            CHART_INTERACTIONS_EXAMPLE,
+            &["fn chart_canvas(cx: &mut UiCx<'_>,"],
+            &["fn chart_canvas(cx: &mut ElementContext<'_, KernelApp>,"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            CUSTOM_V1_EXAMPLE,
+            &[
+                "fn panel_shell<I: UiChildIntoElement<KernelApp>>(cx: &mut UiCx<'_>,",
+                "fn preview_content(cx: &mut UiCx<'_>, label: &str) -> AnyElement",
+                "let swatch = |_cx: &mut UiCx<'_>, rgb: u32|",
+            ],
+            &[
+                "fn panel_shell<I: UiChildIntoElement<KernelApp>>(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn preview_content(cx: &mut ElementContext<'_, KernelApp>, label: &str) -> AnyElement",
+                "let swatch = |_cx: &mut ElementContext<'_, KernelApp>, rgb: u32|",
+            ],
+        );
     }
 
     #[test]

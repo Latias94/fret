@@ -93,7 +93,7 @@ impl View for DropShadowBasicsView {
 
         let chain = shadow_chain();
 
-        let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement {
+        let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement {
             let surface = ui::v_flex(|cx| {
                 ui::children![
                     cx;
