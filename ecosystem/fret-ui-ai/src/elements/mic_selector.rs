@@ -63,22 +63,17 @@ impl std::fmt::Debug for MicSelectorController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct MicSelectorProviderState {
-    controller: Option<MicSelectorController>,
-    anchor_width: Option<Px>,
-}
+#[derive(Debug, Clone, Copy)]
+struct MicSelectorAnchorWidth(Option<Px>);
 
 pub fn use_mic_selector_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MicSelectorController> {
-    cx.inherited_state::<MicSelectorProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<MicSelectorController>().cloned()
 }
 
 fn use_mic_selector_anchor_width<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Px> {
-    cx.inherited_state::<MicSelectorProviderState>()
-        .and_then(|st| st.anchor_width)
+    cx.provided::<MicSelectorAnchorWidth>().and_then(|st| st.0)
 }
 
 #[derive(Default)]
@@ -232,20 +227,20 @@ impl MicSelector {
         Popover::new(open.clone()).into_element_with_anchor(
             cx,
             move |cx| {
-                cx.with_state(MicSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_trigger.clone());
-                    st.anchor_width = None;
-                });
-                let (trigger, _) = children_for_trigger(cx);
-                trigger
+                cx.provide(controller_for_trigger.clone(), |cx| {
+                    cx.provide(MicSelectorAnchorWidth(None), |cx| {
+                        let (trigger, _) = children_for_trigger(cx);
+                        trigger
+                    })
+                })
             },
             move |cx, anchor_rect| {
-                cx.with_state(MicSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_content.clone());
-                    st.anchor_width = Some(anchor_rect.size.width);
-                });
-                let (_, content) = children_for_content(cx);
-                content
+                cx.provide(controller_for_content.clone(), |cx| {
+                    cx.provide(MicSelectorAnchorWidth(Some(anchor_rect.size.width)), |cx| {
+                        let (_, content) = children_for_content(cx);
+                        content
+                    })
+                })
             },
         )
     }
@@ -281,18 +276,17 @@ impl MicSelector {
         Popover::new(open.clone()).into_element_with_anchor(
             cx,
             move |cx| {
-                cx.with_state(MicSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_trigger.clone());
-                    st.anchor_width = None;
-                });
-                trigger(cx)
+                cx.provide(controller_for_trigger.clone(), |cx| {
+                    cx.provide(MicSelectorAnchorWidth(None), trigger)
+                })
             },
             move |cx, anchor_rect| {
-                cx.with_state(MicSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_content.clone());
-                    st.anchor_width = Some(anchor_rect.size.width);
-                });
-                content(cx)
+                cx.provide(controller_for_content.clone(), |cx| {
+                    cx.provide(
+                        MicSelectorAnchorWidth(Some(anchor_rect.size.width)),
+                        content,
+                    )
+                })
             },
         )
     }
@@ -1062,19 +1056,19 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.with_state(MicSelectorProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                    st.anchor_width = Some(Px(240.0));
-                });
-                ui::v_stack(|cx| {
-                    vec![
-                        MicSelectorValue::new()
-                            .placeholder("Pick a mic")
-                            .into_element(cx),
-                        MicSelectorLabel::new(device.clone()).into_element(cx),
-                    ]
+                cx.provide(controller.clone(), |cx| {
+                    cx.provide(MicSelectorAnchorWidth(Some(Px(240.0))), |cx| {
+                        ui::v_stack(|cx| {
+                            vec![
+                                MicSelectorValue::new()
+                                    .placeholder("Pick a mic")
+                                    .into_element(cx),
+                                MicSelectorLabel::new(device.clone()).into_element(cx),
+                            ]
+                        })
+                        .into_element(cx)
+                    })
                 })
-                .into_element(cx)
             });
 
         let theme = Theme::global(&app).clone();

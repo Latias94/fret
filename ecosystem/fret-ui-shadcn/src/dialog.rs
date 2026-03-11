@@ -32,14 +32,14 @@ use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use fret_ui_kit::typography::scope_description_text;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 struct DialogOpenProviderState {
-    current: Option<Model<bool>>,
+    current: Model<bool>,
 }
 
 fn inherited_dialog_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
-    cx.inherited_state_where::<DialogOpenProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<DialogOpenProviderState>()
+        .map(|st| st.current.clone())
 }
 
 #[track_caller]
@@ -48,16 +48,7 @@ fn with_dialog_open_provider<H: UiHost, R>(
     open: Model<bool>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(DialogOpenProviderState::default, |st| {
-        let prev = st.current.clone();
-        st.current = Some(open);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(DialogOpenProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(DialogOpenProviderState { current: open }, f)
 }
 
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {

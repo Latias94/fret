@@ -54,11 +54,6 @@ impl Default for ChartConfigItem {
 /// Upstream shadcn/ui v4 `ChartConfig` (a key -> entry map).
 pub type ChartConfig = BTreeMap<Arc<str>, ChartConfigItem>;
 
-#[derive(Default)]
-struct ChartContextProviderState {
-    current: Option<ChartContext>,
-}
-
 /// Chart context surface aligned with upstream `useChart`.
 #[derive(Debug, Clone)]
 pub struct ChartContext {
@@ -67,8 +62,7 @@ pub struct ChartContext {
 }
 
 pub fn chart_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<ChartContext> {
-    cx.inherited_state_where::<ChartContextProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<ChartContext>().cloned()
 }
 
 #[track_caller]
@@ -206,50 +200,47 @@ impl ChartContainer {
         let theme = Theme::global(&*cx.app).snapshot();
         let layout = decl_style::layout_style(&theme, self.layout);
         let config = self.config.clone();
-        let config_for_state = config.clone();
         let chart_id: Arc<str> = self
             .id
             .clone()
             .map(|id| Arc::<str>::from(format!("chart-{id}")))
             .unwrap_or_else(|| Arc::<str>::from("chart"));
-        let chart_id_for_state = chart_id.clone();
+        let context = ChartContext {
+            chart_id: chart_id.clone(),
+            config: config.clone(),
+        };
 
-        cx.with_state(ChartContextProviderState::default, |st| {
-            st.current = Some(ChartContext {
-                chart_id: chart_id_for_state,
-                config: config_for_state,
-            });
-        });
-
-        let mut el = cx.container(
-            ContainerProps {
-                layout,
-                ..Default::default()
-            },
-            move |cx| {
-                vec![
-                    ChartStyle::new(chart_id.clone(), config.clone()).into_element(cx),
-                    child(cx),
-                ]
-            },
-        );
-
-        if let Some(test_id) = self.test_id {
-            el = el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Panel)
-                    .label("chart")
-                    .test_id(test_id),
+        cx.provide(context, |cx| {
+            let mut el = cx.container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        ChartStyle::new(chart_id.clone(), config.clone()).into_element(cx),
+                        child(cx),
+                    ]
+                },
             );
-        } else {
-            el = el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Panel)
-                    .label("chart"),
-            );
-        }
 
-        el
+            if let Some(test_id) = self.test_id {
+                el = el.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .label("chart")
+                        .test_id(test_id),
+                );
+            } else {
+                el = el.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .label("chart"),
+                );
+            }
+
+            el
+        })
     }
 }
 

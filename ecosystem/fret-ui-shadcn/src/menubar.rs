@@ -1459,7 +1459,7 @@ struct MenubarProviderState {
 }
 
 fn menubar_disabled_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
-    cx.inherited_state_where::<MenubarProviderState>(|st| st.disabled)
+    cx.provided::<MenubarProviderState>()
         .is_some_and(|st| st.disabled)
 }
 
@@ -1469,16 +1469,7 @@ fn with_menubar_provider_state<H: UiHost, R>(
     disabled: bool,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MenubarProviderState::default, |st| {
-        let prev = st.disabled;
-        st.disabled = disabled;
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MenubarProviderState::default, |st| {
-        st.disabled = prev;
-    });
-    out
+    cx.provide(MenubarProviderState { disabled }, f)
 }
 
 pub struct MenubarMenu {

@@ -216,14 +216,13 @@ fn sheet_open_change_events(
     (changed, completed)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 struct SheetSideProviderState {
-    current: Option<SheetSide>,
+    current: SheetSide,
 }
 
 fn inherited_sheet_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SheetSide> {
-    cx.inherited_state_where::<SheetSideProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<SheetSideProviderState>().map(|st| st.current)
 }
 
 #[track_caller]
@@ -232,25 +231,16 @@ fn with_sheet_side_provider<H: UiHost, R>(
     side: SheetSide,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SheetSideProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(side);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SheetSideProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(SheetSideProviderState { current: side }, f)
 }
 
 fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
     inherited_sheet_side(cx).unwrap_or_default()
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 struct SheetOpenProviderState {
-    current: Option<Model<bool>>,
+    current: Model<bool>,
 }
 
 #[track_caller]
@@ -259,21 +249,12 @@ fn with_sheet_open_provider<H: UiHost, R>(
     open: Model<bool>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SheetOpenProviderState::default, |st| {
-        let prev = st.current.clone();
-        st.current = Some(open);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SheetOpenProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(SheetOpenProviderState { current: open }, f)
 }
 
 fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
-    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<SheetOpenProviderState>()
+        .map(|st| st.current.clone())
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

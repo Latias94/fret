@@ -376,39 +376,12 @@ impl SidebarContext {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct SidebarProviderState {
-    context: Option<SidebarContext>,
-    surface_context: Option<SidebarSurfaceContext>,
-}
-
-#[derive(Debug, Default, Clone)]
-struct SidebarSurfaceProviderState {
-    context: Option<SidebarSurfaceContext>,
-}
-
 pub fn use_sidebar<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SidebarContext> {
-    cx.inherited_state_where::<SidebarProviderState>(|st| st.context.is_some())
-        .and_then(|st| st.context.clone())
+    cx.provided::<SidebarContext>().cloned()
 }
 
 fn use_sidebar_surface<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SidebarSurfaceContext> {
-    cx.inherited_state_where::<SidebarSurfaceProviderState>(|st| st.context.is_some())
-        .and_then(|st| st.context)
-        .or_else(|| {
-            cx.inherited_state_where::<SidebarProviderState>(|st| st.surface_context.is_some())
-                .and_then(|st| st.surface_context)
-        })
-}
-
-#[track_caller]
-fn publish_sidebar_surface_context<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    context: SidebarSurfaceContext,
-) {
-    cx.with_state(SidebarProviderState::default, |st| {
-        st.surface_context = Some(context);
-    });
+    cx.provided::<SidebarSurfaceContext>().copied()
 }
 
 #[track_caller]
@@ -417,35 +390,16 @@ fn with_sidebar_provider_state<H: UiHost, R>(
     context: SidebarContext,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SidebarProviderState::default, |st| {
-        let prev = (st.context.clone(), st.surface_context);
-        st.context = Some(context);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SidebarProviderState::default, |st| {
-        st.context = prev.0;
-        st.surface_context = prev.1;
-    });
-    out
+    cx.provide(context, f)
 }
 
 #[track_caller]
-fn with_sidebar_surface_state<H: UiHost, R>(
+fn with_sidebar_surface_provider<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
     context: SidebarSurfaceContext,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SidebarSurfaceProviderState::default, |st| {
-        let prev = st.context;
-        st.context = Some(context);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SidebarSurfaceProviderState::default, |st| {
-        st.context = prev;
-    });
-    out
+    cx.provide(context, f)
 }
 
 fn sidebar_collapsed_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
@@ -923,8 +877,6 @@ impl Sidebar {
             variant,
         };
 
-        publish_sidebar_surface_context(cx, surface_context);
-
         if is_mobile && !matches!(collapsible, SidebarCollapsible::None) {
             if let Some(sidebar_ctx) = sidebar_ctx.clone() {
                 let open_model = sidebar_ctx.open.clone();
@@ -989,9 +941,10 @@ impl Sidebar {
                             trigger
                         },
                         move |cx| {
-                            let children = with_sidebar_surface_state(cx, surface_context, |cx| {
-                                render_children(cx).into_iter().collect::<Vec<_>>()
-                            });
+                            let children =
+                                with_sidebar_surface_provider(cx, surface_context, |cx| {
+                                    render_children(cx).into_iter().collect::<Vec<_>>()
+                                });
                             let content_root =
                                 cx.container(ContainerProps::default(), move |_cx| children);
 
@@ -1127,7 +1080,7 @@ impl Sidebar {
         let mut props = decl_style::container_props(theme, chrome, surface_layout);
         props.layout.overflow = Overflow::Clip;
 
-        let children = with_sidebar_surface_state(cx, surface_context, |cx| {
+        let children = with_sidebar_surface_provider(cx, surface_context, |cx| {
             render_children(cx).into_iter().collect::<Vec<_>>()
         });
         let surface = shadcn_layout::container_flow(cx, props, children);
@@ -1154,8 +1107,6 @@ impl Sidebar {
             collapsible,
             variant,
         };
-
-        publish_sidebar_surface_context(cx, surface_context);
 
         if is_mobile && !matches!(collapsible, SidebarCollapsible::None) {
             if let Some(sidebar_ctx) = sidebar_ctx.clone() {
@@ -1190,9 +1141,10 @@ impl Sidebar {
                             })
                         },
                         move |cx| {
-                            let surface = with_sidebar_surface_state(cx, surface_context, |cx| {
-                                shadcn_layout::container_flow(cx, surface_props, children)
-                            });
+                            let surface =
+                                with_sidebar_surface_provider(cx, surface_context, |cx| {
+                                    shadcn_layout::container_flow(cx, surface_props, children)
+                                });
 
                             SheetContent::new([surface])
                                 .refine_style(
@@ -1308,7 +1260,7 @@ impl Sidebar {
         let mut props = decl_style::container_props(theme, chrome, surface_layout);
         props.layout.overflow = Overflow::Clip;
 
-        let surface = with_sidebar_surface_state(cx, surface_context, |cx| {
+        let surface = with_sidebar_surface_provider(cx, surface_context, |cx| {
             shadcn_layout::container_flow(cx, props, children)
         });
         shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
@@ -2373,16 +2325,10 @@ struct SidebarMenuItemContext {
     focus_within: bool,
 }
 
-#[derive(Debug, Default, Clone)]
-struct SidebarMenuItemProviderState {
-    context: Option<SidebarMenuItemContext>,
-}
-
 fn use_sidebar_menu_item_context<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<SidebarMenuItemContext> {
-    cx.inherited_state_where::<SidebarMenuItemProviderState>(|st| st.context.is_some())
-        .and_then(|st| st.context)
+    cx.provided::<SidebarMenuItemContext>().copied()
 }
 
 #[track_caller]
@@ -2391,16 +2337,7 @@ fn with_sidebar_menu_item_state<H: UiHost, R>(
     context: SidebarMenuItemContext,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(SidebarMenuItemProviderState::default, |st| {
-        let prev = st.context;
-        st.context = Some(context);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(SidebarMenuItemProviderState::default, |st| {
-        st.context = prev;
-    });
-    out
+    cx.provide(context, f)
 }
 
 fn sidebar_menu_item_hovered_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<bool> {
@@ -4097,7 +4034,7 @@ mod tests {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
                     .with(cx, |cx| {
-                        let inset = with_sidebar_surface_state(
+                        let inset = with_sidebar_surface_provider(
                             cx,
                             SidebarSurfaceContext {
                                 side: SidebarSide::Left,

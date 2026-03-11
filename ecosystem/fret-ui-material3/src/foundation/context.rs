@@ -2,8 +2,8 @@
 //!
 //! Compose Material3 uses composition locals for theme-scoped overrides (`LocalContentColor`,
 //! `LocalRippleConfiguration`, `LocalMotionScheme`, ...). Fret does not require a dedicated runtime
-//! context system to model this outcome: `ElementContext::inherited_state_where` + `with_state`
-//! provides a lightweight provider pattern.
+//! context system to model this outcome: `ElementContext::provide` / `provided` provides a
+//! lightweight provider pattern.
 
 #![allow(dead_code)]
 
@@ -85,22 +85,10 @@ pub enum MaterialIconSizeOverride {
     Custom(Px),
 }
 
-#[derive(Debug, Default, Clone)]
-struct MaterialContextState {
-    content_color: Option<MaterialContentColor>,
-    ripple: Option<MaterialRippleConfiguration>,
-    motion_scheme: Option<MaterialMotionSchemeOverride>,
-    design_variant: Option<MaterialDesignVariantOverride>,
-    layout_direction: Option<MaterialLayoutDirectionOverride>,
-    text_style: Option<MaterialTextStyleOverride>,
-    icon_size: Option<MaterialIconSizeOverride>,
-}
-
 pub fn inherited_content_color_policy<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialContentColor> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.content_color.is_some())
-        .and_then(|st| st.content_color)
+    cx.provided::<MaterialContentColor>().copied()
 }
 
 pub fn inherited_content_color<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Color> {
@@ -113,36 +101,31 @@ pub fn inherited_content_color<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<
 pub fn inherited_ripple_configuration<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialRippleConfiguration> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.ripple.is_some())
-        .and_then(|st| st.ripple)
+    cx.provided::<MaterialRippleConfiguration>().copied()
 }
 
 pub fn inherited_motion_scheme_override<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialMotionSchemeOverride> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.motion_scheme.is_some())
-        .and_then(|st| st.motion_scheme)
+    cx.provided::<MaterialMotionSchemeOverride>().copied()
 }
 
 pub fn inherited_design_variant_override<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialDesignVariantOverride> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.design_variant.is_some())
-        .and_then(|st| st.design_variant)
+    cx.provided::<MaterialDesignVariantOverride>().copied()
 }
 
 pub fn inherited_layout_direction_override<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialLayoutDirectionOverride> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.layout_direction.is_some())
-        .and_then(|st| st.layout_direction)
+    cx.provided::<MaterialLayoutDirectionOverride>().copied()
 }
 
 pub fn inherited_text_style_override<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialTextStyleOverride> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.text_style.is_some())
-        .and_then(|st| st.text_style.clone())
+    cx.provided::<MaterialTextStyleOverride>().cloned()
 }
 
 pub fn inherited_text_style<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TextStyle> {
@@ -155,8 +138,7 @@ pub fn inherited_text_style<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Tex
 pub fn inherited_icon_size_override<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<MaterialIconSizeOverride> {
-    cx.inherited_state_where::<MaterialContextState>(|st| st.icon_size.is_some())
-        .and_then(|st| st.icon_size)
+    cx.provided::<MaterialIconSizeOverride>().copied()
 }
 
 pub fn inherited_icon_size<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Px> {
@@ -271,16 +253,7 @@ pub fn with_material_content_color_policy<H: UiHost, R>(
     policy: MaterialContentColor,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.content_color;
-        st.content_color = Some(policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.content_color = prev;
-    });
-    out
+    cx.provide(policy, f)
 }
 
 #[track_caller]
@@ -289,16 +262,7 @@ pub fn with_material_ripple_configuration<H: UiHost, R>(
     config: MaterialRippleConfiguration,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.ripple;
-        st.ripple = Some(config);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.ripple = prev;
-    });
-    out
+    cx.provide(config, f)
 }
 
 #[track_caller]
@@ -324,16 +288,7 @@ pub fn with_material_motion_scheme_override<H: UiHost, R>(
     override_policy: MaterialMotionSchemeOverride,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.motion_scheme;
-        st.motion_scheme = Some(override_policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.motion_scheme = prev;
-    });
-    out
+    cx.provide(override_policy, f)
 }
 
 #[track_caller]
@@ -380,16 +335,7 @@ pub fn with_material_layout_direction_override<H: UiHost, R>(
     override_policy: MaterialLayoutDirectionOverride,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.layout_direction;
-        st.layout_direction = Some(override_policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.layout_direction = prev;
-    });
-    out
+    cx.provide(override_policy, f)
 }
 
 #[track_caller]
@@ -398,16 +344,7 @@ pub fn with_material_design_variant_override<H: UiHost, R>(
     override_policy: MaterialDesignVariantOverride,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.design_variant;
-        st.design_variant = Some(override_policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.design_variant = prev;
-    });
-    out
+    cx.provide(override_policy, f)
 }
 
 #[track_caller]
@@ -433,16 +370,7 @@ pub fn with_material_text_style_override<H: UiHost, R>(
     override_policy: MaterialTextStyleOverride,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.text_style.clone();
-        st.text_style = Some(override_policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.text_style = prev;
-    });
-    out
+    cx.provide(override_policy, f)
 }
 
 #[track_caller]
@@ -468,16 +396,7 @@ pub fn with_material_icon_size_override<H: UiHost, R>(
     override_policy: MaterialIconSizeOverride,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(MaterialContextState::default, |st| {
-        let prev = st.icon_size;
-        st.icon_size = Some(override_policy);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(MaterialContextState::default, |st| {
-        st.icon_size = prev;
-    });
-    out
+    cx.provide(override_policy, f)
 }
 
 #[cfg(test)]

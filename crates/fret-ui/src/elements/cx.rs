@@ -66,6 +66,17 @@ pub struct ElementContext<'a, H: UiHost> {
 
 type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
 
+#[derive(Debug)]
+struct ProvidedState<T> {
+    value: Option<T>,
+}
+
+impl<T> Default for ProvidedState<T> {
+    fn default() -> Self {
+        Self { value: None }
+    }
+}
+
 fn bump_callsite_counter(counters: &mut CallsiteCounters, callsite: u64) -> u64 {
     for (seen, next) in counters.iter_mut() {
         if *seen != callsite {
@@ -209,6 +220,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             }
         }
         None
+    }
+
+    /// Returns the nearest value installed via [`Self::provide`] for type `S`.
+    pub fn provided<S: Any>(&self) -> Option<&S> {
+        self.provided_where(|_state: &S| true)
+    }
+
+    /// Like [`Self::provided`], but allows filtering values while continuing the ancestor search.
+    pub fn provided_where<S: Any>(&self, predicate: impl Fn(&S) -> bool) -> Option<&S> {
+        self.inherited_state_where::<ProvidedState<S>>(|slot| {
+            slot.value.as_ref().is_some_and(|value| predicate(value))
+        })
+        .and_then(|slot| slot.value.as_ref())
     }
 
     /// Returns the last known `NodeId` for a declarative element, if available.
@@ -440,22 +464,128 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.enter_with_callsite(loc, caller, Some(key_hash), Some(name), f)
     }
 
-    pub fn with_state<S: Any, R>(
+    /// Accesses root-scoped state stored under the current `root_id()`.
+    ///
+    /// This is keyed by `(root_id, TypeId)`, so it is a shared slot per element root.
+    /// Repeated calls with the same state type under the same root intentionally see the same
+    /// state. If you need multiple independent slots of the same type, create a child scope first
+    /// via [`Self::scope`], [`Self::keyed`], or another helper that allocates a distinct root id.
+    pub fn root_state<S: Any, R>(
         &mut self,
         init: impl FnOnce() -> S,
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         let id = self.root_id();
-        self.with_state_for(id, init, f)
+        self.state_for(id, init, f)
     }
 
-    pub fn with_state_for<S: Any, R>(
+    /// Compatibility alias for [`Self::root_state`].
+    pub fn with_state<S: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        self.root_state(init, f)
+    }
+
+    /// Accesses helper-local state stored under a synthetic callsite-derived slot.
+    ///
+    /// Unlike [`Self::root_state`], this does not use the current `root_id()` directly. The slot is
+    /// derived from `(current_root, caller_location, call_index_at_that_location)` so distinct
+    /// callsites of the same state type do not collide.
+    ///
+    /// This is the correct primitive for helper-owned internals that want React hook-like slot
+    /// semantics without allocating a visible child scope in the element stack. The derived slot is
+    /// intentionally **not** pushed onto the inherited-state stack, so descendants cannot observe
+    /// it via [`Self::inherited_state`].
+    ///
+    /// If a helper needs to touch the same slot more than once during one render pass, either do
+    /// all work inside a single closure or allocate the slot once via [`Self::slot_id`] and then
+    /// use [`Self::with_state_for`] for repeated accesses.
+    ///
+    /// When the helper may be invoked from a reorderable collection, prefer wrapping the caller in
+    /// [`Self::keyed`] (or use [`Self::keyed_slot_state`]) so the surrounding identity stays stable
+    /// across insertions and reordering.
+    #[track_caller]
+    pub fn slot_state<S: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let loc = Location::caller();
+        let id = self.callsite_state_slot_id(loc, None);
+        self.state_for(id, init, f)
+    }
+
+    /// Like [`Self::slot_state`], but derives the synthetic slot from `(callsite, key)`.
+    ///
+    /// This mirrors [`Self::keyed`]: repeated renders with the same key reuse the same state slot
+    /// even if sibling order changes.
+    #[track_caller]
+    pub fn keyed_slot_state<K: Hash, S: Any, R>(
+        &mut self,
+        key: K,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let loc = Location::caller();
+        let id = self.callsite_state_slot_id(loc, Some(stable_hash(&key)));
+        self.state_for(id, init, f)
+    }
+
+    /// Allocates a synthetic callsite-derived state slot id without pushing a child scope.
+    ///
+    /// Use this when one helper invocation needs to read/write the same helper-local slot multiple
+    /// times during a single render pass.
+    #[track_caller]
+    pub fn slot_id(&mut self) -> GlobalElementId {
+        let loc = Location::caller();
+        self.callsite_state_slot_id(loc, None)
+    }
+
+    /// Like [`Self::slot_id`], but keys the synthetic slot by `(callsite, key)`.
+    ///
+    /// This is useful for helper-local state inside reorderable collections where sibling order is
+    /// not stable across renders.
+    #[track_caller]
+    pub fn keyed_slot_id<K: Hash>(&mut self, key: K) -> GlobalElementId {
+        let loc = Location::caller();
+        self.callsite_state_slot_id(loc, Some(stable_hash(&key)))
+    }
+
+    /// Accesses state stored under an explicit element identity.
+    pub fn state_for<S: Any, R>(
         &mut self,
         element: GlobalElementId,
         init: impl FnOnce() -> S,
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         self.window_state.with_state_mut(element, init, f)
+    }
+
+    /// Compatibility alias for [`Self::state_for`].
+    pub fn with_state_for<S: Any, R>(
+        &mut self,
+        element: GlobalElementId,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        self.state_for(element, init, f)
+    }
+
+    /// Installs `value` as an inherited provider value for the current subtree.
+    ///
+    /// This is the preferred authoring surface for provider-style patterns. It keeps provider
+    /// semantics separate from raw root state while still using the same element-state substrate.
+    pub fn provide<S: Any, R>(&mut self, value: S, f: impl FnOnce(&mut Self) -> R) -> R {
+        let prev = self.root_state(ProvidedState::<S>::default, |slot| {
+            slot.value.replace(value)
+        });
+        let out = f(self);
+        self.root_state(ProvidedState::<S>::default, |slot| {
+            slot.value = prev;
+        });
+        out
     }
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
@@ -892,6 +1022,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.callsite_counters.pop();
         self.stack.pop();
         out
+    }
+
+    fn callsite_state_slot_id(
+        &mut self,
+        loc: &'static Location<'static>,
+        key_hash: Option<u64>,
+    ) -> GlobalElementId {
+        let parent = self.root_id();
+        let callsite = callsite_hash(loc);
+        let counters = self
+            .callsite_counters
+            .last_mut()
+            .expect("callsite counters exist");
+        let slot = bump_callsite_counter(counters, callsite);
+        let child_salt = key_hash.unwrap_or(slot);
+        derive_child_id(parent, callsite, child_salt)
     }
 
     #[track_caller]

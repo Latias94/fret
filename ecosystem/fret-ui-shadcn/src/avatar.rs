@@ -44,14 +44,14 @@ fn is_avatar_badge_marker(element: &AnyElement) -> bool {
         }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 struct AvatarSizeProviderState {
-    current: Option<AvatarSize>,
+    current: AvatarSize,
 }
 
 fn inherited_avatar_size<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<AvatarSize> {
-    cx.inherited_state_where::<AvatarSizeProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<AvatarSizeProviderState>()
+        .map(|st| st.current)
 }
 
 #[track_caller]
@@ -60,16 +60,7 @@ fn with_avatar_size_provider<H: UiHost, R>(
     size: AvatarSize,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(AvatarSizeProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(size);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(AvatarSizeProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(AvatarSizeProviderState { current: size }, f)
 }
 
 /// shadcn/ui avatar size variants (`size="sm" | "default" | "lg"`).

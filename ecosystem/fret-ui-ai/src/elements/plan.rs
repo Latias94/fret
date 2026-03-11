@@ -21,11 +21,6 @@ use fret_ui_shadcn::{
 
 const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action:";
 
-#[derive(Debug, Default, Clone)]
-struct PlanProviderState {
-    controller: Option<PlanController>,
-}
-
 #[derive(Debug, Clone)]
 pub struct PlanController {
     pub open: Model<bool>,
@@ -34,8 +29,7 @@ pub struct PlanController {
 }
 
 pub fn use_plan_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<PlanController> {
-    cx.inherited_state::<PlanProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<PlanController>().cloned()
 }
 
 fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -157,16 +151,14 @@ impl Plan {
                     disabled,
                 };
 
-                cx.with_state(PlanProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
+                cx.provide(controller.clone(), |cx| {
+                    let body = ui::v_stack(move |cx| children(cx, controller.clone()))
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N6)
+                        .into_element(cx);
 
-                let body = ui::v_stack(move |cx| children(cx, controller))
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N6)
-                    .into_element(cx);
-
-                vec![body]
+                    vec![body]
+                })
             },
         );
 
@@ -606,14 +598,14 @@ mod tests {
         );
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            cx.with_state(PlanProviderState::default, |st| {
-                st.controller = Some(PlanController {
+            cx.provide(
+                PlanController {
                     open: open.clone(),
                     is_streaming: true,
                     disabled: false,
-                });
-            });
-            PlanTitle::new("Title").into_element(cx)
+                },
+                |cx| PlanTitle::new("Title").into_element(cx),
+            )
         });
 
         let theme = fret_ui::Theme::global(&app).snapshot();
@@ -650,14 +642,14 @@ mod tests {
         );
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            cx.with_state(PlanProviderState::default, |st| {
-                st.controller = Some(PlanController {
+            cx.provide(
+                PlanController {
                     open: open.clone(),
                     is_streaming: true,
                     disabled: false,
-                });
-            });
-            PlanDescription::new("Description").into_element(cx)
+                },
+                |cx| PlanDescription::new("Description").into_element(cx),
+            )
         });
 
         let theme = fret_ui::Theme::global(&app).snapshot();

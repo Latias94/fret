@@ -59,14 +59,14 @@ pub struct PromptInputController {
     pub attachments: Option<Model<Vec<AttachmentData>>>,
 }
 
-#[derive(Debug, Default, Clone)]
-struct PromptInputProviderState {
-    controller: Option<PromptInputController>,
+#[derive(Debug, Clone)]
+struct PromptInputProviderController {
+    controller: PromptInputController,
 }
 
-#[derive(Debug, Default, Clone)]
-struct PromptInputLocalState {
-    controller: Option<PromptInputController>,
+#[derive(Debug, Clone)]
+struct PromptInputLocalController {
+    controller: PromptInputController,
 }
 
 #[derive(Clone)]
@@ -114,14 +114,8 @@ impl PromptInputStatus {
     }
 }
 
-#[derive(Default, Clone)]
-struct PromptInputConfigState {
-    config: Option<PromptInputConfig>,
-}
-
 pub fn use_prompt_input_config<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<PromptInputConfig> {
-    cx.inherited_state::<PromptInputConfigState>()
-        .and_then(|st| st.config.clone())
+    cx.provided::<PromptInputConfig>().cloned()
 }
 
 #[derive(Debug, Clone)]
@@ -129,16 +123,11 @@ pub struct PromptInputReferencedSourcesController {
     pub sources: Model<Vec<AttachmentSourceDocumentData>>,
 }
 
-#[derive(Debug, Default, Clone)]
-struct PromptInputReferencedSourcesState {
-    controller: Option<PromptInputReferencedSourcesController>,
-}
-
 pub fn use_prompt_input_referenced_sources<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<PromptInputReferencedSourcesController> {
-    cx.inherited_state::<PromptInputReferencedSourcesState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<PromptInputReferencedSourcesController>()
+        .cloned()
 }
 
 /// Returns the nearest prompt input controller in scope.
@@ -148,13 +137,12 @@ pub fn use_prompt_input_referenced_sources<H: UiHost>(
 pub fn use_prompt_input_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<PromptInputController> {
-    if let Some(local) = cx.inherited_state::<PromptInputLocalState>() {
-        if let Some(controller) = local.controller.clone() {
-            return Some(controller);
-        }
-    }
-    cx.inherited_state::<PromptInputProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<PromptInputLocalController>()
+        .map(|local| local.controller.clone())
+        .or_else(|| {
+            cx.provided::<PromptInputProviderController>()
+                .map(|provider| provider.controller.clone())
+        })
 }
 
 #[derive(Debug, Clone)]
@@ -212,11 +200,12 @@ impl PromptInputProvider {
                 text,
                 attachments: Some(attachments),
             };
-            cx.with_state(PromptInputProviderState::default, |st| {
-                st.controller = Some(controller.clone());
-            });
-
-            children(cx, controller)
+            cx.provide(
+                PromptInputProviderController {
+                    controller: controller.clone(),
+                },
+                |cx| children(cx, controller),
+            )
         })
     }
 }
@@ -557,11 +546,6 @@ fn prompt_input_referenced_sources_model<H: UiHost>(
     controlled: Option<Model<Vec<AttachmentSourceDocumentData>>>,
 ) -> Model<Vec<AttachmentSourceDocumentData>> {
     if let Some(model) = controlled {
-        cx.with_state(PromptInputReferencedSourcesState::default, |st| {
-            st.controller = Some(PromptInputReferencedSourcesController {
-                sources: model.clone(),
-            });
-        });
         return model;
     }
 
@@ -582,12 +566,6 @@ fn prompt_input_referenced_sources_model<H: UiHost>(
             m
         }
     };
-
-    cx.with_state(PromptInputReferencedSourcesState::default, |st| {
-        st.controller = Some(PromptInputReferencedSourcesController {
-            sources: model.clone(),
-        });
-    });
 
     model
 }
@@ -850,190 +828,198 @@ impl PromptInputRoot {
             .clone()
             .or_else(|| provider.as_ref().and_then(|c| c.attachments.clone()));
 
-        let _referenced_sources_model =
+        let referenced_sources_model =
             prompt_input_referenced_sources_model(cx, self.referenced_sources.clone());
-
-        cx.with_state(PromptInputLocalState::default, |st| {
-            st.controller = Some(PromptInputController {
+        let local_controller = PromptInputLocalController {
+            controller: PromptInputController {
                 text: text_model.clone(),
                 attachments: attachments_model.clone(),
-            });
-        });
-
-        cx.with_state(PromptInputConfigState::default, |st| {
-            st.config = Some(PromptInputConfig {
-                disabled: self.disabled,
-                loading: self.loading,
-                status: self.status,
-                clear_on_send: self.clear_on_send,
-                clear_attachments_on_send: self.clear_attachments_on_send,
-                on_send: self.on_send.clone(),
-                on_stop: self.on_stop.clone(),
-                on_add_attachments: self.on_add_attachments.clone(),
-                accept: self.accept.clone(),
-                multiple: self.multiple,
-                max_files: self.max_files,
-                max_file_size_bytes: self.max_file_size_bytes,
-                on_error: self.on_error.clone(),
-                test_id_root: self.test_id_root.clone(),
-                test_id_textarea: self.test_id_textarea.clone(),
-                test_id_send: self.test_id_send.clone(),
-                test_id_stop: self.test_id_stop.clone(),
-                test_id_attachments: self.test_id_attachments.clone(),
-                test_id_referenced_sources: self.test_id_referenced_sources.clone(),
-                test_id_add_attachments: self.test_id_add_attachments.clone(),
-            });
-        });
-
-        let status = self.status.unwrap_or(if self.loading {
-            PromptInputStatus::Streaming
-        } else {
-            PromptInputStatus::Idle
-        });
-        let generating = status.is_generating();
-
-        let textarea_min_height = if self.textarea_min_height == Px(96.0) {
-            theme
-                .metric_by_key("fret.ai.prompt_input.min_height")
-                .unwrap_or(self.textarea_min_height)
-        } else {
-            self.textarea_min_height
+            },
+        };
+        let config = PromptInputConfig {
+            disabled: self.disabled,
+            loading: self.loading,
+            status: self.status,
+            clear_on_send: self.clear_on_send,
+            clear_attachments_on_send: self.clear_attachments_on_send,
+            on_send: self.on_send.clone(),
+            on_stop: self.on_stop.clone(),
+            on_add_attachments: self.on_add_attachments.clone(),
+            accept: self.accept.clone(),
+            multiple: self.multiple,
+            max_files: self.max_files,
+            max_file_size_bytes: self.max_file_size_bytes,
+            on_error: self.on_error.clone(),
+            test_id_root: self.test_id_root.clone(),
+            test_id_textarea: self.test_id_textarea.clone(),
+            test_id_send: self.test_id_send.clone(),
+            test_id_stop: self.test_id_stop.clone(),
+            test_id_attachments: self.test_id_attachments.clone(),
+            test_id_referenced_sources: self.test_id_referenced_sources.clone(),
+            test_id_add_attachments: self.test_id_add_attachments.clone(),
+        };
+        let referenced_sources_controller = PromptInputReferencedSourcesController {
+            sources: referenced_sources_model.clone(),
         };
 
-        let textarea_max_height = self
-            .textarea_max_height
-            .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
+        cx.provide(local_controller, |cx| {
+            cx.provide(config.clone(), |cx| {
+                cx.provide(referenced_sources_controller.clone(), |cx| {
+                    let status = self.status.unwrap_or(if self.loading {
+                        PromptInputStatus::Streaming
+                    } else {
+                        PromptInputStatus::Idle
+                    });
+                    let generating = status.is_generating();
 
-        let send_activate = prompt_input_send_activate(
-            text_model.clone(),
-            attachments_model.clone(),
-            self.clear_on_send,
-            self.clear_attachments_on_send,
-            self.on_send.clone(),
-        );
+                    let textarea_min_height = if self.textarea_min_height == Px(96.0) {
+                        theme
+                            .metric_by_key("fret.ai.prompt_input.min_height")
+                            .unwrap_or(self.textarea_min_height)
+                    } else {
+                        self.textarea_min_height
+                    };
 
-        let control_key_handler = prompt_input_control_key_handler(
-            text_model.clone(),
-            attachments_model.clone(),
-            self.disabled,
-            self.loading || generating,
-            send_activate,
-        );
+                    let textarea_max_height = self
+                        .textarea_max_height
+                        .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
 
-        let current = cx
-            .get_model_cloned(&text_model, Invalidation::Layout)
-            .unwrap_or_default();
-        let is_empty = current.trim().is_empty();
+                    let send_activate = prompt_input_send_activate(
+                        text_model.clone(),
+                        attachments_model.clone(),
+                        self.clear_on_send,
+                        self.clear_attachments_on_send,
+                        self.on_send.clone(),
+                    );
 
-        let prompt_empty_state_marker = self.test_id_root.clone().map(|root| {
-            let suffix = if is_empty {
-                "prompt-empty"
-            } else {
-                "prompt-nonempty"
-            };
-            let id = Arc::<str>::from(format!("{root}-{suffix}"));
-            cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: fret_core::SemanticsRole::Text,
-                    test_id: Some(id),
-                    ..Default::default()
-                },
-                |cx| {
-                    vec![cx.container(
-                        fret_ui::element::ContainerProps {
-                            layout: fret_ui::element::LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: fret_ui::element::Length::Px(Px(0.0)),
-                                    height: fret_ui::element::Length::Px(Px(0.0)),
-                                    ..Default::default()
-                                },
+                    let control_key_handler = prompt_input_control_key_handler(
+                        text_model.clone(),
+                        attachments_model.clone(),
+                        self.disabled,
+                        self.loading || generating,
+                        send_activate,
+                    );
+
+                    let current = cx
+                        .get_model_cloned(&text_model, Invalidation::Layout)
+                        .unwrap_or_default();
+                    let is_empty = current.trim().is_empty();
+
+                    let prompt_empty_state_marker = self.test_id_root.clone().map(|root| {
+                        let suffix = if is_empty {
+                            "prompt-empty"
+                        } else {
+                            "prompt-nonempty"
+                        };
+                        let id = Arc::<str>::from(format!("{root}-{suffix}"));
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                role: fret_core::SemanticsRole::Text,
+                                test_id: Some(id),
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    )]
-                },
-            )
-        });
+                            |cx| {
+                                vec![cx.container(
+                                    fret_ui::element::ContainerProps {
+                                        layout: fret_ui::element::LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: fret_ui::element::Length::Px(Px(0.0)),
+                                                height: fret_ui::element::Length::Px(Px(0.0)),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )]
+                            },
+                        )
+                    });
 
-        let mut slots = slots(cx);
-        if let Some(marker) = prompt_empty_state_marker {
-            slots.block_end.push(marker);
-        }
+                    let mut slots = slots(cx);
+                    if let Some(marker) = prompt_empty_state_marker {
+                        slots.block_end.push(marker);
+                    }
 
-        let mut group = InputGroup::new(text_model.clone())
-            .textarea()
-            .textarea_min_height(textarea_min_height)
-            .control_on_key_down(control_key_handler)
-            .refine_layout(self.layout.w_full());
+                    let mut group = InputGroup::new(text_model.clone())
+                        .textarea()
+                        .textarea_min_height(textarea_min_height)
+                        .control_on_key_down(control_key_handler)
+                        .refine_layout(self.layout.w_full());
 
-        if let Some(max_h) = textarea_max_height {
-            group = group.textarea_max_height(max_h);
-        }
+                    if let Some(max_h) = textarea_max_height {
+                        group = group.textarea_max_height(max_h);
+                    }
 
-        if !slots.block_end.is_empty() {
-            group = group.block_end(slots.block_end).block_end_border_top(true);
-        }
+                    if !slots.block_end.is_empty() {
+                        group = group.block_end(slots.block_end).block_end_border_top(true);
+                    }
 
-        if !slots.block_start.is_empty() {
-            group = group
-                .block_start(slots.block_start)
-                .block_start_border_bottom(true);
-        }
+                    if !slots.block_start.is_empty() {
+                        group = group
+                            .block_start(slots.block_start)
+                            .block_start_border_bottom(true);
+                    }
 
-        if let Some(id) = self.test_id_root {
-            group = group.test_id(id);
-        }
-        if let Some(id) = self.test_id_textarea {
-            group = group.control_test_id(id);
-        }
+                    if let Some(id) = self.test_id_root {
+                        group = group.test_id(id);
+                    }
+                    if let Some(id) = self.test_id_textarea {
+                        group = group.control_test_id(id);
+                    }
 
-        let content = group.into_element(cx);
+                    let content = group.into_element(cx);
 
-        let drop_handler: Option<OnExternalDrag> =
-            attachments_model
-                .clone()
-                .map(|attachments| -> OnExternalDrag {
-                    let disabled = self.disabled;
-                    let loading = self.loading;
-                    let accept = self.accept.clone();
-                    let max_files = self.max_files;
-                    let max_file_size_bytes = self.max_file_size_bytes;
-                    let on_error = self.on_error.clone();
-                    Arc::new(
-                        move |host: &mut dyn fret_ui::action::UiActionHost,
-                              action_cx: fret_ui::action::ActionCx,
-                              e: &fret_core::ExternalDragEvent| {
-                            if disabled || loading {
-                                return false;
-                            }
+                    let drop_handler: Option<OnExternalDrag> =
+                        attachments_model
+                            .clone()
+                            .map(|attachments| -> OnExternalDrag {
+                                let disabled = self.disabled;
+                                let loading = self.loading;
+                                let accept = self.accept.clone();
+                                let max_files = self.max_files;
+                                let max_file_size_bytes = self.max_file_size_bytes;
+                                let on_error = self.on_error.clone();
+                                Arc::new(
+                                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                                          action_cx: fret_ui::action::ActionCx,
+                                          e: &fret_core::ExternalDragEvent| {
+                                        if disabled || loading {
+                                            return false;
+                                        }
 
-                            let ExternalDragKind::DropFiles(files) = &e.kind else {
-                                return false;
-                            };
-                            prompt_input_handle_drop_files(
-                                host,
-                                action_cx,
-                                &attachments,
-                                files,
-                                accept.as_deref(),
-                                max_files,
-                                max_file_size_bytes,
-                                on_error.as_ref(),
-                            )
-                        },
-                    )
-                });
+                                        let ExternalDragKind::DropFiles(files) = &e.kind else {
+                                            return false;
+                                        };
+                                        prompt_input_handle_drop_files(
+                                            host,
+                                            action_cx,
+                                            &attachments,
+                                            files,
+                                            accept.as_deref(),
+                                            max_files,
+                                            max_file_size_bytes,
+                                            on_error.as_ref(),
+                                        )
+                                    },
+                                )
+                            });
 
-        if let Some(on_drop) = drop_handler {
-            cx.external_drag_region(fret_ui::element::ExternalDragRegionProps::default(), |cx| {
-                cx.external_drag_region_on_external_drag(on_drop);
-                vec![content]
+                    if let Some(on_drop) = drop_handler {
+                        cx.external_drag_region(
+                            fret_ui::element::ExternalDragRegionProps::default(),
+                            |cx| {
+                                cx.external_drag_region_on_external_drag(on_drop);
+                                vec![content]
+                            },
+                        )
+                    } else {
+                        content
+                    }
+                })
             })
-        } else {
-            content
-        }
+        })
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1298,397 +1284,405 @@ impl PromptInput {
             .clone()
             .or_else(|| provider.as_ref().and_then(|c| c.attachments.clone()));
 
-        cx.with_state(PromptInputLocalState::default, |st| {
-            st.controller = Some(PromptInputController {
+        let local_controller = PromptInputLocalController {
+            controller: PromptInputController {
                 text: text_model.clone(),
                 attachments: attachments_model.clone(),
+            },
+        };
+
+        cx.provide(local_controller, |cx| {
+            let current = cx
+                .get_model_cloned(&text_model, Invalidation::Layout)
+                .unwrap_or_default();
+            let is_empty = current.trim().is_empty();
+
+            let attachments = attachments_model.as_ref().and_then(|m| {
+                cx.get_model_cloned(m, Invalidation::Layout)
+                    .or_else(|| Some(Vec::new()))
             });
-        });
+            let attachments_len = attachments.as_ref().map(|v| v.len()).unwrap_or(0);
 
-        let current = cx
-            .get_model_cloned(&text_model, Invalidation::Layout)
-            .unwrap_or_default();
-        let is_empty = current.trim().is_empty();
-
-        let attachments = attachments_model.as_ref().and_then(|m| {
-            cx.get_model_cloned(m, Invalidation::Layout)
-                .or_else(|| Some(Vec::new()))
-        });
-        let attachments_len = attachments.as_ref().map(|v| v.len()).unwrap_or(0);
-
-        let text_model_for_handlers = text_model.clone();
-        let clear_on_send = self.clear_on_send;
-        let on_send = self.on_send.clone();
-        let attachments_model_for_send = attachments_model.clone();
-        let clear_attachments_on_send = self.clear_attachments_on_send;
-        let send_activate: OnActivate = Arc::new(move |host, action_cx, reason| {
-            let text = host
-                .models_mut()
-                .read(&text_model_for_handlers, Clone::clone)
-                .ok();
-            let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
-
-            let attachments_len = attachments_model_for_send
-                .as_ref()
-                .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
-                .unwrap_or(0);
-
-            if is_empty && attachments_len == 0 {
-                return;
-            }
-
-            if let Some(on_send) = on_send.as_ref() {
-                on_send(host, action_cx, reason);
-            }
-
-            if clear_on_send {
-                let _ = host
+            let text_model_for_handlers = text_model.clone();
+            let clear_on_send = self.clear_on_send;
+            let on_send = self.on_send.clone();
+            let attachments_model_for_send = attachments_model.clone();
+            let clear_attachments_on_send = self.clear_attachments_on_send;
+            let send_activate: OnActivate = Arc::new(move |host, action_cx, reason| {
+                let text = host
                     .models_mut()
-                    .update(&text_model_for_handlers, |v| v.clear());
-            }
-            if clear_attachments_on_send {
-                if let Some(attachments_model) = attachments_model_for_send.as_ref() {
-                    let _ = host.models_mut().update(attachments_model, |v| v.clear());
+                    .read(&text_model_for_handlers, Clone::clone)
+                    .ok();
+                let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
+
+                let attachments_len = attachments_model_for_send
+                    .as_ref()
+                    .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
+                    .unwrap_or(0);
+
+                if is_empty && attachments_len == 0 {
+                    return;
                 }
-            }
-        });
 
-        let stop_activate = self.on_stop.clone();
-
-        let send_disabled = self.disabled || self.loading || (is_empty && attachments_len == 0);
-        let stop_disabled = self.disabled || !self.loading;
-
-        let textarea_min_height = if self.textarea_min_height == Px(96.0) {
-            theme
-                .metric_by_key("fret.ai.prompt_input.min_height")
-                .unwrap_or(self.textarea_min_height)
-        } else {
-            self.textarea_min_height
-        };
-
-        let textarea_max_height = self
-            .textarea_max_height
-            .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
-
-        let send_activate_for_button = send_activate.clone();
-        let send_button = (!self.loading).then(|| {
-            let mut btn = Button::new("Send")
-                .variant(ButtonVariant::Default)
-                .size(ButtonSize::Sm)
-                .disabled(send_disabled)
-                .on_activate(send_activate_for_button);
-            if let Some(id) = self.test_id_send.clone() {
-                btn = btn.test_id(id);
-            }
-            btn.into_element(cx)
-        });
-
-        let stop_button = (self.loading).then(|| {
-            let mut btn = Button::new("Stop")
-                .variant(ButtonVariant::Secondary)
-                .size(ButtonSize::Sm)
-                .disabled(stop_disabled);
-
-            if let Some(on_stop) = stop_activate {
-                btn = btn.on_activate(on_stop);
-            }
-            if let Some(id) = self.test_id_stop.clone() {
-                btn = btn.test_id(id);
-            }
-            btn.into_element(cx)
-        });
-
-        let add_attachments_button = self.on_add_attachments.clone().map(|on_add| {
-            let add_disabled = self.disabled || self.loading;
-            let mut btn = Button::new("")
-                .a11y_label("Add attachments")
-                .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::IconSm)
-                .disabled(add_disabled)
-                .icon(IconId::new("lucide.plus"))
-                .on_activate(on_add);
-
-            let test_id = self.test_id_add_attachments.clone().or_else(|| {
-                self.test_id_root
-                    .clone()
-                    .map(|id| Arc::<str>::from(format!("{id}-add-attachments")))
-            });
-            if let Some(id) = test_id {
-                btn = btn.test_id(id);
-            }
-
-            btn.into_element(cx)
-        });
-
-        let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let actions = cx.flex(
-            FlexProps {
-                layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-                direction: Axis::Horizontal,
-                gap: gap.into(),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::End,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            move |cx| {
-                let mut out = Vec::new();
-                if let Some(add_button) = add_attachments_button {
-                    out.push(cx.container(
-                        ContainerProps {
-                            layout: decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().mr_auto(),
-                            ),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![add_button],
-                    ));
+                if let Some(on_send) = on_send.as_ref() {
+                    on_send(host, action_cx, reason);
                 }
-                if let Some(stop_button) = stop_button {
-                    out.push(stop_button);
-                }
-                if let Some(send_button) = send_button {
-                    out.push(send_button);
-                }
-                out
-            },
-        );
 
-        let attachments_el = attachments.and_then(|items| {
-            if items.is_empty() {
-                return None;
-            }
-
-            let attachments_model = attachments_model.clone();
-            let on_remove = attachments_model.map(|attachments_model| {
-                let model = attachments_model.clone();
-                Arc::new(
-                    move |host: &mut dyn fret_ui::action::UiActionHost,
-                          _action_cx: fret_ui::action::ActionCx,
-                          id: Arc<str>| {
-                        let _ = host.models_mut().update(&model, |v| {
-                            v.retain(|item| item.id().as_ref() != id.as_ref());
-                        });
-                    },
-                )
+                if clear_on_send {
+                    let _ = host
+                        .models_mut()
+                        .update(&text_model_for_handlers, |v| v.clear());
+                }
+                if clear_attachments_on_send {
+                    if let Some(attachments_model) = attachments_model_for_send.as_ref() {
+                        let _ = host.models_mut().update(attachments_model, |v| v.clear());
+                    }
+                }
             });
 
-            let row_test_id = self.test_id_attachments.clone().or_else(|| {
-                self.test_id_root
-                    .clone()
-                    .map(|id| Arc::<str>::from(format!("{id}-attachments")))
-            });
+            let stop_activate = self.on_stop.clone();
 
-            let mut children = Vec::new();
-            for item in items {
-                let item_id = item.id().clone();
-                let key = item_key_from_external_id(item_id.as_ref());
+            let send_disabled = self.disabled || self.loading || (is_empty && attachments_len == 0);
+            let stop_disabled = self.disabled || !self.loading;
 
-                let item_test_id = row_test_id
-                    .as_deref()
-                    .map(|root| Arc::<str>::from(format!("{root}-item-{item_id}")));
-                let remove_test_id = item_test_id
-                    .as_deref()
-                    .map(|root| Arc::<str>::from(format!("{root}-remove")));
-
-                let on_remove = on_remove.clone();
-                let el = cx.keyed(key, move |cx| {
-                    let mut chip = Attachment::new(item.clone()).variant(AttachmentVariant::Inline);
-                    if let Some(on_remove) = on_remove.clone() {
-                        chip = chip.on_remove(on_remove);
-                    }
-                    if let Some(id) = item_test_id.clone() {
-                        chip = chip.test_id(id);
-                    }
-                    if let Some(id) = remove_test_id.clone() {
-                        chip = chip.remove_test_id(id);
-                    }
-                    chip.into_element(cx)
-                });
-                children.push(el);
-            }
-
-            let mut row = Attachments::new(children).variant(AttachmentVariant::Inline);
-            if let Some(id) = row_test_id {
-                row = row.test_id(id);
-            }
-            Some(row.into_element(cx))
-        });
-
-        let control_key_handler: OnKeyDown = {
-            let text_model = text_model.clone();
-            let attachments_model = attachments_model.clone();
-            let disabled = self.disabled;
-            let loading = self.loading;
-            let send_activate = send_activate.clone();
-
-            Arc::new(move |host, action_cx, down| {
-                if disabled {
-                    return false;
-                }
-
-                match down.key {
-                    fret_core::KeyCode::Enter => {
-                        if loading || down.repeat {
-                            return false;
-                        }
-                        if down.modifiers.shift {
-                            return false;
-                        }
-
-                        let text = host.models_mut().read(&text_model, Clone::clone).ok();
-                        let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
-                        let attachments_len = attachments_model
-                            .as_ref()
-                            .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
-                            .unwrap_or(0);
-                        if is_empty && attachments_len == 0 {
-                            return false;
-                        }
-
-                        send_activate(host, action_cx, ActivateReason::Keyboard);
-                        host.notify(action_cx);
-                        true
-                    }
-                    fret_core::KeyCode::Backspace => {
-                        let Some(attachments_model) = attachments_model.as_ref() else {
-                            return false;
-                        };
-                        let attachments_len = host
-                            .models_mut()
-                            .read(attachments_model, |v| v.len())
-                            .ok()
-                            .unwrap_or(0);
-                        if attachments_len == 0 {
-                            return false;
-                        }
-
-                        let text = host.models_mut().read(&text_model, Clone::clone).ok();
-                        let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
-                        if !is_empty {
-                            return false;
-                        }
-
-                        let _ = host.models_mut().update(attachments_model, |v| {
-                            let _ = v.pop();
-                        });
-                        host.notify(action_cx);
-                        true
-                    }
-                    _ => false,
-                }
-            })
-        };
-
-        let prompt_empty_state_marker = self.test_id_root.clone().map(|root| {
-            let suffix = if is_empty {
-                "prompt-empty"
+            let textarea_min_height = if self.textarea_min_height == Px(96.0) {
+                theme
+                    .metric_by_key("fret.ai.prompt_input.min_height")
+                    .unwrap_or(self.textarea_min_height)
             } else {
-                "prompt-nonempty"
+                self.textarea_min_height
             };
-            let id = Arc::<str>::from(format!("{root}-{suffix}"));
-            cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: fret_core::SemanticsRole::Text,
-                    test_id: Some(id),
-                    ..Default::default()
+
+            let textarea_max_height = self
+                .textarea_max_height
+                .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
+
+            let send_activate_for_button = send_activate.clone();
+            let send_button = (!self.loading).then(|| {
+                let mut btn = Button::new("Send")
+                    .variant(ButtonVariant::Default)
+                    .size(ButtonSize::Sm)
+                    .disabled(send_disabled)
+                    .on_activate(send_activate_for_button);
+                if let Some(id) = self.test_id_send.clone() {
+                    btn = btn.test_id(id);
+                }
+                btn.into_element(cx)
+            });
+
+            let stop_button = (self.loading).then(|| {
+                let mut btn = Button::new("Stop")
+                    .variant(ButtonVariant::Secondary)
+                    .size(ButtonSize::Sm)
+                    .disabled(stop_disabled);
+
+                if let Some(on_stop) = stop_activate {
+                    btn = btn.on_activate(on_stop);
+                }
+                if let Some(id) = self.test_id_stop.clone() {
+                    btn = btn.test_id(id);
+                }
+                btn.into_element(cx)
+            });
+
+            let add_attachments_button = self.on_add_attachments.clone().map(|on_add| {
+                let add_disabled = self.disabled || self.loading;
+                let mut btn = Button::new("")
+                    .a11y_label("Add attachments")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::IconSm)
+                    .disabled(add_disabled)
+                    .icon(IconId::new("lucide.plus"))
+                    .on_activate(on_add);
+
+                let test_id = self.test_id_add_attachments.clone().or_else(|| {
+                    self.test_id_root
+                        .clone()
+                        .map(|id| Arc::<str>::from(format!("{id}-add-attachments")))
+                });
+                if let Some(id) = test_id {
+                    btn = btn.test_id(id);
+                }
+
+                btn.into_element(cx)
+            });
+
+            let gap = MetricRef::space(Space::N2).resolve(&theme);
+            let actions = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    direction: Axis::Horizontal,
+                    gap: gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
+                    justify: MainAlign::End,
+                    align: CrossAlign::Center,
+                    wrap: false,
                 },
-                |cx| {
-                    vec![cx.container(
-                        fret_ui::element::ContainerProps {
-                            layout: fret_ui::element::LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: fret_ui::element::Length::Px(Px(0.0)),
-                                    height: fret_ui::element::Length::Px(Px(0.0)),
-                                    ..Default::default()
-                                },
+                move |cx| {
+                    let mut out = Vec::new();
+                    if let Some(add_button) = add_attachments_button {
+                        out.push(cx.container(
+                            ContainerProps {
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().mr_auto(),
+                                ),
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    )]
+                            move |_cx| vec![add_button],
+                        ));
+                    }
+                    if let Some(stop_button) = stop_button {
+                        out.push(stop_button);
+                    }
+                    if let Some(send_button) = send_button {
+                        out.push(send_button);
+                    }
+                    out
                 },
-            )
-        });
+            );
 
-        let mut group = InputGroup::new(text_model.clone())
-            .textarea()
-            .textarea_min_height(textarea_min_height)
-            .control_on_key_down(control_key_handler)
-            .block_end({
-                let mut out = vec![actions];
-                if let Some(marker) = prompt_empty_state_marker {
-                    out.push(marker);
+            let attachments_el = attachments.and_then(|items| {
+                if items.is_empty() {
+                    return None;
                 }
-                out
-            })
-            .block_end_border_top(true)
-            .refine_layout(self.layout.w_full());
 
-        if let Some(max_h) = textarea_max_height {
-            group = group.textarea_max_height(max_h);
-        }
-
-        if let Some(attachments_el) = attachments_el {
-            group = group
-                .block_start(vec![attachments_el])
-                .block_start_border_bottom(true);
-        }
-
-        if let Some(id) = self.test_id_root {
-            group = group.test_id(id);
-        }
-        if let Some(id) = self.test_id_textarea {
-            group = group.control_test_id(id);
-        }
-
-        let content = group.into_element(cx);
-
-        let drop_handler: Option<OnExternalDrag> =
-            attachments_model
-                .clone()
-                .map(|attachments| -> OnExternalDrag {
-                    let disabled = self.disabled;
-                    let loading = self.loading;
-                    let accept = self.accept.clone();
-                    let max_files = self.max_files;
-                    let max_file_size_bytes = self.max_file_size_bytes;
-                    let on_error = self.on_error.clone();
+                let attachments_model = attachments_model.clone();
+                let on_remove = attachments_model.map(|attachments_model| {
+                    let model = attachments_model.clone();
                     Arc::new(
                         move |host: &mut dyn fret_ui::action::UiActionHost,
-                              action_cx: fret_ui::action::ActionCx,
-                              e: &fret_core::ExternalDragEvent| {
-                            if disabled || loading {
-                                return false;
-                            }
-
-                            let ExternalDragKind::DropFiles(files) = &e.kind else {
-                                return false;
-                            };
-                            prompt_input_handle_drop_files(
-                                host,
-                                action_cx,
-                                &attachments,
-                                files,
-                                accept.as_deref(),
-                                max_files,
-                                max_file_size_bytes,
-                                on_error.as_ref(),
-                            )
+                              _action_cx: fret_ui::action::ActionCx,
+                              id: Arc<str>| {
+                            let _ = host.models_mut().update(&model, |v| {
+                                v.retain(|item| item.id().as_ref() != id.as_ref());
+                            });
                         },
                     )
                 });
 
-        if let Some(on_drop) = drop_handler {
-            cx.external_drag_region(fret_ui::element::ExternalDragRegionProps::default(), |cx| {
-                cx.external_drag_region_on_external_drag(on_drop);
-                vec![content]
-            })
-        } else {
-            content
-        }
+                let row_test_id = self.test_id_attachments.clone().or_else(|| {
+                    self.test_id_root
+                        .clone()
+                        .map(|id| Arc::<str>::from(format!("{id}-attachments")))
+                });
+
+                let mut children = Vec::new();
+                for item in items {
+                    let item_id = item.id().clone();
+                    let key = item_key_from_external_id(item_id.as_ref());
+
+                    let item_test_id = row_test_id
+                        .as_deref()
+                        .map(|root| Arc::<str>::from(format!("{root}-item-{item_id}")));
+                    let remove_test_id = item_test_id
+                        .as_deref()
+                        .map(|root| Arc::<str>::from(format!("{root}-remove")));
+
+                    let on_remove = on_remove.clone();
+                    let el = cx.keyed(key, move |cx| {
+                        let mut chip =
+                            Attachment::new(item.clone()).variant(AttachmentVariant::Inline);
+                        if let Some(on_remove) = on_remove.clone() {
+                            chip = chip.on_remove(on_remove);
+                        }
+                        if let Some(id) = item_test_id.clone() {
+                            chip = chip.test_id(id);
+                        }
+                        if let Some(id) = remove_test_id.clone() {
+                            chip = chip.remove_test_id(id);
+                        }
+                        chip.into_element(cx)
+                    });
+                    children.push(el);
+                }
+
+                let mut row = Attachments::new(children).variant(AttachmentVariant::Inline);
+                if let Some(id) = row_test_id {
+                    row = row.test_id(id);
+                }
+                Some(row.into_element(cx))
+            });
+
+            let control_key_handler: OnKeyDown = {
+                let text_model = text_model.clone();
+                let attachments_model = attachments_model.clone();
+                let disabled = self.disabled;
+                let loading = self.loading;
+                let send_activate = send_activate.clone();
+
+                Arc::new(move |host, action_cx, down| {
+                    if disabled {
+                        return false;
+                    }
+
+                    match down.key {
+                        fret_core::KeyCode::Enter => {
+                            if loading || down.repeat {
+                                return false;
+                            }
+                            if down.modifiers.shift {
+                                return false;
+                            }
+
+                            let text = host.models_mut().read(&text_model, Clone::clone).ok();
+                            let is_empty =
+                                text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
+                            let attachments_len = attachments_model
+                                .as_ref()
+                                .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
+                                .unwrap_or(0);
+                            if is_empty && attachments_len == 0 {
+                                return false;
+                            }
+
+                            send_activate(host, action_cx, ActivateReason::Keyboard);
+                            host.notify(action_cx);
+                            true
+                        }
+                        fret_core::KeyCode::Backspace => {
+                            let Some(attachments_model) = attachments_model.as_ref() else {
+                                return false;
+                            };
+                            let attachments_len = host
+                                .models_mut()
+                                .read(attachments_model, |v| v.len())
+                                .ok()
+                                .unwrap_or(0);
+                            if attachments_len == 0 {
+                                return false;
+                            }
+
+                            let text = host.models_mut().read(&text_model, Clone::clone).ok();
+                            let is_empty =
+                                text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
+                            if !is_empty {
+                                return false;
+                            }
+
+                            let _ = host.models_mut().update(attachments_model, |v| {
+                                let _ = v.pop();
+                            });
+                            host.notify(action_cx);
+                            true
+                        }
+                        _ => false,
+                    }
+                })
+            };
+
+            let prompt_empty_state_marker = self.test_id_root.clone().map(|root| {
+                let suffix = if is_empty {
+                    "prompt-empty"
+                } else {
+                    "prompt-nonempty"
+                };
+                let id = Arc::<str>::from(format!("{root}-{suffix}"));
+                cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        role: fret_core::SemanticsRole::Text,
+                        test_id: Some(id),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            fret_ui::element::ContainerProps {
+                                layout: fret_ui::element::LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: fret_ui::element::Length::Px(Px(0.0)),
+                                        height: fret_ui::element::Length::Px(Px(0.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                )
+            });
+
+            let mut group = InputGroup::new(text_model.clone())
+                .textarea()
+                .textarea_min_height(textarea_min_height)
+                .control_on_key_down(control_key_handler)
+                .block_end({
+                    let mut out = vec![actions];
+                    if let Some(marker) = prompt_empty_state_marker {
+                        out.push(marker);
+                    }
+                    out
+                })
+                .block_end_border_top(true)
+                .refine_layout(self.layout.w_full());
+
+            if let Some(max_h) = textarea_max_height {
+                group = group.textarea_max_height(max_h);
+            }
+
+            if let Some(attachments_el) = attachments_el {
+                group = group
+                    .block_start(vec![attachments_el])
+                    .block_start_border_bottom(true);
+            }
+
+            if let Some(id) = self.test_id_root {
+                group = group.test_id(id);
+            }
+            if let Some(id) = self.test_id_textarea {
+                group = group.control_test_id(id);
+            }
+
+            let content = group.into_element(cx);
+
+            let drop_handler: Option<OnExternalDrag> =
+                attachments_model
+                    .clone()
+                    .map(|attachments| -> OnExternalDrag {
+                        let disabled = self.disabled;
+                        let loading = self.loading;
+                        let accept = self.accept.clone();
+                        let max_files = self.max_files;
+                        let max_file_size_bytes = self.max_file_size_bytes;
+                        let on_error = self.on_error.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  e: &fret_core::ExternalDragEvent| {
+                                if disabled || loading {
+                                    return false;
+                                }
+
+                                let ExternalDragKind::DropFiles(files) = &e.kind else {
+                                    return false;
+                                };
+                                prompt_input_handle_drop_files(
+                                    host,
+                                    action_cx,
+                                    &attachments,
+                                    files,
+                                    accept.as_deref(),
+                                    max_files,
+                                    max_file_size_bytes,
+                                    on_error.as_ref(),
+                                )
+                            },
+                        )
+                    });
+
+            if let Some(on_drop) = drop_handler {
+                cx.external_drag_region(
+                    fret_ui::element::ExternalDragRegionProps::default(),
+                    |cx| {
+                        cx.external_drag_region_on_external_drag(on_drop);
+                        vec![content]
+                    },
+                )
+            } else {
+                content
+            }
+        })
     }
 }
 

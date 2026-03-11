@@ -125,11 +125,6 @@ struct ContextSchema {
     model_id: Option<Arc<str>>,
 }
 
-#[derive(Debug, Default, Clone)]
-struct ContextProviderState {
-    schema: Option<ContextSchema>,
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct ContextUsageCosts {
     input_cost_usd: Option<f64>,
@@ -291,8 +286,7 @@ fn resolved_usage_costs(schema: &ContextSchema) -> Option<ContextUsageCosts> {
 }
 
 fn use_context_schema<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<ContextSchema> {
-    cx.inherited_state::<ContextProviderState>()
-        .and_then(|st| st.schema.clone())
+    cx.provided::<ContextSchema>().cloned()
 }
 
 fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -633,30 +627,28 @@ impl Context {
                 LayoutRefinement::default(),
             ),
             move |cx| {
-                cx.with_state(ContextProviderState::default, |st| {
-                    st.schema = Some(schema.clone());
-                });
+                cx.provide(schema.clone(), |cx| {
+                    let (default_trigger, default_content) = children(cx);
+                    let trigger = trigger_override.unwrap_or(default_trigger);
+                    let content = content_override.unwrap_or(default_content);
 
-                let (default_trigger, default_content) = children(cx);
-                let trigger = trigger_override.unwrap_or(default_trigger);
-                let content = content_override.unwrap_or(default_content);
+                    let hover = HoverCard::new(trigger, content)
+                        .open_delay_frames(open_delay_frames)
+                        .close_delay_frames(close_delay_frames)
+                        .refine_layout(layout)
+                        .into_element(cx);
 
-                let hover = HoverCard::new(trigger, content)
-                    .open_delay_frames(open_delay_frames)
-                    .close_delay_frames(close_delay_frames)
-                    .refine_layout(layout)
-                    .into_element(cx);
+                    let hover = match test_id_root {
+                        Some(id) => hover.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .test_id(id),
+                        ),
+                        None => hover,
+                    };
 
-                let hover = match test_id_root {
-                    Some(id) => hover.attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Group)
-                            .test_id(id),
-                    ),
-                    None => hover,
-                };
-
-                vec![hover]
+                    vec![hover]
+                })
             },
         );
 
@@ -689,46 +681,44 @@ impl Context {
                     LayoutRefinement::default(),
                 ),
                 move |cx| {
-                    cx.with_state(ContextProviderState::default, |st| {
-                        st.schema = Some(schema.clone());
-                    });
-
-                    let (slot_trigger, slot_content) =
-                        resolve_context_root_children(cx, direct_children);
-                    let trigger = trigger_override
-                        .or(slot_trigger)
-                        .unwrap_or_else(|| ContextTrigger::default().into_element(cx));
-                    let content = content_override.or(slot_content).unwrap_or_else(|| {
-                        ContextContent::new([
-                            ContextContentHeader::default().into_element(cx),
-                            ContextContentBody::new([
-                                ContextInputUsage::default().into_element(cx),
-                                ContextOutputUsage::default().into_element(cx),
-                                ContextReasoningUsage::default().into_element(cx),
-                                ContextCacheUsage::default().into_element(cx),
+                    cx.provide(schema.clone(), |cx| {
+                        let (slot_trigger, slot_content) =
+                            resolve_context_root_children(cx, direct_children);
+                        let trigger = trigger_override
+                            .or(slot_trigger)
+                            .unwrap_or_else(|| ContextTrigger::default().into_element(cx));
+                        let content = content_override.or(slot_content).unwrap_or_else(|| {
+                            ContextContent::new([
+                                ContextContentHeader::default().into_element(cx),
+                                ContextContentBody::new([
+                                    ContextInputUsage::default().into_element(cx),
+                                    ContextOutputUsage::default().into_element(cx),
+                                    ContextReasoningUsage::default().into_element(cx),
+                                    ContextCacheUsage::default().into_element(cx),
+                                ])
+                                .into_element(cx),
+                                ContextContentFooter::default().into_element(cx),
                             ])
-                            .into_element(cx),
-                            ContextContentFooter::default().into_element(cx),
-                        ])
-                        .into_element(cx)
-                    });
+                            .into_element(cx)
+                        });
 
-                    let hover = HoverCard::new(trigger, content)
-                        .open_delay_frames(open_delay_frames)
-                        .close_delay_frames(close_delay_frames)
-                        .refine_layout(layout)
-                        .into_element(cx);
+                        let hover = HoverCard::new(trigger, content)
+                            .open_delay_frames(open_delay_frames)
+                            .close_delay_frames(close_delay_frames)
+                            .refine_layout(layout)
+                            .into_element(cx);
 
-                    let hover = match test_id_root {
-                        Some(id) => hover.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(SemanticsRole::Group)
-                                .test_id(id),
-                        ),
-                        None => hover,
-                    };
+                        let hover = match test_id_root {
+                            Some(id) => hover.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(SemanticsRole::Group)
+                                    .test_id(id),
+                            ),
+                            None => hover,
+                        };
 
-                    vec![hover]
+                        vec![hover]
+                    })
                 },
             );
         }
@@ -1637,8 +1627,8 @@ mod tests {
                 .into_element(cx),
             ];
 
-            cx.with_state(ContextProviderState::default, |st| {
-                st.schema = Some(ContextSchema {
+            cx.provide(
+                ContextSchema {
                     used_tokens: 42_560,
                     max_tokens: 128_000,
                     model_id: Some(Arc::<str>::from("openai:gpt-5")),
@@ -1649,22 +1639,23 @@ mod tests {
                         cached_input_tokens: Some(2_048),
                         ..Default::default()
                     }),
-                });
-            });
+                },
+                |cx| {
+                    let (trigger, content) = resolve_context_root_children(cx, direct_children);
+                    let trigger = trigger.expect("resolved trigger");
+                    let content = content.expect("resolved content");
 
-            let (trigger, content) = resolve_context_root_children(cx, direct_children);
-            let trigger = trigger.expect("resolved trigger");
-            let content = content.expect("resolved content");
-
-            assert!(has_test_id(&trigger, "context-trigger"));
-            assert!(has_test_id(&content, "context-content"));
-            assert!(has_test_id(&content, "context-header"));
-            assert!(has_test_id(&content, "context-body"));
-            assert!(has_test_id(&content, "context-footer"));
-            assert!(has_test_id(&content, "context-input"));
-            assert!(has_test_id(&content, "context-output"));
-            assert!(has_test_id(&content, "context-reasoning"));
-            assert!(has_test_id(&content, "context-cache"));
+                    assert!(has_test_id(&trigger, "context-trigger"));
+                    assert!(has_test_id(&content, "context-content"));
+                    assert!(has_test_id(&content, "context-header"));
+                    assert!(has_test_id(&content, "context-body"));
+                    assert!(has_test_id(&content, "context-footer"));
+                    assert!(has_test_id(&content, "context-input"));
+                    assert!(has_test_id(&content, "context-output"));
+                    assert!(has_test_id(&content, "context-reasoning"));
+                    assert!(has_test_id(&content, "context-cache"));
+                },
+            );
         });
     }
 

@@ -73,16 +73,10 @@ impl std::fmt::Debug for VoiceSelectorController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct VoiceSelectorProviderState {
-    controller: Option<VoiceSelectorController>,
-}
-
 pub fn use_voice_selector_controller<H: UiHost>(
     cx: &ElementContext<'_, H>,
 ) -> Option<VoiceSelectorController> {
-    cx.inherited_state::<VoiceSelectorProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<VoiceSelectorController>().cloned()
 }
 
 #[derive(Default)]
@@ -267,18 +261,16 @@ impl VoiceSelector {
         Dialog::new(open.clone()).into_element(
             cx,
             move |cx| {
-                cx.with_state(VoiceSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_trigger.clone());
-                });
-                let (trigger, _) = children_for_trigger(cx);
-                trigger
+                cx.provide(controller_for_trigger.clone(), |cx| {
+                    let (trigger, _) = children_for_trigger(cx);
+                    trigger
+                })
             },
             move |cx| {
-                cx.with_state(VoiceSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_content.clone());
-                });
-                let (_, content) = children_for_content(cx);
-                content
+                cx.provide(controller_for_content.clone(), |cx| {
+                    let (_, content) = children_for_content(cx);
+                    content
+                })
             },
         )
     }
@@ -313,18 +305,8 @@ impl VoiceSelector {
 
         Dialog::new(open.clone()).into_element(
             cx,
-            move |cx| {
-                cx.with_state(VoiceSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_trigger.clone());
-                });
-                trigger(cx)
-            },
-            move |cx| {
-                cx.with_state(VoiceSelectorProviderState::default, |st| {
-                    st.controller = Some(controller_for_content.clone());
-                });
-                content(cx)
-            },
+            move |cx| cx.provide(controller_for_trigger.clone(), trigger),
+            move |cx| cx.provide(controller_for_content.clone(), content),
         )
     }
 }
@@ -1440,22 +1422,21 @@ mod tests {
             ),
             "test",
             |cx| {
-                cx.with_state(VoiceSelectorProviderState::default, |st| {
-                    st.controller = Some(controller.clone());
-                });
-                ui::v_stack(|cx| {
-                    vec![
-                        VoiceSelectorValue::new()
-                            .placeholder("Pick a voice")
-                            .into_element(cx),
-                        VoiceSelectorName::new("Alloy").into_element(cx),
-                        VoiceSelectorAge::new("Adult").into_element(cx),
-                        VoiceSelectorAccent::new()
-                            .value("american")
-                            .into_element(cx),
-                    ]
+                cx.provide(controller.clone(), |cx| {
+                    ui::v_stack(|cx| {
+                        vec![
+                            VoiceSelectorValue::new()
+                                .placeholder("Pick a voice")
+                                .into_element(cx),
+                            VoiceSelectorName::new("Alloy").into_element(cx),
+                            VoiceSelectorAge::new("Adult").into_element(cx),
+                            VoiceSelectorAccent::new()
+                                .value("american")
+                                .into_element(cx),
+                        ]
+                    })
+                    .into_element(cx)
                 })
-                .into_element(cx)
             },
         );
 

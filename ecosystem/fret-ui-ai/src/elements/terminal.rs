@@ -60,11 +60,6 @@ fn zinc_400() -> Color {
     fret_ui_kit::colors::linear_from_hex_rgb(0xA1_A1_AA)
 }
 
-#[derive(Debug, Default, Clone)]
-struct TerminalProviderState {
-    controller: Option<TerminalController>,
-}
-
 #[derive(Clone)]
 pub struct TerminalController {
     pub output: Model<String>,
@@ -84,11 +79,8 @@ impl std::fmt::Debug for TerminalController {
     }
 }
 
-fn use_terminal_controller<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Option<TerminalController> {
-    cx.inherited_state::<TerminalProviderState>()
-        .and_then(|st| st.controller.clone())
+fn use_terminal_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TerminalController> {
+    cx.provided::<TerminalController>().cloned()
 }
 
 #[derive(Clone)]
@@ -215,20 +207,18 @@ impl Terminal {
             auto_scroll: self.auto_scroll,
             on_clear: self.on_clear.clone(),
         };
-        cx.with_state(TerminalProviderState::default, |st| {
-            st.controller = Some(controller.clone());
+        let root = cx.provide(controller.clone(), |cx| {
+            let children = children(cx, controller.clone());
+
+            let inner = ui::v_stack(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            cx.container(
+                decl_style::container_props(&theme, root_chrome, self.layout),
+                move |_cx| vec![inner],
+            )
         });
-
-        let children = children(cx, controller.clone());
-
-        let inner = ui::v_stack(move |_cx| children)
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx);
-
-        let root = cx.container(
-            decl_style::container_props(&theme, root_chrome, self.layout),
-            move |_cx| vec![inner],
-        );
 
         if let Some(test_id) = self.test_id_root {
             root.attach_semantics(
@@ -1039,6 +1029,23 @@ mod tests {
             .any(|child| has_scoped_text_style(child, refinement, foreground))
     }
 
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_deref())
+            .is_some_and(|test_id| test_id == expected)
+            || match &element.kind {
+                ElementKind::Pressable(props) => props.a11y.test_id.as_deref() == Some(expected),
+                ElementKind::Semantics(props) => props.test_id.as_deref() == Some(expected),
+                _ => false,
+            }
+            || element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, expected))
+    }
+
     #[test]
     fn terminal_title_children_scope_inherited_typography() {
         let window = AppWindowId::default();
@@ -1071,6 +1078,27 @@ mod tests {
     }
 
     #[test]
+    fn terminal_root_provides_controller_to_default_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let output = app.models_mut().insert(String::from("cargo check"));
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Terminal::new(output.clone())
+                    .is_streaming(true)
+                    .on_clear(Arc::new(|_host, _action_cx| {}))
+                    .test_id_clear("terminal-clear")
+                    .test_id_viewport("terminal-viewport")
+                    .into_element(cx)
+            });
+
+        assert!(has_test_id(&element, "terminal-clear"));
+        assert!(has_test_id(&element, "terminal-viewport"));
+        assert!(find_text_by_content(&element, "Streaming").is_some());
+    }
+
+    #[test]
     fn terminal_status_default_streaming_message_scopes_inherited_typography_for_shimmer() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1078,15 +1106,15 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                cx.with_state(TerminalProviderState::default, |st| {
-                    st.controller = Some(TerminalController {
+                cx.provide(
+                    TerminalController {
                         output: output.clone(),
                         is_streaming: true,
                         auto_scroll: true,
                         on_clear: None,
-                    });
-                });
-                TerminalStatus::new().into_element(cx)
+                    },
+                    |cx| TerminalStatus::new().into_element(cx),
+                )
             });
 
         let theme = fret_ui::Theme::global(&app).clone();

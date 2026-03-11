@@ -1726,29 +1726,28 @@ impl Carousel {
                 });
             }
 
-            cx.with_state(CarouselContextProviderState::default, |st| {
-                st.current = match (api_handle_model.clone(), api_snapshot_model.clone()) {
-                    (Some(api_handle), Some(api_snapshot)) => Some(CarouselContext {
-                        api_handle,
-                        api_snapshot,
-                        orientation,
-                        options,
-                        root_test_id: root_test_id.clone(),
-                    }),
-                    _ => None,
-                };
-            });
+            let carousel_context = match (api_handle_model.clone(), api_snapshot_model.clone()) {
+                (Some(api_handle), Some(api_snapshot)) => Some(CarouselContext {
+                    api_handle,
+                    api_snapshot,
+                    orientation,
+                    options,
+                    root_test_id: root_test_id.clone(),
+                }),
+                _ => None,
+            };
 
-            let root_layout = decl_style::layout_style(
-                &theme,
-                // Upstream shadcn places the prev/next controls outside the viewport (`-left-12` /
-                // `-right-12`). Keep the root overflow-visible so hit-testing can reach those
-                // controls even when their bounds extend outside the carousel panel.
-                LayoutRefinement::default()
-                    .relative()
-                    .overflow_visible()
-                    .merge(self.layout),
-            );
+            let render_root = |cx: &mut ElementContext<'_, H>| {
+                let root_layout = decl_style::layout_style(
+                    &theme,
+                    // Upstream shadcn places the prev/next controls outside the viewport (`-left-12` /
+                    // `-right-12`). Keep the root overflow-visible so hit-testing can reach those
+                    // controls even when their bounds extend outside the carousel panel.
+                    LayoutRefinement::default()
+                        .relative()
+                        .overflow_visible()
+                        .merge(self.layout),
+                );
 
             let viewport_width_for_viewport_breakpoints =
                 cx.environment_viewport_width(Invalidation::Layout);
@@ -4738,6 +4737,12 @@ impl Carousel {
                     .orientation(orientation_semantics)
                     .test_id(root_test_id),
             )
+            };
+
+            match carousel_context {
+                Some(context) => cx.provide(context, render_root),
+                None => render_root(cx),
+            }
         })
     }
 }
@@ -5186,11 +5191,6 @@ impl CarouselNext {
     }
 }
 
-#[derive(Default)]
-struct CarouselContextProviderState {
-    current: Option<CarouselContext>,
-}
-
 #[derive(Debug, Clone)]
 pub struct CarouselContext {
     pub api_handle: Model<Option<CarouselApi>>,
@@ -5201,8 +5201,7 @@ pub struct CarouselContext {
 }
 
 pub fn carousel_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<CarouselContext> {
-    cx.inherited_state_where::<CarouselContextProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
+    cx.provided::<CarouselContext>().cloned()
 }
 
 #[track_caller]

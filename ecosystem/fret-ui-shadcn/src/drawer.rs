@@ -102,14 +102,14 @@ fn normalize_snap_points(points: Vec<DrawerSnapPoint>) -> Vec<f32> {
     out
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 struct DrawerSideProviderState {
-    current: Option<DrawerSide>,
+    current: DrawerSide,
 }
 
 fn inherited_drawer_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<DrawerSide> {
-    cx.inherited_state_where::<DrawerSideProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current)
+    cx.provided::<DrawerSideProviderState>()
+        .map(|st| st.current)
 }
 
 fn drawer_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> DrawerSide {
@@ -122,16 +122,7 @@ fn with_drawer_side_provider<H: UiHost, R>(
     side: DrawerSide,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    let prev = cx.with_state(DrawerSideProviderState::default, |st| {
-        let prev = st.current;
-        st.current = Some(side);
-        prev
-    });
-    let out = f(cx);
-    cx.with_state(DrawerSideProviderState::default, |st| {
-        st.current = prev;
-    });
-    out
+    cx.provide(DrawerSideProviderState { current: side }, f)
 }
 
 fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSide) -> Px {

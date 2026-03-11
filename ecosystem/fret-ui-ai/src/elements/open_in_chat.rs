@@ -90,14 +90,8 @@ impl std::fmt::Debug for OpenInController {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-struct OpenInProviderState {
-    controller: Option<OpenInController>,
-}
-
 pub fn use_open_in_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<OpenInController> {
-    cx.inherited_state::<OpenInProviderState>()
-        .and_then(|st| st.controller.clone())
+    cx.provided::<OpenInController>().cloned()
 }
 
 #[derive(Default)]
@@ -193,9 +187,6 @@ impl OpenIn {
         let open = open_in_open_model(cx);
 
         let controller = OpenInController { query: self.query };
-        cx.with_state(OpenInProviderState::default, |st| {
-            st.controller = Some(controller.clone());
-        });
 
         let modal = self.modal;
         let align = self.align;
@@ -215,20 +206,18 @@ impl OpenIn {
             .into_element(
                 cx,
                 move |cx| {
-                    cx.with_state(OpenInProviderState::default, |st| {
-                        st.controller = Some(controller_for_trigger.clone());
-                    });
-                    trigger.into_element_with_open(cx, open.clone())
+                    cx.provide(controller_for_trigger.clone(), |cx| {
+                        trigger.into_element_with_open(cx, open.clone())
+                    })
                 },
                 move |cx| {
-                    cx.with_state(OpenInProviderState::default, |st| {
-                        st.controller = Some(controller_for_entries.clone());
-                    });
-                    let out = entries(cx);
-                    if out.is_empty() {
-                        return vec![OpenInChatGpt::new().into_entry(cx)];
-                    }
-                    out
+                    cx.provide(controller_for_entries.clone(), |cx| {
+                        let out = entries(cx);
+                        if out.is_empty() {
+                            return vec![OpenInChatGpt::new().into_entry(cx)];
+                        }
+                        out
+                    })
                 },
             )
     }
