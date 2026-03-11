@@ -871,6 +871,16 @@ real editors.
   `ui/canvas/widget/keyboard_shortcuts_gate/editing.rs` seams, so
   `keyboard_shortcuts_gate.rs` now mainly keeps the re-export surface explicit while per-family
   gate predicates retain focused unit coverage.
+- overlay hit helpers now also route context-menu geometry/item hit-testing and searcher
+  geometry/row hit-testing through the private
+  `ui/canvas/widget/overlay_hit/context_menu.rs` and
+  `ui/canvas/widget/overlay_hit/searcher.rs` seams, so `overlay_hit.rs` now mainly keeps the
+  re-export surface explicit while overlay hit geometry retains focused unit coverage.
+- viewport math helpers now also route viewport construction/clamp helpers and canvas snap helpers
+  through the private `ui/canvas/widget/view_math_viewport/viewport.rs` and
+  `ui/canvas/widget/view_math_viewport/snap.rs` seams, so `view_math_viewport.rs` now mainly keeps
+  the re-export surface explicit while viewport construction equivalence and snap behavior retain
+  focused unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

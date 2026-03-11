@@ -1327,6 +1327,16 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/keyboard_shortcuts_gate/editing.rs` seams, so
     `keyboard_shortcuts_gate.rs` now mainly keeps the re-export surface explicit while per-family
     gate predicates retain focused unit coverage.
+  - Progress: overlay hit helpers now also route context-menu geometry/item hit-testing and
+    searcher geometry/row hit-testing through the private
+    `ui/canvas/widget/overlay_hit/context_menu.rs` and
+    `ui/canvas/widget/overlay_hit/searcher.rs` seams, so `overlay_hit.rs` now mainly keeps the
+    re-export surface explicit while overlay hit geometry retains focused unit coverage.
+  - Progress: viewport math helpers now also route viewport construction/clamp helpers and canvas
+    snap helpers through the private `ui/canvas/widget/view_math_viewport/viewport.rs` and
+    `ui/canvas/widget/view_math_viewport/snap.rs` seams, so `view_math_viewport.rs` now mainly
+    keeps the re-export surface explicit while viewport construction equivalence and snap behavior
+    retain focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
