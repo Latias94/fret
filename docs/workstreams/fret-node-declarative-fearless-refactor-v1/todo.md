@@ -1456,6 +1456,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/command_open_edge/reroute.rs`, and
     `ui/canvas/widget/command_open_conversion/overlay.rs` seams, so the remaining
     `command_open_*` roots now mainly keep façade forwarding explicit.
+  - Progress: context-menu activation dispatch now also routes command actions and target-specific
+    activation branches through the private `ui/canvas/widget/context_menu/activate/command.rs`
+    and `ui/canvas/widget/context_menu/activate/target.rs` seams, so
+    `context_menu/activate.rs` now mainly keeps the top-level dispatch surface explicit.
 
 ## M5 - Compatibility retained convergence
 

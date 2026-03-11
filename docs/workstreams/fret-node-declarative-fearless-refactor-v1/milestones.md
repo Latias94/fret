@@ -998,6 +998,10 @@ real editors.
   `ui/canvas/widget/command_open_edge/reroute.rs`, and
   `ui/canvas/widget/command_open_conversion/overlay.rs` seams, so the remaining `command_open_*`
   roots now mainly keep façade forwarding explicit.
+- context-menu activation dispatch now also routes command actions and target-specific activation
+  branches through the private `ui/canvas/widget/context_menu/activate/command.rs` and
+  `ui/canvas/widget/context_menu/activate/target.rs` seams, so `context_menu/activate.rs` now
+  mainly keeps the top-level dispatch surface explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
