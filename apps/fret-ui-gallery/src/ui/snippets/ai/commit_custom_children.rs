@@ -2,8 +2,7 @@ pub const SOURCE: &str = include_str!("commit_custom_children.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{Badge, BadgeVariant, typography};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -22,10 +21,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             ui_ai::CommitMetadata::new([
                 ui_ai::CommitHash::new(short_hash).into_element(cx),
                 ui_ai::CommitSeparator::default()
-                    .children([typography::muted(cx, "/")])
+                    .children([shadcn::raw::typography::muted(cx, "/")])
                     .into_element(cx),
                 ui_ai::CommitTimestamp::new(timestamp)
-                    .children([typography::muted(cx, "2 hours ago")])
+                    .children([shadcn::raw::typography::muted(cx, "2 hours ago")])
                     .into_element(cx),
             ])
             .into_element(cx),
@@ -42,8 +41,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             "docs/workstreams/ai-elements-port.md",
             ui_ai::CommitFileStatusKind::Added,
             Some(
-                Badge::new("NEW")
-                    .variant(BadgeVariant::Secondary)
+                shadcn::Badge::new("NEW")
+                    .variant(shadcn::BadgeVariant::Secondary)
                     .into_element(cx),
             ),
         ),
@@ -53,8 +52,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             "apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs",
             ui_ai::CommitFileStatusKind::Modified,
             Some(
-                Badge::new("DOCS")
-                    .variant(BadgeVariant::Outline)
+                shadcn::Badge::new("DOCS")
+                    .variant(shadcn::BadgeVariant::Outline)
                     .into_element(cx),
             ),
         ),

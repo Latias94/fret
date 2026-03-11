@@ -9,7 +9,7 @@ use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{facade as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -52,9 +52,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .get_model_cloned(&approval, Invalidation::Layout)
         .unwrap_or(None);
 
-    let request_btn = Button::new("Request approval")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let request_btn = shadcn::Button::new("Request approval")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-confirmation-requested-btn")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -72,7 +72,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let reject_btn = ui_ai::ConfirmationAction::new("Reject")
-        .variant(ButtonVariant::Outline)
+        .variant(shadcn::ButtonVariant::Outline)
         .test_id("ui-ai-confirmation-reject")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -92,7 +92,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let approve_btn = ui_ai::ConfirmationAction::new("Approve")
-        .variant(ButtonVariant::Default)
+        .variant(shadcn::ButtonVariant::Default)
         .test_id("ui-ai-confirmation-approve")
         .on_activate(Arc::new({
             let state = state.clone();

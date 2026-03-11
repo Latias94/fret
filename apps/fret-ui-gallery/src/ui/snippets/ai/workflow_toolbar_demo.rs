@@ -6,17 +6,17 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let toolbar = ui_ai::WorkflowToolbar::new([
-        fret_ui_shadcn::Button::new("Run")
+        shadcn::Button::new("Run")
             .test_id("ui-ai-workflow-toolbar-demo-run")
             .into_element(cx),
-        fret_ui_shadcn::Button::new("Stop")
+        shadcn::Button::new("Stop")
             .test_id("ui-ai-workflow-toolbar-demo-stop")
             .into_element(cx),
-        fret_ui_shadcn::Button::new("Inspect")
+        shadcn::Button::new("Inspect")
             .test_id("ui-ai-workflow-toolbar-demo-inspect")
             .into_element(cx),
     ])

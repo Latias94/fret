@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{ButtonSize, ButtonVariant, facade as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -22,11 +22,11 @@ fn state_button(
     label: &'static str,
 ) -> shadcn::Button {
     shadcn::Button::new(label)
-        .size(ButtonSize::Sm)
+        .size(shadcn::ButtonSize::Sm)
         .variant(if current_state == next_state {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .on_activate(Arc::new(move |host, action_cx, _reason| {
             let _ = host

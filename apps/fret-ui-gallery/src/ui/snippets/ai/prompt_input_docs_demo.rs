@@ -10,11 +10,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{
-    ButtonVariant, Radius, Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerSize,
-    SelectValue,
-};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -146,15 +142,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .panel_test_id("ui-gallery-ai-prompt-input-docs-search-tooltip-panel"),
                 )
                 .variant(if searching {
-                    ButtonVariant::Default
+                    shadcn::ButtonVariant::Default
                 } else {
-                    ButtonVariant::Ghost
+                    shadcn::ButtonVariant::Ghost
                 })
                 .test_id("ui-gallery-ai-prompt-input-docs-search")
                 .on_activate(toggle_search)
                 .into_element(cx);
 
-            let select = Select::new(model_value.clone(), model_open.clone())
+            let select = shadcn::Select::new(model_value.clone(), model_open.clone())
                 .trigger_test_id("ui-gallery-ai-prompt-input-docs-model-trigger")
                 .on_value_change({
                     let model_value = model_value.clone();
@@ -164,12 +160,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 })
                 .into_element_parts(
                     cx,
-                    |_cx| SelectTrigger::new().size(SelectTriggerSize::Sm),
-                    |_cx| SelectValue::new().placeholder("Model"),
+                    |_cx| shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm),
+                    |_cx| shadcn::SelectValue::new().placeholder("Model"),
                     |_cx| {
-                        SelectContent::new().with_entries([
-                            SelectItem::new("gpt-4o", "GPT-4o").into(),
-                            SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
+                        shadcn::SelectContent::new().with_entries([
+                            shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
+                            shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus")
+                                .into(),
                         ])
                     },
                 );

@@ -5,8 +5,7 @@ use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -28,9 +27,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     };
 
-    let add = Button::new("Add referenced source")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let add = shadcn::Button::new("Add referenced source")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-gallery-ai-prompt-input-referenced-sources-add")
         .on_activate(Arc::new({
             let sources = sources.clone();

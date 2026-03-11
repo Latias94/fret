@@ -7,7 +7,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -74,10 +74,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx),
             ui_ai::ConfirmationActions::new([
                 ui_ai::ConfirmationAction::new("Reject")
-                    .variant(ButtonVariant::Outline)
+                    .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx),
                 ui_ai::ConfirmationAction::new("Approve")
-                    .variant(ButtonVariant::Default)
+                    .variant(shadcn::ButtonVariant::Default)
                     .into_element(cx),
             ])
             .into_element(cx),

@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-use fret_ui_shadcn::{ButtonSize, ButtonVariant, Radius, facade as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -30,11 +30,11 @@ fn state_button<H: UiHost + 'static>(
 ) -> shadcn::Button {
     shadcn::Button::new("")
         .children([decl_icon::icon(cx, IconId::new_static(icon))])
-        .size(ButtonSize::IconSm)
+        .size(shadcn::ButtonSize::IconSm)
         .variant(if current_state == state {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .a11y_label(label)
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
@@ -52,11 +52,11 @@ fn variant_button(
     variant: ui_ai::PersonaVariant,
 ) -> shadcn::Button {
     shadcn::Button::new(variant.label())
-        .size(ButtonSize::Sm)
+        .size(shadcn::ButtonSize::Sm)
         .variant(if current_variant == variant {
-            ButtonVariant::Default
+            shadcn::ButtonVariant::Default
         } else {
-            ButtonVariant::Outline
+            shadcn::ButtonVariant::Outline
         })
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
         .on_activate(Arc::new(move |host, action_cx, _reason| {

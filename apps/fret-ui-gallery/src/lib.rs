@@ -39,7 +39,10 @@ mod authoring_surface_policy_tests {
 
     fn gallery_rust_sources() -> Vec<PathBuf> {
         let mut paths = Vec::new();
-        collect_rust_sources(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut paths);
+        collect_rust_sources(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut paths,
+        );
         paths.sort();
         paths
     }
@@ -120,8 +123,10 @@ mod authoring_surface_policy_tests {
 
                     let segment = &after[..segment_len];
                     let is_module_path = after[segment_len..].starts_with("::");
-                    let starts_with_lowercase =
-                        segment.chars().next().is_some_and(|ch| ch.is_ascii_lowercase());
+                    let starts_with_lowercase = segment
+                        .chars()
+                        .next()
+                        .is_some_and(|ch| ch.is_ascii_lowercase());
                     if is_module_path
                         && starts_with_lowercase
                         && !matches!(segment, "raw" | "themes" | "app")
@@ -134,6 +139,86 @@ mod authoring_surface_policy_tests {
                         );
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn gallery_ai_snippet_batch_prefers_curated_shadcn_facade_imports() {
+        let src_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let curated_paths = [
+            "ui/snippets/ai/audio_player_demo.rs",
+            "ui/snippets/ai/canvas_world_layer_spike.rs",
+            "ui/snippets/ai/checkpoint_demo.rs",
+            "ui/snippets/ai/code_block_demo.rs",
+            "ui/snippets/ai/commit_custom_children.rs",
+            "ui/snippets/ai/confirmation_demo.rs",
+            "ui/snippets/ai/confirmation_request.rs",
+            "ui/snippets/ai/model_selector_demo.rs",
+            "ui/snippets/ai/persona_demo.rs",
+            "ui/snippets/ai/persona_state_management.rs",
+            "ui/snippets/ai/plan_demo.rs",
+            "ui/snippets/ai/prompt_input_docs_demo.rs",
+            "ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+            "ui/snippets/ai/reasoning_demo.rs",
+            "ui/snippets/ai/speech_input_demo.rs",
+            "ui/snippets/ai/task_demo.rs",
+            "ui/snippets/ai/transcript_torture.rs",
+            "ui/snippets/ai/workflow_canvas_demo.rs",
+            "ui/snippets/ai/workflow_toolbar_demo.rs",
+        ];
+
+        for relative_path in curated_paths {
+            let path = src_root.join(relative_path);
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert!(
+                source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+                "{} should import the curated shadcn facade",
+                path.display()
+            );
+
+            for line in source.lines() {
+                if !line.contains("fret_ui_shadcn::") {
+                    continue;
+                }
+
+                assert_eq!(
+                    line.trim(),
+                    "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
+                    "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                    path.display(),
+                    line.trim()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn gallery_ai_snippet_tree_avoids_direct_shadcn_root_paths() {
+        let ai_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ui/snippets/ai");
+        let mut paths = Vec::new();
+        collect_rust_sources(&ai_root, &mut paths);
+        paths.sort();
+
+        for path in paths {
+            let source = std::fs::read_to_string(&path).unwrap();
+            for (line_idx, line) in source.lines().enumerate() {
+                if !line.contains("fret_ui_shadcn::") {
+                    continue;
+                }
+
+                let trimmed = line.trim();
+                let allowed_import = trimmed == "use fret_ui_shadcn::prelude::*;"
+                    || trimmed == "use fret_ui_shadcn::{facade as shadcn, prelude::*};"
+                    || (trimmed.starts_with("use fret_ui_shadcn::prelude::{")
+                        && trimmed.ends_with("};"));
+                assert!(
+                    allowed_import,
+                    "{}:{} reintroduced a direct fret_ui_shadcn root path outside allowed imports: {}",
+                    path.display(),
+                    line_idx + 1,
+                    trimmed
+                );
             }
         }
     }

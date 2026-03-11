@@ -12,7 +12,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -106,7 +106,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             vec![
                 cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
-                fret_ui_shadcn::Button::new(format!("Append {append_batch} messages"))
+                shadcn::Button::new(format!("Append {append_batch} messages"))
                     .test_id("ui-gallery-ai-transcript-append")
                     .on_activate(append_messages_on_activate)
                     .into_element(cx),

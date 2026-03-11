@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Kbd, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct DemoModels {
@@ -137,12 +137,12 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                 ui_ai::PlanFooter::new([
                     ui::h_flex(move |cx| {
                         vec![ui_ai::PlanAction::new([
-                            Button::new("Build")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Build")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
                                 .children([
                                     ui::text("Build").into_element(cx),
-                                    Kbd::new("⌘↩").into_element(cx),
+                                    shadcn::Kbd::new("⌘↩").into_element(cx),
                                 ])
                                 .a11y_label("Build")
                                 .into_element(cx),
@@ -161,9 +161,9 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
         vec![
             cx.text("Plan (AI Elements)"),
             cx.text("Toggle the chevron button to expand/collapse."),
-            Button::new("Toggle streaming")
-                .variant(ButtonVariant::Secondary)
-                .size(ButtonSize::Sm)
+            shadcn::Button::new("Toggle streaming")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .toggle_model(streaming.clone())
                 .into_element(cx),
             body,

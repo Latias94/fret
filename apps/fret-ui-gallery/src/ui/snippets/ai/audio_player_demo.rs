@@ -7,7 +7,7 @@ use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -113,20 +113,20 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .refine_style(ChromeRefinement::default().p(Space::N3))
         .into_element_with_children(cx, move |cx, _controller| {
             let controls = ui_ai::AudioPlayerControlBar::new([
-                fret_ui_shadcn::ButtonGroupItem::from(
+                shadcn::ButtonGroupItem::from(
                     ui_ai::AudioPlayerPlayButton::new()
                         .test_id("ui-ai-audio-player-demo-play")
                         .into_element(cx),
                 ),
-                fret_ui_shadcn::ButtonGroupItem::from(
+                shadcn::ButtonGroupItem::from(
                     ui_ai::AudioPlayerSeekBackwardButton::new().into_element(cx),
                 ),
-                fret_ui_shadcn::ButtonGroupItem::from(
+                shadcn::ButtonGroupItem::from(
                     ui_ai::AudioPlayerSeekForwardButton::new()
                         .test_id("ui-ai-audio-player-demo-seek-forward")
                         .into_element(cx),
                 ),
-                fret_ui_shadcn::ButtonGroupItem::from(
+                shadcn::ButtonGroupItem::from(
                     ui_ai::AudioPlayerMuteButton::new()
                         .test_id("ui-ai-audio-player-demo-mute")
                         .into_element(cx),

@@ -6,7 +6,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -29,9 +29,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .get_model_copied(&streaming, Invalidation::Layout)
         .unwrap_or(false);
 
-    let start = Button::new("Start streaming")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let start = shadcn::Button::new("Start streaming")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-start-streaming")
         .on_activate(Arc::new({
             let streaming = streaming.clone();
@@ -42,9 +42,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }))
         .into_element(cx);
 
-    let stop = Button::new("Stop streaming")
-        .variant(ButtonVariant::Secondary)
-        .size(ButtonSize::Sm)
+    let stop = shadcn::Button::new("Stop streaming")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-stop-streaming")
         .on_activate(Arc::new({
             let streaming = streaming.clone();

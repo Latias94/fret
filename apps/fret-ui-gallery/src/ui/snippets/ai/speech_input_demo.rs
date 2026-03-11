@@ -16,7 +16,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
-use fret_ui_shadcn::{ButtonSize, ButtonVariant, Card, CardContent, CardSize, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -267,8 +267,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let speech_input = ui_ai::SpeechInput::new()
                     .listening_model(listening.clone())
                     .processing_model(processing.clone())
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Icon)
                     .test_id("ui-ai-speech-input-demo-btn")
                     .on_listening_change(Arc::new({
                         let listening = listening.clone();
@@ -366,10 +366,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                    let content = CardContent::new([content]).into_element(cx);
+                    let content = shadcn::CardContent::new([content]).into_element(cx);
 
-                    Card::new([content])
-                        .size(CardSize::Sm)
+                    shadcn::Card::new([content])
+                        .size(shadcn::CardSize::Sm)
                         .refine_style(ChromeRefinement::default().shadow_none())
                         .refine_layout(
                             LayoutRefinement::default()

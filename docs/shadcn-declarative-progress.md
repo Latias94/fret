@@ -154,6 +154,8 @@ Guidelines:
 
 - Prefer `ui()` for all authoring (chrome + layout + debug helpers).
 - Prefer composing shadcn components over introducing new wrapper nodes.
+- First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
+  `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

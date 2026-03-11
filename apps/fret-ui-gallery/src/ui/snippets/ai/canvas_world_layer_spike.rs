@@ -6,8 +6,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::facade as shadcn;
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
@@ -25,8 +24,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_ui::action::OnActivate;
     use fret_ui::canvas::CanvasPainter;
     use fret_ui::element::{CanvasCachePolicy, Length, PointerRegionProps, SemanticsDecoration};
-    use fret_ui_shadcn::ButtonVariant;
-
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct ConnectOverlayDragState {
         pointer_id: fret_core::PointerId,
@@ -605,7 +602,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         ui_ai::WorkflowNodeFooter::new([shadcn::Button::new("Click node")
                             .test_id("ui-ai-cwl-node-click")
                             .on_activate(on_node_activate.clone())
-                            .variant(ButtonVariant::Secondary)
+                            .variant(shadcn::ButtonVariant::Secondary)
                             .into_element(cx)])
                         .into_element(cx),
                     ])
@@ -1444,13 +1441,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let mode_scale = shadcn::Button::new("Mode: Scale-with-zoom")
                 .test_id("ui-ai-cwl-mode-scale-with-zoom")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_mode_scale)
                 .into_element(cx);
 
             let mode_semantic = shadcn::Button::new("Mode: Semantic zoom")
                 .test_id("ui-ai-cwl-mode-semantic-zoom")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_mode_semantic)
                 .into_element(cx);
 
@@ -1466,13 +1463,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             });
             let commit_connection = shadcn::Button::new("Commit connection")
                 .test_id("ui-ai-cwl-commit-connection")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_commit_connection)
                 .into_element(cx);
 
             let overlay = shadcn::Button::new(format!("Overlay clicks: {overlay_clicks_value}"))
                 .test_id("ui-ai-cwl-overlay-click")
-                .variant(ButtonVariant::Outline)
+                .variant(shadcn::ButtonVariant::Outline)
                 .on_activate(on_overlay_activate)
                 .into_element(cx);
 
@@ -1622,7 +1619,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let reset = shadcn::Button::new("Reset")
                 .test_id("ui-ai-cwl-reset")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_reset)
                 .into_element(cx);
 
@@ -1652,7 +1649,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let fit_view = shadcn::Button::new("Fit view")
                 .test_id("ui-ai-cwl-fit-view")
-                .variant(ButtonVariant::Secondary)
+                .variant(shadcn::ButtonVariant::Secondary)
                 .on_activate(on_fit_view)
                 .into_element(cx);
 

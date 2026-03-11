@@ -116,7 +116,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         ui_ai::TaskItem::new([
                             cx.text(text),
                             ui_ai::TaskItemFile::new([
-                                fret_ui_shadcn::icon::icon_with(
+                                icon::icon_with(
                                     cx,
                                     fret_icons::IconId::new_static(icon),
                                     Some(Px(16.0)),
@@ -163,7 +163,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .min_w_0()
         .max_w(Px(896.0))
         .h_px(Px(600.0));
-    let mut props = fret_ui_shadcn::decl_style::container_props(theme, chrome, layout);
+    let mut props = decl_style::container_props(theme, chrome, layout);
     props.border_color = Some(theme.color_token("border"));
     props.background = Some(theme.color_token("background"));
 

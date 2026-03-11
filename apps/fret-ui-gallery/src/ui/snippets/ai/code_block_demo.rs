@@ -7,10 +7,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use fret_ui_shadcn::{
-    Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerSize, SelectValue,
-};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -83,7 +80,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ),
     };
 
-    let language_select = Select::new(language.clone(), language_open.clone())
+    let language_select = shadcn::Select::new(language.clone(), language_open.clone())
         .trigger_test_id("ui-ai-code-block-language-trigger")
         .on_value_change({
             let language = language.clone();
@@ -95,8 +92,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element_parts(
             cx,
             |_cx| {
-                SelectTrigger::new()
-                    .size(SelectTriggerSize::Sm)
+                shadcn::SelectTrigger::new()
+                    .size(shadcn::SelectTriggerSize::Sm)
                     .refine_style(
                         ChromeRefinement::default()
                             .border_width(Px(0.0))
@@ -105,19 +102,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             .py(Space::N0p5),
                     )
             },
-            |_cx| SelectValue::new().placeholder("Language"),
+            |_cx| shadcn::SelectValue::new().placeholder("Language"),
             |_cx| {
-                SelectContent::new().with_entries([
-                    SelectItem::new("typescript", "TypeScript")
+                shadcn::SelectContent::new().with_entries([
+                    shadcn::SelectItem::new("typescript", "TypeScript")
                         .test_id("ui-ai-code-block-language-item-typescript")
                         .into(),
-                    SelectItem::new("python", "Python")
+                    shadcn::SelectItem::new("python", "Python")
                         .test_id("ui-ai-code-block-language-item-python")
                         .into(),
-                    SelectItem::new("rust", "Rust")
+                    shadcn::SelectItem::new("rust", "Rust")
                         .test_id("ui-ai-code-block-language-item-rust")
                         .into(),
-                    SelectItem::new("go", "Go")
+                    shadcn::SelectItem::new("go", "Go")
                         .test_id("ui-ai-code-block-language-item-go")
                         .into(),
                 ])

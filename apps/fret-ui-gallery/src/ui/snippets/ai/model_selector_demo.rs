@@ -168,7 +168,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
                 let name = ui_ai::ModelSelectorName::new(model.name).into_element(cx);
 
-                let check = fret_ui_shadcn::icon::icon_with(
+                let check = icon::icon_with(
                     cx,
                     fret_icons::ids::ui::CHECK,
                     Some(fret_core::Px(16.0)),
