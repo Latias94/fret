@@ -39,6 +39,10 @@ Current status on 2026-03-11:
 - `fret-router-ui` now exposes typed-route authoring helpers on top of the codec contract.
 - The first codec-based migration target is landed in
   `apps/fret-cookbook/examples/router_basics.rs`.
+- `apps/fret-ui-gallery` now also routes its gallery page URL encode/decode through
+  `UiGalleryRouteCodec`, including canonical page navigation and legacy `start_page` fallback.
+- `apps/fret-demo-web/src/wasm.rs` now resolves demo selection through a codec-backed helper for
+  the canonical `?demo=...` entry path while retaining legacy hash-token fallback compatibility.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 

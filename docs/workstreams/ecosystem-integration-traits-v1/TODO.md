@@ -99,8 +99,12 @@ surface.
 - [x] Pick one in-tree app as the first codec-based migration target.
   - Landed on 2026-03-11: `apps/fret-cookbook/examples/router_basics.rs` now teaches an
     app-defined `RouteCodec` plus typed-route router link helpers.
-- [ ] Remove remaining stringly route construction in official examples after the typed route path
+- [x] Remove remaining stringly route construction in official examples after the typed route path
   is ready.
+  - Landed on 2026-03-11: `apps/fret-cookbook/examples/router_basics.rs`,
+    `apps/fret-ui-gallery`, and `apps/fret-demo-web/src/wasm.rs` now route official first-party
+    entry paths through codec-backed helpers; remaining string parsing is compatibility-only
+    fallback logic.
 - [x] Keep browser/history adapters independent from codec ownership.
   - Current implementation keeps `RouteCodec` in `fret-router` core while history remains owned by
     `MemoryHistory` / web adapters and is not referenced by the codec contract.

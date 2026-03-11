@@ -120,6 +120,16 @@ Current recommendation:
 - router UI helpers may consume a codec for typed link/navigation authoring without changing the
   route-tree route ID type.
 
+Current first-party adoption:
+
+- `apps/fret-cookbook/examples/router_basics.rs` teaches app-authored typed routes plus typed
+  router link helpers.
+- `apps/fret-ui-gallery` now centralizes page-route encode/decode in `UiGalleryRouteCodec`, keeping
+  canonical `/gallery?page=...&source=nav` output, passthrough query preservation, and legacy
+  `start_page` / hash fallback in one place.
+- `apps/fret-demo-web/src/wasm.rs` now uses a codec-backed demo selection helper for the canonical
+  `?demo=...` route while keeping legacy hash-token compatibility as fallback-only behavior.
+
 Navigation flow:
 
 1. intent (`navigate`, `back`, command)
@@ -138,9 +148,12 @@ Navigation flow:
 
 Priority migration candidates:
 
-1. `apps/fret-demo-web/src/wasm.rs` (demo selection URL parsing)
-2. `apps/fret-ui-gallery/src/spec.rs` (page/start_page URL parsing)
-3. `apps/fret-ui-gallery` command paths that currently construct route-like strings
+1. `apps/fret-demo-web/src/wasm.rs` (demo selection URL parsing; landed on 2026-03-11 via the
+   demo route codec in `apps/fret-demo-web/src/wasm.rs`)
+2. `apps/fret-ui-gallery/src/spec.rs` (page/start_page URL parsing; landed on 2026-03-11 via
+   `UiGalleryRouteCodec`)
+3. `apps/fret-ui-gallery` command paths that currently construct route-like strings (landed on
+   2026-03-11 via codec-backed page route helpers in `apps/fret-ui-gallery/src/driver/router.rs`)
 
 ## API design principles
 

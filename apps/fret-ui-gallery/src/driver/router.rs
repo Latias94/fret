@@ -1,12 +1,12 @@
 use fret::router::{
-    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
-    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
-    Router, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchValidationMode,
-    collect_invalidated_namespaces, prefetch_intent_query_key,
+    collect_invalidated_namespaces, prefetch_intent_query_key, NamespaceInvalidationRule,
+    NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
+    RouteSearchTable, RouteSearchValidationFailure, RouteTree, Router, RouterUpdate,
+    RouterUpdateWithPrefetchIntents, SearchValidationMode,
 };
 use fret_app::{App, CommandId};
 use fret_core::AppWindowId;
-use fret_query::{QueryPolicy, with_query_client};
+use fret_query::{with_query_client, QueryPolicy};
 use fret_runtime::WindowCommandEnabledService;
 use std::sync::Arc;
 
@@ -33,27 +33,21 @@ struct UiGalleryPagePrefetchSeed {
 }
 
 fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
-    // Preserve any non-gallery query params (e.g. devtools WS flags) when canonicalizing navigation.
-    let mut location = from.clone();
-    location.path = "/gallery".to_string();
-    location.set_query_value("page", Some(page.to_string()));
-    location.set_query_value("source", Some("nav".to_string()));
-    location
+    // Preserve any non-gallery query params (e.g. devtools WS flags) when canonicalizing
+    // navigation, but drop gallery-owned legacy keys as soon as we emit the canonical route.
+    ui_gallery_route_location_for_page(from, page)
 }
 
 pub(super) fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
-    let page = location.query_value("page")?;
-    page_spec(page).is_some().then_some(Arc::<str>::from(page))
+    ui_gallery_page_from_route_location(location)
 }
 
 pub(super) fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
     let tree = Arc::new(RouteTree::new(
         RouteNode::new(UiGalleryRouteId::Root, "/")
             .expect("root route should build")
-            .with_children(vec![
-                RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
-                    .expect("gallery route should build"),
-            ]),
+            .with_children(vec![RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
+                .expect("gallery route should build")]),
     ));
 
     let search_table = Arc::new(RouteSearchTable::new());

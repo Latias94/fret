@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
+use fret::router::{RouteCodec, RouteLocation};
 use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
@@ -28,6 +29,79 @@ pub(crate) const BISECT_DISABLE_CARD_SECTION_COMPOSITIONS: u32 = 1 << 15;
 pub(crate) const BISECT_DISABLE_CARD_SECTION_NOTES: u32 = 1 << 16;
 pub(crate) const BISECT_DISABLE_CARD_CODE_TABS: u32 = 1 << 17;
 pub(crate) const BISECT_DISABLE_CARD_PAGE_INTRO: u32 = 1 << 18;
+
+const UI_GALLERY_ROUTE_PATH: &str = "/gallery";
+const UI_GALLERY_QUERY_PAGE: &str = "page";
+const UI_GALLERY_QUERY_SOURCE: &str = "source";
+const UI_GALLERY_QUERY_START_PAGE: &str = "start_page";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum UiGalleryAppRoute {
+    Gallery { page: Arc<str> },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum UiGalleryRouteDecodeError {
+    MissingPage,
+    UnknownPage,
+}
+
+pub(crate) struct UiGalleryRouteCodec;
+
+pub(crate) const UI_GALLERY_ROUTE_CODEC: UiGalleryRouteCodec = UiGalleryRouteCodec;
+
+impl RouteCodec for UiGalleryRouteCodec {
+    type Route = UiGalleryAppRoute;
+    type Error = UiGalleryRouteDecodeError;
+
+    fn encode(&self, route: &Self::Route) -> RouteLocation {
+        match route {
+            UiGalleryAppRoute::Gallery { page } => RouteLocation::from_path(UI_GALLERY_ROUTE_PATH)
+                .with_query_value(UI_GALLERY_QUERY_PAGE, Some(page.to_string()))
+                .with_query_value(UI_GALLERY_QUERY_SOURCE, Some("nav".to_string())),
+        }
+    }
+
+    fn decode(&self, location: &RouteLocation) -> Result<Self::Route, Self::Error> {
+        let page = location
+            .query_value(UI_GALLERY_QUERY_PAGE)
+            .or_else(|| location.query_value(UI_GALLERY_QUERY_START_PAGE))
+            .ok_or(UiGalleryRouteDecodeError::MissingPage)?;
+        let page =
+            ui_gallery_start_page_from_id(page).ok_or(UiGalleryRouteDecodeError::UnknownPage)?;
+        Ok(UiGalleryAppRoute::Gallery { page })
+    }
+}
+
+fn ui_gallery_route_owns_query_key(key: &str) -> bool {
+    matches!(
+        key,
+        UI_GALLERY_QUERY_PAGE | UI_GALLERY_QUERY_SOURCE | UI_GALLERY_QUERY_START_PAGE
+    )
+}
+
+pub(crate) fn ui_gallery_page_from_route_location(location: &RouteLocation) -> Option<Arc<str>> {
+    match UI_GALLERY_ROUTE_CODEC.decode_canonical(location).ok()? {
+        UiGalleryAppRoute::Gallery { page } => Some(page),
+    }
+}
+
+pub(crate) fn ui_gallery_route_location_for_page(
+    from: &RouteLocation,
+    page: &Arc<str>,
+) -> RouteLocation {
+    let mut location =
+        UI_GALLERY_ROUTE_CODEC.encode_canonical(&UiGalleryAppRoute::Gallery { page: page.clone() });
+    let from = from.canonicalized();
+    location.query.extend(
+        from.query
+            .into_iter()
+            .filter(|pair| !ui_gallery_route_owns_query_key(pair.key.as_str())),
+    );
+    location.canonicalize_query();
+    location.fragment = from.fragment;
+    location
+}
 
 pub(crate) fn ui_gallery_bisect_flags() -> u32 {
     static FLAGS: OnceLock<u32> = OnceLock::new();
@@ -73,24 +147,79 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    let location = fret::router::core::web::current_location()?;
-
+#[cfg(any(target_arch = "wasm32", test))]
+fn ui_gallery_legacy_start_page_from_search_or_hash(search: &str, hash: &str) -> Option<Arc<str>> {
     let id = fret::router::core::first_query_value_from_search_or_hash(
-        &location.search,
-        &location.hash,
-        "page",
+        search,
+        hash,
+        UI_GALLERY_QUERY_PAGE,
     )
     .or_else(|| {
         fret::router::core::first_query_value_from_search_or_hash(
-            &location.search,
-            &location.hash,
-            "start_page",
+            search,
+            hash,
+            UI_GALLERY_QUERY_START_PAGE,
         )
     })?;
-
     ui_gallery_start_page_from_id(&id)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
+    if let Some(location) = fret::router::core::web::current_route_location() {
+        if let Some(page) = ui_gallery_page_from_route_location(&location) {
+            return Some(page);
+        }
+    }
+
+    let location = fret::router::core::web::current_location()?;
+    ui_gallery_legacy_start_page_from_search_or_hash(&location.search, &location.hash)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ui_gallery_route_codec_encodes_canonical_gallery_page_href() {
+        let href = UI_GALLERY_ROUTE_CODEC.href_for(&UiGalleryAppRoute::Gallery {
+            page: Arc::from(PAGE_BUTTON_GROUP),
+        });
+
+        assert_eq!(href, "/gallery?page=button_group&source=nav");
+    }
+
+    #[test]
+    fn ui_gallery_page_from_route_location_accepts_legacy_query_aliases() {
+        let page =
+            ui_gallery_page_from_route_location(&RouteLocation::parse("/legacy?start_page=button"))
+                .expect("legacy gallery page should decode");
+
+        assert_eq!(page.as_ref(), PAGE_BUTTON);
+    }
+
+    #[test]
+    fn ui_gallery_route_location_for_page_preserves_passthrough_query_and_fragment() {
+        let from = RouteLocation::parse(
+            "/legacy?source=legacy&ws=1&mode=dev&start_page=intro&page=dialog#sheet 1",
+        );
+
+        let next = ui_gallery_route_location_for_page(&from, &Arc::from(PAGE_BUTTON_GROUP));
+
+        assert_eq!(
+            next.to_url(),
+            "/gallery?mode=dev&page=button_group&source=nav&ws=1#sheet%201"
+        );
+    }
+
+    #[test]
+    fn ui_gallery_legacy_start_page_from_search_or_hash_supports_hash_queries() {
+        let page =
+            ui_gallery_legacy_start_page_from_search_or_hash("", "#/gallery?page=button_group")
+                .expect("hash route query should resolve a gallery page");
+
+        assert_eq!(page.as_ref(), PAGE_BUTTON_GROUP);
+    }
 }
 
 pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";

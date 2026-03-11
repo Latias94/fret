@@ -18,7 +18,7 @@ It answers four concrete questions:
 | --- | --- | --- | --- | --- |
 | `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
 | `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | In progress |
-| `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | In progress |
+| `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Migrated |
 | `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | In progress |
 | `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
 
@@ -119,6 +119,13 @@ Target rule:
 - route typing does not leak string parsing through app code,
 - app-authored codec types own typed route translation, while `RouteTree` / `Router` keep route ID
   matching and history ownership independent.
+
+Current first-party posture:
+
+- `apps/fret-cookbook/examples/router_basics.rs` teaches the default typed-route path.
+- `apps/fret-ui-gallery` uses `UiGalleryRouteCodec` for page routing and legacy URL normalization.
+- `apps/fret-demo-web/src/wasm.rs` uses a codec-backed demo selection helper for the canonical web
+  entry path.
 
 ### 3.4 Query / selector ecosystems
 
