@@ -1031,6 +1031,8 @@ mod tests {
     use fret_ui_kit::ui;
     use std::sync::Arc;
 
+    const LIB_RS: &str = include_str!("lib.rs");
+
     fn action_cx(window: fret_core::AppWindowId) -> ActionCx {
         ActionCx {
             window,
@@ -1104,6 +1106,36 @@ mod tests {
     #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
     enum CompileRoute {
         Home,
+    }
+
+    #[test]
+    fn crate_docs_keep_router_ui_positioned_as_thin_adoption_layer() {
+        assert!(LIB_RS.contains("This crate intentionally provides a thin layer:"));
+        assert!(LIB_RS.contains(
+            "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
+        ));
+    }
+
+    #[test]
+    fn router_ui_surface_does_not_grow_a_second_app_runtime() {
+        let public_surface = LIB_RS
+            .split("#[cfg(test)]")
+            .next()
+            .expect("router-ui source should contain a test module split");
+
+        assert!(public_surface.contains("pub fn register_router_commands("));
+        assert!(public_surface.contains("pub struct RouterUiStore"));
+        assert!(public_surface.contains("pub struct RouterOutlet"));
+        assert!(public_surface.contains("pub fn router_link<"));
+        assert!(public_surface.contains("pub fn router_outlet<"));
+
+        assert!(!public_surface.contains("pub fn install_app("));
+        assert!(!public_surface.contains("pub struct RouterApp"));
+        assert!(!public_surface.contains("pub trait RouterApp"));
+        assert!(!public_surface.contains("FretApp::"));
+        assert!(!public_surface.contains("AppUi<"));
+        assert!(!public_surface.contains("ViewCx<"));
+        assert!(!public_surface.contains("Plugin"));
     }
 
     #[test]

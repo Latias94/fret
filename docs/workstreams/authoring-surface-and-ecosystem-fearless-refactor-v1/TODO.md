@@ -135,10 +135,10 @@ Companion docs:
     longer fall back to raw `use_query*`.
   - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
   - [ ] Audit remaining advanced/component call sites and keep them explicit.
-- [ ] Migrate `fret-router` to the new explicit app/advanced extension seams.
+- [x] Migrate `fret-router` to the new explicit app/advanced extension seams.
   - [x] Add an explicit `fret::router` facade module behind a `fret/router` feature.
   - [x] Move the cookbook router example to the `fret::router::*` extension seam.
-  - [ ] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
+  - [x] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
   - [x] Audit remaining direct imports of `fret-router` / `fret-router-ui` in first-party app-facing examples and docs.
 - [ ] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
 
@@ -208,6 +208,8 @@ Companion docs:
   - [x] Shadcn docs/examples now gate the curated `shadcn::app::*` seam, explicit advanced hooks,
     and the documented raw escape-hatch lanes.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
+  - [x] `fret-router-ui` now gates its thin adoption-layer posture and forbids growing a second
+    app runtime surface.
   - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
 - [ ] Keep layering checks green.
 
