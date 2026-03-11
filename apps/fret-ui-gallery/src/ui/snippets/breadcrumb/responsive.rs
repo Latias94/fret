@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("responsive.rs");
 // region: example
 use fret_app::App;
 use fret_ui::Invalidation;
-use fret_ui_shadcn::breadcrumb::primitives as bc;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
 const ITEMS_TO_DISPLAY: usize = 3;

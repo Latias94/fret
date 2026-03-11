@@ -267,4 +267,46 @@ mod authoring_surface_policy_tests {
             }
         }
     }
+
+    #[test]
+    fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
+        let src_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let curated_paths = [
+            "ui/snippets/breadcrumb/demo.rs",
+            "ui/snippets/breadcrumb/dropdown.rs",
+            "ui/snippets/breadcrumb/link_component.rs",
+            "ui/snippets/breadcrumb/responsive.rs",
+            "ui/snippets/breadcrumb/rtl.rs",
+            "ui/snippets/breadcrumb/usage.rs",
+        ];
+
+        for relative_path in curated_paths {
+            let path = src_root.join(relative_path);
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert!(
+                source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+                "{} should import the curated shadcn facade",
+                path.display()
+            );
+            assert!(
+                source.contains("use shadcn::raw::breadcrumb::primitives as bc;"),
+                "{} should use the explicit raw breadcrumb primitive escape hatch",
+                path.display()
+            );
+
+            for line in source.lines() {
+                if !line.contains("fret_ui_shadcn::") {
+                    continue;
+                }
+
+                assert_eq!(
+                    line.trim(),
+                    "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
+                    "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                    path.display(),
+                    line.trim()
+                );
+            }
+        }
+    }
 }

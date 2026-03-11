@@ -1,8 +1,8 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret_ui_shadcn::breadcrumb::primitives as bc;
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::breadcrumb::primitives as bc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
