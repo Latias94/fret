@@ -271,7 +271,7 @@ Target rule:
 
 | Crate category | Target integration model | Notes |
 | --- | --- | --- |
-| design-system kit (`fret-ui-shadcn`, future kits) | component surface + optional explicit app integration module (`shadcn::app`) + explicit theme/raw seams (`shadcn::themes`, `shadcn::raw`) | recipe crates must not define a competing app runtime or leak their full crate root onto the default app path |
+| design-system kit (`fret-ui-shadcn`, future kits) | component surface + optional explicit app integration module (`shadcn::app`) + explicit advanced/theme/raw seams (`fret_ui_shadcn::advanced`, `shadcn::themes`, `shadcn::raw`) | recipe crates must not define a competing app runtime or leak their full crate root onto the default app path |
 | docking | explicit `fret::docking` extension module over dock core contracts + `fret-docking` UI/runtime adoption | keeps docking policy powerful without leaking runner ideas into the app default path |
 | selector/query | grouped app-surface extension traits | first-party ecosystems must use the same seams expected of third parties |
 | router | explicit app-level extension module (`fret::router`) over router core + thin UI adoption | keeps routing opt-in and visible without leaking it into `fret::app::prelude::*` |
@@ -284,6 +284,8 @@ Direct crate usage rule for first-party recipe crates:
 - official examples/docs should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
 - common component names stay on `shadcn::*`
 - app-level setup stays on `shadcn::app::*`
+- environment / `UiServices` hooks stay on `fret_ui_shadcn::advanced::*` (or
+  `fret::shadcn::raw::advanced::*` when intentionally exiting the curated `fret` facade)
 - theme presets stay on `shadcn::themes::*`
 - full crate-root escape hatches must be explicit via `shadcn::raw::*`
 

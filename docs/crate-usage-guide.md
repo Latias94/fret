@@ -275,10 +275,13 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
   `shadcn::themes::apply_shadcn_new_york(...)` for an explicit preset, or enable
   `fret-ui-shadcn/app-integration` and call `shadcn::app::install(...)` for the golden-path
-  default. Only drop to `shadcn::raw::*` when you intentionally need the full crate root.
+  default. For environment / `UiServices`-boundary hooks, stay explicit with
+  `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
+  Only drop to `shadcn::raw::*` when you intentionally need the full crate root.
 - Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
   `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
-  full uncurated `fret_ui_shadcn` surface.
+  full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also carries advanced
+  service hooks at `fret::shadcn::raw::advanced::*`.
 
 **Tables vs grids (naming and intent):**
 

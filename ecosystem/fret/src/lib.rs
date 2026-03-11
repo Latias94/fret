@@ -55,7 +55,8 @@
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
-//!   curated default design-system surface plus explicit escape hatches
+//!   curated default design-system surface; advanced environment / `UiServices` hooks stay on
+//!   `fret::shadcn::raw::advanced::*`
 //! - use `fret::integration::InstallIntoApp` for reusable app-install bundles; small app-local
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing plain installer functions to `.setup(...)`
@@ -1388,6 +1389,11 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/examples/todo-app-golden-path.md");
     const AUTHORING_GOLDEN_PATH_V2: &str =
         include_str!("../../../docs/authoring-golden-path-v2.md");
+    const SHADCN_DECLARATIVE_PROGRESS: &str =
+        include_str!("../../../docs/shadcn-declarative-progress.md");
+    const AUTHORING_SURFACE_TARGET_INTERFACE_STATE: &str = include_str!(
+        "../../../docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md"
+    );
     const CRATE_README: &str = include_str!("../README.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
     const INTEGRATING_TOKIO_AND_REQWEST: &str =
@@ -1594,12 +1600,15 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_README.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_README.contains("`shadcn::raw::*`"));
+        assert!(CRATE_README.contains("`fret::shadcn::raw::advanced::*`"));
+        assert!(CRATE_README.contains("`fret_ui_shadcn::advanced::*`"));
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
             "//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}`"
         ));
+        assert!(rustdoc.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(public_surface.contains("pub use fret_ui_shadcn::facade as shadcn;"));
         assert!(!public_surface.contains("pub use fret_ui_shadcn as shadcn;"));
     }
@@ -1736,13 +1745,27 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`"
+        ));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::shadcn_themes::"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::shadcn::shadcn_themes::"));
+    }
+
+    #[test]
+    fn shadcn_docs_keep_advanced_hooks_off_curated_lane() {
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
+        assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
+        assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
+        assert!(
+            AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret::shadcn::raw::advanced::*`")
+        );
     }
 
     #[test]
