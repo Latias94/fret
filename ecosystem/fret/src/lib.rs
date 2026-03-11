@@ -51,7 +51,8 @@
 //! Optional ecosystem extensions stay explicit:
 //!
 //! - enable `state` for grouped selector/query helpers on `AppUi`
-//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`
+//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, router_link, ...}`
+//!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface plus explicit escape hatches
@@ -321,7 +322,8 @@ pub mod component {
 /// This keeps the router story explicit:
 /// - `fret-router` remains the portable matching/history/guard core,
 /// - `fret-router-ui` remains the thin adoption layer,
-/// - `fret::router` gives app authors one curated import lane without pulling router types into
+/// - `fret::router` gives app authors one curated import lane for router types, link/outlet
+///   helpers, and `RouterUiStore` history action bindings without pulling router types into
 ///   `fret::app::prelude::*`.
 #[cfg(feature = "router")]
 pub mod router {
@@ -1559,8 +1561,9 @@ mod authoring_surface_policy_tests {
 
         let rustdoc = crate_rustdoc();
         assert!(rustdoc.contains(
-            "//! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`"
+            "`fret::router::{install_app, RouterUiStore, RouterOutlet, router_link, ...}`"
         ));
+        assert!(rustdoc.contains("`RouterUiStore::{back_on_action, forward_on_action}`"));
         assert!(LIB_RS.contains("pub mod router {"));
         assert!(LIB_RS.contains("pub fn install_app(app: &mut crate::app::App) {"));
     }
@@ -1676,6 +1679,9 @@ mod authoring_surface_policy_tests {
     fn usage_docs_expose_router_as_explicit_extension_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `router` feature"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`back_on_action()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`forward_on_action()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`"));
         assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
 
