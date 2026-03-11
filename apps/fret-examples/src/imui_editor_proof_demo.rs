@@ -151,7 +151,7 @@ impl View for ImUiEditorProofView {
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements {
+fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let window = cx.window;
     let last_input: Arc<str> = embedded::models(&*cx.app, window)
         .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())

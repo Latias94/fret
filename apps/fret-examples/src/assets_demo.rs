@@ -131,7 +131,7 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> fret::ViewElements {
+fn render_view(cx: &mut UiCx<'_>) -> Ui {
     let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
@@ -259,7 +259,7 @@ fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> fret::ViewElements {
 }
 
 fn render_image_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
+    cx: &mut UiCx<'_>,
     theme: &Theme,
     frame: u64,
     image: Option<fret_core::ImageId>,
@@ -327,11 +327,7 @@ fn render_image_panel(
     .into_element(cx)
 }
 
-fn render_svg_panel(
-    cx: &mut ElementContext<'_, KernelApp>,
-    theme: &Theme,
-    svg: Option<fret_core::SvgId>,
-) -> AnyElement {
+fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme, svg: Option<fret_core::SvgId>) -> AnyElement {
     let icon = if let Some(svg) = svg {
         let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
         props.layout = decl_style::layout_style(

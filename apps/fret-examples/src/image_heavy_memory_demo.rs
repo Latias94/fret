@@ -181,7 +181,7 @@ fn upload_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Rend
     });
 }
 
-fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> Ui {
+fn render_view(cx: &mut UiCx<'_>) -> Ui {
     let images = cx
         .app
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());

@@ -555,6 +555,32 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_helper_contexts_prefer_uicx_aliases() {
         assert_advanced_helpers_prefer_uicx(
+            ASSETS_DEMO,
+            &[
+                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "fn render_image_panel(cx: &mut UiCx<'_>,",
+                "fn render_svg_panel(cx: &mut UiCx<'_>,",
+            ],
+            &[
+                "fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements",
+                "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
+                "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
+            ],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            IMAGE_HEAVY_MEMORY_DEMO,
+            &["fn render_view(cx: &mut UiCx<'_>) -> Ui"],
+            &["fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> Ui"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            IMUI_EDITOR_PROOF_DEMO,
+            &["fn render_view(cx: &mut UiCx<'_>) -> ViewElements"],
+            &["fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
             CUSTOM_EFFECT_V1_DEMO,
             &[
                 "fn watch_first_f32(cx: &mut UiCx<'_>,",
