@@ -182,9 +182,17 @@ The default app context should group its public API by intent.
 Target operations:
 
 - `local::<T>()`
+- `local_keyed(key)`
 - `local_init(|| ...)`
 - `watch(&state)`
 - `get(&state)` / `get_or(...)` through transactions or explicit watch handles
+
+Target rule:
+
+- the default app surface does not expose public flat `use_local*` helpers; those flows live
+  under `cx.state()`.
+- raw `use_state(...)` / `use_state_keyed(...)` remain explicit advanced seams until the remaining
+  retained-state reference stories are fully audited.
 
 ### `ui.actions()`
 

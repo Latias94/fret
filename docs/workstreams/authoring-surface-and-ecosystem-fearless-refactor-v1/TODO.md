@@ -153,6 +153,8 @@ Companion docs:
 - [ ] Remove old default-path names that are no longer canonical.
 - [x] Remove flat `AppUi` data/effects helpers that duplicate the grouped `cx.data()` /
   `cx.effects()` surface.
+- [x] Remove public flat `AppUi::use_local*` helpers that duplicate the grouped `cx.state()`
+  surface while keeping raw `use_state*` as an explicit advanced seam for now.
 - [x] Remove flat `AppUi` action mutation helpers that duplicate the grouped `cx.actions()` surface
   while keeping raw handler registration as an explicit advanced seam.
 - [ ] Remove duplicate or ambiguous exports from the app prelude.

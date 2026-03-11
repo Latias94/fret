@@ -465,7 +465,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
     where
         T: Any + Default,
     {
-        self.cx.use_local::<T>()
+        self.cx.local_with(T::default)
     }
 
     #[track_caller]
@@ -473,7 +473,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
     where
         T: Any + Default,
     {
-        self.cx.use_local_keyed::<K, T>(key)
+        self.cx.keyed(key, |cx| cx.local_with(T::default))
     }
 
     #[track_caller]
@@ -481,7 +481,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
     where
         T: Any,
     {
-        self.cx.use_local_with(init)
+        self.cx.local_with(init)
     }
 
     pub fn watch<T: Any>(
@@ -903,27 +903,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         self.keyed(key, |cx| cx.use_state::<T>())
     }
 
-    /// v2 prototype: a model-backed local-state wrapper with a lower-noise authoring surface.
-    #[track_caller]
-    pub fn use_local<T>(&mut self) -> LocalState<T>
-    where
-        T: Any + Default,
-    {
-        self.use_local_with(T::default)
-    }
-
-    /// v2 prototype: keyed local-state variant intended for loops.
-    #[track_caller]
-    pub fn use_local_keyed<K: Hash, T>(&mut self, key: K) -> LocalState<T>
-    where
-        T: Any + Default,
-    {
-        self.keyed(key, |cx| cx.use_local::<T>())
-    }
-
-    /// v2 prototype: local state with explicit initializer.
-    #[track_caller]
-    pub fn use_local_with<T>(&mut self, init: impl FnOnce() -> T) -> LocalState<T>
+    fn local_with<T>(&mut self, init: impl FnOnce() -> T) -> LocalState<T>
     where
         T: Any,
     {
@@ -1337,6 +1317,9 @@ mod tests {
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
+        assert!(!api_source.contains("pub fn use_local<"));
+        assert!(!api_source.contains("pub fn use_local_keyed<"));
+        assert!(!api_source.contains("pub fn use_local_with<"));
         assert!(!api_source.contains("pub fn on_action_notify_local_update<"));
         assert!(!api_source.contains("pub fn on_action_notify_local_set<"));
         assert!(!api_source.contains("pub fn on_action_notify_toggle_local_bool<"));
