@@ -1583,6 +1583,10 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: auto-pan motion ticks now also route drag-move dispatch through the private
     `ui/canvas/widget/timer_motion_auto_pan/dispatch.rs` seam, so
     `timer_motion_auto_pan.rs` now mainly keeps the auto-pan tick orchestration explicit.
+  - Progress: viewport animation timers now also route animation start/stop and move-end debounce
+    handling through the private `ui/canvas/widget/viewport_timer_animation/animation.rs` and
+    `ui/canvas/widget/viewport_timer_animation/debounce.rs` seams, so
+    `viewport_timer_animation.rs` now mainly keeps the viewport timer façades explicit.
 
 ## M5 - Compatibility retained convergence
 

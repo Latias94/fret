@@ -71,7 +71,6 @@ use super::middleware::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx, NoopNodeGraphCanvasMiddleware,
 };
 use super::paint::CanvasPaintCache;
-use super::state::ViewportMoveDebounceState;
 
 mod apply;
 mod auto_measure;

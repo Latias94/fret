@@ -1121,6 +1121,10 @@ real editors.
 - auto-pan motion ticks now also route drag-move dispatch through the private
   `ui/canvas/widget/timer_motion_auto_pan/dispatch.rs` seam, so
   `timer_motion_auto_pan.rs` now mainly keeps the auto-pan tick orchestration explicit.
+- viewport animation timers now also route animation start/stop and move-end debounce handling
+  through the private `ui/canvas/widget/viewport_timer_animation/animation.rs` and
+  `ui/canvas/widget/viewport_timer_animation/debounce.rs` seams, so
+  `viewport_timer_animation.rs` now mainly keeps the viewport timer façades explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
