@@ -6,7 +6,7 @@ use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
 use fret_ui::Theme;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -141,7 +141,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             shadcn::ContextMenuSeparator::new().into(),
                             shadcn::ContextMenuItem::new("Delete")
                                 .action(CommandId::new("ui_gallery.context_menu.demo.delete"))
-                                .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                                .variant(fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive)
                                 .test_id("ui-gallery-context-menu-demo-delete")
                                 .into(),
                         ]),
@@ -165,9 +165,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::ContextMenuRadioGroup::new(people.clone())
                         .item(
                             shadcn::ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte")
-                                .action(CommandId::new(
-                                    "ui_gallery.context_menu.demo.person.pedro",
-                                ))
+                                .action(CommandId::new("ui_gallery.context_menu.demo.person.pedro"))
                                 .test_id("ui-gallery-context-menu-demo-person-pedro"),
                         )
                         .item(

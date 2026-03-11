@@ -9,7 +9,7 @@ use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{self as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, Button, ButtonSize, ButtonVariant, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]

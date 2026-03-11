@@ -20,7 +20,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .into_element(cx);
 
-                        let caption = shadcn::raw::typography::muted(cx, format!("Photo by {artist}"));
+                        let caption =
+                            shadcn::raw::typography::muted(cx, format!("Photo by {artist}"));
 
                         let mut figure = ui::v_stack(|_cx| vec![art, caption])
                             .gap(Space::N2)

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_ui_kit::ui::UiElementSinkExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct Models {
@@ -111,10 +111,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             )
                             .into_element(cx),
                         ]);
-                        out.push_ui(
-                            cx,
-                            field_content,
-                        );
+                        out.push_ui(cx, field_content);
                         out.push_ui(
                             cx,
                             shadcn::Switch::new(switch.clone())

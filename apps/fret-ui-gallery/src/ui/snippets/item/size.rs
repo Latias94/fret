@@ -16,7 +16,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
         let icon_id = fret_icons::IconId::new_static(id);
         match id {
-            "lucide.badge-check" => fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None),
+            "lucide.badge-check" => {
+                fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None)
+            }
             _ => fret_ui_shadcn::icon::icon(cx, icon_id),
         }
     };

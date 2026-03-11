@@ -68,7 +68,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             DocSection::new("Usage", usage)
                 .description("Copyable imports plus a minimal docs-aligned part-based example.")
                 .code_rust(
-                    r#"use fret_ui_shadcn::{self as shadcn, prelude::*};
+                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 let query = cx.app.models_mut().insert(String::new());
 
@@ -78,7 +78,7 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
             shadcn::InputGroupInput::new().placeholder("Search..."),
         ),
         shadcn::InputGroupPart::addon(
-            shadcn::InputGroupAddon::new([shadcn::icon::icon(
+            shadcn::InputGroupAddon::new([fret_ui_shadcn::icon::icon(
                 cx,
                 fret_icons::IconId::new_static("lucide.search"),
             )])
@@ -123,7 +123,7 @@ shadcn::InputGroup::new(query).into_element_parts(cx, |cx| {
                 .test_id_prefix("ui-gallery-input-group-kbd")
                 .code_rust_from_file_region(snippets::kbd::SOURCE, "example"),
             DocSection::new("Dropdown", dropdown)
-                .description("Leading button with a chevron icon (wire it to a menu in app code).")
+                .description("Inline-end dropdown menu trigger composed with a real `DropdownMenu`.")
                 .test_id_prefix("ui-gallery-input-group-dropdown")
                 .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
             DocSection::new("Spinner", spinner)

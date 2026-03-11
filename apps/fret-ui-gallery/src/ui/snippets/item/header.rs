@@ -34,7 +34,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .overflow_hidden(),
             );
             let image = cx
-                .container(props, move |cx| vec![shadcn::raw::typography::muted(cx, "IMG")])
+                .container(props, move |cx| {
+                    vec![shadcn::raw::typography::muted(cx, "IMG")]
+                })
                 .test_id(format!("ui-gallery-item-header-image-{idx}"));
             shadcn::ItemHeader::new([image]).into_element(cx)
         };

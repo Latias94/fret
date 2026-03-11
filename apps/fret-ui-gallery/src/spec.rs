@@ -2210,7 +2210,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 PAGE_SHADCN_EXTRAS,
                 "Extras",
                 "Shadcn Extras (blocks / recipes)",
-                "fret-ui-shadcn::extras",
+                "fret-ui-shadcn extras",
                 CMD_NAV_SHADCN_EXTRAS,
                 &["extras", "blocks", "recipes", "kibo"],
             ),

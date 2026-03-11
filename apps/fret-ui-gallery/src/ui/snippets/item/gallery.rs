@@ -454,7 +454,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 LayoutRefinement::default().size_full(),
             );
             let image = cx
-                .container(props, move |cx| vec![shadcn::raw::typography::muted(cx, "IMG")])
+                .container(props, move |cx| {
+                    vec![shadcn::raw::typography::muted(cx, "IMG")]
+                })
                 .test_id(format!("ui-gallery-item-music-image-{idx}"));
             let media = shadcn::ItemMedia::new([image])
                 .variant(shadcn::ItemMediaVariant::Image)

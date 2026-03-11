@@ -27,61 +27,66 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
-        let crumb = fret_ui_shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
-            let list =
-                fret_ui_shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
-                    let home = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(
-                        cx,
-                        |cx| {
-                            vec![
+        let crumb =
+            fret_ui_shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
+                let list = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbList::new()
+                    .into_element(cx, |cx| {
+                        let home =
+                            fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                                .into_element(cx, |cx| {
+                                    vec![
                                 fret_ui_shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
                                     .on_activate(Arc::new(|_host, _acx, _reason| {}))
                                     .into_element(cx),
                             ]
-                        },
-                    );
+                                });
 
-                    let components_dropdown = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new()
-                        .into_element(cx, |cx| {
-                            let menu = shadcn::DropdownMenu::new(open.clone())
-                                .align(shadcn::DropdownMenuAlign::End)
-                                .into_element(
-                                    cx,
-                                    move |cx| {
-                                        let theme = Theme::global(&*cx.app);
-                                        let fg = theme.color_token("foreground");
-                                        let muted = theme.color_token("muted-foreground");
-                                        let mut props = fret_ui::element::PressableProps::default();
-                                        props.a11y.label = Some(Arc::<str>::from("Components"));
-                                        props.a11y.test_id = Some(Arc::<str>::from(
-                                            "ui-gallery-breadcrumb-rtl-dropdown-trigger",
-                                        ));
+                        let components_dropdown =
+                            fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                                .into_element(cx, |cx| {
+                                    let menu = shadcn::DropdownMenu::new(open.clone())
+                                        .align(shadcn::DropdownMenuAlign::End)
+                                        .into_element(
+                                            cx,
+                                            move |cx| {
+                                                let theme = Theme::global(&*cx.app);
+                                                let fg = theme.color_token("foreground");
+                                                let muted = theme.color_token("muted-foreground");
+                                                let mut props =
+                                                    fret_ui::element::PressableProps::default();
+                                                props.a11y.label =
+                                                    Some(Arc::<str>::from("Components"));
+                                                props.a11y.test_id = Some(Arc::<str>::from(
+                                                    "ui-gallery-breadcrumb-rtl-dropdown-trigger",
+                                                ));
 
-                                        cx.pressable(props, move |cx, st| {
-                                            let color = if st.hovered { fg } else { muted };
-                                            let label = fret_ui_kit::ui::text("Components")
-                                                .text_color(fret_ui_kit::ColorRef::Color(color))
-                                                .nowrap()
-                                                .into_element(cx);
-                                            let chevron = fret_ui_shadcn::icon::icon_with(
-                                                cx,
-                                                fret_icons::IconId::new_static(
-                                                    "lucide.chevron-down",
-                                                ),
-                                                Some(Px(14.0)),
-                                                Some(fret_ui_kit::ColorRef::Color(color)),
-                                            );
+                                                cx.pressable(props, move |cx, st| {
+                                                    let color = if st.hovered { fg } else { muted };
+                                                    let label = fret_ui_kit::ui::text("Components")
+                                                        .text_color(fret_ui_kit::ColorRef::Color(
+                                                            color,
+                                                        ))
+                                                        .nowrap()
+                                                        .into_element(cx);
+                                                    let chevron = fret_ui_shadcn::icon::icon_with(
+                                                        cx,
+                                                        fret_icons::IconId::new_static(
+                                                            "lucide.chevron-down",
+                                                        ),
+                                                        Some(Px(14.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(color)),
+                                                    );
 
-                                            vec![
-                                                ui::h_row(move |_cx| vec![label, chevron])
-                                                    .gap(Space::N1)
-                                                    .items_center()
-                                                    .into_element(cx),
-                                            ]
-                                        })
-                                    },
-                                    |_cx| {
-                                        vec![
+                                                    vec![
+                                                        ui::h_row(move |_cx| vec![label, chevron])
+                                                            .gap(Space::N1)
+                                                            .items_center()
+                                                            .into_element(cx),
+                                                    ]
+                                                })
+                                            },
+                                            |_cx| {
+                                                vec![
                                             shadcn::DropdownMenuEntry::Item(
                                                 shadcn::DropdownMenuItem::new("Documentation")
                                                     .on_activate(Arc::new(
@@ -104,32 +109,34 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                                     )),
                                             ),
                                         ]
-                                    },
-                                );
-                            vec![menu]
-                        });
+                                            },
+                                        );
+                                    vec![menu]
+                                });
 
-                    let page = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(
-                        cx,
-                        |cx| {
-                            vec![
-                                fret_ui_shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
+                        let page = fret_ui_shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                            .into_element(cx, |cx| {
+                                vec![
+                                    fret_ui_shadcn::breadcrumb::primitives::BreadcrumbPage::new(
+                                        "Breadcrumb",
+                                    )
                                     .into_element(cx),
-                            ]
-                        },
-                    );
+                                ]
+                            });
 
-                    vec![
-                        home,
-                        fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparator::new().into_element(cx),
-                        components_dropdown,
-                        fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparator::new().into_element(cx),
-                        page,
-                    ]
-                });
+                        vec![
+                            home,
+                            fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
+                                .into_element(cx),
+                            components_dropdown,
+                            fret_ui_shadcn::breadcrumb::primitives::BreadcrumbSeparator::new()
+                                .into_element(cx),
+                            page,
+                        ]
+                    });
 
-            vec![list]
-        });
+                vec![list]
+            });
 
         crumb.test_id("ui-gallery-breadcrumb-rtl")
     })

@@ -57,6 +57,7 @@ pub(super) fn preview_calendar(
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
             "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
+            "For the closest source-aligned equivalent to upstream `selected/onSelect`, pass your selected model into `Calendar::new_controllable(cx, Some(selected), default_selected)` and let the calendar own only the visible month state.",
             "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
             "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",

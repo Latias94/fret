@@ -34,7 +34,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .a11y_label("More")
         .variant(shadcn::ButtonVariant::Outline)
         .refine_style(ChromeRefinement::default().pl(Space::N2))
-        .children([fret_ui_shadcn::icon::icon(cx, icon_id("lucide.chevron-down"))])
+        .children([fret_ui_shadcn::icon::icon(
+            cx,
+            icon_id("lucide.chevron-down"),
+        )])
         .toggle_model(open.clone())
         .border_left_width_override(Px(0.0))
         .corner_radii_override(corners_last)

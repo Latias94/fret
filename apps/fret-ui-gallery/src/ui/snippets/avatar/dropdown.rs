@@ -41,7 +41,9 @@ pub fn render<H: UiHost>(
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Log out")
-                        .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                        .variant(
+                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                        )
                         .test_id("ui-gallery-avatar-dropdown-item-logout"),
                 ),
             ]

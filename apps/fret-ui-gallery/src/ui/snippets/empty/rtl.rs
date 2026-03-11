@@ -23,7 +23,8 @@ fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let query = query_model(cx);
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
+        let icon =
+            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
         let input = shadcn::InputGroup::new(query)
             .a11y_label("RTL search")
             .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])

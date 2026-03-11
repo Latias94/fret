@@ -433,7 +433,9 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
             },
             ..Default::default()
         },
-        |cx| vec![shadcn::raw::typography::p(cx, "DotGrid").test_id("ui-gallery-magic-pattern-dot")],
+        |cx| {
+            vec![shadcn::raw::typography::p(cx, "DotGrid").test_id("ui-gallery-magic-pattern-dot")]
+        },
     );
 
     let grid = magic::grid_pattern(

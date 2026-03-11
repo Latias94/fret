@@ -186,7 +186,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::SidebarHeader::new([shadcn::raw::typography::small(cx, "Acme Inc.")])
                 .into_element(cx),
             shadcn::SidebarContent::new([platform, projects]).into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "shadcn")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "shadcn")])
+                .into_element(cx),
         ])
         .collapsible(shadcn::SidebarCollapsible::Icon)
         .refine_layout(LayoutRefinement::default().h_full())

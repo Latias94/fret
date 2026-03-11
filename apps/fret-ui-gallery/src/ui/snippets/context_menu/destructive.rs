@@ -32,7 +32,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .action(CommandId::new(
                                 "ui_gallery.context_menu.destructive.delete_project",
                             ))
-                            .variant(fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                            .variant(
+                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                            )
                             .test_id("ui-gallery-context-menu-destructive-delete"),
                     ),
                 ]

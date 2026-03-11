@@ -115,7 +115,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::SidebarContent::new([platform])
                 .collapsed(false)
                 .into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "الدعم")]).into_element(cx),
+            shadcn::SidebarFooter::new([shadcn::raw::typography::small(cx, "الدعم")])
+                .into_element(cx),
         ])
         .collapsed(false)
         .refine_layout(LayoutRefinement::default().h_full())

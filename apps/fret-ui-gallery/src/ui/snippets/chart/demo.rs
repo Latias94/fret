@@ -288,7 +288,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         };
 
     let trending_footer = |cx: &mut ElementContext<'_, App>, secondary: &'static str| {
-        let icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
+        let icon =
+            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
         ui::v_flex(|cx| {
             vec![
                 ui::h_row(|cx| {

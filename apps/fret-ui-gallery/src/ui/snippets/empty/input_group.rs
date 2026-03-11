@@ -41,7 +41,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx),
         fret_ui_shadcn::empty::EmptyContent::new([
             search,
-            fret_ui_shadcn::empty::EmptyDescription::new("Need help? Contact support.").into_element(cx),
+            fret_ui_shadcn::empty::EmptyDescription::new("Need help? Contact support.")
+                .into_element(cx),
         ])
         .into_element(cx),
     ])

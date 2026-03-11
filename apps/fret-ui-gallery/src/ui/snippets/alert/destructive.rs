@@ -7,7 +7,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     ui::v_flex(|cx| {
         vec![
             shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(
+                    cx,
+                    fret_icons::IconId::new_static("lucide.circle-alert"),
+                ),
                 shadcn::AlertTitle::new("Something went wrong!").into_element(cx),
                 shadcn::AlertDescription::new("Your session has expired. Please log in again.")
                     .into_element(cx),
@@ -17,7 +20,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-alert-destructive-session"),
             shadcn::Alert::new([
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                fret_ui_shadcn::icon::icon(
+                    cx,
+                    fret_icons::IconId::new_static("lucide.circle-alert"),
+                ),
                 shadcn::AlertTitle::new("Unable to process your payment.").into_element(cx),
                 shadcn::AlertDescription::new_children([
                     ui::text("Please verify your billing information and try again.")

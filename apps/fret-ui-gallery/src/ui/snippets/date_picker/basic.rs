@@ -62,12 +62,14 @@ pub fn render<H: UiHost>(
                         .refine_layout(LayoutRefinement::default().w_px(Px(176.0)));
 
                     if selected_now.is_none() {
-                        button = button.style(fret_ui_shadcn::button::ButtonStyle::default().foreground(
-                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
-                                key: "muted-foreground",
-                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                            })),
-                        ));
+                        button = button.style(
+                            fret_ui_shadcn::button::ButtonStyle::default().foreground(
+                                fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                                    key: "muted-foreground",
+                                    fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                                })),
+                            ),
+                        );
                     }
 
                     button

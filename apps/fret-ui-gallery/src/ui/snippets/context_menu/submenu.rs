@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("submenu.rs");
 
 // region: example
 use fret_runtime::CommandId;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)
@@ -37,9 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 .test_id("ui-gallery-context-menu-submenu-rename")
                                 .into(),
                             shadcn::ContextMenuItem::new("Duplicate")
-                                .action(CommandId::new(
-                                    "ui_gallery.context_menu.submenu.duplicate",
-                                ))
+                                .action(CommandId::new("ui_gallery.context_menu.submenu.duplicate"))
                                 .test_id("ui-gallery-context-menu-submenu-duplicate")
                                 .into(),
                         ]),

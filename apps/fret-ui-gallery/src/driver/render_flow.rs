@@ -11,7 +11,7 @@ use fret_ui::element::{
     SpacerProps,
 };
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
@@ -1905,7 +1905,7 @@ mod tests {
 
     #[test]
     fn gallery_input_group_core_examples_keep_upstream_aligned_targets_present() {
-        let mut rendered = render_gallery_page(PAGE_INPUT_GROUP);
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT_GROUP);
 
         for target in [
             "ui-gallery-input-group-demo",
@@ -1928,6 +1928,38 @@ mod tests {
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Input Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_button_group_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
+
+        for target in [
+            "ui-gallery-button-group-demo-content",
+            "ui-gallery-button-group-orientation-content",
+            "ui-gallery-button-group-size-content",
+            "ui-gallery-button-group-nested-content",
+            "ui-gallery-button-group-nested-add-button",
+            "ui-gallery-button-group-nested-control",
+            "ui-gallery-button-group-nested-voice-button",
+            "ui-gallery-button-group-input-content",
+            "ui-gallery-button-group-input-group-content",
+            "ui-gallery-button-group-input-group-add-button",
+            "ui-gallery-button-group-input-group-control",
+            "ui-gallery-button-group-input-group-voice-button",
+            "ui-gallery-button-group-dropdown-content",
+            "ui-gallery-button-group-select-content",
+            "ui-gallery-button-group-select-currency-trigger",
+            "ui-gallery-button-group-select-amount",
+            "ui-gallery-button-group-rtl-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Button Group page target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
     }

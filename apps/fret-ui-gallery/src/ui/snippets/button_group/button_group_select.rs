@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("button_group_select.rs");
 
 // region: example
 use fret_core::{FontId, Px};
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -81,6 +81,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 |_cx| shadcn::SelectValue::new(),
                 move |_cx| {
                     shadcn::SelectContent::new()
+                        .position(fret_ui_shadcn::select::SelectPosition::Popper)
                         .align(shadcn::SelectAlign::Start)
                         .with_entries(entries)
                 },

@@ -40,7 +40,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .variant(shadcn::ButtonVariant::Outline)
                 .children([
                     ui::text("Fork").font_medium().nowrap().into_element(cx),
-                    fret_ui_shadcn::icon::icon_with(cx, IconId::new_static("lucide.git-fork"), None, None),
+                    fret_ui_shadcn::icon::icon_with(
+                        cx,
+                        IconId::new_static("lucide.git-fork"),
+                        None,
+                        None,
+                    ),
                 ])
                 .test_id("ui-gallery-button-with-trailing-icon")
                 .into_element(cx),

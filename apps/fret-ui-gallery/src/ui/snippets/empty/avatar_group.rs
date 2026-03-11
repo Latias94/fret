@@ -4,7 +4,8 @@ pub const SOURCE: &str = include_str!("avatar_group.rs");
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let invite_icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.user-plus"));
+    let invite_icon =
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.user-plus"));
     let invite_text = cx.text("Invite Members");
     let invite_button = shadcn::Button::new("Invite Members")
         .size(shadcn::ButtonSize::Sm)

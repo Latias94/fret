@@ -4,7 +4,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
+    let icon =
+        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
 
     shadcn::Empty::new([
         fret_ui_shadcn::empty::EmptyHeader::new([

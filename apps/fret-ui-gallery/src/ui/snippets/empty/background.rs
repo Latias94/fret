@@ -60,7 +60,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .children([refresh_icon, refresh_text])
                 .into_element(cx);
 
-            let header_icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
+            let header_icon =
+                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
             let empty = shadcn::Empty::new([
                 fret_ui_shadcn::empty::EmptyHeader::new([
                     fret_ui_shadcn::empty::EmptyMedia::new([header_icon])

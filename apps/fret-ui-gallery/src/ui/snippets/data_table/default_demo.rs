@@ -8,7 +8,7 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -191,18 +191,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         }
     };
 
-    let toolbar = shadcn::DataTableToolbar::new(state.clone(), assets.1.clone(), |col| {
-        Arc::clone(&col.id)
-    })
-    .show_global_filter(false)
-    .column_filter("email")
-    .column_filter_placeholder("Filter customer emails...")
-    .column_filter_a11y_label("Customer email filter")
-    .columns_button_label("Columns")
-    .show_pinning_menu(false)
-    .show_selected_text(false)
-    .into_element(cx)
-    .test_id("ui-gallery-data-table-default-toolbar");
+    let toolbar =
+        shadcn::DataTableToolbar::new(state.clone(), assets.1.clone(), |col| Arc::clone(&col.id))
+            .show_global_filter(false)
+            .column_filter("email")
+            .column_filter_placeholder("Filter customer emails...")
+            .column_filter_a11y_label("Customer email filter")
+            .columns_button_label("Columns")
+            .show_pinning_menu(false)
+            .show_selected_text(false)
+            .into_element(cx)
+            .test_id("ui-gallery-data-table-default-toolbar");
 
     let table = shadcn::DataTable::new()
         .row_click_selection(false)
@@ -229,8 +228,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 "email" => cx.text(row.customer_email.as_ref()),
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
-                    let amount_text =
-                        ui::text(amount).text_sm().tabular_nums().into_element(cx);
+                    let amount_text = ui::text(amount).text_sm().tabular_nums().into_element(cx);
                     align_end(cx, amount_text)
                 }
                 _ => cx.text("?"),

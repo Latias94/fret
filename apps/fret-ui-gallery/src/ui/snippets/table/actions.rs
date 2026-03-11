@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("actions.rs");
 // region: example
 use fret_app::App;
 use fret_ui_kit::ui::UiElementSinkExt;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -70,7 +70,7 @@ fn action_row(
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Delete")
-                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
+                        .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
                 ),
             ]
         },
@@ -120,7 +120,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             cx,
             shadcn::TableBody::build(|cx, out| {
                 out.push(action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"));
-                out.push(action_row(cx, "Mechanical Keyboard", "$89.99", open_2, "row-2"));
+                out.push(action_row(
+                    cx,
+                    "Mechanical Keyboard",
+                    "$89.99",
+                    open_2,
+                    "row-2",
+                ));
                 out.push(action_row(cx, "4K Monitor", "$299.99", open_3, "row-3"));
             }),
         );
