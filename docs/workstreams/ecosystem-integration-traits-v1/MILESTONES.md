@@ -1,6 +1,6 @@
 # Ecosystem Integration Traits v1 — Milestones
 
-Status: Planning
+Status: Active
 Last updated: 2026-03-11
 
 Related:
@@ -43,6 +43,8 @@ Current status on 2026-03-11:
   `UiGalleryRouteCodec`, including canonical page navigation and legacy `start_page` fallback.
 - `apps/fret-demo-web/src/wasm.rs` now resolves demo selection through a codec-backed helper for
   the canonical `?demo=...` entry path while retaining legacy hash-token fallback compatibility.
+- First-party web README surfaces now also teach canonical query routes first and treat hash/query
+  aliases as compatibility-only migration baggage.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 
@@ -113,4 +115,5 @@ Exit criteria:
 - guardrails exist for the highest-risk regressions,
 - legacy mixed postures tracked in `MIGRATION_MATRIX.md` are either deleted or intentionally marked
   as advanced/internal,
+- first-party router docs stop teaching compatibility-only hash-token routing as a primary path,
 - this workstream can be downgraded from active refactor planning to maintenance.

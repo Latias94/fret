@@ -140,6 +140,11 @@ Status legend:
   - Evidence:
     - `apps/fret-demo-web/src/wasm.rs`
     - legacy hash substring fallback retained for old links
+- `[x]` Update first-party web READMEs to teach canonical query routes and mark legacy hash/query
+  aliases as compatibility-only.
+  - Evidence:
+    - `apps/fret-demo-web/README.md`
+    - `apps/fret-ui-gallery-web/README.md`
 
 ## Phase 6 - Diagnostics and stabilization
 

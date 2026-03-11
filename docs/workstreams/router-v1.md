@@ -1,6 +1,6 @@
 # Router v1 (Ecosystem Workstream)
 
-Status: Draft (implementation notes; ADRs remain the source of truth)
+Status: Active (typed-route baseline landed; UI/diagnostics follow-ups remain)
 
 Related ADRs:
 
@@ -31,6 +31,19 @@ What is still fragmented is route/navigation state, especially for Web/WASM:
 
 The goal of this workstream is to define a single, portable routing story without expanding
 `crates/fret-ui` runtime contracts.
+
+## Current status on 2026-03-11
+
+- `RouteCodec` is landed in `fret-router` and is now the shared typed-route seam.
+- `fret-router-ui` and `apps/fret-cookbook/examples/router_basics.rs` already teach typed-route
+  authoring on top of that codec seam.
+- First-party web entry surfaces (`apps/fret-demo-web`, `apps/fret-ui-gallery`) now centralize
+  their canonical route decode/encode logic through app-defined codecs instead of scattered string
+  parsing.
+- Public first-party web READMEs now teach canonical query routes first and explicitly mark legacy
+  hash/query aliases as compatibility-only behavior.
+- Remaining v1 work is now mostly authoring ergonomics (`router-ui` snapshot/link helpers),
+  multi-window/window-scoped patterns, and diagnostics/stabilization.
 
 ## Scope and constraints
 
@@ -129,6 +142,8 @@ Current first-party adoption:
   `start_page` / hash fallback in one place.
 - `apps/fret-demo-web/src/wasm.rs` now uses a codec-backed demo selection helper for the canonical
   `?demo=...` route while keeping legacy hash-token compatibility as fallback-only behavior.
+- `apps/fret-demo-web/README.md` and `apps/fret-ui-gallery-web/README.md` now teach canonical query
+  routes first instead of presenting compatibility hash forms as the default authoring path.
 
 Navigation flow:
 
@@ -144,9 +159,9 @@ Navigation flow:
 - `fret-query`: derive query keys from route params and trigger explicit prefetch/invalidate.
 - `fret::actions!` / `fret::payload_actions!`: route navigation can remain typed without string parsing.
 
-## Migration targets (first wave)
+## Completed first-wave migrations
 
-Priority migration candidates:
+Landed on 2026-03-11:
 
 1. `apps/fret-demo-web/src/wasm.rs` (demo selection URL parsing; landed on 2026-03-11 via the
    demo route codec in `apps/fret-demo-web/src/wasm.rs`)
@@ -154,6 +169,15 @@ Priority migration candidates:
    `UiGalleryRouteCodec`)
 3. `apps/fret-ui-gallery` command paths that currently construct route-like strings (landed on
    2026-03-11 via codec-backed page route helpers in `apps/fret-ui-gallery/src/driver/router.rs`)
+
+Recommended next focus after this first migration wave:
+
+1. land the window-scoped `router-ui` snapshot/store story so typed routes are ergonomic in
+   desktop-first apps, not just in shell bootstrap code
+2. add malformed-URL / unknown-route diagnostics so compatibility fallbacks do not become silent
+   long-term debt
+3. lock scroll/focus restoration and guard/blocker behavior once the first desktop app migration
+   needs it
 
 ## API design principles
 
