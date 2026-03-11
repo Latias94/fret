@@ -124,6 +124,8 @@ Companion docs:
   - [ ] Audit remaining advanced/component call sites and keep them explicit.
 - [ ] Migrate `fret-query` to the grouped app data surface.
   - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.
+  - [x] Add the grouped `data()` namespace to extracted `UiCx` helpers so helper-heavy examples no
+    longer fall back to raw `use_query*`.
   - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
   - [ ] Audit remaining advanced/component call sites and keep them explicit.
 - [ ] Migrate `fret-router` to the new explicit app/advanced extension seams.

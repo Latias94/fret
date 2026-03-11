@@ -235,6 +235,9 @@ Target rule:
 - flat `AppUi::use_selector*` / `AppUi::use_query*` helpers are removed from the default app
   surface; low-level `ElementContext` query/selector helpers remain explicit for component or
   advanced call sites.
+- extracted `UiCx` helpers on the default/advanced app-facing surface use the same grouped
+  `data()` namespace through `UiCxDataExt`, so first-party helper functions do not fall back to raw
+  `use_query*` / `use_selector*` calls just because they were split out of `render()`.
 
 ### `ui.effects()`
 
@@ -253,6 +256,8 @@ Target rule:
 
 - Use `UiCx` for extracted helper functions that still belong to the default app-facing teaching
   surface.
+- Those extracted helpers should keep the same grouped selector/query posture as `AppUi`
+  (`cx.data().selector/query*`) rather than dropping to raw `ElementContext` hook names.
 - First-party teaching snippets in `apps/fret-cookbook`, `apps/fret-examples`, and curated gallery
   surfaces should be source-gated so raw `ElementContext<'_, KernelApp>` only remains on
   intentional advanced/manual-assembly seams.
