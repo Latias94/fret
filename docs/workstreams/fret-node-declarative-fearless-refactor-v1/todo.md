@@ -1472,6 +1472,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/selection_activation/payload.rs` and
     `ui/canvas/widget/context_menu/selection_activation/pointer_down.rs` seams, so
     `context_menu/selection_activation.rs` now mainly keeps the selection façade explicit.
+  - Progress: context-menu opening now also routes group-hit, edge-hit, and background fallback
+    branches through the private `ui/canvas/widget/context_menu/opening/group.rs`,
+    `ui/canvas/widget/context_menu/opening/edge.rs`, and
+    `ui/canvas/widget/context_menu/opening/background.rs` seams, so
+    `context_menu/opening.rs` now mainly keeps the right-click orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 

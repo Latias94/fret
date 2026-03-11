@@ -1014,6 +1014,11 @@ real editors.
   `ui/canvas/widget/context_menu/selection_activation/payload.rs` and
   `ui/canvas/widget/context_menu/selection_activation/pointer_down.rs` seams, so
   `context_menu/selection_activation.rs` now mainly keeps the selection façade explicit.
+- context-menu opening now also routes group-hit, edge-hit, and background fallback branches
+  through the private `ui/canvas/widget/context_menu/opening/group.rs`,
+  `ui/canvas/widget/context_menu/opening/edge.rs`, and
+  `ui/canvas/widget/context_menu/opening/background.rs` seams, so
+  `context_menu/opening.rs` now mainly keeps the right-click orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
