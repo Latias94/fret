@@ -1099,6 +1099,12 @@ real editors.
   through the private `ui/canvas/widget/node_drag_constraints_extent/bounds.rs` and
   `ui/canvas/widget/node_drag_constraints_extent/clamp_delta.rs` seams, so
   `node_drag_constraints_extent.rs` now mainly keeps the extent-clamp entrypoint explicit.
+- group resize planning now also routes pointer-to-rect mapping, child-size minimums, and
+  snap-to-grid sizing through the private
+  `ui/canvas/widget/group_resize_apply/pointer_rect.rs`,
+  `ui/canvas/widget/group_resize_apply/children_min.rs`, and
+  `ui/canvas/widget/group_resize_apply/snap.rs` seams, so
+  `group_resize_apply.rs` now mainly keeps the resize-planning entrypoint explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
