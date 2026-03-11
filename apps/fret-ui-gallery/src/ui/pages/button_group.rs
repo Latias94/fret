@@ -100,8 +100,11 @@ pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .test_id_prefix("ui-gallery-button-group-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("API Reference", api_reference)
-                .no_shell()
-                .test_id_prefix("ui-gallery-button-group-api-reference"),
+                .description(
+                    "Public surface summary plus copyable examples for the core API pieces.",
+                )
+                .test_id_prefix("ui-gallery-button-group-api-reference")
+                .code_rust_from_file_region(snippets::api_reference::SOURCE, "example"),
             DocSection::new("ButtonGroupText", text)
                 .test_id_prefix("ui-gallery-button-group-text")
                 .code_rust_from_file_region(snippets::text::SOURCE, "example"),
