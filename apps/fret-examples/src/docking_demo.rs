@@ -1,14 +1,14 @@
 use anyhow::Context as _;
+use fret::docking::{
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportLayout,
+    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingRuntime, ViewportPanel,
+    create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
+};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     geometry::Px,
-};
-use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, DockingRuntime, create_dock_space_node_with_test_id,
-    render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, FnDriver, WindowCreateSpec, WinitCommandContext,
@@ -225,8 +225,8 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         theme: fret_ui::ThemeSnapshot,
         _window: AppWindowId,
         _panel: &fret_core::PanelKey,
-        _viewport: fret_docking::ViewportPanel,
-        layout: fret_docking::DockViewportLayout,
+        _viewport: ViewportPanel,
+        layout: DockViewportLayout,
         scene: &mut Scene,
     ) {
         let border_color = Color {

@@ -222,6 +222,7 @@ mod authoring_surface_policy_tests {
         include_str!("custom_effect_v2_identity_web_demo.rs");
     const CUSTOM_EFFECT_V2_LUT_WEB_DEMO: &str = include_str!("custom_effect_v2_lut_web_demo.rs");
     const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
+    const CONTAINER_QUERIES_DOCKING_DEMO: &str = include_str!("container_queries_docking_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
     const DOCKING_ARBITRATION_DEMO: &str = include_str!("docking_arbitration_demo.rs");
     const DOCKING_DEMO: &str = include_str!("docking_demo.rs");
@@ -558,6 +559,21 @@ mod authoring_surface_policy_tests {
             (LIQUID_GLASS_DEMO, "LiquidGlassState"),
         ] {
             assert_advanced_entry_prefers_view_elements_alias(src, state);
+        }
+    }
+
+    #[test]
+    fn app_facing_docking_examples_prefer_fret_docking_facade() {
+        for src in [CONTAINER_QUERIES_DOCKING_DEMO, DOCKING_DEMO] {
+            assert!(src.contains("use fret::docking::{"));
+            assert!(!src.contains("use fret_docking::{"));
+        }
+    }
+
+    #[test]
+    fn advanced_docking_harnesses_keep_raw_fret_docking_imports() {
+        for src in [DOCKING_ARBITRATION_DEMO, IMUI_EDITOR_PROOF_DEMO] {
+            assert!(src.contains("use fret_docking::{"));
         }
     }
 

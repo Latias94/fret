@@ -1,11 +1,11 @@
 use anyhow::Context as _;
-use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
-use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
-use fret_docking::{
+use fret::docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockingRuntime,
     create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
 };
+use fret_app::{App, CommandId, Effect, WindowRequest};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
+use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,

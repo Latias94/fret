@@ -118,6 +118,7 @@ Companion docs:
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
+  - [x] Move app-facing `fret-examples` docking demos (`docking_demo`, `container_queries_docking_demo`) to the `fret::docking::*` seam.
   - [ ] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
 - [ ] Migrate `fret-selector` to the grouped app data surface.
   - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
