@@ -664,10 +664,14 @@ mod tests {
 
     fn render_gallery_page_with_app(page: &str, bounds: Rect, mut app: App) -> RenderedGalleryPage {
         let window = AppWindowId::default();
-        let state = UiGalleryDriver::build_ui(&mut app, window);
-        let _ = app.models_mut().update(&state.selected_page, |selected| {
-            *selected = Arc::<str>::from(page)
-        });
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        UiGalleryDriver::navigate_to_gallery_page(
+            &mut app,
+            &mut state,
+            window,
+            Arc::<str>::from(page),
+            fret_router::NavigationAction::Replace,
+        );
 
         let services = FakeServices;
 
@@ -707,6 +711,41 @@ mod tests {
                 Size::new(Px(1080.0), Px(720.0)),
             ),
         )
+    }
+
+    #[test]
+    fn render_gallery_page_helper_keeps_requested_page_in_models_layout_and_router() {
+        let rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
+
+        let selected_page = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after helper render");
+        let workspace_layout = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.workspace_window_layout)
+            .expect("workspace layout model should exist after helper render");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&workspace_layout)
+            .expect("workspace layout snapshot should remain supported after helper render");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the helper-selected page");
+        let semantics_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after helper render");
+
+        assert_eq!(selected_page.as_ref(), PAGE_BUTTON_GROUP);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_BUTTON_GROUP));
+        assert_eq!(routed_page.as_ref(), PAGE_BUTTON_GROUP);
+        assert!(
+            find_node_by_test_id(semantics_snapshot, "ui-gallery-button-group-demo-content")
+                .is_some(),
+            "expected helper render to expose the requested page semantics"
+        );
     }
 
     #[test]
