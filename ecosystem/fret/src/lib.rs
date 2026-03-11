@@ -1064,7 +1064,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         .global::<fret_ui_shadcn::app::InstallConfig>()
         .copied()
         .unwrap_or_default();
-    let _ = fret_ui_shadcn::app::sync_theme_from_environment(
+    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
         app,
         window,
         config.base_color,

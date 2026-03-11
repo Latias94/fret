@@ -52,6 +52,9 @@ Current status on 2026-03-11:
 - `fret-ui-magic` now exposes its renderer/material helper on an explicit
   `fret_ui_magic::advanced::ensure_materials(...)` seam instead of the ambiguous
   `app_integration` module.
+- `fret-ui-shadcn` now keeps default theme installation on `fret_ui_shadcn::app::*`, while
+  environment-sync and `UiServices` helpers live on the explicit
+  `fret_ui_shadcn::advanced::*` seam.
 - First-party callers and docs that used those root-level helpers (`fret-bootstrap`,
   `fret-examples`, scaffold templates, crate usage docs, and the todo golden-path doc) have been
   migrated to the explicit `crate::app::*` posture.
@@ -66,7 +69,7 @@ Milestone readout on 2026-03-11:
 | Milestone | State | Notes |
 | --- | --- | --- |
 | M0 | Done | budget, owners, rejected shapes, and docs index/roadmap links are all recorded |
-| M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, and one advanced material helper has moved to `advanced::*`, but broader first-party naming cleanup and bundle adoption are still incomplete |
+| M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, `fret-ui-shadcn` split its advanced hooks off the default app lane, and one advanced material helper has moved to `advanced::*`, but broader first-party naming cleanup and bundle adoption are still incomplete |
 | M2 | Mostly done | `CommandCatalog`, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
 | M3 | Not started | `QueryAdapter` still needs a real-consumer decision; selector remains intentionally trait-free |
 | M4 | In progress | checklist/gate work has started, but hard deletions and full docs/template cleanup remain |

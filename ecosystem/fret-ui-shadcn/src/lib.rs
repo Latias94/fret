@@ -15,14 +15,15 @@
 //! use fret_ui_shadcn::{facade as shadcn, prelude::*};
 //! ```
 //!
-//! Use `fret_ui_shadcn::app::*` for app-level setup and treat the crate root as a raw escape hatch
+//! Use `fret_ui_shadcn::app::*` for default app setup, `fret_ui_shadcn::advanced::*` for
+//! environment or `UiServices`-boundary hooks, and treat the crate root as a raw escape hatch
 //! rather than the default app-facing namespace.
 //!
 //! ## Feature flags
 //!
 //! - `app-integration`: explicit app-surface helpers under `fret_ui_shadcn::app::{install, ...}`
-//!   for installing the default shadcn theme into `fret_app::App` and syncing light/dark from
-//!   `WindowMetricsService`.
+//!   plus advanced hooks under `fret_ui_shadcn::advanced::{...}` for environment syncing and
+//!   `UiServices`-boundary integration.
 //! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
@@ -116,7 +117,10 @@ pub mod tooltip;
 pub mod typography;
 
 #[cfg(feature = "app-integration")]
-mod app_integration;
+pub mod advanced;
+
+#[cfg(feature = "app-integration")]
+pub mod app;
 
 mod surface_slot;
 mod test_id;
@@ -363,15 +367,6 @@ pub use tooltip::{
     Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,
     TooltipTrigger,
 };
-
-/// Explicit app integration helpers for shadcn defaults.
-#[cfg(feature = "app-integration")]
-pub mod app {
-    pub use crate::app_integration::{
-        InstallConfig, install, install_with, install_with_services, install_with_theme,
-        sync_theme_from_environment,
-    };
-}
 
 /// Curated app-facing shadcn surface for higher-level facades such as `fret::shadcn`.
 ///
@@ -632,10 +627,7 @@ pub mod facade {
     /// Explicit app integration helpers for shadcn defaults.
     #[cfg(feature = "app-integration")]
     pub mod app {
-        pub use crate::app::{
-            InstallConfig, install, install_with, install_with_services, install_with_theme,
-            sync_theme_from_environment,
-        };
+        pub use crate::app::{InstallConfig, install, install_with, install_with_theme};
     }
 
     /// Explicit built-in theme presets for app-level theme installation.

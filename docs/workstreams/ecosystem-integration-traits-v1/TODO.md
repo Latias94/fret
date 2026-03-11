@@ -68,6 +68,9 @@ surface.
     `fret-ui-magic` now exposes its renderer/material helper as
     `fret_ui_magic::advanced::ensure_materials(...)` rather than the old ambiguous
     `app_integration`-named path.
+  - Extended on 2026-03-11:
+    `fret-ui-shadcn` now keeps environment sync and `UiServices` helpers on
+    `fret_ui_shadcn::advanced::*`, leaving `fret_ui_shadcn::app::*` for default theme setup only.
 - [ ] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
   one of the target seams.
 
