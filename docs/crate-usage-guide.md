@@ -313,8 +313,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - **Apps:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::install(...)` or
-  `fret_ui_assets::app::install_with_budgets(...)`; keep the `*_with_ui_services` helpers as
-  explicit advanced/bootstrap-only escape hatches.
+  `fret_ui_assets::app::install_with_budgets(...)`; keep
+  `fret_ui_assets::advanced::{install_with_ui_services(...), install_with_ui_services_and_budgets(...)}`
+  as explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
   and gate it behind an explicit feature (e.g. `app-integration`).
 

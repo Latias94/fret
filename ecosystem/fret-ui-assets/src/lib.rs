@@ -28,19 +28,15 @@ pub use svg_file::*;
 pub use ui_assets::*;
 
 #[cfg(feature = "app-integration")]
-mod app_integration;
+pub mod advanced;
 #[cfg(feature = "app-integration")]
-pub mod app {
-    pub use super::app_integration::{
-        install, install_with_budgets, install_with_ui_services,
-        install_with_ui_services_and_budgets,
-    };
-}
+pub mod app;
 
 #[cfg(test)]
 mod surface_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
-    const APP_INTEGRATION_RS: &str = include_str!("app_integration.rs");
+    const APP_RS: &str = include_str!("app.rs");
+    const ADVANCED_RS: &str = include_str!("advanced.rs");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -49,9 +45,12 @@ mod surface_policy_tests {
     #[test]
     fn app_integration_stays_under_explicit_app_module() {
         let public_surface = public_surface();
-        assert!(public_surface.contains("pub mod app {"));
-        assert!(!public_surface.contains("pub use app_integration::{install, install_app"));
-        assert!(APP_INTEGRATION_RS.contains("pub fn install(app: &mut fret_app::App)"));
-        assert!(APP_INTEGRATION_RS.contains("pub fn install_with_ui_services("));
+        assert!(public_surface.contains("pub mod app;"));
+        assert!(public_surface.contains("pub mod advanced;"));
+        assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(APP_RS.contains("pub fn install_with_budgets("));
+        assert!(!APP_RS.contains("install_with_ui_services"));
+        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services_and_budgets("));
     }
 }

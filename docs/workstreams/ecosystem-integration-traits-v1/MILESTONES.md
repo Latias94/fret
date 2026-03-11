@@ -47,8 +47,8 @@ Current status on 2026-03-11:
   aliases as compatibility-only migration baggage.
 - `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose default
   app wiring under explicit `crate::app::install(...)` seams instead of root-level
-  `install_app(...)` exports; their UI-services-boundary wrappers are now spelled as explicit
-  advanced helpers.
+  `install_app(...)` exports; their UI-services-boundary wrappers now live under explicit
+  `crate::advanced::*` seams.
 - `fret-ui-magic` now exposes its renderer/material helper on an explicit
   `fret_ui_magic::advanced::ensure_materials(...)` seam instead of the ambiguous
   `app_integration` module.
