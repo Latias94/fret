@@ -1348,6 +1348,16 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/command_edit_remove/apply.rs` seams, so `command_edit_remove.rs` now mainly
     keeps cut/delete command orchestration explicit while remove-op collection and commit/view-state
     cleanup stop sharing one inline tail.
+  - Progress: right-click helpers now also route pending-release handling and click-threshold
+    predicates through the private `ui/canvas/widget/right_click/pending.rs` and
+    `ui/canvas/widget/right_click/threshold.rs` seams, so `right_click.rs` now mainly keeps the
+    public helper surface explicit while pending click-threshold behavior retains focused unit
+    coverage.
+  - Progress: searcher activation hit helpers now also route pointer-hit geometry and candidate-row
+    lookup through the private `ui/canvas/widget/searcher_activation_hit/hit.rs` and
+    `ui/canvas/widget/searcher_activation_hit/candidate.rs` seams, so
+    `searcher_activation_hit.rs` now mainly keeps the re-export surface explicit while candidate-row
+    mapping retains focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
