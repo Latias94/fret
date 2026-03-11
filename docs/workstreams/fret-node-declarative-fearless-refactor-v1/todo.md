@@ -1591,6 +1591,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     pointer-down finish cleanup through the private `ui/canvas/widget/sticky_wire_connect/plan.rs`
     and `ui/canvas/widget/sticky_wire_connect/finish.rs` seams, so
     `sticky_wire_connect.rs` now mainly keeps the sticky-wire connect orchestration explicit.
+  - Progress: node-drag move handling now also routes drag-delta planning and move-tail pan /
+    callback / invalidation through the private `ui/canvas/widget/node_drag/delta.rs` and
+    `ui/canvas/widget/node_drag/tail.rs` seams, so `node_drag.rs` now mainly keeps the node-drag
+    move orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 

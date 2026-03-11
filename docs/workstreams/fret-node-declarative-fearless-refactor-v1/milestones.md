@@ -1130,6 +1130,10 @@ real editors.
   `ui/canvas/widget/sticky_wire_connect/plan.rs` and
   `ui/canvas/widget/sticky_wire_connect/finish.rs` seams, so
   `sticky_wire_connect.rs` now mainly keeps the sticky-wire connect orchestration explicit.
+- node-drag move handling now also routes drag-delta planning and move-tail pan / callback /
+  invalidation through the private `ui/canvas/widget/node_drag/delta.rs` and
+  `ui/canvas/widget/node_drag/tail.rs` seams, so `node_drag.rs` now mainly keeps the node-drag
+  move orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
