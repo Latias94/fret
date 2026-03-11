@@ -33,9 +33,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .overlay(shadcn::DialogOverlay::new())
         .content_with(move |cx| {
             shadcn::DialogContent::new([
-                shadcn::DialogClose::from_scope()
-                    .into_element(cx)
-                    .test_id("ui-gallery-dialog-parts-close"),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Parts dialog").into_element(cx),
                     shadcn::DialogDescription::new(
@@ -44,7 +41,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
+                shadcn::DialogClose::from_scope()
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-parts-close"),
             ])
+            .show_close_button(false)
             .into_element(cx)
             .test_id("ui-gallery-dialog-parts-content")
         })

@@ -4280,6 +4280,7 @@ impl CommandDialog {
                 let palette = palette.into_element(cx);
 
                 DialogContent::new(vec![palette])
+                    .show_close_button(false)
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .a11y_label(a11y_label)
                     .into_element(cx)

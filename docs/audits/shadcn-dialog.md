@@ -47,14 +47,13 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
   underlay layout/overflow.
+- Pass: `DialogContent` renders a default close affordance and exposes
+  `show_close_button(false)`, matching upstream `showCloseButton={false}`.
 - Pass: `DialogClose` is available as an explicit close affordance recipe (close button parity).
 - Pass: `DialogClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DialogClose::new(open)` as the explicit constructor.
 - Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
-- Note: Public-surface drift remains around the default close affordance: upstream
-  `DialogContent` renders a close button by default and exposes `showCloseButton={false}`;
-  Fret currently models that choice explicitly with `DialogClose` / omission.
 
 ### Dismissal behavior
 
@@ -92,12 +91,15 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dialog_open_change_events_complete_without_animation`
+- Contract test: `dialog_content_default_close_button_closes`
+- Contract test: `dialog_content_show_close_button_false_hides_default_close`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_dialog_demo_panel_chrome_matches`).
 - Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_dialog_open_geometry_matches_fret`).
+- Gallery diag gate: `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-default-close-click.json`
 
 ## Authoring note: `from_scope()`
 
@@ -106,6 +108,8 @@ Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
 - Scope: only for parts whose semantic job is “close the current dialog”.
 - Layering: this does **not** change the underlying mechanism contract; it only reads the current
   dialog content scope while rendering the recipe.
+- Relationship to defaults: `DialogContent` now owns the upstream-style default corner close
+  affordance; use `show_close_button(false)` when an explicit `DialogClose` should replace it.
 - Escape hatch: `DialogClose::new(open)` remains the explicit constructor and should be preferred
   when building the part outside the dialog content subtree.
 - Rollout: `SheetClose` and `DrawerClose` now reuse the same pattern via wrappers over

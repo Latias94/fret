@@ -65,6 +65,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx)])
                 .into_element(cx),
             ])
+            .show_close_button(false)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
             .into_element(cx)
             .test_id("ui-gallery-dialog-custom-close-content")

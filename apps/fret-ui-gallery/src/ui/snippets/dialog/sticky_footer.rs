@@ -63,7 +63,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx);
 
             shadcn::DialogContent::new([
-                shadcn::DialogClose::from_scope().into_element(cx),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
                     shadcn::DialogDescription::new(

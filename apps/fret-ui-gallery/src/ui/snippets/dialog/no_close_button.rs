@@ -39,6 +39,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
             ])
             .into_element(cx)])
+            .show_close_button(false)
             .into_element(cx)
             .test_id("ui-gallery-dialog-no-close-content")
         },

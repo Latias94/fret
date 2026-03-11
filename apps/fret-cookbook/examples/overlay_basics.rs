@@ -194,6 +194,7 @@ impl View for OverlayBasicsView {
                             .test_id(TEST_ID_DIALOG_CLOSE),
                     );
                 })
+                .show_close_button(false)
                 .ui()
                 .test_id(TEST_ID_DIALOG_CONTENT)
                 .into_element(cx)

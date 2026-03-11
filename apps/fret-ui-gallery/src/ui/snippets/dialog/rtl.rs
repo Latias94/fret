@@ -74,7 +74,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             |cx| {
                 shadcn::DialogContent::new([
-                    shadcn::DialogClose::from_scope().into_element(cx),
                     shadcn::DialogHeader::new([
                         shadcn::DialogTitle::new("RTL Profile").into_element(cx),
                         shadcn::DialogDescription::new(

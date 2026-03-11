@@ -40,6 +40,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, dialog_open: Model<bool>) -> Any
                         .into_element(cx)])
                     .into_element(cx),
                 ])
+                .show_close_button(false)
                 .into_element(cx)
                 .test_id("ui-gallery-motion-presets-dialog-content")
             },

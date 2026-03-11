@@ -84,7 +84,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         move |cx| {
             shadcn::DialogContent::new([
-                shadcn::DialogClose::from_scope().into_element(cx),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Edit profile").into_element(cx),
                     shadcn::DialogDescription::new(
