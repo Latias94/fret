@@ -327,10 +327,60 @@ pub(crate) fn editor_icon_segment<H: UiHost>(
     )
 }
 
+pub(crate) fn editor_text_segment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    text_px: Px,
+    text: Arc<str>,
+    color: Color,
+    padding: Edges,
+) -> AnyElement {
+    let text_el = cx.text_props(TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Auto,
+                height: Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_control_text(TextStyle {
+            size: text_px,
+            line_height: Some(density.row_height),
+            ..Default::default()
+        })),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    });
+
+    editor_input_group_segment(
+        cx,
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Auto,
+                height: Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        padding,
+        text_el,
+    )
+}
+
 #[derive(Debug, Default)]
 struct JoinedInputPointerState {
     pressed: bool,
     last_pointer_type: Option<fret_core::PointerType>,
+}
+
+pub(crate) struct EditorJoinedInputContents {
+    pub(crate) root: AnyElement,
+    pub(crate) focus_id: fret_ui::GlobalElementId,
 }
 
 pub(crate) fn editor_joined_input_frame<H: UiHost>(
@@ -344,7 +394,7 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
     build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    editor_joined_input_frame_with_overrides(
+    editor_joined_input_frame_segments_with_overrides(
         cx,
         layout,
         density,
@@ -353,8 +403,56 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
         open,
         frame_test_id,
         |_cx, _focused| EditorInputGroupFrameOverrides::none(),
+        |_cx| Vec::new(),
         build_input,
         build_trailing_segments,
+    )
+}
+
+pub(crate) fn editor_joined_input_frame_segments_with_overrides<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+    density: EditorDensity,
+    chrome: ResolvedEditorFrameChrome,
+    enabled_for_paint: bool,
+    open: bool,
+    frame_test_id: Option<std::sync::Arc<str>>,
+    frame_overrides: impl FnOnce(&mut ElementContext<'_, H>, bool) -> EditorInputGroupFrameOverrides,
+    build_leading_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    editor_joined_input_frame_with_overrides(
+        cx,
+        layout,
+        density,
+        chrome,
+        enabled_for_paint,
+        open,
+        frame_test_id,
+        frame_overrides,
+        move |cx| {
+            let divider = chrome.border;
+            let mut segments = build_leading_segments(cx);
+            let input = build_input(cx);
+            let focus_id = input.id;
+            let input = editor_input_group_inset(cx, chrome.padding, input);
+
+            if !segments.is_empty() {
+                segments.push(editor_input_group_divider(cx, divider));
+            }
+            segments.push(input);
+
+            for seg in build_trailing_segments(cx) {
+                segments.push(editor_input_group_divider(cx, divider));
+                segments.push(seg);
+            }
+
+            EditorJoinedInputContents {
+                root: editor_input_group_row(cx, Px(0.0), segments),
+                focus_id,
+            }
+        },
     )
 }
 
@@ -367,8 +465,7 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
     open: bool,
     frame_test_id: Option<std::sync::Arc<str>>,
     frame_overrides: impl FnOnce(&mut ElementContext<'_, H>, bool) -> EditorInputGroupFrameOverrides,
-    build_input: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-    build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    build_contents: impl FnOnce(&mut ElementContext<'_, H>) -> EditorJoinedInputContents,
 ) -> AnyElement {
     cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
         let pointer_state: Arc<Mutex<JoinedInputPointerState>> = cx.with_state(
@@ -446,18 +543,9 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
                 cx.pointer_region_add_on_pointer_up(on_up);
                 cx.pointer_region_on_pointer_cancel(on_cancel);
 
-                let input = build_input(cx);
-                let focused = cx.is_focused_element(input.id);
+                let contents = build_contents(cx);
+                let focused = cx.is_focused_element(contents.focus_id);
                 let overrides = frame_overrides(cx, focused);
-
-                let divider = chrome.border;
-                let input = editor_input_group_inset(cx, chrome.padding, input);
-
-                let mut segments = vec![input];
-                for seg in build_trailing_segments(cx) {
-                    segments.push(editor_input_group_divider(cx, divider));
-                    segments.push(seg);
-                }
 
                 let mut frame = editor_input_group_frame_with_overrides(
                     cx,
@@ -479,7 +567,7 @@ pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
                         open,
                     },
                     overrides,
-                    move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), segments)],
+                    move |_cx, _visuals| vec![contents.root],
                 );
 
                 if let Some(test_id) = frame_test_id.as_ref() {

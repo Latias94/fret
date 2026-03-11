@@ -14,7 +14,6 @@ Allowed (expected):
 
 - `crates/fret-ui`
 - `ecosystem/fret-ui-kit`
-- `ecosystem/fret-ui-headless`
 - Optional: `ecosystem/fret-selector`, `ecosystem/fret-query`, `ecosystem/fret-undo` (feature-gated)
 
 Forbidden (by design intent):
@@ -35,6 +34,5 @@ Forbidden (by design intent):
 
 See:
 
-- `docs/workstreams/ui-editor-v1/ui-editor-v1.md`
-- `docs/workstreams/ui-editor-v1/ui-editor-v1-todo.md`
-
+- `docs/workstreams/ui-editor-v1.md`
+- `docs/workstreams/ui-editor-v1-todo.md`

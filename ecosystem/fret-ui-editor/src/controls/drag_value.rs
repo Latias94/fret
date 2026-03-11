@@ -13,6 +13,10 @@ use crate::controls::numeric_input::{
     NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::input_group::{
+    editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
+    editor_text_segment,
+};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions};
@@ -53,6 +57,8 @@ impl Default for DragValueState {
 #[derive(Debug, Clone)]
 pub struct DragValueOptions {
     pub layout: LayoutStyle,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
     /// Explicit identity source for internal state (scrub/typing focus restore).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -78,6 +84,8 @@ impl Default for DragValueOptions {
                 },
                 ..Default::default()
             },
+            prefix: None,
+            suffix: None,
             id_source: None,
             test_id: None,
         }
@@ -149,6 +157,8 @@ where
         let mode = state.lock().unwrap_or_else(|e| e.into_inner()).mode;
 
         let typing = mode == DragValueMode::Typing;
+        let prefix = self.options.prefix.clone();
+        let suffix = self.options.suffix.clone();
 
         let (density, scrub_chrome) = {
             let theme = Theme::global(&*cx.app);
@@ -234,7 +244,13 @@ where
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.text_props(TextProps {
+                        let theme = Theme::global(&*cx.app);
+                        let affix_color = theme
+                            .color_by_key("muted-foreground")
+                            .or_else(|| theme.color_by_key("muted_foreground"))
+                            .unwrap_or_else(|| theme.color_token("foreground"));
+                        let divider = visuals.border;
+                        let value_text_el = cx.text_props(TextProps {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Fill,
@@ -254,7 +270,34 @@ where
                             overflow: TextOverflow::Ellipsis,
                             align: TextAlign::Start,
                             ink_overflow: Default::default(),
-                        })]
+                        });
+                        let value =
+                            editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
+                        let mut segments = Vec::new();
+                        if let Some(prefix) = prefix.clone() {
+                            segments.push(editor_text_segment(
+                                cx,
+                                density,
+                                scrub_chrome.text_px,
+                                prefix,
+                                affix_color,
+                                scrub_chrome.padding,
+                            ));
+                            segments.push(editor_input_group_divider(cx, divider));
+                        }
+                        segments.push(value);
+                        if let Some(suffix) = suffix.clone() {
+                            segments.push(editor_input_group_divider(cx, divider));
+                            segments.push(editor_text_segment(
+                                cx,
+                                density,
+                                scrub_chrome.text_px,
+                                suffix,
+                                affix_color,
+                                scrub_chrome.padding,
+                            ));
+                        }
+                        vec![editor_input_group_row(cx, Px(0.0), segments)]
                     },
                 )]
             });
@@ -271,6 +314,8 @@ where
                 layout: input_layout,
                 enabled: typing,
                 focusable: typing,
+                prefix: self.options.prefix.clone(),
+                suffix: self.options.suffix.clone(),
                 test_id: self.options.test_id.clone(),
                 // Avoid growing the row height when a commit-time validation error occurs.
                 // A small trailing status icon keeps the inspector layout stable.

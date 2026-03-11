@@ -2798,7 +2798,6 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
- "fret-ui-headless",
  "fret-ui-kit",
  "fret-undo",
 ]

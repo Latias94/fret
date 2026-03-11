@@ -25,7 +25,8 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_icon_segment, editor_joined_input_frame_with_overrides,
+    EditorInputGroupFrameOverrides, editor_icon_segment,
+    editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
 use crate::primitives::style::EditorStyle;
 
@@ -34,6 +35,8 @@ pub struct NumericInputOptions {
     pub layout: LayoutStyle,
     pub size: Size,
     pub placeholder: Option<Arc<str>>,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
     /// Explicit identity source for internal state (draft/error models).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -59,6 +62,8 @@ impl Default for NumericInputOptions {
             },
             size: Size::default(),
             placeholder: None,
+            prefix: None,
+            suffix: None,
             id_source: None,
             test_id: None,
             enabled: true,
@@ -195,13 +200,15 @@ where
         let placeholder = options.placeholder.clone();
         let focusable = options.focusable;
         let error_display = options.error_display;
+        let prefix = options.prefix.clone();
+        let suffix = options.suffix.clone();
         let error_icon_test_id = options
             .test_id
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{}.error", id.as_ref())));
 
         let frame_bg = frame_chrome.bg;
-        let field = editor_joined_input_frame_with_overrides(
+        let field = editor_joined_input_frame_segments_with_overrides(
             cx,
             LayoutStyle {
                 size: SizeStyle {
@@ -221,34 +228,54 @@ where
                     .get_model_cloned(&error_for_frame, Invalidation::Paint)
                     .unwrap_or(None)
                     .is_some();
-                if !has_error {
-                    return EditorInputGroupFrameOverrides::none();
-                }
+                if has_error {
+                    let theme = Theme::global(&*cx.app);
+                    let error_border = theme
+                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+                        .unwrap_or_else(|| theme.color_token("destructive"));
+                    let error_bg = theme
+                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG)
+                        .unwrap_or_else(|| {
+                            let mut out = mix(
+                                frame_bg,
+                                Color {
+                                    a: 1.0,
+                                    ..error_border
+                                },
+                                0.08,
+                            );
+                            out.a = 1.0;
+                            out
+                        });
 
+                    EditorInputGroupFrameOverrides {
+                        bg: Some(error_bg),
+                        border: Some(error_border),
+                    }
+                } else {
+                    EditorInputGroupFrameOverrides::none()
+                }
+            },
+            move |cx| {
                 let theme = Theme::global(&*cx.app);
-                let error_border = theme
-                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-                    .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                    .unwrap_or_else(|| theme.color_token("destructive"));
-                let error_bg = theme
-                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG)
-                    .unwrap_or_else(|| {
-                        let mut out = mix(
-                            frame_bg,
-                            Color {
-                                a: 1.0,
-                                ..error_border
-                            },
-                            0.08,
-                        );
-                        out.a = 1.0;
-                        out
-                    });
+                let affix_color = theme
+                    .color_by_key("muted-foreground")
+                    .or_else(|| theme.color_by_key("muted_foreground"))
+                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let mut segments = Vec::new();
 
-                EditorInputGroupFrameOverrides {
-                    bg: Some(error_bg),
-                    border: Some(error_border),
+                if let Some(prefix) = prefix.clone() {
+                    segments.push(editor_text_segment(
+                        cx,
+                        density,
+                        frame_chrome.text_px,
+                        prefix,
+                        affix_color,
+                        frame_chrome.padding,
+                    ));
                 }
+                segments
             },
             move |cx| {
                 let mut props = TextInputProps::new(draft.clone());
@@ -372,27 +399,49 @@ where
                 input
             },
             move |cx| {
+                let mut segments = Vec::new();
+                let affix_color = {
+                    let theme = Theme::global(&*cx.app);
+                    theme
+                        .color_by_key("muted-foreground")
+                        .or_else(|| theme.color_by_key("muted_foreground"))
+                        .unwrap_or_else(|| theme.color_token("foreground"))
+                };
+
+                if let Some(suffix) = suffix.clone() {
+                    segments.push(editor_text_segment(
+                        cx,
+                        density,
+                        frame_chrome.text_px,
+                        suffix,
+                        affix_color,
+                        frame_chrome.padding,
+                    ));
+                }
+
                 let show_icon = matches!(
                     error_display,
                     NumericInputErrorDisplay::TrailingIcon
                         | NumericInputErrorDisplay::InlineTextAndIcon
                 );
                 if !show_icon {
-                    return Vec::new();
+                    return segments;
                 }
 
                 let error_msg = cx
                     .get_model_cloned(&error_for_trailing, Invalidation::Paint)
                     .unwrap_or(None);
                 if error_msg.is_none() {
-                    return Vec::new();
+                    return segments;
                 }
 
-                let theme = Theme::global(&*cx.app);
-                let error_border = theme
-                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-                    .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                    .unwrap_or_else(|| theme.color_token("destructive"));
+                let error_border = {
+                    let theme = Theme::global(&*cx.app);
+                    theme
+                        .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
+                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+                        .unwrap_or_else(|| theme.color_token("destructive"))
+                };
 
                 let mut icon = editor_icon_segment(
                     cx,
@@ -404,7 +453,8 @@ where
                 if let Some(test_id) = error_icon_test_id.as_ref() {
                     icon = icon.test_id(test_id.clone());
                 }
-                vec![icon]
+                segments.push(icon);
+                segments
             },
         );
 
