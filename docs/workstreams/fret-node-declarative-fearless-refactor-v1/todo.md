@@ -1566,6 +1566,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/group_resize_apply/children_min.rs`, and
     `ui/canvas/widget/group_resize_apply/snap.rs` seams, so
     `group_resize_apply.rs` now mainly keeps the resize-planning entrypoint explicit.
+  - Progress: viewport timer motion now also routes animation tick advancement and move-end
+    debounce handling through the private
+    `ui/canvas/widget/timer_motion_viewport/animation.rs` and
+    `ui/canvas/widget/timer_motion_viewport/debounce.rs` seams, so
+    `timer_motion_viewport.rs` now mainly keeps the viewport timer-motion façades explicit.
 
 ## M5 - Compatibility retained convergence
 

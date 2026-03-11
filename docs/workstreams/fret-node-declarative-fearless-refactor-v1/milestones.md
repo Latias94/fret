@@ -1105,6 +1105,10 @@ real editors.
   `ui/canvas/widget/group_resize_apply/children_min.rs`, and
   `ui/canvas/widget/group_resize_apply/snap.rs` seams, so
   `group_resize_apply.rs` now mainly keeps the resize-planning entrypoint explicit.
+- viewport timer motion now also routes animation tick advancement and move-end debounce handling
+  through the private `ui/canvas/widget/timer_motion_viewport/animation.rs` and
+  `ui/canvas/widget/timer_motion_viewport/debounce.rs` seams, so `timer_motion_viewport.rs` now
+  mainly keeps the viewport timer-motion façades explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
