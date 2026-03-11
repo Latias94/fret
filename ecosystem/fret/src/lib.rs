@@ -393,10 +393,12 @@ pub mod docking {
 
     pub use fret_docking::runtime::{recenter_in_window_floatings, request_dock_invalidation};
     pub use fret_docking::{
-        ActivatePanelOptions, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
-        DockSpace, DockSpaceMount, DockViewportLayout, DockViewportOverlayHooks,
-        DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService, DockingRuntime,
-        ViewportPanel, create_dock_space_node, create_dock_space_node_with_test_id,
+        ActivatePanelOptions, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
+        DockPanelFactoryRegistry, DockPanelRegistry, DockPanelRegistryBuilder,
+        DockPanelRegistryService, DockSpace, DockSpaceMount, DockViewportLayout,
+        DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy,
+        DockingPolicyService, DockingRuntime, DuplicateDockPanelKindError, ViewportPanel,
+        create_dock_space_node, create_dock_space_node_with_test_id,
         handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
         mount_dock_space, mount_dock_space_with_test_id, render_and_bind_dock_panels,
         render_cached_panel_root,

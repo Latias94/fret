@@ -8,8 +8,9 @@ use super::prelude_runtime::*;
 use super::prelude_ui::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::{
-    DockManager, DockPanel, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService,
-    DockSpace, DockingPolicy, DockingPolicyService, render_and_bind_dock_panels,
+    DockManager, DockPanel, DockPanelContentService, DockPanelFactory, DockPanelRegistry,
+    DockPanelRegistryBuilder, DockPanelRegistryService, DockSpace, DockingPolicy,
+    DockingPolicyService, render_and_bind_dock_panels,
 };
 use super::{DockViewportLayout, ViewportPanel};
 use crate::test_host::TestHost;

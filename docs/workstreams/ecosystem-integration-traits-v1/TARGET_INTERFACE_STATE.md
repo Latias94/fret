@@ -19,7 +19,7 @@ It answers four concrete questions:
 | `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
 | `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | In progress |
 | `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Planned |
-| `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | Planned |
+| `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | In progress |
 | `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
 
 ## 2. Default Teaching Rule
@@ -97,6 +97,8 @@ Target rule:
 
 - dock panel contributions are keyed by stable `PanelKind` / `PanelKey`,
 - docking stays out of `crates/fret-ui`.
+- registration belongs to `DockPanelRegistryBuilder`, while the app still owns the final registry
+  service installation.
 
 ### 3.3 Router ecosystems
 
@@ -246,24 +248,23 @@ impl RouteCodec for RouteCodecV1 {
 ```rust
 struct SearchPanelFactory;
 
-impl DockPanelFactory for SearchPanelFactory {
+impl DockPanelFactory<App> for SearchPanelFactory {
     fn panel_kind(&self) -> PanelKind {
         PanelKind::new("workbench.search")
-    }
-
-    fn register(&self, registry: &mut DockPanelRegistryBuilder) {
-        registry.register(self.panel_kind(), self);
     }
 
     fn build_panel(
         &self,
         key: &PanelKey,
-        cx: &mut DockPanelFactoryCx<'_>,
-    ) -> DockPanelRegistration {
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<NodeId> {
         let _ = (key, cx);
-        todo!()
+        Some(todo!())
     }
 }
+
+let mut registry = DockPanelRegistryBuilder::<App>::new();
+registry.register(SearchPanelFactory);
 ```
 
 ## 9. Completion Rule

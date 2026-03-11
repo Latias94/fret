@@ -5,15 +5,15 @@ use fret::shadcn::raw::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 use fret::{
     advanced::prelude::*,
     docking::{
-        self, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockingPolicy,
-        DockingPolicyService, create_dock_space_node_with_test_id, render_and_bind_dock_panels,
-        render_cached_panel_root,
+        self, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
+        DockPanelRegistryBuilder, DockPanelRegistryService, DockingPolicy, DockingPolicyService,
+        create_dock_space_node_with_test_id, render_and_bind_dock_panels,
     },
     integration::InstallIntoApp,
     shadcn,
 };
 use fret_app::{CommandMeta, CommandScope};
-use fret_core::{Color, Px};
+use fret_core::{Color, PanelKind, Px};
 use fret_runtime::CommandId;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
@@ -36,6 +36,8 @@ const CMD_ACTIVATE_HIERARCHY: &str = "cookbook.docking.activate_hierarchy";
 const CMD_ACTIVATE_INSPECTOR: &str = "cookbook.docking.activate_inspector";
 const CMD_ACTIVATE_EDITOR: &str = "cookbook.docking.activate_editor";
 const CMD_ACTIVATE_CONSOLE: &str = "cookbook.docking.activate_console";
+const PANEL_DESCRIPTION: &str =
+    "Dock content is app-owned, while reusable panel contributions aggregate through fret::docking::DockPanelFactory over the fret-docking ecosystem layer.";
 
 fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
@@ -179,65 +181,56 @@ impl DockingPolicy for DockingBasicsPolicy {
     }
 }
 
-struct DockingBasicsPanelRegistry;
+struct DockingBasicsCardPanelFactory {
+    kind: PanelKind,
+    title: &'static str,
+}
 
-impl DockPanelRegistry<KernelApp> for DockingBasicsPanelRegistry {
-    fn render_panel(
+impl DockingBasicsCardPanelFactory {
+    fn new(kind: &'static str, title: &'static str) -> Self {
+        Self {
+            kind: PanelKind::new(kind),
+            title,
+        }
+    }
+}
+
+impl DockPanelFactory<KernelApp> for DockingBasicsCardPanelFactory {
+    fn panel_kind(&self) -> PanelKind {
+        self.kind.clone()
+    }
+
+    fn build_panel(
         &self,
-        ui: &mut UiTree<KernelApp>,
-        app: &mut KernelApp,
-        services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        bounds: fret_core::Rect,
         panel: &PanelKey,
+        cx: &mut DockPanelFactoryCx<'_, KernelApp>,
     ) -> Option<fret_core::NodeId> {
-        let title = match panel.kind.0.as_str() {
-            "core.hierarchy" => "Hierarchy",
-            "core.inspector" => "Inspector",
-            "core.editor" => "Editor",
-            "core.console" => "Console",
-            _ => "Panel",
-        };
-
         let root_name = format!("cookbook.docking.panel.{}", panel.kind.0);
-        Some(render_cached_panel_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            &root_name,
-            |cx| {
-                let body = shadcn::Card::build(|cx, out| {
-                    out.push_ui(
-                        cx,
-                        shadcn::CardHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::CardTitle::new(title));
-                            out.push_ui(
-                                cx,
-                                shadcn::CardDescription::new(
-                                    "Dock content is app-owned (registry-driven), while docking UI/policy is adopted through fret::docking over the fret-docking ecosystem layer.",
-                                ),
-                            );
-                        }),
-                    );
-                    out.push_ui(
-                        cx,
-                        shadcn::CardContent::build(|cx, out| {
-                            out.push(cx.text(
-                                "Try: click tabs, drag tabs, drag the splitter, right-click a tab.",
-                            ));
-                        }),
-                    );
-                })
-                .ui()
-                .w_full()
-                .h_full()
-                .into_element(cx);
+        Some(cx.render_cached_panel_root(&root_name, |cx| {
+            let body = shadcn::Card::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::CardHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::CardTitle::new(self.title));
+                        out.push_ui(cx, shadcn::CardDescription::new(PANEL_DESCRIPTION));
+                    }),
+                );
+                out.push_ui(
+                    cx,
+                    shadcn::CardContent::build(|cx, out| {
+                        out.push(cx.text(
+                            "Try: click tabs, drag tabs, drag the splitter, right-click a tab.",
+                        ));
+                    }),
+                );
+            })
+            .ui()
+            .w_full()
+            .h_full()
+            .into_element(cx);
 
-                vec![body]
-            },
-        ))
+            vec![body]
+        }))
     }
 }
 
@@ -289,10 +282,17 @@ struct DockingBasicsWindowState {
 }
 
 fn install_docking_services(app: &mut KernelApp) {
+    let mut registry = DockPanelRegistryBuilder::new();
+    registry
+        .register(DockingBasicsCardPanelFactory::new("core.hierarchy", "Hierarchy"))
+        .register(DockingBasicsCardPanelFactory::new("core.inspector", "Inspector"))
+        .register(DockingBasicsCardPanelFactory::new("core.editor", "Editor"))
+        .register(DockingBasicsCardPanelFactory::new("core.console", "Console"));
+
     app.with_global_mut(
         DockPanelRegistryService::<KernelApp>::default,
         |svc, _app| {
-            svc.set(Arc::new(DockingBasicsPanelRegistry));
+            svc.set(registry.build_arc());
         },
     );
 

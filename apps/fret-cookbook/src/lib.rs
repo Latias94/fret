@@ -331,7 +331,8 @@ mod authoring_surface_policy_tests {
         assert!(DOCKING_EXAMPLE.contains("integration::InstallIntoApp"));
         assert!(DOCKING_EXAMPLE.contains("docking::{"));
         assert!(!DOCKING_EXAMPLE.contains("use fret_docking::{"));
-        assert!(DOCKING_EXAMPLE.contains("DockPanelRegistry<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("DockPanelFactory<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("DockPanelRegistryBuilder::new()"));
         assert!(DOCKING_EXAMPLE.contains("docking::handle_dock_op"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
         assert!(DOCKING_EXAMPLE.contains(".setup(DockingBasicsBundle)"));

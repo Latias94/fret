@@ -284,19 +284,23 @@ Target shape:
 
 ```rust
 use fret_core::{PanelKey, PanelKind};
+use fret_ui::{NodeId, UiHost};
 
-pub trait DockPanelFactory: Send + Sync + 'static {
+pub trait DockPanelFactory<H: UiHost>: Send + Sync + 'static {
     fn panel_kind(&self) -> PanelKind;
-    fn register(&self, registry: &mut DockPanelRegistryBuilder);
-    fn build_panel(&self, key: &PanelKey, cx: &mut DockPanelFactoryCx<'_>) -> DockPanelRegistration;
+    fn build_panel(&self, key: &PanelKey, cx: &mut DockPanelFactoryCx<'_, H>) -> Option<NodeId>;
 }
+
+let mut registry = DockPanelRegistryBuilder::<App>::new();
+registry.register(MyPanelFactory);
 ```
 
 Rules:
 
 - the app still owns the final dock registry/service,
 - this trait represents a single panel contribution, not the entire workspace shell,
-- it should aggregate into the existing docking registry story instead of bypassing it.
+- it should aggregate into the existing docking registry story instead of bypassing it,
+- registration belongs to the builder rather than a trait-side `register(...)` method.
 
 Use cases:
 
@@ -537,24 +541,23 @@ switches spread through the codebase:
 ```rust
 struct InspectorPanelFactory;
 
-impl DockPanelFactory for InspectorPanelFactory {
+impl DockPanelFactory<App> for InspectorPanelFactory {
     fn panel_kind(&self) -> PanelKind {
         PanelKind::new("workspace.inspector")
-    }
-
-    fn register(&self, registry: &mut DockPanelRegistryBuilder) {
-        registry.register(self.panel_kind(), self);
     }
 
     fn build_panel(
         &self,
         key: &PanelKey,
-        cx: &mut DockPanelFactoryCx<'_>,
-    ) -> DockPanelRegistration {
+        cx: &mut DockPanelFactoryCx<'_, App>,
+    ) -> Option<NodeId> {
         let _ = (key, cx);
-        todo!()
+        Some(todo!())
     }
 }
+
+let mut registry = DockPanelRegistryBuilder::<App>::new();
+registry.register(InspectorPanelFactory);
 ```
 
 ## 9. Migration Strategy

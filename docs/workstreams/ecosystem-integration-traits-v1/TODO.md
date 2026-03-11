@@ -27,8 +27,11 @@ surface.
     `fret-ui-kit::command`, with recipe crates consuming and mapping the data-only entries.
 - [ ] Audit existing router code and decide whether `RouteCodec` should be implemented directly by
   route-table builders or by app-defined codec types.
-- [ ] Audit docking registry usage and decide the precise relationship between the current
+- [x] Audit docking registry usage and decide the precise relationship between the current
   `DockPanelRegistry` and the target `DockPanelFactory`.
+  - Landed on 2026-03-11: `DockPanelRegistry` remains the app-owned final aggregation seam,
+    while `DockPanelFactory` + `DockPanelRegistryBuilder` provide the reusable contribution-level
+    path.
 - [ ] Decide whether `QueryAdapter` is needed in v1 or should stay "design locked, implementation
   deferred" until a second real consumer appears.
 - [ ] Record an explicit "do not add" policy for universal `Component` / giant ecosystem `Plugin`
@@ -97,15 +100,25 @@ surface.
 
 ## 6. `DockPanelFactory` Adoption
 
-- [ ] Audit current `DockPanelRegistry` call sites and classify them into:
+- [x] Audit current `DockPanelRegistry` call sites and classify them into:
   - app-owned bespoke registries,
   - reusable panel packs,
   - runtime-only helpers.
-- [ ] Define a contribution-level factory shape that can aggregate into the existing registry
+  - Landed on 2026-03-11: existing call sites are now explicitly split between app-owned final
+    registries (`DockPanelRegistry`), contribution-level reusable panel factories, and runtime-only
+    `render_and_bind_dock_panels(...)` helpers.
+- [x] Define a contribution-level factory shape that can aggregate into the existing registry
   service.
-- [ ] Keep persistent panel identity anchored on `PanelKind` / `PanelKey`.
-- [ ] Migrate at least one reusable panel set to the new contribution model before deleting old
+  - Landed on 2026-03-11 in `ecosystem/fret-docking/src/dock/panel_registry.rs` as
+    `DockPanelFactory`, `DockPanelFactoryCx`, `DockPanelRegistryBuilder`, and
+    `DockPanelFactoryRegistry`.
+- [x] Keep persistent panel identity anchored on `PanelKind` / `PanelKey`.
+  - The builder dispatches by stable `PanelKind`, while each factory still receives the full
+    `PanelKey` for singleton or multi-instance panels.
+- [x] Migrate at least one reusable panel set to the new contribution model before deleting old
   bespoke wiring guidance.
+  - Landed on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now registers its panel
+    set through `DockPanelFactory` contributions rather than a monolithic bespoke registry.
 
 ## 7. `QueryAdapter` and Selector Boundaries
 

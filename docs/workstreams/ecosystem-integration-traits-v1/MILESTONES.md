@@ -22,6 +22,10 @@ Current status on 2026-03-11:
 - Host command registry collection/gating/shortcut derivation now lives in
   `ecosystem/fret-ui-kit/src/command.rs`, while `fret-ui-shadcn::command` only maps catalog data
   into shadcn recipe entries and `fret-bootstrap` consumes the shared collector directly.
+- `DockPanelFactory` is now landed as a contribution-level seam in `fret-docking`.
+- `DockPanelRegistryBuilder` now aggregates `PanelKind`-keyed factories into the existing
+  app-owned `DockPanelRegistry` story, and the cookbook docking example has migrated to the new
+  contribution model.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 

@@ -29,8 +29,9 @@ mod space;
 pub use diagnostics::{dock_graph_signature_for_window, dock_graph_stats_for_window};
 pub use manager::{ActivatePanelOptions, DockManager};
 pub use panel_registry::{
-    DockPanelRegistry, DockPanelRegistryService, render_and_bind_dock_panels,
-    render_cached_panel_root,
+    DockPanelFactory, DockPanelFactoryCx, DockPanelFactoryRegistry, DockPanelRegistry,
+    DockPanelRegistryBuilder, DockPanelRegistryService, DuplicateDockPanelKindError,
+    render_and_bind_dock_panels, render_cached_panel_root,
 };
 pub use services::{
     DockPanelContentService, DockViewportOverlayHooksService, DockingPolicyService,
