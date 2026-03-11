@@ -881,6 +881,12 @@ real editors.
   `ui/canvas/widget/view_math_viewport/snap.rs` seams, so `view_math_viewport.rs` now mainly keeps
   the re-export surface explicit while viewport construction equivalence and snap behavior retain
   focused unit coverage.
+- delete-op building now also routes group, node, and edge removal planners through the private
+  `ui/canvas/widget/delete_ops_builder/group.rs`,
+  `ui/canvas/widget/delete_ops_builder/node.rs`, and
+  `ui/canvas/widget/delete_ops_builder/edge.rs` seams, so `delete_ops_builder.rs` now mainly keeps
+  top-level delete orchestration explicit while edge de-duplication across node removal retains
+  focused unit coverage.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

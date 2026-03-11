@@ -1337,6 +1337,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/view_math_viewport/snap.rs` seams, so `view_math_viewport.rs` now mainly
     keeps the re-export surface explicit while viewport construction equivalence and snap behavior
     retain focused unit coverage.
+  - Progress: delete-op building now also routes group, node, and edge removal planners through the
+    private `ui/canvas/widget/delete_ops_builder/group.rs`,
+    `ui/canvas/widget/delete_ops_builder/node.rs`, and
+    `ui/canvas/widget/delete_ops_builder/edge.rs` seams, so `delete_ops_builder.rs` now mainly
+    keeps top-level delete orchestration explicit while edge de-duplication across node removal
+    retains focused unit coverage.
 
 ## M5 - Compatibility retained convergence
 
