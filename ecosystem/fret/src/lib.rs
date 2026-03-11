@@ -48,10 +48,11 @@
 //! }
 //! ```
 //!
-//! Optional app-level extensions stay explicit:
+//! Optional ecosystem extensions stay explicit:
 //!
 //! - enable `state` for grouped selector/query helpers on `AppUi`
 //! - enable `router` for `fret::router::{install_app, RouterUiStore, RouterOutlet, ...}`
+//! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
 
 pub use fret_app::App as KernelApp;
 
@@ -309,6 +310,48 @@ pub mod router {
     pub fn install_app(app: &mut crate::app::App) {
         register_router_commands(app.commands_mut());
     }
+}
+
+/// Optional docking integration surface for advanced app code.
+///
+/// This keeps the docking story explicit:
+/// - docking data contracts remain in `fret-core`,
+/// - `fret-docking` remains the policy-heavy UI/runtime adoption layer,
+/// - `fret::docking` gives advanced app code one curated import lane without leaking docking types
+///   into `fret::app::prelude::*`.
+#[cfg(feature = "docking")]
+pub mod docking {
+    /// Raw docking core contracts for advanced or fully explicit use.
+    pub mod core {
+        pub use fret_core::dock::*;
+        pub use fret_core::{
+            DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow,
+            DockLayoutNode, DockLayoutValidationError, DockLayoutValidationErrorKind,
+            DockLayoutWindow, DockNodeId, DockOp, DockRect, DockWindowPlacement,
+            EditorDockLayoutSpec, PanelKey, SplitFractionsUpdate,
+        };
+    }
+
+    /// Raw docking UI/policy exports for advanced or fully explicit use.
+    pub mod ui {
+        pub use fret_docking::*;
+    }
+
+    /// Raw docking runtime integration helpers for advanced or fully explicit use.
+    pub mod runtime {
+        pub use fret_docking::runtime::*;
+    }
+
+    pub use fret_docking::runtime::{recenter_in_window_floatings, request_dock_invalidation};
+    pub use fret_docking::{
+        ActivatePanelOptions, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
+        DockSpace, DockSpaceMount, DockViewportLayout, DockViewportOverlayHooks,
+        DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService, DockingRuntime,
+        ViewportPanel, create_dock_space_node, create_dock_space_node_with_test_id,
+        handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+        mount_dock_space, mount_dock_space_with_test_id, render_and_bind_dock_panels,
+        render_cached_panel_root,
+    };
 }
 
 /// Explicit advanced/manual-assembly imports for power users and integration code.
@@ -1355,6 +1398,26 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn readme_and_rustdoc_expose_docking_as_explicit_optional_surface() {
+        assert!(CRATE_README.contains("- `docking`: enable the explicit advanced docking surface"));
+        assert!(
+            CRATE_README.contains("`fret::docking::{core::*, DockManager, handle_dock_op, ...}`")
+        );
+
+        let rustdoc = crate_rustdoc();
+        assert!(rustdoc.contains(
+            "//! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`"
+        ));
+        assert!(LIB_RS.contains("pub mod docking {"));
+        assert!(
+            LIB_RS.contains("/// Raw docking core contracts for advanced or fully explicit use.")
+        );
+        assert!(LIB_RS.contains(
+            "/// Raw docking runtime integration helpers for advanced or fully explicit use."
+        ));
+    }
+
+    #[test]
     fn crate_docs_only_teach_view_entry() {
         let rustdoc = crate_rustdoc();
         assert!(rustdoc.contains(
@@ -1433,6 +1496,15 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn usage_docs_expose_docking_as_explicit_extension_surface() {
+        assert!(CRATE_USAGE_GUIDE.contains("| Add docking integration | `[\"docking\"]` |"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::{core::*, ...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `docking` feature"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::docking::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("part of `fret::app::prelude::*`"));
+    }
+
+    #[test]
     fn fearless_refactoring_docs_distinguish_default_and_advanced_surfaces() {
         assert!(FEARLESS_REFACTORING.contains(
             "`impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`"
@@ -1473,6 +1545,10 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("UiIntoElementTestIdExt"));
         assert!(app_prelude.contains("ElementContextThemeExt"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
+        assert!(!app_prelude_exports_symbol("RouterUiStore"));
+        assert!(!app_prelude_exports_symbol("DockManager"));
+        assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
+        assert!(!app_prelude_exports_symbol("handle_dock_op"));
     }
 
     #[test]

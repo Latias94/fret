@@ -26,7 +26,6 @@ fret-icons = { path = "../../ecosystem/fret-icons", optional = true }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide", default-features = false, optional = true }
 fret-undo = { path = "../../ecosystem/fret-undo", optional = true }
 fret-executor = { path = "../../ecosystem/fret-executor", optional = true }
-fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"], optional = true }
 fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
@@ -65,7 +64,7 @@ cookbook-bootstrap = [
     "fret-bootstrap/ui-assets",
     "fret-bootstrap/icons-ui-semantic-lucide",
 ]
-cookbook-docking = ["cookbook-bootstrap", "dep:fret-docking"]
+cookbook-docking = ["cookbook-bootstrap", "fret/docking"]
 cookbook-imui = [
     "dep:fret-imui",
     "dep:fret-genui-core",

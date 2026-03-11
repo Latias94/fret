@@ -107,6 +107,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
+| Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
 | Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
@@ -362,6 +363,26 @@ Notes:
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
   explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).
+
+### `fret-docking`
+
+**What it is:** the policy-heavy docking UI/runtime adoption layer built on top of the stable
+`fret-core` dock graph/contracts.
+
+**Use it when:** you need editor-grade tab/split/tear-off workflows and are willing to opt into the
+advanced retained/manual-assembly seams they require.
+
+Notes:
+
+- On the default `fret` path, enable `fret`'s `docking` feature and prefer the explicit
+  `fret::docking::*` seam.
+- Use `fret::docking::core::*` for dock graph/contracts (`DockNode`, `DockOp`, `PanelKey`, layout
+  shapes) and `fret::docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for the UI +
+  runtime adoption helpers.
+- Keep docking explicit at the app boundary: panel registry, docking policy, and `dock_op` driver
+  wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
+- Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app
+  golden path.
 
 ### `fret-canvas`
 

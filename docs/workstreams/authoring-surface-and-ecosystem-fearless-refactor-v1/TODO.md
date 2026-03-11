@@ -105,6 +105,9 @@ Companion docs:
 
 - [ ] Migrate `fret-ui-shadcn` to the component surface + explicit optional app integration seams.
 - [ ] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
+  - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
+  - [x] Move the cookbook docking example to the `fret::docking::*` seam.
+  - [ ] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
 - [ ] Migrate `fret-selector` to the grouped app data surface.
   - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
@@ -150,6 +153,8 @@ Companion docs:
 - [x] Add a gate that README/docs/first-hour agree on the default action model.
 - [x] Add source gates that keep default selector/query teaching on grouped `cx.data()` helpers.
 - [ ] Add a gate that first-party ecosystem crates use documented extension seams.
+  - [x] Router cookbook/docs now gate the `fret::router::*` seam.
+  - [x] Docking cookbook/docs now gate the `fret::docking::*` seam.
 - [ ] Keep layering checks green.
 
 ## Exit Criteria

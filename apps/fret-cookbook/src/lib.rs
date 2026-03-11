@@ -282,8 +282,12 @@ mod authoring_surface_policy_tests {
         assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
         assert!(CUSTOM_V1_EXAMPLE.contains(".install_custom_effects(install_custom_effect)"));
 
-        assert!(DOCKING_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
+        assert!(DOCKING_EXAMPLE.contains("use fret::{"));
+        assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));
+        assert!(DOCKING_EXAMPLE.contains("docking::{"));
+        assert!(!DOCKING_EXAMPLE.contains("use fret_docking::{"));
         assert!(DOCKING_EXAMPLE.contains("DockPanelRegistry<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("docking::handle_dock_op"));
         assert!(DOCKING_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
 
         assert!(

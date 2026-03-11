@@ -218,7 +218,7 @@ Target rule:
 | Crate category | Target integration model | Notes |
 | --- | --- | --- |
 | design-system kit (`fret-ui-shadcn`, future kits) | component surface + optional app integration module | recipe crates must not define a competing app runtime |
-| docking | component surface + explicit advanced seams | keeps docking policy powerful without leaking runner ideas into the app default path |
+| docking | explicit `fret::docking` extension module over dock core contracts + `fret-docking` UI/runtime adoption | keeps docking policy powerful without leaking runner ideas into the app default path |
 | selector/query | grouped app-surface extension traits | first-party ecosystems must use the same seams expected of third parties |
 | router | explicit app-level extension module (`fret::router`) over router core + thin UI adoption | keeps routing opt-in and visible without leaking it into `fret::app::prelude::*` |
 | third-party reusable kits | component surface | default choice for portable UI packages |

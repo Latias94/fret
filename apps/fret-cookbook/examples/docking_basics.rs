@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
-use fret::{advanced::prelude::*, shadcn};
-use fret_app::{CommandMeta, CommandScope};
-use fret_core::DockOp;
-use fret_core::dock::{Axis, DockNode};
-use fret_core::{AppWindowId, Color, DockNodeId, PanelKey, Px, SemanticsRole};
-use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockingPolicy,
-    DockingPolicyService, create_dock_space_node_with_test_id, render_and_bind_dock_panels,
-    render_cached_panel_root,
+use fret::docking::core::{Axis, DockNode, DockNodeId, DockOp, PanelKey};
+use fret::{
+    advanced::prelude::*,
+    docking::{
+        self, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockingPolicy,
+        DockingPolicyService, create_dock_space_node_with_test_id, render_and_bind_dock_panels,
+        render_cached_panel_root,
+    },
+    shadcn,
 };
+use fret_app::{CommandMeta, CommandScope};
+use fret_core::{Color, Px};
 use fret_runtime::CommandId;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
@@ -201,7 +203,7 @@ impl DockPanelRegistry<KernelApp> for DockingBasicsPanelRegistry {
                             out.push_ui(
                                 cx,
                                 shadcn::CardDescription::new(
-                                    "Dock content is app-owned (registry-driven), while docking UI/policy lives in fret-docking.",
+                                    "Dock content is app-owned (registry-driven), while docking UI/policy is adopted through fret::docking over the fret-docking ecosystem layer.",
                                 ),
                             );
                         }),
@@ -454,7 +456,7 @@ fn on_command(
             reset_dock_layout(dock, window)
         });
         st.layout_ids = ids;
-        fret_docking::runtime::request_dock_invalidation(app, [window]);
+        docking::request_dock_invalidation(app, [window]);
         return;
     }
 
@@ -478,8 +480,8 @@ fn on_command(
     };
 
     // Apply directly (not via Effect) to keep this example self-contained.
-    let _ = fret_docking::handle_dock_op(app, op);
-    fret_docking::runtime::request_dock_invalidation(app, [window]);
+    let _ = docking::handle_dock_op(app, op);
+    docking::request_dock_invalidation(app, [window]);
 }
 
 fn on_dock_op(app: &mut KernelApp, op: DockOp) {
@@ -489,7 +491,7 @@ fn on_dock_op(app: &mut KernelApp, op: DockOp) {
     // - `handle_dock_op` applies pure graph ops and translates tear-off requests into window
     //   create requests.
     // - This cookbook example installs a policy that disables tear-off.
-    let _ = fret_docking::handle_dock_op(app, op);
+    let _ = docking::handle_dock_op(app, op);
 }
 
 fn configure_driver(

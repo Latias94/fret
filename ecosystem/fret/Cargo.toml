@@ -46,6 +46,7 @@ app = [
 state = ["state-selector", "state-query"]
 state-selector = ["dep:fret-selector", "fret-selector/ui"]
 state-query = ["dep:fret-query", "fret-query/ui", "fret-ui-kit/state-query"]
+docking = ["dep:fret-docking"]
 router = ["dep:fret-router", "dep:fret-router-ui"]
 
 # Load layered config files by default (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`).
@@ -88,6 +89,7 @@ fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", pack
 
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
+fret-docking = { version = "0.1.0", path = "../fret-docking", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
