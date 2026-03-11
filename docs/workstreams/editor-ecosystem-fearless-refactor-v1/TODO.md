@@ -38,8 +38,12 @@ Interaction contract:
       field chrome, contrast bands, separators, label/readout clarity, and group hierarchy.
 - [ ] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
       before promoting more components.
-- [ ] `EER-BASE-112` Define and land inspector/property layout grammar:
-      label width, value width, status slot, reset slot, and dense minimums.
+- [~] `EER-BASE-112` Define and land inspector/property layout grammar:
+      shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
+      `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
+      explicit (`label -> value -> reset slot -> status/actions slot`).
+      Remaining work: tune wide-inspector slack and any dense-mode overrides from screenshot review
+      rather than ad-hoc per-demo tweaks.
 - [ ] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
 - [~] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are
@@ -51,9 +55,9 @@ Interaction contract:
 - [~] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
-      and the latest review-only capture now covers overview / typing / validation states on the
-      editor inspector surface. The scripted run now completes successfully; review + follow-up
-      token/layout fixes are still pending.
+      and the latest review-only capture covers overview / typing / validation states on the editor
+      inspector surface. The script is now rerun-safe inside one session; remaining closure is
+      making the `fretboard diag run --session-auto --launch` process exit cleanly after success.
 - [ ] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       app-owned shadcn sync, environment color-scheme changes, and proof/demo startup should all
       converge on the same intended editor preset instead of silently falling back to host-only
@@ -111,10 +115,13 @@ Interaction contract:
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
-      its next job is to drive token/layout cleanup, not just exist.
+      its next job is to drive token/layout cleanup, not just exist, and to stay aligned with the
+      new shared inspector lane grammar.
 - [~] `EER-GATE-136` Close the screenshot-runner finalization gap for editor typed-edit proof.
-      The current default baseline script now reaches `PASS` for reviewable overview / typing /
-      validation screenshots. Remaining follow-up: understand or remove the repeated
+      The default baseline script now resets the proof search field up front so repeated runs do
+      not strand the next session in a filtered state, and the latest session root result reaches
+      `passed`. Remaining follow-up: make the `fretboard diag run --session-auto --launch` command
+      exit promptly after success, and understand or remove the repeated
       `global access while leased` noise emitted during typed-mode interactions so the gate is
       quiet as well as green.
 - [ ] `EER-MIGRATE-134` Write a short migration note for promoting app-local editor surfaces into

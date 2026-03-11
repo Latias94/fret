@@ -17,6 +17,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::controls::{MiniSearchBox, MiniSearchBoxOptions};
 use crate::primitives::EditorDensity;
+use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelOptions {
@@ -109,9 +110,10 @@ impl InspectorPanel {
         cx.scope(|cx| {
             let (density, gap, header_gap, padding) = {
                 let theme = Theme::global(&*cx.app);
-                let density = EditorDensity::resolve(theme);
-                let gap = self.options.gap.unwrap_or(Px(8.0));
-                let header_gap = self.options.header_gap.unwrap_or(Px(6.0));
+                let metrics = InspectorLayoutMetrics::resolve(theme);
+                let density = metrics.density;
+                let gap = self.options.gap.unwrap_or(metrics.panel_gap);
+                let header_gap = self.options.header_gap.unwrap_or(metrics.panel_header_gap);
                 let padding = self.options.padding.unwrap_or_else(|| Edges::all(Px(0.0)));
                 (density, gap, header_gap, padding)
             };

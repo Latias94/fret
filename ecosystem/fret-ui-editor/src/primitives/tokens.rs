@@ -22,10 +22,17 @@ impl EditorTokenKeys {
     pub const NUMERIC_ERROR_BG: &'static str = "editor.numeric.error_bg";
 
     pub const PROPERTY_COLUMN_GAP: &'static str = "editor.property.column_gap";
+    pub const PROPERTY_TRAILING_GAP: &'static str = "editor.property.trailing_gap";
     pub const PROPERTY_ROW_GAP: &'static str = "editor.property.row_gap";
     pub const PROPERTY_LABEL_WIDTH: &'static str = "editor.property.label_width";
+    pub const PROPERTY_VALUE_MAX_WIDTH: &'static str = "editor.property.value_max_width";
+    pub const PROPERTY_STATUS_SLOT_WIDTH: &'static str = "editor.property.status_slot_width";
+    pub const PROPERTY_RESET_SLOT_WIDTH: &'static str = "editor.property.reset_slot_width";
     pub const PROPERTY_GROUP_HEADER_HEIGHT: &'static str = "editor.property.group_header_height";
+    pub const PROPERTY_GROUP_CONTENT_GAP: &'static str = "editor.property.group_content_gap";
     pub const PROPERTY_AUTO_STACK_BELOW: &'static str = "editor.property.auto_stack_below";
+    pub const PROPERTY_PANEL_GAP: &'static str = "editor.property.panel_gap";
+    pub const PROPERTY_PANEL_HEADER_GAP: &'static str = "editor.property.panel_header_gap";
     pub const PROPERTY_PANEL_BG: &'static str = "editor.property.panel_bg";
     pub const PROPERTY_PANEL_BORDER: &'static str = "editor.property.panel_border";
     pub const PROPERTY_HEADER_BG: &'static str = "editor.property.header_bg";

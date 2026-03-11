@@ -33,6 +33,21 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo" }
       },
       "timeout_frames": 600

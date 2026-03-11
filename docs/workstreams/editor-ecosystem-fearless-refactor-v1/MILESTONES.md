@@ -58,14 +58,15 @@ Deliverables:
 - clearer default editor visual hierarchy and token ownership,
 - editor-owned baseline replay that survives host theme resets and environment-driven theme sync,
 - broader `EditorWidgetVisuals` coverage across reusable editor controls,
-- explicit property-grid / inspector layout grammar,
+- shared property-grid / inspector layout metrics for label, value, reset, status, group, and panel
+  lanes,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
 - a review-only proof composition that hides unrelated parity/docking surfaces during baseline
   screenshot capture,
 - a decision and follow-up plan for `imgui_like_dense` screenshot parity,
 - proof-surface cleanup so overview / typing / error states are visible without manual scene setup,
-- and a boring close-out path for screenshot automation after typed-mode interactions.
+- and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
 
@@ -74,6 +75,8 @@ Exit gates:
 - overview / typing / invalid screenshots are all meaningful and reproducible,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
+- repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
+  launch,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.
 
 ## Phase C - Editor starter kit closure

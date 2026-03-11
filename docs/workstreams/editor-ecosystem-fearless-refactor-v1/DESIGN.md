@@ -215,10 +215,17 @@ Recent baseline work clarified the next bottleneck:
   `FRET_IMUI_EDITOR_PROOF_LAYOUT=editor_review`,
 - the default screenshot proof uses that mode so overview / typing / validation captures focus on
   the editor inspector instead of mixing in parity and docking surfaces,
-- and the remaining proof/gate gap is no longer composition but reliability:
-  `fretboard diag run` now completes for the default baseline proof, but repeated
-  `global access while leased` warnings still show up during typed-mode interactions and should be
-  cleaned up before calling the gate fully quiet.
+- shared `InspectorLayoutMetrics` now drive property row / grid / group / panel spacing and slot
+  widths, so the inspector grammar is no longer spread across per-composite magic numbers,
+- `PropertyRow` now encodes one reusable lane model
+  (`label -> value -> reset slot -> status/actions slot`), while special rows can explicitly
+  collapse trailing slots when needed,
+- the latest `r15` screenshot proof now resets the search field before capture, and repeated runs
+  in the same session reach `passed` while still emitting reviewable overview / typing / validation
+  artifacts,
+- and the remaining proof/gate gap is now narrow and explicit:
+  make `fretboard diag run --session-auto --launch` exit promptly after a successful run and reduce
+  the repeated `global access while leased` warnings during typed-mode interactions.
 
 ### Foundation-first rule
 

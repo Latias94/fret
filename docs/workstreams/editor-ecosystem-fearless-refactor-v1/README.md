@@ -38,6 +38,15 @@ For this workstream, "foundations" means:
 - proof-surface composition that actually exposes the states we need to review,
 - and focused diagnostics/screenshot gates for those states.
 
+Current checkpoint:
+
+- shared inspector layout metrics now drive `PropertyRow`, `PropertyGrid`,
+  `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`,
+- the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
+- the default proof surface can produce reviewable overview / typing / validation screenshots,
+- and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
+  wide-inspector slack after the new lane grammar landed.
+
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.
 

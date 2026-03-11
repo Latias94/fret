@@ -222,19 +222,25 @@ impl GradientEditor {
                     let s = s.trim().trim_end_matches('°').trim();
                     s.parse::<f64>().ok()
                 });
-                PropertyRow::new().into_element(
-                    cx,
-                    |cx| cx.text("Angle"),
-                    |cx| {
-                        DragValue::new(m, fmt, parse)
-                            .options(DragValueOptions {
-                                test_id: angle_test_id.clone(),
-                                ..Default::default()
-                            })
-                            .into_element(cx)
-                    },
-                    |_cx| None,
-                )
+                PropertyRow::new()
+                    .options(PropertyRowOptions {
+                        reset_slot_width: Some(Px(0.0)),
+                        status_slot_width: Some(Px(0.0)),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |cx| cx.text("Angle"),
+                        |cx| {
+                            DragValue::new(m, fmt, parse)
+                                .options(DragValueOptions {
+                                    test_id: angle_test_id.clone(),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                        |_cx| None,
+                    )
             });
 
         let enabled = options.enabled;
@@ -341,6 +347,8 @@ fn stop_row<H: UiHost>(
 
     let mut row_options = row_options;
     row_options.test_id = row_test_id.clone();
+    row_options.reset_slot_width = Some(Px(0.0));
+    row_options.status_slot_width = Some(density.hit_thickness);
 
     PropertyRow::new().options(row_options).into_element(
         cx,

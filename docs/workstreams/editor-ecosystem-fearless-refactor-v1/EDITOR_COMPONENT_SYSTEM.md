@@ -292,6 +292,24 @@ Rules:
 - icon-only affordances should not become the only visible label in narrow layouts,
 - popup/list max heights should preserve scrolling and keyboard usability.
 
+### Inspector lane grammar
+
+Reusable inspector/property surfaces should default to one shared lane model:
+
+- a scan-aligned label lane,
+- a value lane that can fill but stays capped to a readable maximum,
+- a reserved reset slot,
+- and a reserved status/actions slot.
+
+Implications:
+
+- `PropertyRow` owns the lane grammar,
+- `PropertyGrid`, `PropertyGroup`, and `InspectorPanel` should forward shared metrics rather than
+  restating their own hardcoded spacing,
+- rows that genuinely do not want trailing affordances may explicitly collapse those slots,
+- and wide inspectors should keep alignment stable before trying to stretch every value field to
+  the full panel width.
+
 ### Visual density vs usability
 
 Use `editor.density.*` to tune the visual system, but do not encode unsafe defaults:

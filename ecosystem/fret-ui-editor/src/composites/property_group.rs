@@ -13,9 +13,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
+use crate::primitives::EditorTokenKeys;
 use crate::primitives::icons::editor_icon;
+use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::visuals::hover_overlay_bg;
-use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 pub type OnPropertyGroupToggle = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
 
@@ -92,7 +93,7 @@ impl PropertyGroup {
     ) -> AnyElement {
         cx.scope(|cx| {
             let (
-                density,
+                metrics,
                 header_height,
                 header_bg,
                 header_border,
@@ -102,12 +103,11 @@ impl PropertyGroup {
                 header_fg,
             ) = {
                 let theme = Theme::global(&*cx.app);
-                let density = EditorDensity::resolve(theme);
+                let metrics = InspectorLayoutMetrics::resolve(theme);
                 let header_height = self
                     .options
                     .header_height
-                    .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT))
-                    .unwrap_or(density.row_height);
+                    .unwrap_or(metrics.group_header_height);
                 let header_bg = theme
                     .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG)
                     .or_else(|| theme.color_by_key("muted"))
@@ -134,7 +134,7 @@ impl PropertyGroup {
                     .or_else(|| theme.color_by_key("foreground"))
                     .unwrap_or_else(|| theme.color_token("foreground"));
                 (
-                    density,
+                    metrics,
                     header_height,
                     header_bg,
                     header_border,
@@ -145,7 +145,8 @@ impl PropertyGroup {
                 )
             };
 
-            let gap = self.options.gap.unwrap_or(Px(4.0));
+            let density = metrics.density;
+            let gap = self.options.gap.unwrap_or(metrics.group_content_gap);
 
             let collapsed_model = self
                 .options
