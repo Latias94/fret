@@ -2207,7 +2207,7 @@ fn ordinal_suffix(day: u8) -> &'static str {
     }
 }
 
-fn calendar_nav_icon_button<H: UiHost>(
+pub(crate) fn calendar_nav_icon_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
     button_size_px: Px,

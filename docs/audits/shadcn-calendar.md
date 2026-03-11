@@ -31,6 +31,7 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 
 - Pass: `Calendar::new(month, selected)` covers the common single-date authoring path with externally owned month state.
 - Pass: `Calendar::new_controllable(cx, selected, default_selected)` covers the docs/gallery-style uncontrolled path without forcing callers to allocate a month model.
+- Pass: The gallery `Usage` snippet now demonstrates the source-aligned controlled-selection variant too: callers can pass `Some(selected_model)` into `new_controllable(...)` and keep only the visible month state internal, which is the closest Fret equivalent to upstream `selected` / `onSelect` usage without widening the public surface.
 - Pass: `caption_layout(...)`, `number_of_months(...)`, `week_start(...)`, `show_week_number(...)`, `fixed_weeks(...)`, `locale(...)`, and disabled/hidden matchers cover the important recipe surface from the upstream docs/examples.
 - Pass: `CalendarDayButton` exposes the day-cell customization seam that maps to upstream `components.DayButton`; richer per-day rendering should continue to land as a dedicated slot/day-button surface rather than a generic children API.
 - Note: Range / multiple / Hijri variants intentionally live as dedicated components instead of overloading one generic builder, which keeps the contract surface explicit and typed.
@@ -48,9 +49,12 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 - Pass: The `Selected Date (With TimeZone)` section is intentionally explanatory in Fret: the base calendar works with `time::Date`, so the JS `Date` offset issue described upstream does not require a calendar-level `timeZone` prop for date-only selection.
 - Pass: The `Demo` and example snippets keep caller-owned styling (`rounded-lg border`, `p-0`, custom cell size, field/popover sizing) at the page/snippet layer instead of baking those constraints into `Calendar` defaults.
 - Pass: Fret-only additions (`Date of Birth Picker`, `Natural Language Picker`, locale experiments, responsive semantics) remain after the upstream-aligned path so the page stays source-comparable.
+- Pass: All calendar variants now use SVG chevron nav buttons rather than text `<` / `>` fallbacks; the earlier drift was confined to `CalendarRange` / `CalendarMultiple` recipe code, not the core mechanism layer.
+- Pass: The gallery regression gate now targets snippet-owned stable semantics (`ui-gallery.calendar.*`) instead of doc-scaffold `*-content` wrappers, so the page-level check follows the real interactive surfaces that should stay source-aligned.
 
 ## Validation
 
+- `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_multiple_nav_buttons_render_svg_icons) | test(calendar_range_nav_buttons_render_svg_icons) | test(calendar_root_width_is_intrinsic_unless_caller_overrides_it)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web --status-level fail`
 - `cargo nextest run -p fret-ui-gallery --lib gallery_calendar_core_examples_keep_upstream_aligned_targets_present --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib calendar_root_width_is_intrinsic_unless_caller_overrides_it --status-level fail`

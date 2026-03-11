@@ -17,7 +17,6 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
-use crate::button::{ButtonSize, ButtonVariant};
 use crate::calendar::{
     CalendarLocale, clamp_start_month, date_in_month_bounds, max_start_month, month_le, month_lt,
 };
@@ -438,15 +437,17 @@ fn calendar_multi_month_view<H: UiHost>(
         let max_start = month_bounds.map(|b| max_start_month(b, number_of_months));
         let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
+        let direction = crate::use_direction(cx, None);
+        let prev_icon = crate::rtl::chevron_inline_start(direction);
+        let next_icon = crate::rtl::chevron_inline_end(direction);
 
         let month_model_prev = month_model.clone();
-        let prev = calendar_icon_button(
+        let prev = crate::calendar::calendar_nav_icon_button(
             cx,
             "Go to the Previous Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
             day_size,
-            Arc::from("<"),
+            prev_icon,
+            None,
             prev_enabled,
             move |host| {
                 if disable_navigation {
@@ -460,13 +461,12 @@ fn calendar_multi_month_view<H: UiHost>(
             },
         );
         let month_model_next = month_model.clone();
-        let next = calendar_icon_button(
+        let next = crate::calendar::calendar_nav_icon_button(
             cx,
             "Go to the Next Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
             day_size,
-            Arc::from(">"),
+            next_icon,
+            None,
             next_enabled,
             move |host| {
                 if disable_navigation {
@@ -907,91 +907,6 @@ fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]
     out.into()
 }
 
-fn calendar_icon_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    label: &'static str,
-    variant: crate::button::ButtonVariant,
-    size: ButtonSize,
-    button_size_px: Px,
-    text: Arc<str>,
-    enabled: bool,
-    on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app).snapshot();
-
-    let (bg, bg_hover, bg_pressed, border, fg, text_style) = {
-        let theme_full = Theme::global(&*cx.app);
-        let (bg, bg_hover, bg_pressed, border, fg) =
-            crate::button::variant_colors(theme_full, variant);
-        let text_style = crate::button::button_text_style(theme_full, size);
-        (bg, bg_hover, bg_pressed, border, fg, text_style)
-    };
-
-    let radius = theme
-        .metric_by_key("component.button.radius")
-        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
-
-    control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-        if !enabled {
-            cx.pressable_clear_on_activate();
-        } else {
-            cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
-                on_activate(host);
-            }));
-        }
-
-        let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(button_size_px);
-        pressable_layout.size.height = Length::Px(button_size_px);
-
-        let bg = if st.pressed {
-            bg_pressed
-        } else if st.hovered {
-            bg_hover
-        } else {
-            bg
-        };
-
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .bg(ColorRef::Color(bg))
-            .border_1()
-            .border_color(ColorRef::Color(border));
-
-        let pressable = PressableProps {
-            layout: pressable_layout,
-            enabled,
-            focusable: enabled,
-            focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-            a11y: PressableA11y {
-                label: Some(Arc::from(label)),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-
-        let style = text_style.clone();
-        let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut label = ui::label(text.clone())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(fg))
-                .nowrap();
-            if let Some(line_height) = style.line_height {
-                label = label.line_height_px(line_height);
-            }
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                label = label.letter_spacing_em(letter_spacing_em);
-            }
-            vec![label.into_element(cx)]
-        };
-
-        (pressable, chrome_props, children)
-    })
-}
-
 fn calendar_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &ThemeSnapshot,
@@ -1027,6 +942,68 @@ fn calendar_hidden_day_cell<H: UiHost>(
         let children = move |_cx: &mut ElementContext<'_, H>| Vec::new();
         (pressable, chrome_props, children)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{AnyElement, ElementKind};
+    use time::Month;
+
+    fn count_svg_icons(node: &AnyElement) -> usize {
+        let mut out = usize::from(matches!(node.kind, ElementKind::SvgIcon(_)));
+        for child in &node.children {
+            out += count_svg_icons(child);
+        }
+        out
+    }
+
+    fn find_pressable_by_label<'a>(node: &'a AnyElement, label: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Pressable(props) = &node.kind
+            && props.a11y.label.as_deref() == Some(label)
+        {
+            return Some(node);
+        }
+
+        for child in &node.children {
+            if let Some(found) = find_pressable_by_label(child, label) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn calendar_multiple_nav_buttons_render_svg_icons() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::March));
+            let selected = cx.app.models_mut().insert(Vec::<Date>::new());
+
+            CalendarMultiple::new(month, selected).into_element(cx)
+        });
+
+        let prev = find_pressable_by_label(&element, "Go to the Previous Month")
+            .expect("expected previous-month nav button");
+        let next = find_pressable_by_label(&element, "Go to the Next Month")
+            .expect("expected next-month nav button");
+
+        assert_eq!(count_svg_icons(prev), 1);
+        assert_eq!(count_svg_icons(next), 1);
+    }
 }
 
 fn calendar_multi_day_cell<H: UiHost>(
