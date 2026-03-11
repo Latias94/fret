@@ -2,6 +2,7 @@ use fret::advanced::prelude::*;
 use fret_core::Px;
 use fret_ui::ElementContext;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
+use fret_ui_shadcn::facade as shadcn;
 
 struct ExtrasMarqueePerfState;
 
@@ -18,7 +19,7 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ExtrasMarqueePerfS
 }
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, _st: &mut ExtrasMarqueePerfState) -> ViewElements {
-    let marquee = fret_ui_shadcn::extras::Marquee::new([
+    let marquee = shadcn::raw::extras::Marquee::new([
         "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta",
     ])
     .speed_px_per_frame(Px(1.0))

@@ -12,7 +12,7 @@ use fret_runtime::{
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use fret_ui_shadcn::facade as shadcn;
 
 const OVERLAY_LOGICAL_WINDOW_ID: &str = "overlay";
 
@@ -187,16 +187,16 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewEle
                 },
             );
 
-            let content = Card::new([
-                CardHeader::new([
-                    CardTitle::new("Hit-test passthrough probe").into_element(cx),
-                    CardDescription::new(
+            let content = shadcn::Card::new([
+                shadcn::CardHeader::new([
+                    shadcn::CardTitle::new("Hit-test passthrough probe").into_element(cx),
+                    shadcn::CardDescription::new(
                         "Use diag scripts to patch hit_test regions and assert OS-level receiver selection.",
                     )
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                CardContent::new([
+                shadcn::CardContent::new([
                     ui::v_flex(move |cx| {
                         let logical_line =
                             ui::text(format!("logical_window_id={logical}"))

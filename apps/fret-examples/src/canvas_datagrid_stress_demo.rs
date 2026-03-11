@@ -10,7 +10,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_shadcn::{DataGrid, DataGridCanvasAxis, DataGridCanvasOutput};
+use fret_ui_shadcn::facade as shadcn;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -52,8 +52,8 @@ pub struct CanvasDataGridStressWindowState {
     variable_sizes: Model<bool>,
     clamp_rows: Model<bool>,
     revision: Model<u64>,
-    grid_output: Model<DataGridCanvasOutput>,
-    grid_hist: VecDeque<DataGridCanvasOutput>,
+    grid_output: Model<shadcn::DataGridCanvasOutput>,
+    grid_hist: VecDeque<shadcn::DataGridCanvasOutput>,
     grid_hist_window: usize,
     frame: u64,
     exit_after_frames: Option<u64>,
@@ -85,7 +85,9 @@ impl CanvasDataGridStressDriver {
             .models_mut()
             .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS"));
         let revision = app.models_mut().insert(1u64);
-        let grid_output = app.models_mut().insert(DataGridCanvasOutput::default());
+        let grid_output = app
+            .models_mut()
+            .insert(shadcn::DataGridCanvasOutput::default());
         let grid_hist_window = parse_env_usize("FRET_CANVAS_GRID_STATS_WINDOW").unwrap_or(120);
 
         let exit_after_frames = parse_env_u64("FRET_CANVAS_GRID_EXIT_AFTER_FRAMES");
@@ -364,7 +366,8 @@ fn render(
             grid_slot.flex.basis = Length::Px(Px(0.0));
 
             let rows_axis = {
-                let mut axis = DataGridCanvasAxis::new(Arc::clone(&rows), revision, Px(24.0))
+                let mut axis =
+                    shadcn::DataGridCanvasAxis::new(Arc::clone(&rows), revision, Px(24.0))
                     .gap(Px(0.0))
                     .reset_measurements_on_revision_change(true);
                 if clamp_rows {
@@ -388,7 +391,8 @@ fn render(
             };
 
             let cols_axis = {
-                let mut axis = DataGridCanvasAxis::new(Arc::clone(&cols), revision, Px(120.0))
+                let mut axis =
+                    shadcn::DataGridCanvasAxis::new(Arc::clone(&cols), revision, Px(120.0))
                     .gap(Px(0.0))
                     .reset_measurements_on_revision_change(true);
                 if variable {
@@ -408,7 +412,7 @@ fn render(
                 axis
             };
 
-            let grid = DataGrid::new(rows_axis, cols_axis)
+            let grid = shadcn::DataGrid::new(rows_axis, cols_axis)
                 .overscan_rows(8)
                 .overscan_cols(4)
                 .output_model(state.grid_output.clone())

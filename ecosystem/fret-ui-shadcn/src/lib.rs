@@ -12,8 +12,11 @@
 //! Recommended imports for application/component code:
 //!
 //! ```rust
-//! use fret_ui_shadcn::prelude::*;
+//! use fret_ui_shadcn::{facade as shadcn, prelude::*};
 //! ```
+//!
+//! Use `fret_ui_shadcn::app::*` for app-level setup and treat the crate root as a raw escape hatch
+//! rather than the default app-facing namespace.
 //!
 //! ## Feature flags
 //!
@@ -665,7 +668,7 @@ pub use ui_builder_ext::*;
 /// Common imports for application code using `fret-ui-shadcn`.
 ///
 /// This keeps the “golden path” small: app code can typically depend on `fret-bootstrap` +
-/// `fret-ui-shadcn` and `use fret_ui_shadcn::prelude::*;`.
+/// `fret-ui-shadcn`, then import `use fret_ui_shadcn::{facade as shadcn, prelude::*};`.
 pub mod prelude {
     pub use crate::with_direction_provider;
     pub use crate::{

@@ -16,7 +16,7 @@ use fret_ui::element::{
 };
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
-use fret_ui_shadcn::{Field, FieldContent, FieldLabel, FieldOrientation};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 const INITIAL_SPLIT_FRACTION_LEFT: f32 = 0.75;
@@ -160,11 +160,11 @@ impl DemoDockPanelRegistry {
                             |cx| vec![cx.text("Input stub")],
                         );
 
-                        let field = Field::new([
-                            FieldLabel::new("Name").into_element(cx),
-                            FieldContent::new([field_input_stub]).into_element(cx),
+                        let field = shadcn::Field::new([
+                            shadcn::FieldLabel::new("Name").into_element(cx),
+                            shadcn::FieldContent::new([field_input_stub]).into_element(cx),
                         ])
-                        .orientation(FieldOrientation::Responsive)
+                        .orientation(shadcn::FieldOrientation::Responsive)
                         .into_element(cx)
                         .attach_semantics(
                             SemanticsDecoration::default().test_id("cq-dock-demo-field"),

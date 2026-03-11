@@ -147,7 +147,7 @@ Implementation anchors:
 Recommended imports for app code:
 
 ```rust
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 ```
 
 Guidelines:

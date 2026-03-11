@@ -12,8 +12,7 @@ use fret_runtime::{
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_BLINK: &str = "launcher_utility_window_demo.blink";
 const CMD_TOGGLE_ALWAYS_ON_TOP: &str = "launcher_utility_window_demo.toggle_always_on_top";
@@ -260,25 +259,25 @@ fn view(
 
                     let header_controls = ui::h_row(move |cx| {
                         vec![
-                            Button::new("Blink")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Blink")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from(CMD_BLINK))
                                 .test_id(TEST_ID_BLINK)
                                 .into_element(cx),
-                            Button::new(if always_on_top {
+                            shadcn::Button::new(if always_on_top {
                                 "Always on top: on"
                             } else {
                                 "Always on top: off"
                             })
-                            .variant(ButtonVariant::Outline)
-                            .size(ButtonSize::Sm)
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
                             .on_click(CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP))
                             .test_id(TEST_ID_TOGGLE_ALWAYS_ON_TOP)
                             .into_element(cx),
-                            Button::new("Quit")
-                                .variant(ButtonVariant::Destructive)
-                                .size(ButtonSize::Sm)
+                            shadcn::Button::new("Quit")
+                                .variant(shadcn::ButtonVariant::Destructive)
+                                .size(shadcn::ButtonSize::Sm)
                                 .on_click(CommandId::from(CMD_QUIT))
                                 .test_id(TEST_ID_QUIT)
                                 .into_element(cx),
@@ -299,16 +298,16 @@ fn view(
         },
     );
 
-    let content = Card::new([
-        CardHeader::new([
-            CardTitle::new("MVP gates").into_element(cx),
-            CardDescription::new(
+    let content = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("MVP gates").into_element(cx),
+            shadcn::CardDescription::new(
                 "Frameless main window + BeginDrag/BeginResize hooks + SetVisible (blink).",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        CardContent::new([ui::v_flex(move |cx| {
+        shadcn::CardContent::new([ui::v_flex(move |cx| {
             [
                 ui::text(style_text)
                     .font_monospace()

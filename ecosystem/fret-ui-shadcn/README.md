@@ -24,13 +24,19 @@ Experimental learning project (not production-ready).
 
 Keep the component taxonomy and app wiring separate:
 
-- recipes/components stay under `fret_ui_shadcn::*`
+- recipes/components should prefer the curated facade import
+  `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
 - app-owned setup stays under `fret_ui_shadcn::app::*`
+- raw root access stays an explicit escape hatch for low-level/internal use
 
 Example:
 
 ```rust
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
 fret_ui_shadcn::app::install(app);
+
+let _button = shadcn::Button::new("Save");
 ```
 
 ## Upstream references (non-normative)

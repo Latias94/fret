@@ -207,6 +207,8 @@ pub mod workspace_shell_demo;
 
 #[cfg(test)]
 mod authoring_surface_policy_tests {
+    use std::path::{Path, PathBuf};
+
     const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
     const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
     const CJK_CONFORMANCE_DEMO: &str = include_str!("cjk_conformance_demo.rs");
@@ -258,6 +260,27 @@ mod authoring_surface_policy_tests {
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
+
+    fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                collect_rust_sources(&path, out);
+                continue;
+            }
+
+            if path.extension().is_some_and(|ext| ext == "rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    fn examples_rust_sources() -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        collect_rust_sources(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut paths);
+        paths.sort();
+        paths
+    }
 
     fn assert_uses_advanced_surface(src: &str) {
         assert!(src.contains("advanced::prelude::*"));
@@ -459,6 +482,38 @@ mod authoring_surface_policy_tests {
     fn app_facing_state_examples_prefer_grouped_data_surface() {
         for src in [QUERY_ASYNC_TOKIO_DEMO, QUERY_DEMO, TODO_DEMO] {
             assert_prefers_grouped_data_surface(src);
+        }
+    }
+
+    #[test]
+    fn examples_source_tree_prefers_curated_shadcn_facade_imports() {
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert!(!source.contains("use fret_ui_shadcn as shadcn;"));
+            assert!(!source.contains("use fret_ui_shadcn::{self as shadcn"));
+
+            for line in source.lines() {
+                if !line.contains("fret_ui_shadcn::") {
+                    continue;
+                }
+
+                let trimmed = line.trim();
+                let allowed = matches!(
+                    trimmed,
+                    "use fret_ui_shadcn::facade as shadcn;"
+                        | "use fret_ui_shadcn::{facade as shadcn, prelude::*};"
+                );
+                assert!(
+                    allowed,
+                    "{} reintroduced a non-curated fret_ui_shadcn import: {}",
+                    path.display(),
+                    trimmed
+                );
+            }
         }
     }
 
