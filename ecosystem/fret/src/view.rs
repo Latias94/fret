@@ -771,6 +771,96 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
     }
 }
 
+/// Grouped selector/query helpers for extracted `UiCx` child builders on the default app surface.
+pub struct UiCxData<'cx, 'a> {
+    #[allow(dead_code)]
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+}
+
+impl<'cx, 'a> UiCxData<'cx, 'a> {
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector<Deps, TValue>(
+        self,
+        deps: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> Deps,
+        compute: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> TValue,
+    ) -> TValue
+    where
+        Deps: Any + PartialEq,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(self.cx, deps, compute)
+    }
+
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_keyed<K: Hash, Deps, TValue>(
+        self,
+        key: K,
+        deps: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> Deps,
+        compute: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> TValue,
+    ) -> TValue
+    where
+        Deps: Any + PartialEq,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+            self.cx, key, deps, compute,
+        )
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query<T: Any + Send + Sync + 'static>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Result<T, fret_query::QueryError>
+        + Send
+        + 'static,
+    ) -> fret_query::QueryHandle<T> {
+        fret_query::ui::QueryElementContextExt::use_query(self.cx, key, policy, fetch)
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query_async<T, Fut>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + Send + 'static,
+    ) -> fret_query::QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, fret_query::QueryError>> + Send + 'static,
+    {
+        fret_query::ui::QueryElementContextExt::use_query_async(self.cx, key, policy, fetch)
+    }
+
+    #[cfg(feature = "state-query")]
+    pub fn query_async_local<T, Fut>(
+        self,
+        key: fret_query::QueryKey<T>,
+        policy: fret_query::QueryPolicy,
+        fetch: impl FnOnce(fret_query::CancellationToken) -> Fut + 'static,
+    ) -> fret_query::QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
+    {
+        fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
+    }
+}
+
+/// Brings the grouped `data()` namespace to extracted `UiCx` helper functions.
+pub trait UiCxDataExt<'a> {
+    fn data(&mut self) -> UiCxData<'_, 'a>;
+}
+
+impl<'a> UiCxDataExt<'a> for ElementContext<'a, crate::app::App> {
+    fn data(&mut self) -> UiCxData<'_, 'a> {
+        UiCxData { cx: self }
+    }
+}
+
 /// Grouped render-time effect helpers for the default app authoring surface.
 pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
@@ -1351,6 +1441,7 @@ mod tests {
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
+        assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));

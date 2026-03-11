@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
@@ -859,14 +858,14 @@ fn query_panel_for_mode(
         FetchMode::Sync => {
             let search = cx.watch_model(&st.search_input).layout().value_or_default();
             let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-            cx.use_query(key, policy.clone(), move |token| {
+            cx.data().query(key, policy.clone(), move |token| {
                 mock_fetch_sync(token, id, delay, fail_mode, search, symbol)
             })
         }
         FetchMode::Async => {
             let search = cx.watch_model(&st.search_input).layout().value_or_default();
             let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-            cx.use_query_async(key, policy.clone(), move |token| async move {
+            cx.data().query_async(key, policy.clone(), move |token| async move {
                 mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
             })
         }

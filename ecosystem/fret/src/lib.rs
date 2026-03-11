@@ -220,6 +220,7 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::{LocalState, TrackedStateExt, View};
+        pub use crate::view::UiCxDataExt as _;
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
         pub use crate::{actions, workspace_menu};
         pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
@@ -492,6 +493,7 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::view::{LocalState, TrackedStateExt, View};
+        pub use crate::view::UiCxDataExt as _;
         pub use crate::{AppUi, Ui, UiCx};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, SemanticsRole};

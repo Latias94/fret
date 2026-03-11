@@ -508,6 +508,13 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn helper_heavy_examples_prefer_grouped_data_surface() {
+        for src in [ASYNC_PLAYGROUND_DEMO, MARKDOWN_DEMO] {
+            assert_prefers_grouped_data_surface(src);
+        }
+    }
+
+    #[test]
     fn examples_source_tree_prefers_curated_shadcn_facade_imports() {
         for path in examples_rust_sources() {
             if path.ends_with("src/lib.rs") {

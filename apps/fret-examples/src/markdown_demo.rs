@@ -12,7 +12,6 @@ use anyhow::Context as _;
 use fret::{FretApp, advanced::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -493,7 +492,7 @@ $$
                 let key = remote_image_key(&info.src);
                 let policy = remote_image_policy();
 
-                let handle = cx.use_query(key, policy, move |_token| {
+                let handle = cx.data().query(key, policy, move |_token| {
                     download_remote_image(src_for_fetch.as_ref())
                 });
 
