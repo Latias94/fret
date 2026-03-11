@@ -44,6 +44,7 @@ Companion docs:
 - [x] Add `fret::component::prelude::*`.
 - [x] Add explicit advanced import modules under `fret::advanced::*`.
 - [x] Remove broad transitive re-export of `fret_ui_kit::declarative::prelude::*` from the app surface.
+- [x] Remove broad transitive re-export of `fret_ui_kit::prelude::*` from the advanced prelude convenience lane.
 - [ ] Remove low-level mechanism types from the default app prelude:
   - [x] `AppWindowId`
   - [x] `Event`

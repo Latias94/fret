@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::app::prelude::*;
+use fret::{FretApp, shadcn};
 use fret_core::Corners;
+use fret_icons::IconId;
+use fret_ui::element::TextProps;
+use fret_ui_kit::declarative::icon;
 
 mod act {
     fret::actions!([
@@ -54,7 +58,7 @@ fn parse_step(step_text: &str) -> (i64, bool) {
 }
 
 impl View for HelloCounterView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
