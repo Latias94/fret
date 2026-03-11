@@ -506,7 +506,7 @@ fn main() -> anyhow::Result<()> {
         .with_command_default_keybindings()
         .setup(install_commands)
         .setup(install_docking_services)
-        .setup(shadcn::install_app)
+        .setup(shadcn::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons();

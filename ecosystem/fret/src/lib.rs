@@ -844,7 +844,7 @@ pub(crate) fn apply_desktop_defaults_with<D: fret_launch::WinitAppDriver + 'stat
 
     #[cfg(feature = "shadcn")]
     let builder = if defaults.shadcn {
-        builder.install_app(fret_ui_shadcn::install_app)
+        builder.install_app(fret_ui_shadcn::app::install)
     } else {
         builder
     };
@@ -1002,11 +1002,15 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         return;
     }
     let config = app
-        .global::<fret_ui_shadcn::ShadcnInstallConfig>()
+        .global::<fret_ui_shadcn::app::InstallConfig>()
         .copied()
         .unwrap_or_default();
-    let _ =
-        fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
+    let _ = fret_ui_shadcn::app::sync_theme_from_environment(
+        app,
+        window,
+        config.base_color,
+        config.scheme,
+    );
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1210,7 +1214,7 @@ mod tests {
     #[test]
     fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
         let mut app = KernelApp::new();
-        fret_ui_shadcn::install_app(&mut app);
+        fret_ui_shadcn::app::install(&mut app);
 
         let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
@@ -1505,6 +1509,12 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn usage_docs_expose_shadcn_app_surface_as_explicit_submodule() {
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::app::install(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
+    }
+
+    #[test]
     fn fearless_refactoring_docs_distinguish_default_and_advanced_surfaces() {
         assert!(FEARLESS_REFACTORING.contains(
             "`impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`"
@@ -1549,6 +1559,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DockManager"));
         assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
+        assert!(!app_prelude_exports_symbol("InstallConfig"));
     }
 
     #[test]

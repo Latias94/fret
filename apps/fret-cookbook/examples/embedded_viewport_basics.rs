@@ -505,7 +505,7 @@ fn main() -> anyhow::Result<()> {
     let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
         .with_main_window("cookbook-embedded-viewport-basics", (1120.0, 780.0))
         .setup(install_commands)
-        .setup(shadcn::install_app)
+        .setup(shadcn::app::install)
         .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .with_lucide_icons();

@@ -17,8 +17,9 @@
 //!
 //! ## Feature flags
 //!
-//! - `app-integration`: helpers for installing the default shadcn theme into `fret_app::App` and
-//!   syncing light/dark from `WindowMetricsService`.
+//! - `app-integration`: explicit app-surface helpers under `fret_ui_shadcn::app::{install, ...}`
+//!   for installing the default shadcn theme into `fret_app::App` and syncing light/dark from
+//!   `WindowMetricsService`.
 //! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
@@ -112,7 +113,7 @@ pub mod tooltip;
 pub mod typography;
 
 #[cfg(feature = "app-integration")]
-pub mod app_integration;
+mod app_integration;
 
 mod surface_slot;
 mod test_id;
@@ -122,6 +123,9 @@ mod ui_ext;
 
 #[cfg(test)]
 mod test_support;
+
+#[cfg(test)]
+mod surface_policy_tests;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionOrientation,
@@ -357,11 +361,14 @@ pub use tooltip::{
     TooltipTrigger,
 };
 
+/// Explicit app integration helpers for shadcn defaults.
 #[cfg(feature = "app-integration")]
-pub use app_integration::{
-    ShadcnInstallConfig, install, install_app, install_app_with, install_app_with_theme,
-    sync_theme_from_environment,
-};
+pub mod app {
+    pub use crate::app_integration::{
+        InstallConfig, install, install_with, install_with_services, install_with_theme,
+        sync_theme_from_environment,
+    };
+}
 
 /// Re-exported “authoring glue” for app/component code.
 ///

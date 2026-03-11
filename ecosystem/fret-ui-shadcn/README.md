@@ -16,9 +16,22 @@ Experimental learning project (not production-ready).
 
 ## Features
 
-- `app-integration`: helpers that integrate with `fret-app` (optional)
+- `app-integration`: explicit app helpers under `fret_ui_shadcn::app::{install, install_with, ...}` (optional)
 - `state-selector` / `state-query`: opt into derived/async state helpers
 - `state`: enables both selector + query integration
+
+## App integration
+
+Keep the component taxonomy and app wiring separate:
+
+- recipes/components stay under `fret_ui_shadcn::*`
+- app-owned setup stays under `fret_ui_shadcn::app::*`
+
+Example:
+
+```rust
+fret_ui_shadcn::app::install(app);
+```
 
 ## Upstream references (non-normative)
 
