@@ -1425,6 +1425,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/searcher_ui/event.rs` seams, so `searcher_input.rs` and `searcher_ui.rs`
     now mainly keep façade methods explicit while key routing and overlay event tails stop
     accumulating in the root files.
+  - Progress: searcher pointer helpers now also route pointer-move and wheel event tails through
+    the private `ui/canvas/widget/searcher_pointer/move_event.rs` and
+    `ui/canvas/widget/searcher_pointer/wheel_event.rs` seams, so `searcher_pointer.rs` now mainly
+    keeps façade forwarding explicit while pointer invalidation tails stop sharing the same root
+    helper body.
 
 ## M5 - Compatibility retained convergence
 

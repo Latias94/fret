@@ -968,6 +968,11 @@ real editors.
   `ui/canvas/widget/searcher_ui/event.rs` seams, so `searcher_input.rs` and `searcher_ui.rs` now
   mainly keep façade methods explicit while key routing and overlay event tails stop accumulating
   in the root files.
+- searcher pointer helpers now also route pointer-move and wheel event tails through the private
+  `ui/canvas/widget/searcher_pointer/move_event.rs` and
+  `ui/canvas/widget/searcher_pointer/wheel_event.rs` seams, so `searcher_pointer.rs` now mainly
+  keeps façade forwarding explicit while pointer invalidation tails stop sharing the same root
+  helper body.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
