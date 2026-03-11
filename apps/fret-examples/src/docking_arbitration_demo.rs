@@ -26,7 +26,7 @@ use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::json;
 use slotmap::KeyData;
 use std::collections::{HashMap, HashSet};

@@ -21,7 +21,7 @@ use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt
 use fret_ui::{Theme, UiTree};
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 const DOCKING_DEMO_TAB_BAR_H: Px = Px(28.0);

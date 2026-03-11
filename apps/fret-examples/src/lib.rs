@@ -221,6 +221,8 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V2_LUT_WEB_DEMO: &str = include_str!("custom_effect_v2_lut_web_demo.rs");
     const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
+    const DOCKING_ARBITRATION_DEMO: &str = include_str!("docking_arbitration_demo.rs");
+    const DOCKING_DEMO: &str = include_str!("docking_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
@@ -241,6 +243,7 @@ mod authoring_surface_policy_tests {
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_DEMO: &str = include_str!("launcher_utility_window_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO: &str =
         include_str!("launcher_utility_window_materials_demo.rs");
@@ -251,6 +254,7 @@ mod authoring_surface_policy_tests {
     const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
     const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
+    const SONNER_DEMO: &str = include_str!("sonner_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
@@ -612,17 +616,22 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
             CUSTOM_EFFECT_V2_WEB_DEMO,
             CUSTOM_EFFECT_V3_DEMO,
+            DOCKING_ARBITRATION_DEMO,
+            DOCKING_DEMO,
             DROP_SHADOW_DEMO,
             EMBEDDED_VIEWPORT_DEMO,
             EMOJI_CONFORMANCE_DEMO,
             GENUI_DEMO,
             HELLO_COUNTER_DEMO,
+            IME_SMOKE_DEMO,
             IMUI_EDITOR_PROOF_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
             LIQUID_GLASS_DEMO,
+            MARKDOWN_DEMO,
             POSTPROCESS_THEME_DEMO,
             QUERY_ASYNC_TOKIO_DEMO,
             SIMPLE_TODO_DEMO,
+            SONNER_DEMO,
         ] {
             assert_shadcn_surface_is_curated(src);
         }

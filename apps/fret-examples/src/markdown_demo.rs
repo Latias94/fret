@@ -23,7 +23,7 @@ use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::image_asset_state;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::{ColorRef, Space, ui};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 
 mod act {
     fret::actions!([RefreshRemoteImages = "markdown_demo.refresh_remote_images.v1"]);

@@ -11,7 +11,7 @@ use fret_runtime::{
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 pub struct ImeSmokeWindowState {
     ui: UiTree<App>,

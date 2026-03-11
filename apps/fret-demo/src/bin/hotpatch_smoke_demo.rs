@@ -8,7 +8,7 @@ mod hotpatch {
     use fret_runtime::Model;
     use fret_ui::{ElementContext, Invalidation};
     use fret_ui_kit::declarative::ElementContextThemeExt as _;
-    use fret_ui_shadcn as shadcn;
+    use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
