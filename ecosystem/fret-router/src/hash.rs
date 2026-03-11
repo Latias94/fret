@@ -2,6 +2,10 @@ use crate::query::decode_path_component;
 
 /// Parse a token-style hash value.
 ///
+/// Compatibility-only:
+/// prefer canonical query/path routes plus `RouteCodec` for new code. This helper exists for
+/// pre-router token hashes such as `#ui_gallery`.
+///
 /// Examples:
 /// - `#ui_gallery` -> `Some("ui_gallery")`
 /// - `#/ui_gallery` -> `Some("ui_gallery")`
@@ -23,7 +27,11 @@ pub fn hash_token(hash: &str) -> Option<String> {
     if token.is_empty() { None } else { Some(token) }
 }
 
-/// Backward-compatible helper for legacy `#token` matching behavior.
+/// Backward-compatible helper for legacy `#token` substring matching behavior.
+///
+/// Compatibility-only:
+/// prefer explicit route aliases (`RouteAliasTable`) or canonical query/path migration where
+/// possible. Use this only when older deployments encoded app selection as opaque hash tokens.
 pub fn hash_contains_token(hash: &str, token: &str) -> bool {
     let body = hash.strip_prefix('#').unwrap_or(hash);
     !body.is_empty() && body.contains(token)

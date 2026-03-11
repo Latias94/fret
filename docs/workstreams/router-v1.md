@@ -224,6 +224,13 @@ Current v1 baseline supports ecosystem-level legacy route migration:
   - chained resolution
   - cycle detection and max-hop guard (`AliasResolveError`)
 
+Guidance:
+
+- prefer `RouteAliasTable` when the legacy form is still expressible as a path/query route.
+- reserve `hash_token` / `hash_contains_token` for very old token-style hashes that do not carry a
+  structured route shape and cannot be normalized through alias rules alone.
+- do not teach raw hash-token parsing as a new app-authoring path.
+
 ## Query integration (optional feature)
 
 `fret-router` keeps query integration as optional glue helpers under the `query-integration`
