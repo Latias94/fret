@@ -18,7 +18,7 @@ It answers four concrete questions:
 | --- | --- | --- | --- | --- |
 | `InstallIntoApp` | ecosystem-level integration module (`fret::integration`) | small trait | app integration bundles, first-party and third-party app packs | In progress |
 | `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | In progress |
-| `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Planned |
+| `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | In progress |
 | `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | In progress |
 | `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
 
@@ -116,7 +116,9 @@ Target export posture:
 Target rule:
 
 - route canonicalization and history semantics remain router-owned,
-- route typing does not leak string parsing through app code.
+- route typing does not leak string parsing through app code,
+- app-authored codec types own typed route translation, while `RouteTree` / `Router` keep route ID
+  matching and history ownership independent.
 
 ### 3.4 Query / selector ecosystems
 

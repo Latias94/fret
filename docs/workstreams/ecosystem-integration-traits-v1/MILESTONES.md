@@ -35,6 +35,10 @@ Current status on 2026-03-11:
 - No remaining first-party app/example `DockPanelRegistry` implementations remain outside
   `fret-docking` test harnesses; the old monolithic app-registry teaching posture is now in
   delete-ready territory.
+- `RouteCodec` is now landed in `fret-router` as the shared typed-route seam.
+- `fret-router-ui` now exposes typed-route authoring helpers on top of the codec contract.
+- The first codec-based migration target is landed in
+  `apps/fret-cookbook/examples/router_basics.rs`.
 - Free installer functions remain the default story; first-party bundle examples and the remaining
   trait-budget decisions are still open.
 

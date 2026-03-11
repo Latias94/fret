@@ -124,6 +124,10 @@ Then `fret-router-ui` can wire this into a convenience helper:
 - `router_link(cx, &store, link, children)` -> `AnyElement` (pressable wrapper; no shadcn dependency)
   - diagnostics sugar: `router_link_with_test_id(...)`
   - route-based sugar: `router_link_to(...)` / `router_link_to_with_test_id(...)`
+  - typed-route sugar: `RouterUiStore::link_to_typed_route(...)`,
+    `RouterUiStore::navigate_typed_route(...)`,
+    `router_link_to_typed_route(...)` /
+    `router_link_to_typed_route_with_test_id(...)`
 
 Desktop apps may also want lightweight context menu descriptors (policy stays app-owned):
 

@@ -339,17 +339,18 @@ pub mod router {
     pub use fret_router::{HashHistoryAdapter, WebHistoryAdapter};
     pub use fret_router::{
         HistoryAdapter, MemoryHistory, NamespaceInvalidationRule, NavigationAction, PathParam,
-        RouteChangePolicy, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
-        RouteSearchTable, RouteSearchValidationFailure, RouteTree, Router,
-        RouterBuildLocationError, RouterEvent, RouterTransition, RouterUpdate,
+        PathPattern, PathPatternError, RouteChangePolicy, RouteCodec, RouteHooks, RouteLocation,
+        RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
+        Router, RouterBuildLocationError, RouterEvent, RouterTransition, RouterUpdate,
         RouterUpdateWithPrefetchIntents, SearchMap, SearchValidationMode,
         collect_invalidated_namespaces, prefetch_intent_query_key,
     };
     pub use fret_router_ui::{
         RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
         RouterOutlet, RouterUiSnapshot, RouterUiStore, register_router_commands, router_link,
-        router_link_to, router_link_to_with_test_id, router_link_with_props,
-        router_link_with_test_id, router_outlet, router_outlet_with_test_id,
+        router_link_to, router_link_to_typed_route, router_link_to_typed_route_with_test_id,
+        router_link_to_with_test_id, router_link_with_props, router_link_with_test_id,
+        router_outlet, router_outlet_with_test_id,
     };
 
     /// Register recommended router commands on the app surface.

@@ -72,6 +72,7 @@ Current v1 baseline implementation in `fret-router` includes:
 - `PathPattern` with static/param/wildcard segments
 - `RouteTable` with specificity-first match + fallback resolution
 - `RouteLocation` parse/format helpers with canonical query ordering
+- `RouteCodec` for typed route <-> canonical `RouteLocation` translation
 - `MemoryHistory` with explicit `push/replace/back/forward` duplicate-navigation no-op semantics
 - base-path helpers for sub-path deployments (`apply/strip/normalize`)
 - route alias/redirect mapping with loop/hop protection
@@ -103,6 +104,21 @@ Recommended model:
 - `RouteLocation` for current path + query + fragment
 - `RouteMatch` for resolved route + extracted params
 - `RouterState` in `Model<RouterState>` (app-owned)
+
+### Typed route codec seam (current baseline)
+
+`RouteCodec` is the shared typed-route seam in `fret-router`:
+
+- it translates app/domain routes into canonical `RouteLocation`,
+- it decodes canonical `RouteLocation` back into typed routes,
+- it stays independent from history adapter ownership and route-tree matching ownership.
+
+Current recommendation:
+
+- apps define small codec types (`struct MyRouteCodec;`) near their route enums,
+- `RouteTree<R>` / `Router<R, H>` still own match/guard/history behavior,
+- router UI helpers may consume a codec for typed link/navigation authoring without changing the
+  route-tree route ID type.
 
 Navigation flow:
 

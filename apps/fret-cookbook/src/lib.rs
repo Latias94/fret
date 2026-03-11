@@ -224,8 +224,10 @@ mod authoring_surface_policy_tests {
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
 
         assert!(ROUTER_EXAMPLE.contains("use fret::router::{"));
+        assert!(ROUTER_EXAMPLE.contains("RouteCodec"));
         assert!(!ROUTER_EXAMPLE.contains("use fret_router::{"));
         assert!(!ROUTER_EXAMPLE.contains("use fret_router_ui::{"));
+        assert!(ROUTER_EXAMPLE.contains("router_link_to_typed_route_with_test_id"));
         assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
         assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));

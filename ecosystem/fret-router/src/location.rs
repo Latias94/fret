@@ -23,6 +23,26 @@ impl Default for RouteLocation {
 }
 
 impl RouteLocation {
+    fn format_canonical(&self) -> String {
+        let mut url = self.path.clone();
+        url.push_str(format_query_pairs(self.query.as_slice()).as_str());
+
+        if let Some(fragment) = self
+            .fragment
+            .as_deref()
+            .filter(|fragment| !fragment.is_empty())
+        {
+            if fragment.starts_with('#') {
+                url.push_str(fragment);
+            } else {
+                url.push('#');
+                url.push_str(fragment);
+            }
+        }
+
+        url
+    }
+
     pub fn parse(url: &str) -> Self {
         let url = url.trim();
         if url.is_empty() {
@@ -60,25 +80,7 @@ impl RouteLocation {
     }
 
     pub fn to_url(&self) -> String {
-        let canonical = self.canonicalized();
-
-        let mut url = canonical.path;
-        url.push_str(format_query_pairs(canonical.query.as_slice()).as_str());
-
-        if let Some(fragment) = canonical
-            .fragment
-            .as_deref()
-            .filter(|fragment| !fragment.is_empty())
-        {
-            if fragment.starts_with('#') {
-                url.push_str(fragment);
-            } else {
-                url.push('#');
-                url.push_str(fragment);
-            }
-        }
-
-        url
+        self.canonicalized().format_canonical()
     }
 
     pub fn query_value(&self, key: &str) -> Option<&str> {
@@ -173,11 +175,11 @@ pub fn canonicalize_query_pairs(pairs: &mut Vec<QueryPair>) {
 
 fn canonicalize_fragment(fragment: Option<String>) -> Option<String> {
     let fragment = fragment?;
-    let fragment = fragment.trim().trim_start_matches('#');
+    let fragment = decode_path_component(fragment.trim().trim_start_matches('#'));
     if fragment.is_empty() {
         None
     } else {
-        Some(encode_component(fragment))
+        Some(encode_component(fragment.as_str()))
     }
 }
 
@@ -202,6 +204,16 @@ mod tests {
         let location = RouteLocation::parse("/docs#section%201");
 
         assert_eq!(location.fragment.as_deref(), Some("section 1"));
+        assert_eq!(location.to_url(), "/docs#section%201");
+    }
+
+    #[test]
+    fn route_location_to_url_does_not_double_encode_canonical_fragment() {
+        let mut location = RouteLocation::from_path("/docs");
+        location.fragment = Some("section 1".to_string());
+        location.canonicalize();
+
+        assert_eq!(location.fragment.as_deref(), Some("section%201"));
         assert_eq!(location.to_url(), "/docs#section%201");
     }
 

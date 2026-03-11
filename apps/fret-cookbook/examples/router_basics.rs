@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::router::{
-    HistoryAdapter as _, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
-    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure, RouteTree,
-    Router, RouterOutlet, RouterUiSnapshot, RouterUiStore, SearchMap, SearchValidationMode,
-    router_link_to_with_test_id, router_link_with_test_id,
+    HistoryAdapter as _, MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks,
+    RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteSearchValidationFailure,
+    RouteTree, Router, RouterOutlet, RouterUiSnapshot, RouterUiStore, SearchValidationMode,
+    router_link_to_typed_route_with_test_id, router_link_with_test_id,
 };
 use fret_ui::{CommandAvailability, Invalidation};
 
@@ -38,6 +38,53 @@ enum RouteId {
     Settings,
     User,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AppRoute {
+    Home,
+    Settings,
+    User { id: Arc<str> },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AppRouteDecodeError {
+    NoMatch,
+    MissingUserId,
+}
+
+struct RouterBasicsRouteCodec;
+
+impl RouteCodec for RouterBasicsRouteCodec {
+    type Route = AppRoute;
+    type Error = AppRouteDecodeError;
+
+    fn encode(&self, route: &Self::Route) -> RouteLocation {
+        match route {
+            AppRoute::Home => RouteLocation::from_path("/"),
+            AppRoute::Settings => RouteLocation::from_path("/settings"),
+            AppRoute::User { id } => RouteLocation::from_path(format!("/users/{id}")),
+        }
+    }
+
+    fn decode(&self, location: &RouteLocation) -> Result<Self::Route, Self::Error> {
+        match location.path.as_str() {
+            "/" => Ok(AppRoute::Home),
+            "/settings" => Ok(AppRoute::Settings),
+            _ => {
+                let pattern = PathPattern::parse("/users/:id").expect("pattern should parse");
+                let matched = pattern
+                    .match_path(location.path.as_str())
+                    .ok_or(AppRouteDecodeError::NoMatch)?;
+                let id = matched
+                    .param("id")
+                    .ok_or(AppRouteDecodeError::MissingUserId)?;
+                Ok(AppRoute::User { id: Arc::from(id) })
+            }
+        }
+    }
+}
+
+const APP_ROUTE_CODEC: RouterBasicsRouteCodec = RouterBasicsRouteCodec;
 
 struct RouterBasicsView {
     store: RouterUiStore<RouteId, MemoryHistory>,
@@ -201,6 +248,10 @@ impl View for RouterBasicsView {
             .cloned()
             .expect("router snapshot should be readable");
         let intents = intents_model.watch(cx).layout().value_or_default();
+        let typed_route_label = APP_ROUTE_CODEC
+            .decode_canonical(&snapshot.location)
+            .map(|route| format!("{route:?}"))
+            .unwrap_or_else(|_| "<unmatched>".to_string());
 
         let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
         let can_back = self.store.can_navigate(cx.app, NavigationAction::Back);
@@ -219,57 +270,49 @@ impl View for RouterBasicsView {
             .test_id(TEST_ID_BTN_FORWARD);
 
         let location = cx.text(location_label).test_id(TEST_ID_LOCATION_LABEL);
+        let typed_route = cx.text(format!("typed={typed_route_label}"));
 
-        let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location])
+        let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location, typed_route])
             .gap(Space::N2)
-            .items_center();
+            .items_center()
+            .wrap();
 
         let home_label = cx.text("Home");
         let settings_label = cx.text("Settings");
         let user_label = cx.text("User 42");
         let missing_label = cx.text("Missing");
 
-        let home_link = router_link_to_with_test_id(
+        let home_link = router_link_to_typed_route_with_test_id(
             cx,
             &self.store,
             NavigationAction::Push,
-            &RouteId::Home,
-            &[],
-            SearchMap::default(),
-            None,
+            &APP_ROUTE_CODEC,
+            &AppRoute::Home,
             TEST_ID_LINK_HOME,
             [home_label],
-        )
-        .unwrap_or_else(|err| cx.text(format!("link error: {err}")));
+        );
 
-        let settings_link = router_link_to_with_test_id(
+        let settings_link = router_link_to_typed_route_with_test_id(
             cx,
             &self.store,
             NavigationAction::Push,
-            &RouteId::Settings,
-            &[],
-            SearchMap::default(),
-            None,
+            &APP_ROUTE_CODEC,
+            &AppRoute::Settings,
             TEST_ID_LINK_SETTINGS,
             [settings_label],
-        )
-        .unwrap_or_else(|err| cx.text(format!("link error: {err}")));
+        );
 
-        let user_link = router_link_to_with_test_id(
+        let user_link = router_link_to_typed_route_with_test_id(
             cx,
             &self.store,
             NavigationAction::Push,
-            &RouteId::User,
-            &[PathParam {
-                name: "id".to_string(),
-                value: "42".to_string(),
-            }],
-            SearchMap::default(),
-            None,
+            &APP_ROUTE_CODEC,
+            &AppRoute::User {
+                id: Arc::from("42"),
+            },
             TEST_ID_LINK_USER_42,
             [user_label],
-        )
-        .unwrap_or_else(|err| cx.text(format!("link error: {err}")));
+        );
 
         let missing_link = {
             let link = self
@@ -286,7 +329,7 @@ impl View for RouterBasicsView {
                     out.push_ui(
                         cx,
                         shadcn::CardDescription::new(
-                            "Router links (hover prefetch + click navigate).",
+                            "Typed-route links (codec encode + hover prefetch + click navigate).",
                         ),
                     );
                 }),
@@ -438,7 +481,7 @@ impl View for RouterBasicsView {
                     out.push_ui(
                         cx,
                         shadcn::CardDescription::new(
-                            "A tiny routing example: links, outlet rendering, and back/forward.",
+                            "A tiny routing example: typed route codec, links, outlet rendering, and back/forward.",
                         ),
                     );
                 }),

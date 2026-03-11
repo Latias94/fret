@@ -12,7 +12,7 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_core::{AppWindowId, KeyCode, Modifiers, SemanticsRole};
 use fret_router::{
-    HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
+    HistoryAdapter, NavigationAction, PathParam, RouteCodec, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
@@ -269,6 +269,18 @@ where
         RouterLink { action, href, to }
     }
 
+    pub fn link_to_typed_route<C>(
+        &self,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> RouterLink
+    where
+        C: RouteCodec,
+    {
+        self.link_to_location(action, codec.encode_canonical(route))
+    }
+
     pub fn take_events(&self, app: &mut App) -> Vec<RouterEvent<R>> {
         app.models_mut()
             .update(&self.router, |router| router.take_events())
@@ -363,6 +375,32 @@ where
             .expect("router model should be updatable")?;
         self.apply_update(app, &update.update, &update.intents);
         Ok(update)
+    }
+
+    pub fn navigate_typed_route<C>(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> Result<RouterUpdate, RouteSearchValidationFailure>
+    where
+        C: RouteCodec,
+    {
+        self.navigate(app, action, Some(codec.encode_canonical(route)))
+    }
+
+    pub fn navigate_typed_route_with_prefetch_intents<C>(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure>
+    where
+        C: RouteCodec,
+    {
+        self.navigate_with_prefetch_intents(app, action, Some(codec.encode_canonical(route)))
     }
 
     pub fn sync_with_prefetch_intents(
@@ -757,6 +795,41 @@ where
     Ok(router_link(cx, store, link, children))
 }
 
+pub fn router_link_to_typed_route<R, H, C>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    codec: &C,
+    route: &C::Route,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+    C: RouteCodec,
+{
+    let link = store.link_to_typed_route(action, codec, route);
+    router_link(cx, store, link, children)
+}
+
+pub fn router_link_to_typed_route_with_test_id<R, H, C>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    codec: &C,
+    route: &C::Route,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+    C: RouteCodec,
+{
+    let link = store.link_to_typed_route(action, codec, route);
+    router_link_with_test_id(cx, store, link, test_id, children)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn router_link_to_with_test_id<R, H>(
     cx: &mut ElementContext<'_, App>,
@@ -862,8 +935,8 @@ mod tests {
     use super::{RouterOutlet, RouterUiSnapshot, RouterUiStore};
     use fret_app::App;
     use fret_router::{
-        MemoryHistory, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable,
-        RouteTree, Router,
+        MemoryHistory, RouteCodec, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
+        RouteSearchTable, RouteTree, Router,
     };
     use fret_runtime::Model;
     use fret_ui::ElementContext;
@@ -990,5 +1063,74 @@ mod tests {
             .expect("snapshot should be readable");
         assert_eq!(snapshot.location.to_url(), "/settings");
         assert_eq!(snapshot.matches.len(), 2);
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum TypedRoute {
+        Home,
+        Settings,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum TypedRouteDecodeError {
+        NoMatch,
+    }
+
+    struct TypedRouteCodec;
+
+    impl RouteCodec for TypedRouteCodec {
+        type Route = TypedRoute;
+        type Error = TypedRouteDecodeError;
+
+        fn encode(&self, route: &Self::Route) -> RouteLocation {
+            match route {
+                TypedRoute::Home => RouteLocation::from_path("/"),
+                TypedRoute::Settings => RouteLocation::parse("settings///"),
+            }
+        }
+
+        fn decode(&self, location: &RouteLocation) -> Result<Self::Route, Self::Error> {
+            match location.path.as_str() {
+                "/" => Ok(TypedRoute::Home),
+                "/settings" => Ok(TypedRoute::Settings),
+                _ => Err(TypedRouteDecodeError::NoMatch),
+            }
+        }
+    }
+
+    #[test]
+    fn router_ui_store_builds_typed_route_links_via_codec() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let router = Router::new(
+            tree,
+            search_table,
+            fret_router::SearchValidationMode::Strict,
+            history,
+        )
+        .expect("router should build");
+
+        let mut app = App::new();
+        let window = fret_core::AppWindowId::default();
+        let store = RouterUiStore::new(&mut app, window, router);
+
+        let link = store.link_to_typed_route(
+            fret_router::NavigationAction::Push,
+            &TypedRouteCodec,
+            &TypedRoute::Settings,
+        );
+        assert_eq!(link.href.as_ref(), "/settings");
+        assert_eq!(link.to.to_url(), "/settings");
     }
 }

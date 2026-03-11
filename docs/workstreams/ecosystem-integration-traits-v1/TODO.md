@@ -25,8 +25,11 @@ surface.
 - [x] Lock the canonical owner for `CommandCatalog`.
   - Landed on 2026-03-11: host-command catalog ownership now lives in
     `fret-ui-kit::command`, with recipe crates consuming and mapping the data-only entries.
-- [ ] Audit existing router code and decide whether `RouteCodec` should be implemented directly by
+- [x] Audit existing router code and decide whether `RouteCodec` should be implemented directly by
   route-table builders or by app-defined codec types.
+  - Landed on 2026-03-11: the shared seam is app-defined codec types in `fret-router`, while
+    `RouteTree` / `Router` continue to own route matching, guards, and history semantics
+    independently.
 - [x] Audit docking registry usage and decide the precise relationship between the current
   `DockPanelRegistry` and the target `DockPanelFactory`.
   - Landed on 2026-03-11: `DockPanelRegistry` remains the app-owned final aggregation seam,
@@ -90,13 +93,17 @@ surface.
 
 ## 5. `RouteCodec` Adoption
 
-- [ ] Add a single target note explaining how typed routes, canonical `RouteLocation`, and query
+- [x] Add a single target note explaining how typed routes, canonical `RouteLocation`, and query
   integration fit together.
-- [ ] Pick one in-tree app as the first codec-based migration target.
-  - Preferred candidates: gallery routing or cookbook router basics.
+  - Landed on 2026-03-11 in `docs/workstreams/router-v1.md`.
+- [x] Pick one in-tree app as the first codec-based migration target.
+  - Landed on 2026-03-11: `apps/fret-cookbook/examples/router_basics.rs` now teaches an
+    app-defined `RouteCodec` plus typed-route router link helpers.
 - [ ] Remove remaining stringly route construction in official examples after the typed route path
   is ready.
-- [ ] Keep browser/history adapters independent from codec ownership.
+- [x] Keep browser/history adapters independent from codec ownership.
+  - Current implementation keeps `RouteCodec` in `fret-router` core while history remains owned by
+    `MemoryHistory` / web adapters and is not referenced by the codec contract.
 
 ## 6. `DockPanelFactory` Adoption
 
