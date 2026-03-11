@@ -1155,6 +1155,10 @@ real editors.
   the private `ui/canvas/widget/pending_resize_session/group.rs` and
   `ui/canvas/widget/pending_resize_session/node.rs` seams, so
   `pending_resize_session.rs` now mainly keeps the resize-session activation façades explicit.
+- drag-threshold checks now also route threshold normalization and squared-distance comparison
+  through the private `ui/canvas/widget/threshold/normalize.rs` and
+  `ui/canvas/widget/threshold/distance.rs` seams, so `threshold.rs` now mainly keeps the drag
+  threshold façade explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

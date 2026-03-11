@@ -1616,6 +1616,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     assembly through the private `ui/canvas/widget/pending_resize_session/group.rs` and
     `ui/canvas/widget/pending_resize_session/node.rs` seams, so
     `pending_resize_session.rs` now mainly keeps the resize-session activation façades explicit.
+  - Progress: drag-threshold checks now also route threshold normalization and squared-distance
+    comparison through the private `ui/canvas/widget/threshold/normalize.rs` and
+    `ui/canvas/widget/threshold/distance.rs` seams, so `threshold.rs` now mainly keeps the drag
+    threshold façade explicit.
 
 ## M5 - Compatibility retained convergence
 
