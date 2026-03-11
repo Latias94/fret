@@ -1575,6 +1575,14 @@ Execution companion: `design.md` (surface map + next worktree order).
     through the private `ui/canvas/widget/timer_motion_pan_inertia/guards.rs` and
     `ui/canvas/widget/timer_motion_pan_inertia/advance.rs` seams, so
     `timer_motion_pan_inertia.rs` now mainly keeps the inertia tick orchestration explicit.
+  - Progress: viewport auto-pan timers now also route delta calculation, tick policy, and timer
+    start/stop through the private `ui/canvas/widget/viewport_timer_auto_pan/delta.rs`,
+    `ui/canvas/widget/viewport_timer_auto_pan/policy.rs`, and
+    `ui/canvas/widget/viewport_timer_auto_pan/timer.rs` seams, so
+    `viewport_timer_auto_pan.rs` now mainly keeps the auto-pan timer orchestration explicit.
+  - Progress: auto-pan motion ticks now also route drag-move dispatch through the private
+    `ui/canvas/widget/timer_motion_auto_pan/dispatch.rs` seam, so
+    `timer_motion_auto_pan.rs` now mainly keeps the auto-pan tick orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 

@@ -1113,6 +1113,14 @@ real editors.
   private `ui/canvas/widget/timer_motion_pan_inertia/guards.rs` and
   `ui/canvas/widget/timer_motion_pan_inertia/advance.rs` seams, so
   `timer_motion_pan_inertia.rs` now mainly keeps the inertia tick orchestration explicit.
+- viewport auto-pan timers now also route delta calculation, tick policy, and timer start/stop
+  through the private `ui/canvas/widget/viewport_timer_auto_pan/delta.rs`,
+  `ui/canvas/widget/viewport_timer_auto_pan/policy.rs`, and
+  `ui/canvas/widget/viewport_timer_auto_pan/timer.rs` seams, so
+  `viewport_timer_auto_pan.rs` now mainly keeps the auto-pan timer orchestration explicit.
+- auto-pan motion ticks now also route drag-move dispatch through the private
+  `ui/canvas/widget/timer_motion_auto_pan/dispatch.rs` seam, so
+  `timer_motion_auto_pan.rs` now mainly keeps the auto-pan tick orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
