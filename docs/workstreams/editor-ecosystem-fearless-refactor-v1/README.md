@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-11**
+Last updated: **2026-03-12**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -43,6 +43,8 @@ Current checkpoint:
 - shared inspector layout metrics now drive `PropertyRow`, `PropertyGrid`,
   `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`,
 - the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
+- editor trailing affordances now converge on a row-height-square baseline across property-row
+  reset actions, joined-input clear/remove buttons, and gradient-row icon actions,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
 - and the remaining foundation cleanup is rerun-safe screenshot automation plus follow-up tuning for
   wide-inspector slack after the new lane grammar landed.

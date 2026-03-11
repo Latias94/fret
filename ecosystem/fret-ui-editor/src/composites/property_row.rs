@@ -171,6 +171,7 @@ impl PropertyRow {
 
         let (
             density,
+            affordance_extent,
             gap,
             trailing_gap,
             reset_fg,
@@ -183,6 +184,7 @@ impl PropertyRow {
             let theme = Theme::global(&*cx.app);
             let metrics = InspectorLayoutMetrics::resolve(theme);
             let density = metrics.density;
+            let affordance_extent = density.affordance_extent();
             let gap = self.options.gap.unwrap_or(metrics.column_gap);
             let trailing_gap = self.options.trailing_gap.unwrap_or(metrics.trailing_gap);
             let reset_fg = theme
@@ -202,18 +204,24 @@ impl PropertyRow {
                 .options
                 .status_slot_width
                 .unwrap_or(metrics.status_slot_width);
+            let status_slot_w = if status_slot_w.0 > 0.0 {
+                status_slot_w.max(affordance_extent)
+            } else {
+                status_slot_w
+            };
             let reset_slot_w = self
                 .options
                 .reset_slot_width
                 .unwrap_or(metrics.reset_slot_width);
             let reset_slot_w = if has_reset_slot {
-                reset_slot_w.max(density.hit_thickness)
+                reset_slot_w.max(affordance_extent)
             } else {
                 reset_slot_w
             };
 
             (
                 density,
+                affordance_extent,
                 gap,
                 trailing_gap,
                 reset_fg,
@@ -253,15 +261,15 @@ impl PropertyRow {
                 PressableProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.hit_thickness),
+                            width: Length::Px(affordance_extent),
+                            height: Length::Px(affordance_extent),
                             ..Default::default()
                         },
                         flex: FlexItemStyle {
                             order: 0,
                             grow: 0.0,
                             shrink: 0.0,
-                            basis: Length::Px(density.hit_thickness),
+                            basis: Length::Px(affordance_extent),
                             align_self: None,
                         },
                         ..Default::default()
@@ -318,7 +326,7 @@ impl PropertyRow {
                                 style: Some(typography::as_control_text(TextStyle {
                                     // Keep this conservative: allow the theme's defaults to dominate.
                                     size: Px(12.0),
-                                    line_height: Some(density.hit_thickness),
+                                    line_height: Some(affordance_extent),
                                     ..Default::default()
                                 })),
                                 color: Some(reset_fg),

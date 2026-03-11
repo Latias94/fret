@@ -306,6 +306,8 @@ Implications:
 - `PropertyRow` owns the lane grammar,
 - `PropertyGrid`, `PropertyGroup`, and `InspectorPanel` should forward shared metrics rather than
   restating their own hardcoded spacing,
+- reset/clear/remove/icon affordances should default to a shared row-height-square target even when
+  the visible chrome remains denser,
 - rows that genuinely do not want trailing affordances may explicitly collapse those slots,
 - and wide inspectors should keep alignment stable before trying to stretch every value field to
   the full panel width.

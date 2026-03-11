@@ -60,6 +60,8 @@ Deliverables:
 - broader `EditorWidgetVisuals` coverage across reusable editor controls,
 - shared property-grid / inspector layout metrics for label, value, reset, status, group, and panel
   lanes,
+- one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
+  between narrow hit targets and row-height targets,
 - stronger typed-edit, focus, active, and invalid state clarity,
 - screenshot proof coverage for the neutral default baseline,
 - a review-only proof composition that hides unrelated parity/docking surfaces during baseline

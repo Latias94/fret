@@ -41,9 +41,11 @@ Interaction contract:
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
-      explicit (`label -> value -> reset slot -> status/actions slot`).
-      Remaining work: tune wide-inspector slack and any dense-mode overrides from screenshot review
-      rather than ad-hoc per-demo tweaks.
+      explicit (`label -> value -> reset slot -> status/actions slot`). Trailing affordances now
+      converge on a row-height-square baseline across property-row reset buttons, joined-input
+      clear/remove segments, and gradient-row icon actions.
+      Remaining work: tune wide-inspector slack, badge/status lane balance, and any dense-mode
+      overrides from screenshot review rather than ad-hoc per-demo tweaks.
 - [ ] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
 - [~] `EER-BASE-114` Clean up proof-surface composition so overview / typing / error screenshots are

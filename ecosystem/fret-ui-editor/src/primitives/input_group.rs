@@ -199,13 +199,15 @@ pub(crate) fn editor_icon_button_segment<H: UiHost>(
     test_id: Option<std::sync::Arc<str>>,
     on_activate: OnActivate,
 ) -> AnyElement {
+    let affordance_extent = density.affordance_extent();
+
     let mut el = cx.pressable(
         PressableProps {
             enabled: enabled_for_paint,
             focusable: false,
             layout: LayoutStyle {
                 size: SizeStyle {
-                    width: Length::Px(density.hit_thickness),
+                    width: Length::Px(affordance_extent),
                     height: Length::Px(density.row_height),
                     ..Default::default()
                 },
@@ -598,7 +600,7 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
 
     // Keep the axis marker subtle: it should read as part of the input group, not a standalone button.
     let seg_bg = mix(bg, Color { a: 0.16, ..tint }, 0.35);
-    let seg_w = Px(density.row_height.0.max(density.hit_thickness.0));
+    let seg_w = density.affordance_extent();
 
     cx.container(
         ContainerProps {

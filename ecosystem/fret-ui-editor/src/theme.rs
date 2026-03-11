@@ -108,11 +108,11 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     // Property grid responsiveness (stack label/value vertically in narrow inspectors).
     metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 124.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 10.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 6.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 8.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 5.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 560.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 64.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 20.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 640.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 72.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 24.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP, 6.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW, 520.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 10.0);
@@ -180,11 +180,11 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD, 2.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_LABEL_WIDTH, 120.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_COLUMN_GAP, 6.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 4.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_TRAILING_GAP, 5.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_ROW_GAP, 4.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 520.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 56.0);
-    metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 18.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH, 560.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH, 64.0);
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH, 22.0);
     metric(
         &mut cfg,
         EditorTokenKeys::PROPERTY_GROUP_HEADER_HEIGHT,
@@ -278,19 +278,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_TRAILING_GAP),
-            Some(Px(6.0))
+            Some(Px(8.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH),
-            Some(Px(560.0))
+            Some(Px(640.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(64.0))
+            Some(Px(72.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),
-            Some(Px(20.0))
+            Some(Px(24.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),
@@ -334,19 +334,19 @@ mod tests {
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_TRAILING_GAP),
-            Some(Px(4.0))
+            Some(Px(5.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_VALUE_MAX_WIDTH),
-            Some(Px(520.0))
+            Some(Px(560.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_STATUS_SLOT_WIDTH),
-            Some(Px(56.0))
+            Some(Px(64.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_RESET_SLOT_WIDTH),
-            Some(Px(18.0))
+            Some(Px(22.0))
         );
         assert_eq!(
             theme.metric_by_key(EditorTokenKeys::PROPERTY_GROUP_CONTENT_GAP),

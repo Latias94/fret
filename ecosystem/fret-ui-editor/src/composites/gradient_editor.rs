@@ -259,8 +259,6 @@ impl GradientEditor {
                         .options(IconButtonOptions {
                             enabled: can_add_stop,
                             focusable: false,
-                            width: Some(density.hit_thickness),
-                            height: Some(density.row_height),
                             icon_size: Some(Px(12.0)),
                             a11y_label: Some(Arc::from("Add stop")),
                             test_id: add_stop_test_id.clone(),
@@ -348,7 +346,7 @@ fn stop_row<H: UiHost>(
     let mut row_options = row_options;
     row_options.test_id = row_test_id.clone();
     row_options.reset_slot_width = Some(Px(0.0));
-    row_options.status_slot_width = Some(density.hit_thickness);
+    row_options.status_slot_width = Some(density.affordance_extent());
 
     PropertyRow::new().options(row_options).into_element(
         cx,
@@ -398,8 +396,6 @@ fn stop_row<H: UiHost>(
                     .options(IconButtonOptions {
                         enabled,
                         focusable: false,
-                        width: Some(density.hit_thickness),
-                        height: Some(density.row_height),
                         icon_size: Some(Px(12.0)),
                         a11y_label: Some(Arc::from("Remove stop")),
                         test_id: remove_test_id.clone(),
