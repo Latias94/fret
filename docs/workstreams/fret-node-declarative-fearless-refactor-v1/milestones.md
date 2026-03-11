@@ -1146,6 +1146,11 @@ real editors.
   through the private `ui/canvas/widget/cursor_resolve/resize.rs` and
   `ui/canvas/widget/cursor_resolve/edge.rs` seams, so `cursor_resolve.rs` now mainly keeps the
   cursor-resolution façades explicit.
+- pointer-move pan-release handling now also routes missing pan-release recovery and pending
+  right-click pan-start arming through the private
+  `ui/canvas/widget/pointer_move_release_pan/missing_release.rs` and
+  `ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs` seams, so
+  `pointer_move_release_pan.rs` now mainly keeps the pan-release orchestration explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same

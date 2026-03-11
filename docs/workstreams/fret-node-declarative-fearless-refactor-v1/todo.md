@@ -1607,6 +1607,11 @@ Execution companion: `design.md` (surface map + next worktree order).
     selection through the private `ui/canvas/widget/cursor_resolve/resize.rs` and
     `ui/canvas/widget/cursor_resolve/edge.rs` seams, so `cursor_resolve.rs` now mainly keeps the
     cursor-resolution façades explicit.
+  - Progress: pointer-move pan-release handling now also routes missing pan-release recovery and
+    pending right-click pan-start arming through the private
+    `ui/canvas/widget/pointer_move_release_pan/missing_release.rs` and
+    `ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs` seams, so
+    `pointer_move_release_pan.rs` now mainly keeps the pan-release orchestration explicit.
 
 ## M5 - Compatibility retained convergence
 
