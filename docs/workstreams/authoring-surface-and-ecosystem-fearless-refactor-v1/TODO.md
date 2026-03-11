@@ -124,7 +124,7 @@ Companion docs:
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
   - [x] Move app-facing `fret-examples` docking demos (`docking_demo`, `container_queries_docking_demo`) to the `fret::docking::*` seam.
-  - [ ] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
+  - [x] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
 - [ ] Migrate `fret-selector` to the grouped app data surface.
   - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
@@ -139,7 +139,7 @@ Companion docs:
   - [x] Add an explicit `fret::router` facade module behind a `fret/router` feature.
   - [x] Move the cookbook router example to the `fret::router::*` extension seam.
   - [ ] Keep `fret-router-ui` thin and app-owned instead of turning it into a competing default runtime.
-  - [ ] Audit remaining direct imports of `fret-router` / `fret-router-ui` in first-party app-facing examples and docs.
+  - [x] Audit remaining direct imports of `fret-router` / `fret-router-ui` in first-party app-facing examples and docs.
 - [ ] Audit first-party ecosystem crates for private or accidental shortcuts that bypass the new public contracts.
 
 ## M4 — Migrate docs, templates, and examples
