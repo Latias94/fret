@@ -33,7 +33,9 @@ these sources instead:
 - Pass: `Breadcrumb::new().items([...])` covers the common compact authoring path for standard breadcrumb trails.
 - Pass: `BreadcrumbItem::new(...).href(...)`, non-link `BreadcrumbItem::new(...)` current-page text, and `BreadcrumbItem::ellipsis()` cover the important shadcn recipe outcomes.
 - Pass: Upstream-shaped primitives remain available for cases that need more explicit composition.
+- Pass: `breadcrumb::primitives::BreadcrumbLink::children(...)` and `BreadcrumbPage::children(...)` now provide the narrow Rust-native equivalent of upstream arbitrary React children without introducing a generic `Slot` / `asChild` merge surface.
 - Pass: Gallery `Usage` now prefers the upstream-shaped primitives surface for docs parity, while the compact builder remains an ergonomic Fret shorthand.
+- Note: Gallery live previews keep `href("/")` examples deterministic by pairing them with a gallery command (`ui_gallery.app.open`) instead of falling through to `Effect::OpenUrl` during local/docs automation.
 - Note: Because Fret already offers both the compact builder and primitives surface, it intentionally does not add a separate generic `compose()` builder here.
 
 ### Layout & geometry (shadcn parity)
@@ -59,7 +61,11 @@ these sources instead:
 
 ## Validation
 
-- Focused semantics gates: `cargo nextest run -p fret-ui-shadcn --lib breadcrumb_builder_root_and_current_page_emit_expected_semantics breadcrumb_primitives_emit_list_item_and_hidden_affordance_semantics --status-level fail`
+- Focused native correctness gate: `cargo test -p fret-ui-shadcn --lib breadcrumb_ -- --nocapture`
+  - Covers current-page semantics, list/item semantics, hover tweening, `href` link semantics, and the `BreadcrumbLink::children(...) + on_click(...)` no-`OpenUrl` fallback invariant.
+
+- Gallery live-preview gate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json --launch -- cargo run -p fret-ui-gallery --release`
+  - Verifies the docs `Usage` section keeps `Home` as a semantic link while routing activation through `ui_gallery.app.open` (`ui-gallery-status-last-action` contains `cmd.open`) instead of opening `/` in the system browser.
 
 - Web layout gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - `web_vs_fret_layout_breadcrumb_separator_geometry`
