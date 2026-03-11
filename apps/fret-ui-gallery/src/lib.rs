@@ -222,4 +222,49 @@ mod authoring_surface_policy_tests {
             }
         }
     }
+
+    #[test]
+    fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
+        let src_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let curated_paths = [
+            "ui/snippets/shadcn_extras/announcement.rs",
+            "ui/snippets/shadcn_extras/avatar_stack.rs",
+            "ui/snippets/shadcn_extras/banner.rs",
+            "ui/snippets/shadcn_extras/kanban.rs",
+            "ui/snippets/shadcn_extras/marquee.rs",
+            "ui/snippets/shadcn_extras/rating.rs",
+            "ui/snippets/shadcn_extras/relative_time.rs",
+            "ui/snippets/shadcn_extras/tags.rs",
+            "ui/snippets/shadcn_extras/ticker.rs",
+        ];
+
+        for relative_path in curated_paths {
+            let path = src_root.join(relative_path);
+            let source = std::fs::read_to_string(&path).unwrap();
+            assert!(
+                source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+                "{} should import the curated shadcn facade",
+                path.display()
+            );
+            assert!(
+                source.contains("shadcn::raw::extras::"),
+                "{} should use the explicit raw extras escape hatch",
+                path.display()
+            );
+
+            for line in source.lines() {
+                if !line.contains("fret_ui_shadcn::") {
+                    continue;
+                }
+
+                assert_eq!(
+                    line.trim(),
+                    "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
+                    "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                    path.display(),
+                    line.trim()
+                );
+            }
+        }
+    }
 }

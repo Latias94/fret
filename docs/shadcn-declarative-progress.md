@@ -156,6 +156,8 @@ Guidelines:
 - Prefer composing shadcn components over introducing new wrapper nodes.
 - First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
   `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
+- `fret-ui-shadcn::extras` remains outside the v4 taxonomy; first-party app code should spell it as
+  `shadcn::raw::extras::*` so raw escape-hatch usage stays explicit.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

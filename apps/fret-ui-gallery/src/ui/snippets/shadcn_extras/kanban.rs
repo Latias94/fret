@@ -6,7 +6,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Default)]
 struct KanbanModels {
-    items: Option<Model<Vec<fret_ui_shadcn::extras::KanbanItem>>>,
+    items: Option<Model<Vec<shadcn::raw::extras::KanbanItem>>>,
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -14,11 +14,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let items = cx.with_state(KanbanModels::default, |st| st.items.clone());
         let items = items.unwrap_or_else(|| {
             let model = cx.app.models_mut().insert(vec![
-                fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
-                fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
-                fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-                fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
-                fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+                shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+                shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+                shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+                shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+                shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
             ]);
             cx.with_state(KanbanModels::default, |st| {
                 st.items = Some(model.clone());
@@ -27,12 +27,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         });
 
         let columns = vec![
-            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
-            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
-            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+            shadcn::raw::extras::KanbanColumn::new("backlog", "Backlog"),
+            shadcn::raw::extras::KanbanColumn::new("in_progress", "In Progress"),
+            shadcn::raw::extras::KanbanColumn::new("done", "Done"),
         ];
 
-        fret_ui_shadcn::extras::Kanban::new(columns, items)
+        shadcn::raw::extras::Kanban::new(columns, items)
             .test_id("ui-gallery-shadcn-extras-kanban")
             .into_element_with(cx, |cx, item, ctx| {
                 let title = ui::text(item.name.clone())
@@ -52,7 +52,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
-                let header = if ctx.mode == fret_ui_shadcn::extras::KanbanCardMode::Board {
+                let header = if ctx.mode == shadcn::raw::extras::KanbanCardMode::Board {
                     let checkbox =
                         shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
                     ui::h_flex(move |_cx| vec![checkbox, title])
