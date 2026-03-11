@@ -1418,6 +1418,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/searcher_row_activation/item.rs` seams, so `searcher_picker.rs` and
     `searcher_row_activation.rs` now mainly keep canvas-level orchestration explicit while picker
     request shaping and activation-item validation gain their own helper boundaries.
+  - Progress: searcher keyboard/input and overlay UI helpers now also route key dispatch plus
+    overlay install/open and dismiss/finish tails through the private
+    `ui/canvas/widget/searcher_input/dispatch.rs`,
+    `ui/canvas/widget/searcher_ui/overlay.rs`, and
+    `ui/canvas/widget/searcher_ui/event.rs` seams, so `searcher_input.rs` and `searcher_ui.rs`
+    now mainly keep façade methods explicit while key routing and overlay event tails stop
+    accumulating in the root files.
 
 ## M5 - Compatibility retained convergence
 
