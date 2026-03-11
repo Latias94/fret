@@ -1485,6 +1485,13 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/canvas/widget/context_menu/key_navigation/key_down.rs`, and
     `ui/canvas/widget/context_menu/key_navigation/pointer_move.rs` seams, so
     `context_menu/key_navigation.rs` now mainly keeps the navigation façade explicit.
+  - Progress: background context-menu execution now also routes insert planning, plan application,
+    and action activation through the private
+    `ui/canvas/widget/context_menu/background_execution/plan.rs`,
+    `ui/canvas/widget/context_menu/background_execution/apply.rs`, and
+    `ui/canvas/widget/context_menu/background_execution/activate.rs` seams, so
+    `context_menu/background_execution.rs` now mainly keeps the plan enum plus execution façade
+    explicit.
 
 ## M5 - Compatibility retained convergence
 

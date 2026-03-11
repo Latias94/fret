@@ -1027,6 +1027,12 @@ real editors.
   `ui/canvas/widget/context_menu/key_navigation/key_down.rs`, and
   `ui/canvas/widget/context_menu/key_navigation/pointer_move.rs` seams, so
   `context_menu/key_navigation.rs` now mainly keeps the navigation façade explicit.
+- background context-menu execution now also routes insert planning, plan application, and action
+  activation through the private `ui/canvas/widget/context_menu/background_execution/plan.rs`,
+  `ui/canvas/widget/context_menu/background_execution/apply.rs`, and
+  `ui/canvas/widget/context_menu/background_execution/activate.rs` seams, so
+  `context_menu/background_execution.rs` now mainly keeps the plan enum plus execution façade
+  explicit.
 - command / retained-runtime / wire-commit paint tails now also route through small private helper
   seams, so `command_ui.rs`, `retained_widget_runtime_shared.rs`, `wire_drag/commit_cx.rs`,
   `wire_drag/commit/mod.rs`, and `wire_drag/move_update/mod.rs` stop re-embedding the same
