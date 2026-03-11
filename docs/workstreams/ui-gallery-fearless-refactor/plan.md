@@ -18,16 +18,44 @@ truth for examples.
 
 ## Status
 
-As of 2026-03-02, UI Gallery pages in `apps/fret-ui-gallery/src/ui/pages/**` are snippet-backed
+As of 2026-03-11, UI Gallery pages in `apps/fret-ui-gallery/src/ui/pages/**` are snippet-backed
 (Preview ≡ Code), and enforcement lives in tests + the informational build-time drift audit.
 
 AI Elements gallery demos are also snippet-backed (see `ai-elements-tracker.md`).
 
 Material 3 pages are now **snippet-backed (Preview ≡ Code)** and routed through
 `apps/fret-ui-gallery/src/ui/pages/material3/mod.rs`. The legacy preview layer under
-`apps/fret-ui-gallery/src/ui/previews/material3/**` still exists and should be deleted
-incrementally once local edits are cleared. The dedicated tracker at `material3-tracker.md`
-records the remaining cleanup steps.
+`apps/fret-ui-gallery/src/ui/previews/material3.rs` +
+`apps/fret-ui-gallery/src/ui/previews/material3/**` has now been retired and removed from the
+repository after the audit confirmed it was not compiled. The dedicated tracker at
+`material3-tracker.md` records the retirement matrix and the surviving source-of-truth surface.
+
+The current follow-up lane is no longer snippet backing; it is authoring-surface normalization:
+
+- all routed doc pages under `src/ui/pages/**` now teach `UiCx` instead of
+  `ElementContext<'_, App>`,
+- the gallery shell helpers in `src/ui/content.rs` and `src/ui/nav.rs` also teach `UiCx`,
+- retained internal preview surfaces are fully normalized:
+  `src/ui/previews/magic.rs` and `src/ui/previews/pages/components/**` use `UiCx` and are
+  protected by source gates,
+- the retired Material 3 legacy preview tree has been removed from `src/ui/previews/**`,
+- all remaining internal preview buckets under `src/ui/previews/**` are now on `UiCx` and gated,
+- `0 / 92` preview-surface files expose `ElementContext<'_, App>` on the first-party teaching
+  surface.
+
+This lane is intentionally limited to first-party teaching surfaces. It should not absorb the
+separate state-management refactor or deeper runtime ownership changes.
+
+The current authoring follow-up also has a concrete feature-boundary outcome:
+
+- default builds no longer seed dev-only tabs or a dev-only diagnostics start page when
+  `gallery-dev` is off,
+- dev/material3-only page/cmd entry points and model wiring are being gated end-to-end through
+  `src/spec.rs`, `src/driver/*`, `src/ui/models.rs`, and `src/ui/content.rs`,
+- current crate-local check baseline on 2026-03-11 is:
+  - `fret-ui-gallery` warnings under `cargo check -p fret-ui-gallery --lib`: 0,
+  - `fret-ui-gallery` warnings under
+    `cargo check -p fret-ui-gallery --lib --features gallery-full`: 0.
 
 ## Goals
 
@@ -201,6 +229,19 @@ Now that drift is eliminated by construction, the highest leverage follow-ups ar
 - Expand the drift audit to cover any non-`src/ui/pages/**` preview surfaces (if present).
 - Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages so the gallery feels consistent.
 - Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation (Base as primary, Radix as cross-check).
+
+## Current execution order for the authoring-surface cleanup
+
+1. Internal preview-surface normalization is complete; follow-up work should focus on deleting dead
+   legacy helpers and on other workstreams, not on keeping `ElementContext<'_, App>` around as a
+   teaching seam.
+2. Finish the bounded feature-boundary cleanup so the default build only carries default-surface
+   state and routing, while dev/material3/ai inventory stays behind the matching features.
+3. Treat warning cleanup as an inventory pass, not a contract change:
+   - `src/ui/doc_layout.rs`: decide keep vs delete for unused helpers,
+   - snippet/page assets: delete or route unused examples so warning counts map to real gallery
+     surface area,
+   - keep the retired `src/ui/previews/material3/**` tree deleted.
 
 ## Definition of done
 

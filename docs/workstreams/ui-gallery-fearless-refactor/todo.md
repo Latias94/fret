@@ -11,11 +11,90 @@ Legend:
 
 ## Status
 
-As of 2026-03-02, UI Gallery component pages under `apps/fret-ui-gallery/src/ui/pages/**` are
+As of 2026-03-11, UI Gallery component pages under `apps/fret-ui-gallery/src/ui/pages/**` are
 **snippet-backed** (Preview ≡ Code) and the core enforcement tests are in place.
 
 Any remaining legacy surfaces that embed raw Rust code strings are tracked via the drift audit
 (`apps/fret-ui-gallery/build.rs`) and should be migrated as follow-up work.
+
+The authoring-surface cleanup is also ahead of the previous snapshot:
+
+- Routed doc pages are fully normalized to `UiCx`: `src/ui/pages/**` now has `129 / 129`
+  context-bearing Rust files on the default app helper surface.
+- Gallery shell helpers that are visible to first-party app authors (`src/ui/content.rs`,
+  `src/ui/nav.rs`) also use `UiCx`.
+- Internal preview buckets already normalized to `UiCx` and guarded in
+  `apps/fret-ui-gallery/src/lib.rs`:
+  - `src/ui/previews/magic.rs`
+  - `src/ui/previews/pages/components/**`
+  - `src/ui/previews/pages/harness/**`
+  - `src/ui/previews/pages/editors/**`
+  - `src/ui/previews/pages/torture/**`
+  - `src/ui/previews/gallery/atoms/**`
+  - `src/ui/previews/gallery/forms/**`
+  - `src/ui/previews/gallery/data/**`
+  - `src/ui/previews/gallery/overlays/**`
+  - `src/ui/previews/gallery/torture/**`
+- Remaining internal preview migration is now explicit and bounded:
+  - `0 / 92` preview-surface files expose `ElementContext<'_, App>`.
+  - Source gates in `apps/fret-ui-gallery/src/lib.rs` now cover every preview bucket that still
+    exposes a context surface.
+- Immediate dead-code cleanup has started:
+  - deleted dead `*_legacy` preview helpers from
+    `src/ui/previews/pages/components/buttons.rs`,
+    `src/ui/previews/gallery/atoms/{icons,scroll,slider}.rs`,
+    and `src/ui/previews/gallery/atoms/media/{avatar,image_object_fit,skeleton}.rs`,
+  - deleted orphan preview bridge files
+    `src/ui/previews/gallery/data/table.rs` and
+    `src/ui/previews/gallery/data/table_legacy.rs`.
+- Feature-boundary cleanup is now materially landing:
+  - dev-only harness re-exports and page/cmd entry points are gated to `gallery-dev`,
+  - default workspace bootstrap no longer seeds dev-only tabs (`PAGE_ICONS`, `PAGE_OVERLAY`) or
+    a dev-only diagnostics start page when `gallery-dev` is disabled,
+  - dev/material3-only model wiring is gated through `src/ui/models.rs`,
+    `src/driver/runtime_driver.rs`, `src/driver/window_bootstrap.rs`, and `src/ui/content.rs`,
+  - overlay-menu scratch state (`dropdown_open`, `context_menu_open`, `context_menu_edge_open`) is
+    no longer carried by the default build,
+  - dead gallery-only helper inventory has been pruned further:
+    - `src/ui/doc_layout.rs` no longer carries unused dev-only scaffold helpers in default builds,
+    - dev-only snippet buckets such as `icons` and `shadcn_extras` are no longer compiled by the
+      default feature set,
+    - legacy unused switch snippets (`extras.rs`, `label_card.rs`) are removed,
+    - the unused global `ImageSource` demo-asset cache path is removed; only the live RGBA upload
+      registration path remains,
+  - current crate-local check baseline on 2026-03-11:
+    - `fret-ui-gallery` warnings under `cargo check -p fret-ui-gallery --lib`: 0,
+    - `fret-ui-gallery` warnings under
+      `cargo check -p fret-ui-gallery --lib --features gallery-full`: 0,
+    - remaining command output warnings come from dependency crates (`fret-ui-shadcn`,
+      `fret-bootstrap`, `fret-ui-ai`), not from `fret-ui-gallery`.
+
+### Next authoring-surface execution order (2026-03-11)
+
+1. Convert the low-risk harness shells to `UiCx`:
+   done on 2026-03-11; the full harness bucket is now on `UiCx`.
+2. Convert the lightweight internal gallery previews:
+   done on 2026-03-11 for `gallery/atoms/**`, `gallery/forms/**`, `gallery/data/**`, and
+   `gallery/overlays/**`.
+3. Convert the retained/torture/editor tail:
+   done on 2026-03-11 for `pages/editors/**`, `pages/torture/**`, and `gallery/torture/**`.
+4. Keep this lane scoped to authoring/teaching surfaces only; state-management refactors and
+   deeper runtime rewrites are tracked elsewhere.
+
+### Next boundary-cleanup execution order (2026-03-11)
+
+1. Decide whether the remaining `src/ui/doc_layout.rs` helpers are real internal infrastructure or
+   dead scaffolding:
+   done for the current warning-producing helpers on 2026-03-11; follow-up should only revisit the
+   file if we intentionally redesign the docs scaffold surface.
+2. Prune snippet/page assets that are no longer routed or surfaced by docs (`SOURCE` constants,
+   orphan demo helpers, stale extras snippets):
+   materially completed for the current gallery-local warning set on 2026-03-11.
+3. Delete the remaining legacy Material 3 preview layer under `src/ui/previews/material3/**` once
+   concurrent local edits are clear:
+   done on 2026-03-11. The audited orphan tree (`src/ui/previews/material3.rs` +
+   `src/ui/previews/material3/**`) has been removed. Keep state-management and deeper runtime
+   ownership work out of this lane.
 
 ### Foundations
 
@@ -80,7 +159,8 @@ Notes:
 
 - Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
   on snippet-backed/migrated pages.
-- Material 3 pages are tracked separately because they still have an in-tree legacy preview layer under `src/ui/previews/material3/**` (even though the routed pages are now snippet-backed):
+- Material 3 pages are tracked separately because the routed page surface and the retired legacy
+  preview surface were split during migration; the retirement record lives in:
   `docs/workstreams/ui-gallery-fearless-refactor/material3-tracker.md`.
 
 ## Shadcn component tracker (gallery refactor status)
