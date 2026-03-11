@@ -207,7 +207,7 @@ Companion docs:
   - On 2026-03-11 these UI Gallery gates were moved out of `apps/fret-ui-gallery/src/lib.rs` into
     dedicated integration tests under `apps/fret-ui-gallery/tests/ui_authoring_surface_*.rs` to
     reduce merge conflicts on the crate entry file.
-- [ ] Add a gate that first-party ecosystem crates use documented extension seams.
+- [x] Add a gate that first-party ecosystem crates use documented extension seams.
   - [x] Shadcn docs/examples now gate the curated `shadcn::app::*` seam, explicit advanced hooks,
     and the documented raw escape-hatch lanes.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
@@ -220,6 +220,8 @@ Companion docs:
   - [x] Optional split ecosystem crates (`fret-ui-assets`, icon packs, `fret-node`) now gate
     against root-level app/advanced shortcut re-exports that would bypass their explicit seams.
 - [ ] Keep layering checks green.
+  - 2026-03-12: `python3 tools/check_layering.py` passed after the split-ecosystem shortcut audit
+    guards landed.
 
 ## Exit Criteria
 
