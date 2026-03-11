@@ -227,7 +227,7 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::themes::ShadcnBaseColor::Slate,
                 shadcn::themes::ShadcnColorScheme::Light,
             );
-            fret_icons_lucide::install_app(app);
+            fret_icons_lucide::app::install(app);
         })
         .run()?;
     Ok(())

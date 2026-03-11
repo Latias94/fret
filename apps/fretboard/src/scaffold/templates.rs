@@ -232,7 +232,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
 
     let install_icons = match opts.icon_pack {
         IconPack::Radix => {
-            r#"    fret_icons_radix::install_app(app);
+            r#"    fret_icons_radix::app::install(app);
 "#
         }
         IconPack::Lucide | IconPack::None => "",
@@ -706,7 +706,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
 
     let install_icons = match opts.icon_pack {
         IconPack::Radix => {
-            r#"    fret_icons_radix::install_app(app);
+            r#"    fret_icons_radix::app::install(app);
 "#
         }
         IconPack::Lucide | IconPack::None => "",
@@ -804,7 +804,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
 
     let install_icons = match opts.icon_pack {
         IconPack::Radix => {
-            r#"    fret_icons_radix::install_app(app);
+            r#"    fret_icons_radix::app::install(app);
 "#
         }
         IconPack::Lucide | IconPack::None => "",
@@ -1390,6 +1390,16 @@ mod tests {
         let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
         assert!(!toml.contains("fret-selector"));
+    }
+
+    #[test]
+    fn radix_icon_pack_templates_use_explicit_app_install_surface() {
+        let mut options = opts();
+        options.icon_pack = IconPack::Radix;
+
+        let todo = todo_template_main_rs("todo-app", options);
+        assert!(todo.contains("fret_icons_radix::app::install(app);"));
+        assert!(!todo.contains("fret_icons_radix::install_app(app);"));
     }
 
     #[test]

@@ -53,8 +53,15 @@ surface.
   - `core` / `headless` / `ui` where applicable
 - [ ] Normalize app integration naming where it is still mixed between `install_app`, `install`,
   and `install_into`.
+  - Landed first-pass migration on 2026-03-11:
+    `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose
+    default app wiring under explicit `crate::app::install(...)` seams, while UI-services-boundary
+    helpers are spelled as explicit advanced `install_with_ui_services(...)` variants.
 - [ ] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
 - [ ] Audit first-party crates for root-level exports that bypass curated facades.
+  - Landed first-pass migration on 2026-03-11 for
+    `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node`; keep auditing the
+    remaining ecosystem crates rather than treating this checklist item as globally done yet.
 - [ ] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
   one of the target seams.
 

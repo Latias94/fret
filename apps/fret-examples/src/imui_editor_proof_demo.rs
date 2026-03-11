@@ -104,7 +104,7 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::themes::ShadcnColorScheme::Dark,
             );
             fret_ui_editor::theme::apply_editor_theme_preset_v1(app, editor_preset);
-            fret_icons_lucide::install_app(app);
+            fret_icons_lucide::app::install(app);
             install_dock_panel_registry(app);
         })
         .run()?;

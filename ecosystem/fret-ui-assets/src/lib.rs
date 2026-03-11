@@ -30,4 +30,28 @@ pub use ui_assets::*;
 #[cfg(feature = "app-integration")]
 mod app_integration;
 #[cfg(feature = "app-integration")]
-pub use app_integration::{install, install_app, install_app_with_budgets, install_with_budgets};
+pub mod app {
+    pub use super::app_integration::{
+        install, install_with_budgets, install_with_ui_services,
+        install_with_ui_services_and_budgets,
+    };
+}
+
+#[cfg(test)]
+mod surface_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+    const APP_INTEGRATION_RS: &str = include_str!("app_integration.rs");
+
+    fn public_surface() -> &'static str {
+        LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
+    }
+
+    #[test]
+    fn app_integration_stays_under_explicit_app_module() {
+        let public_surface = public_surface();
+        assert!(public_surface.contains("pub mod app {"));
+        assert!(!public_surface.contains("pub use app_integration::{install, install_app"));
+        assert!(APP_INTEGRATION_RS.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(APP_INTEGRATION_RS.contains("pub fn install_with_ui_services("));
+    }
+}

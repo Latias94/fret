@@ -1692,9 +1692,20 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`RouteCodec`"));
         assert!(CRATE_USAGE_GUIDE.contains("`DockPanelFactory`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret-app::Plugin`"));
-        assert!(CRATE_USAGE_GUIDE.contains(
-            "`docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`"
-        ));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`")
+        );
+    }
+
+    #[test]
+    fn usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems() {
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::install_with_budgets(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_node::app::install(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
     }
 
     #[test]

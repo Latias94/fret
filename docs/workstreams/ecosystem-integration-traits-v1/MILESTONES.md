@@ -45,6 +45,13 @@ Current status on 2026-03-11:
   the canonical `?demo=...` entry path while retaining legacy hash-token fallback compatibility.
 - First-party web README surfaces now also teach canonical query routes first and treat hash/query
   aliases as compatibility-only migration baggage.
+- `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose default
+  app wiring under explicit `crate::app::install(...)` seams instead of root-level
+  `install_app(...)` exports; their UI-services-boundary wrappers are now spelled as explicit
+  advanced helpers.
+- First-party callers and docs that used those root-level helpers (`fret-bootstrap`,
+  `fret-examples`, scaffold templates, crate usage docs, and the todo golden-path doc) have been
+  migrated to the explicit `crate::app::*` posture.
 - `docs/crate-usage-guide.md` now includes a short ecosystem author checklist that points back to
   this trait budget and repeats the "no universal component / giant plugin trait" rule.
 - `ecosystem/fret` authoring-surface policy tests now gate that guidance.
@@ -56,7 +63,7 @@ Milestone readout on 2026-03-11:
 | Milestone | State | Notes |
 | --- | --- | --- |
 | M0 | Done | budget, owners, rejected shapes, and docs index/roadmap links are all recorded |
-| M1 | In progress | `InstallIntoApp` is landed, but first-party naming cleanup and bundle adoption are still incomplete |
+| M1 | In progress | `InstallIntoApp` is landed, and the first app-helper crates now use explicit `crate::app::*` seams, but broader first-party naming cleanup and bundle adoption are still incomplete |
 | M2 | Mostly done | `CommandCatalog`, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
 | M3 | Not started | `QueryAdapter` still needs a real-consumer decision; selector remains intentionally trait-free |
 | M4 | In progress | checklist/gate work has started, but hard deletions and full docs/template cleanup remain |

@@ -298,6 +298,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - **Component crates:** depend on `fret-icons` (and use semantic `IconId`s). Avoid depending on a specific pack.
 - **Apps:** enable `fret-bootstrap/icons-lucide` or `fret-bootstrap/icons-radix` and call the corresponding builder helper
   (`with_lucide_icons()` / `with_radix_icons()`). For custom packs, call `BootstrapBuilder::register_icon_pack(...)`.
+- **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
+  (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
+  install helpers.
 
 ### `fret-ui-assets`
 
@@ -309,6 +312,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - **Apps:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
+- **Direct app wiring:** use `fret_ui_assets::app::install(...)` or
+  `fret_ui_assets::app::install_with_budgets(...)`; keep the `*_with_ui_services` helpers as
+  explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
   and gate it behind an explicit feature (e.g. `app-integration`).
 
@@ -432,7 +438,9 @@ Notes:
 
 **Use it when:** you need a node graph model (headless or UI-integrated).
 
-**Notes:** supports a `headless` mode; UI integration is behind its `fret-ui` feature.
+**Notes:** supports a `headless` mode; UI integration is behind its `fret-ui` feature. If you opt
+into app-owned command/keybinding wiring, use the explicit `fret_node::app::install(...)` seam
+instead of root-level install helpers.
 
 ### `fret-plot` / `fret-chart` / `fret-plot3d`
 
